@@ -1,0 +1,128 @@
+#version: '2'
+#services:
+#  frontendapi:
+#    image: alekstar/flaskbase
+#    container_name: flaskbase
+#    volumes:
+#      - ../source:/source
+#    links:
+#      - db:db
+#    ports:
+#      - '2222:22'
+#      - '51234:51234'
+#    hostname: flaskbase
+#    env_file: ./environment
+#
+#  db:
+#    image: postgres:latest
+#    container_name: db
+#    hostname: dbpgsql
+#    environment:
+#      POSTGRES_USER: flaskbase
+#      POSTGRES_PASSWORD: flaskbase
+#      POSTGRES_DB: flaskbase
+#    ports:
+#      - "5442:5432"
+##    volumes:
+##      - ./data:/docker-entrypoint-initdb.d
+#
+#  web:
+#    image: nginx
+#    container_name: flask-web
+#    volumes:
+#      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+#    links:
+#      - flaskbase
+#    volumes_from:
+#      - flaskbase
+#    ports:
+#      - "8080:8080"
+##  elasticsearch:
+##    build: elasticsearch/
+##    ports:
+##      - "9200:9200"
+##      - "9300:9300"
+##    environment:
+##      ES_JAVA_OPTS: "-Xms1g -Xmx1g"
+##    networks:
+##      - docker_elk
+##  logstash:
+##    build: logstash/
+##    command: -f /etc/logstash/conf.d/
+##    volumes:
+##      - ./logstash/config:/etc/logstash/conf.d
+##    ports:
+##      - "5000:5000"
+##    networks:
+##      - docker_elk
+##    depends_on:
+##      - elasticsearch
+##  kibana:
+##    build: kibana/
+##    volumes:
+##      - ./kibana/config/:/etc/kibana/
+##    ports:
+##      - "5601:5601"
+##    networks:
+##      - docker_elk
+##    depends_on:
+##      - elasticsearch
+##
+##networks:
+##  docker_elk:
+##    driver: bridge
+
+
+version: '3.1'
+
+# хранилища
+volumes:
+    pgdata:
+        driver: local
+services:
+    nginx:
+        restart: always
+        image: nginx:latest
+        expose:
+          - 8080
+        ports:
+          - "80:8080"
+
+        volumes:
+            - ./customate/static:/service/www/customate/static
+            - ./customate/media:/service/www/customate/media
+            - ./customate/logs:/service/www/customate/logs
+            - ./docker/nginx:/etc/nginx/conf.d
+        depends_on:
+            - customate
+
+    customate:
+#        restart: always
+        build:
+            context: .
+            dockerfile: docker/customate/Dockerfile
+        volumes:
+            - ./customate:/service/www/customate
+        expose:
+          - 8000
+        ports:
+            - 8000:8000
+        env_file:
+            - ./docker/environment
+        tty: true
+        links:
+            - db:db
+
+        command: "gunicorn -c gunicorn.py customate.wsgi"
+    db:
+        image: postgres:10
+        ports:
+            - 5442:5432
+        environment:
+            POSTGRES_USER: customate
+            POSTGRES_PASSWORD: customate
+            POSTGRES_DB: customate_frontend
+            PGDATA: /var/lib/postgresql/data
+        volumes:
+#            - ./docker/data/postgres:/var/lib/postgresql/data
+            - pgdata:/var/lib/postgresql/data

@@ -1,0 +1,7 @@
+DB_HOST=db
+DB_PORT=5432
+DB_NAME=customate_frontend
+DB_USER=customate
+DB_PASSWORD=customate
+
+DJANGO_DEBUG=1
