@@ -87,6 +87,7 @@ DATABASES = {
         'PORT': os.environ.get('DB_PORT'),
         'USER': os.environ.get('DB_USER'),
         'PASSWORD': os.environ.get('DB_PASSWORD'),
+        'CONN_MAX_AGE': 60 * 10,  # 10 minutes
         'TEST':  {
             # this is for ci database creation. if multiple developers
             # trigger tests with a commit we don't want them clobbering each

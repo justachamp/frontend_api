@@ -11,6 +11,7 @@ MAINTAINER Alex Tarasenko <alextar.21@gmail.com>
 
 
 RUN apt-get update && apt-get install -y openssh-server
+RUN apt-get install -y supervisor && rm -rf /var/lib/apt/lists/*
 RUN mkdir /var/run/sshd
 RUN echo root:root | chpasswd
 RUN sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
@@ -26,7 +27,8 @@ EXPOSE 51234
 
 
 # Custom Supervisord config
-#COPY docker/customate/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY docker/customate/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
 #COPY docker/frontend_api/setup_cython.py /usr/local/lib/python3.6/site-packages/setup_cython.py
 RUN mkdir -p /service/www/customate
 COPY ./customate /service/www/customate
@@ -39,4 +41,6 @@ RUN pip install -r /serivce/www/customate/requirements.txt
 #ENTRYPOINT ["python"]
 #CMD ["main.py"]
 #CMD ["/usr/sbin/sshd", "-D"]
-#CMD ["/usr/bin/supervisord"]
+CMD ["/usr/bin/supervisord"]
+#CMD ["gunicorn -c gunicorn.py customate.wsgi"]
+

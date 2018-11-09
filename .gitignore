@@ -1,10 +1,9 @@
 *.pyc
 *.pyo
-**/.ropeproject
 **/__pycache__
 **/static
 *.log
 docker/data/
 docker/environment
-.idea
+**/.idea
 *.DS_store
