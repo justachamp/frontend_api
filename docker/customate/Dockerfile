@@ -35,7 +35,7 @@ COPY ./customate /service/www/customate
 COPY ./customate/requirements.txt /serivce/www/customate/requirements.txt
 WORKDIR /service/www/customate
 RUN pip install --upgrade pip
-RUN pip install -r /serivce/www/customate/requirements.txt
+RUN pip install -r /service/www/customate/requirements.txt
 #RUN npm install
 #RUN python "/usr/local/lib/python3.5/site-packages/setup_cython.py" build_ext --inplace
 #ENTRYPOINT ["python"]
