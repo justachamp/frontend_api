@@ -19,7 +19,7 @@ from core.models import Model, User
 
 class Address(Model):
     user = models.ForeignKey(User, related_name='address', on_delete=models.CASCADE)
-    address = models.CharField()
+    address = models.CharField(max_length=250)
 
     country = models.CharField(max_length=50)
     adress_line_1 = models.CharField(max_length=100)
