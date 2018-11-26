@@ -37,8 +37,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'core.apps.CoreConfig',
     'rest_framework',
-    'frontend_api'
+    'rest_framework.authtoken',
+    'frontend_api.apps.FrontendApiConfig',
+    'authentication.apps.AuthenticationConfig',
+    'authentication.cognito.apps.CognitoConfig',
 ]
 
 MIDDLEWARE = [
@@ -49,6 +53,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # 'authentication.cognito.middleware.cognito_django_middleware.AwsDjangoMiddleware'
 ]
 
 # REST_FRAMEWORK = {
@@ -56,6 +61,115 @@ MIDDLEWARE = [
 #     'PAGE_SIZE': 10
 # }
 
+# CACHES = {
+#     'default': {
+#         'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
+#     }
+# }
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+]
+# AUTHENTICATION_BACKENDS = [
+#     # 'django.contrib.auth.backends.ModelBackend',
+#     # 'authentication.cognito.middleware.cognito_django_authentication.AwsDjangoAuthentication'
+# ]
+
+COGNITO_USER_POOL_ID = os.environ.get('COGNITO_USER_POOL_ID')
+COGNITO_APP_CLIENT_ID = os.environ.get('COGNITO_APP_CLIENT_ID')
+COGNITO_APP_SECRET_KEY = os.environ.get('COGNITO_APP_SECRET_KEY')
+
+AWS_ACCESS_KEY = os.environ.get('AWS_ACCESS_KEY')
+AWS_SECRET_KEY = os.environ.get('AWS_SECRET_KEY')
+
+AWS_REGION = os.environ.get('AWS_REGION')
+COGNITO_ATTR_MAPPING = {
+        'email': 'email',
+        'given_name': 'first_name',
+        'family_name': 'last_name',
+        'custom:api_key': 'api_key',
+        'custom:api_key_id': 'api_key_id'
+    }
+
+COGNITO_CREATE_UNKNOWN_USERS = True
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    # 'filters': {
+    #     'require_debug_false': {
+    #         '()': 'django.utils.log.RequireDebugFalse',
+    #     },
+    #     'require_debug_true': {
+    #         '()': 'django.utils.log.RequireDebugTrue',
+    #     },
+    # },
+    'formatters': {
+        # 'django.server': {
+        #     '()': 'django.utils.log.ServerFormatter',
+        #     'format': '[%(server_time)s] %(message)s',
+        # },
+        'console': {
+            # exact format is not important, this is the minimum information
+            'format': '%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+        },
+    },
+    'handlers': {
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'console',
+        },
+
+        # 'console': {
+        #     'level': 'INFO',
+        #     'filters': ['require_debug_true'],
+        #     'class': 'logging.StreamHandler',
+        # },
+        # Custom handler which we will use with logger 'django'.
+        # We want errors/warnings to be logged when DEBUG=False
+        # 'console_on_not_debug': {
+        #     'level': 'WARNING',
+        #     'filters': ['require_debug_false'],
+        #     'class': 'logging.StreamHandler',
+        # },
+        # 'django.server': {
+        #     'level': 'INFO',
+        #     'class': 'logging.StreamHandler',
+        #     'formatter': 'django.server',
+        # },
+        # 'mail_admins': {
+        #     'level': 'ERROR',
+        #     'filters': ['require_debug_false'],
+        #     'class': 'django.utils.log.AdminEmailHandler'
+        # }
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console',
+                         # 'mail_admins', 'console_on_not_debug'
+            ]
+            ,
+            'level': 'INFO',
+        },
+        # 'django.request': {
+        #     'handlers': ['console'],
+        #     'level': 'INFO',
+        #     'propagate': True,
+        # },
+
+
+        # 'django.server': {
+        #     'handlers': ['django.server'],
+        #     'level': 'INFO',
+        #     'propagate': False,
+        # },
+    }
+}
+
+
+
+LOGIN_REDIRECT_URL = '/accounts/profile'
 
 REST_FRAMEWORK = {
     'PAGE_SIZE': 10,
@@ -83,6 +197,26 @@ REST_FRAMEWORK = {
         'rest_framework_json_api.django_filters.DjangoFilterBackend',
         'rest_framework.filters.SearchFilter',
     ),
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.BasicAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+        'authentication.cognito.middleware.cognito_rest_authentication.AwsRestAuthentication',
+    ),
+
+
+
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+
+    'DEFAULT_THROTTLE_CLASSES': (
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle'
+    ),
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '1/sec',
+        'user': '10/sec'
+    },
     'SEARCH_PARAM': 'filter[search]',
     'TEST_REQUEST_RENDERER_CLASSES': (
         'rest_framework_json_api.renderers.JSONRenderer',
@@ -178,5 +312,9 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, "static")
+AUTH_USER_MODEL = 'core.User'
+
+
+
 
 
