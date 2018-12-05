@@ -80,7 +80,7 @@ class AuthView(viewsets.ViewSet):
         # data = json.loads(request.body.decode('utf-8'))
         serializer = CognitoAuthPasswordRestoreSerializer(data=request.data)
         if serializer.is_valid(True):
-            entity = serializer.update_password(serializer.validated_data)
+            entity = serializer.confirm_forgot_password(serializer.validated_data)
             return response.Response(CognitoAuthPasswordRestoreSerializer(instance=entity).data)
 
 

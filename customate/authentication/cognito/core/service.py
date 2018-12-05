@@ -27,47 +27,64 @@ class Identity:
     user_class = get_user_model()
 
     def sign_up(self, username, password, user_attributes, validation_data=None):
-        logger.error(username)
-        logger.error(password)
-        logger.error(user_attributes)
-        secret_hash = utils.get_cognito_secret_hash(username)
-        params = {"ClientId": constants.CLIENT_ID,
-                  "Username": username, "Password": password,
-                  "UserAttributes": user_attributes}
+        try:
+            logger.error(username)
+            logger.error(password)
+            logger.error(user_attributes)
+            secret_hash = utils.get_cognito_secret_hash(username)
+            params = {"ClientId": constants.CLIENT_ID,
+                      "Username": username, "Password": password,
+                      "UserAttributes": user_attributes}
 
-        if validation_data:
-            params['ValidationData'] = validation_data
+            if validation_data:
+                params['ValidationData'] = validation_data
 
-        if secret_hash:
-            params['SecretHash'] = secret_hash
+            if secret_hash:
+                params['SecretHash'] = secret_hash
 
-        user_params = utils.cognito_to_dict(user_attributes, settings.COGNITO_ATTR_MAPPING)
-        cognito_user = self.client.sign_up(**params)
-        logger.error(f'cognito user {cognito_user}')
-        logger.error(f'user_params {user_params}')
-        user = self.user_class.objects.create(
-            username=username, email=username, cognito_id=cognito_user['UserSub']
-            # first_name=user_params.get('given_name'), last_name=user_params.get('family_name')
-        )
+            user_params = utils.cognito_to_dict(user_attributes, settings.COGNITO_ATTR_MAPPING)
+            cognito_user = self.client.sign_up(**params)
+            logger.error(f'cognito user {cognito_user}')
+            logger.error(f'user_params {user_params}')
+            user = self.user_class.objects.create(
+                username=username, email=username, cognito_id=cognito_user['UserSub']
+                # first_name=user_params.get('given_name'), last_name=user_params.get('family_name')
+            )
 
-        user.save()
-        return cognito_user
+            user.save()
+            return cognito_user
+
+        except constants.AWS_EXCEPTIONS as ex:
+            logger.error(f'AWS_EXCEPTIONS {ex}')
+            raise CognitoException.create_from_exception(ex)
+
+        except Exception as ex:
+            logger.error(f'general {ex}')
+            raise Exception(ex)
+
 
     def confirm_sign_up(self, username, confirmation_code, force_alias_creation):
+        try:
+            secret_hash = utils.get_cognito_secret_hash(username)
 
-        secret_hash = utils.get_cognito_secret_hash(username)
+            params = {
+                'ClientId': constants.CLIENT_ID,
+                'Username': username,
+                'ForceAliasCreation': force_alias_creation,
+                'ConfirmationCode': confirmation_code
+            }
 
-        params = {
-            'ClientId': constants.CLIENT_ID,
-            'Username': username,
-            'ForceAliasCreation': force_alias_creation,
-            'ConfirmationCode': confirmation_code
-        }
+            if secret_hash:
+                params['SecretHash'] = secret_hash
 
-        if secret_hash:
-            params['SecretHash'] = secret_hash
+            return self.client.confirm_sign_up(**params)
+        except constants.AWS_EXCEPTIONS as ex:
+            logger.error(f'AWS_EXCEPTIONS {ex}')
+            raise CognitoException.create_from_exception(ex)
 
-        return self.client.confirm_sign_up(**params)
+        except Exception as ex:
+            logger.error(f'general {ex}')
+            raise Exception(ex)
 
     def initiate_auth(self, username, auth_flow, password=None, refresh_token=None):
         auth_parameters = {}
@@ -128,7 +145,15 @@ class Identity:
             raise Exception(ex)
 
     def sign_out(self, access_token):
-        return self.client.global_sign_out(AccessToken=access_token)
+        try:
+            return self.client.global_sign_out(AccessToken=access_token)
+        except constants.AWS_EXCEPTIONS as ex:
+            logger.error(f'AWS_EXCEPTIONS {ex}')
+            raise CognitoException.create_from_exception(ex)
+
+        except Exception as ex:
+            logger.error(f'general {ex}')
+            raise Exception(ex)
 
     def respond_to_auth_challenge(self):
         pass

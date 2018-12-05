@@ -113,7 +113,8 @@ class CognitoAuthSerializer(CogrnitoAuthRetreiveSerializer):
 
         return data
 
-    def validate_username(self, email):
+    @staticmethod
+    def validate_username(email):
         email = email.lower()
         if get_user_model().objects.filter(email=email).exists():
             raise serializers.ValidationError("Not unique email")
@@ -131,8 +132,9 @@ class CognitoAuthSerializer(CogrnitoAuthRetreiveSerializer):
         return data
 
     @staticmethod
-    def create(self, validated_data):
+    def create(validated_data):
         try:
+            # "type": 'personal|business"
             validated_data['username'] = validated_data['preferred_username']
             result = helpers.sign_up(validated_data)
             return Identity(id=result.get('UserSub'), **validated_data)
@@ -141,7 +143,7 @@ class CognitoAuthSerializer(CogrnitoAuthRetreiveSerializer):
             raise Unauthorized(ex)
 
     @staticmethod
-    def update(self, instance, validated_data):
+    def update(instance, validated_data):
         for field, value in validated_data.items():
             setattr(instance, field, value)
         return instance
