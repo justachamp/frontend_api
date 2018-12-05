@@ -4,7 +4,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from authentication.cognito.core import helpers
 from authentication.cognito.serializers import CognitoAuthSerializer, CogrnitoAuthRetreiveSerializer, \
-    CogrnitoSignOutSerializer, CognitoAuthPasswordRestoreSerializer
+    CogrnitoSignOutSerializer, CognitoAuthPasswordRestoreSerializer, CognitoAuthVerificationSerializer
 from authentication.cognito.core.base import CognitoException, CognitoUser
 from rest_framework_json_api.views import viewsets
 from rest_framework.views import APIView
@@ -66,6 +66,14 @@ class AuthView(viewsets.ViewSet):
         if serializer.is_valid(True):
             entity = serializer.create(serializer.validated_data)
             return response.Response(CognitoAuthSerializer(instance=entity).data)
+
+    @action(methods=['POST'], detail=False, name='Forgot password')
+    def verification_code(self, request):
+        # data = json.loads(request.body.decode('utf-8'))
+        serializer = CognitoAuthVerificationSerializer(data=request.data)
+        if serializer.is_valid(True):
+            entity = serializer.verification_code(serializer.validated_data)
+            return response.Response(entity)
 
     @action(methods=['POST'], detail=False, name='Forgot password')
     def forgot_password(self, request):

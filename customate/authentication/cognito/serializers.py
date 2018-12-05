@@ -18,6 +18,33 @@ class CognitoAttributeFiled(Field):
         return data
 
 
+class CognitoAuthVerificationSerializer(serializers.Serializer):
+    resource_name = 'identities'
+    attribute_name = serializers.ChoiceField(required=True, allow_blank=False, choices=('email', 'phone_number'))
+    destination = serializers.CharField(max_length=50, required=False, read_only=True, source='Destination')
+    code = serializers.CharField(max_length=50, required=False, write_only=True)
+    access_token = serializers.CharField(write_only=True, required=True)
+
+    @staticmethod
+    def verification_code(validated_data):
+        try:
+            data = helpers.verification_code(validated_data)
+            response = data.get('CodeDeliveryDetails')
+            validated_data['destination'] = response.get('Destination')
+            return validated_data
+        except Exception as ex:
+            logger.error(f'general {ex}')
+            raise Unauthorized(ex)
+
+    @staticmethod
+    def confirm_forgot_password(validated_data):
+        try:
+            return helpers.confirm_forgot_password(validated_data)
+        except Exception as ex:
+            logger.error(f'general {ex}')
+            raise Unauthorized(ex)
+
+
 class CognitoAuthPasswordRestoreSerializer(serializers.Serializer):
     resource_name = 'identities'
     username = serializers.EmailField(required=True, write_only=True)
@@ -81,7 +108,7 @@ class CogrnitoAuthRetreiveSerializer(serializers.Serializer):
             data = mid_helpers.decode_token(tokens.get('IdToken'))
             validated_data['id_token'] = tokens.get('IdToken')
             validated_data['access_token'] = tokens.get('AccessToken')
-            if not validated_data.get('access_token'):
+            if not validated_data.get('refresh_token'):
                 validated_data['refresh_token'] = tokens.get('RefreshToken')
 
             user = get_user_model().objects.get(email=data[1].get('email')) if len(data) else None

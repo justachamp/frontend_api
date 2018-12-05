@@ -10,7 +10,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from authentication import settings
 from authentication.cognito import utils
-from authentication.cognito.core import constants, actions
+from authentication.cognito.core import constants, service
 from authentication.cognito.utils import PublicKey
 
 # import the logging library
@@ -18,7 +18,7 @@ import logging
 
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
-
+identity = service.Identity()
 
 def validate_token(access_token, id_token, refresh_token=None):
 
@@ -65,7 +65,7 @@ def validate_token(access_token, id_token, refresh_token=None):
             # This token is expired, potentially check for a refresh token? Return this token in the auth return
             # variable?
 
-            result = actions.initiate_auth(payload['username'], constants.REFRESH_TOKEN_FLOW,
+            result = identity.initiate_auth(payload['username'], constants.REFRESH_TOKEN_FLOW,
                                            refresh_token=refresh_token)
 
             if result['AuthenticationResult']:
@@ -125,7 +125,7 @@ def process_request(request, propogate_error=False):
                     raise ex
 
                 if settings.AUTO_CREATE_USER:
-                    aws_user = actions.admin_get_user(payload['username'])
+                    aws_user = identity.admin_get_user(payload['username'])
 
                     user_attributes = {k: v for dict in [{d['Name']: d['Value']} for d in aws_user['UserAttributes']]
                                        for k, v in dict.items()}

@@ -16,6 +16,7 @@ AWS_ACCESS_KEY = settings.AWS_ACCESS_KEY
 AWS_SECRET_KEY = settings.AWS_SECRET_KEY
 
 AWS_EXCEPTIONS = (
+    CognitoClient.client.exceptions.Param,
     CognitoClient.client.exceptions.AliasExistsException,
     CognitoClient.client.exceptions.CodeDeliveryFailureException,
     CognitoClient.client.exceptions.CodeMismatchException,

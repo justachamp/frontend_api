@@ -72,7 +72,7 @@ class CognitoUser(CognitoClient):
         params = {
             'ClientId': constants.CLIENT_ID,
             'Username': username,
-            'ForceAliasCreation': force_alias_creation,
+            'ForceAliasCreation': False, # force_alias_creation,
             'ConfirmationCode': confirmation_code
         }
 
