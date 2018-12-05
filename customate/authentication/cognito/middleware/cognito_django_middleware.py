@@ -9,19 +9,18 @@ logger.setLevel(logging.INFO)
 # This is utilised from normal Django views. Currently used for anything that requires authentication but isn't
 # already utilising rest framework
 class AwsDjangoMiddleware:
-    def __init__(self, get_response=None):
-        self.get_response = get_response
-        # One-time configuration and initialization.
+
+
 
     def __call__(self, request):
         logger.error('call AwsDjangoMiddleware')
 
 
         # Get the user and a new token if required
-        user, token, refresh_token = helpers.process_request(request)
+        user, token, id_token, refresh_token = helpers.process_request(request)
 
         request.user = user
-        logger.error(user)
+        logger.error(f'AwsDjangoMiddleware {user}')
         response = self.get_response(request)
 
         if token:
@@ -30,6 +29,7 @@ class AwsDjangoMiddleware:
             secure = settings.SECURE_COOKIE
 
             response.set_cookie(key='AccessToken', value=token, secure=secure, httponly=http_only)
+            response.set_cookie(key="IdToken", value=id_token, secure=secure, httponly=http_only)
             response.set_cookie(key="RefreshToken", value=refresh_token, secure=secure, httponly=http_only)
             pass
 

@@ -13,16 +13,23 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from authentication.cognito import views
+from authentication.cognito.router import urlpatterns as auth_url
 from django.conf.urls import url
+from django.urls import include, path, re_path
 
+# urlpatterns = [
+#     url(r'^api/v1/', include(api_v1)),
+# ]
 urlpatterns = [
     # Exclude as not appropriate for this app?
     # path('admin/', admin.site.urls),
-    url(r'^login', views.initiate_auth),
-    # url(r'^logout', views.logout),
-    url(r'^signup', views.sign_up),
-    url(r'^forgot_password', views.forgot_password),
-    url(r'^confirm_signup', views.confirm_sign_up),
-    url(r'^confirm_login', views.respond_to_auth_challenge),
-    url(r'^confirm_forgot_password', views.confirm_forgot_password)
+    url(r'^', include(auth_url)),
+    # url(r'^login', views.initiate_auth),
+    # # url(r'^logout', views.logout),
+    # url(r'^signup', views.sign_up),
+    # url(r'^refresh_token', views.refresh_token),
+    # url(r'^forgot_password', views.forgot_password),
+    # url(r'^confirm_signup', views.confirm_sign_up),
+    # url(r'^confirm_login', views.respond_to_auth_challenge),
+    # url(r'^confirm_forgot_password', views.confirm_forgot_password)
 ]

@@ -35,9 +35,13 @@ services:
             - '2222:22'
         env_file:
             - ./docker/environment
+        stdin_open: true
         tty: true
         links:
             - db:db
+        depends_on:
+            - db
+#            - nginx
 
 #        command: "gunicorn -c gunicorn.py customate.wsgi"
     db:

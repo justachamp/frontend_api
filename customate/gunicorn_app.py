@@ -13,6 +13,7 @@ workers = max_workers()
 env = {
     'DJANGO_SETTINGS_MODULE': 'customate.settings'
 }
-
+debug = True
 reload = True
+timeout = 3600
 name = 'Customate'

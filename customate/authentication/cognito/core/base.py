@@ -22,8 +22,7 @@ class CognitoException(Exception):
 
     @staticmethod
     def create_from_exception(ex):
-        return CognitoException({'error': ex.response['Error']['Message']},
-                                ex.response['ResponseMetadata']['HTTPStatusCode'])
+        return CognitoException(ex.response['Error']['Message'], ex.response['ResponseMetadata']['HTTPStatusCode'])
 
 
 class CognitoUser(CognitoClient):

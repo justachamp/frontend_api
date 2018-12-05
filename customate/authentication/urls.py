@@ -16,5 +16,5 @@ from django.conf.urls import url, include
 
 urlpatterns = [
     # Exclude as not appropriate for this app?
-    url(r'^auth/', include('authentication.cognito.urls')),
+    url(r'^', include('authentication.cognito.urls')),
 ]

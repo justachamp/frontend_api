@@ -27,6 +27,8 @@ from rest_framework import renderers
 from rest_framework_json_api.views import RelationshipView
 
 
+import logging
+logger = logging.getLogger(__name__)
 
 
 
@@ -53,7 +55,7 @@ class UserViewSet(views.ModelViewSet):
 class UserRelationshipView(RelationshipView):
     queryset = User.objects
 
-class GroupViewSet(viewsets.ModelViewSet):
+class GroupViewSet(views.ModelViewSet):
     """
     API endpoint that allows groups to be viewed or edited.
     """
@@ -68,6 +70,7 @@ class AddressViewSet(views.ModelViewSet):
     permission_classes = (permissions.IsAuthenticated,)
 
     def perform_create(self, serializer):
+        logger.error('perform create')
         serializer.save(user=self.request.user)
 
     def get_queryset(self):

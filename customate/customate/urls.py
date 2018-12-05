@@ -26,28 +26,16 @@ from django.urls import include, path, re_path
 
 from rest_framework import routers
 from frontend_api import views
+from authentication import views as auth_views
 
 router = routers.DefaultRouter()
+# router.register('auth', auth_views.AuthView)
 router.register('users', views.UserViewSet)
 router.register('groups', views.GroupViewSet)
-router.register('address', views.AddressViewSet)
-# router.register('snippet-highlight', views.SnippetHighlight)
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from rest_framework.reverse import reverse
+router.register('addresses', views.AddressViewSet)
 
 
-from  botocore import regions
-# @api_view(['GET'])
-# def api_root(request, format=None):
-#     return Response({
-#         'users': reverse('user-list', request=request, format=format),
-#         'snippets': reverse('snippet-list', request=request, format=format),
-#     })
 
-#
-# for url in router.urls:
-#     print('url --- ', url.__dict__)
 
 # Wire up our API using automatic URL routing.
 # Additionally, we include login URLs for the browsable API.
@@ -55,7 +43,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path(r'', include('frontend_api.urls')),
     path(r'', include('authentication.urls')),
-    path(r'', include(router.urls)),
+    path(r'api/v1/', include(router.urls)),
     # path('snippets/<uuid:pk>/highlight/', views.SnippetHighlight.as_view()),
     path(r'api-auth/', include('rest_framework.urls', namespace='rest_framework'))
 ]

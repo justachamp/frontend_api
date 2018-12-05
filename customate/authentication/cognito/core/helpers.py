@@ -1,4 +1,5 @@
-from authentication.cognito.core import constants, actions
+from authentication.cognito.core import constants
+from authentication.cognito.core.service import Identity
 
 # Collection of methods intended to make the calling of AWS Cognito methods a bit easier. Each method expects both a
 # data parameter (which will be a dictionary of values) and an optional param_mapping parameter - another dictionary
@@ -12,6 +13,7 @@ BAD_DATA_EXCEPTION = "The required parameters were not passed through in the dat
 
 # TODO: Possibly change some of these methods to just accept one parameter where appropriate (i.e. just a username)
 
+identity = Identity()
 
 def initiate_auth(data, param_mapping=None):
     if ("username" in data and "password" in data) or ("username" in param_mapping and "password" in param_mapping):
@@ -19,10 +21,32 @@ def initiate_auth(data, param_mapping=None):
         username = parse_parameter(data, param_mapping, "username")
         password = parse_parameter(data, param_mapping, "password")
 
-        return actions.initiate_auth(username, auth_flow, password)
+        return identity.initiate_auth(username, auth_flow, password)
 
     else:
         raise ValueError("Unsupported auth flow")
+
+
+def sign_out(data, param_mapping=None):
+    if ("access_token" in data) or ("access_token" in param_mapping):
+        access_token = parse_parameter(data, param_mapping, "access_token")
+        return identity.sign_out(access_token=access_token)
+
+    else:
+        raise ValueError("Unsupported auth flow")
+
+
+def refresh_session(data, param_mapping=None):
+    if ("username" in data and "refresh_token" in data) or ("username" in param_mapping and "refresh_token" in param_mapping):
+        auth_flow = constants.REFRESH_TOKEN_FLOW
+        username = parse_parameter(data, param_mapping, "username")
+        refresh_token = parse_parameter(data, param_mapping, "refresh_token")
+
+        return identity.refresh_session(username, auth_flow, refresh_token=refresh_token)
+
+    else:
+        raise ValueError("Unsupported auth flow")
+
 
 
 def respond_to_auth_challenge(data, param_mapping=None):
@@ -35,7 +59,7 @@ def respond_to_auth_challenge(data, param_mapping=None):
     except Exception as ex:
         raise ValueError(BAD_DATA_EXCEPTION)
 
-    return actions.respond_to_auth_challenge(username=username, challenge_name=challenge_name,
+    return identity.respond_to_auth_challenge(username=username, challenge_name=challenge_name,
                                              responses=responses, session=session)
 
 
@@ -48,19 +72,19 @@ def sign_up(data, param_mapping=None):
     except Exception as ex:
         raise ValueError(BAD_DATA_EXCEPTION)
 
-    return actions.sign_up(username, password, user_attributes)
+    return identity.sign_up(username, password, user_attributes)
 
 
-def confirm_sign_up(data, param_mapping=None):
-    try:
-        username = parse_parameter(data, param_mapping, 'username')
-        confirmation_code = parse_parameter(data, param_mapping, 'password')
-        force_alias_creation = parse_parameter(data, param_mapping, 'force_alias_creation')
-
-    except Exception as ex:
-        raise ValueError(BAD_DATA_EXCEPTION)
-
-    return actions.confirm_sign_up(username, confirmation_code, force_alias_creation)
+# def confirm_sign_up(data, param_mapping=None):
+#     try:
+#         username = parse_parameter(data, param_mapping, 'username')
+#         confirmation_code = parse_parameter(data, param_mapping, 'password')
+#         force_alias_creation = parse_parameter(data, param_mapping, 'force_alias_creation')
+#
+#     except Exception as ex:
+#         raise ValueError(BAD_DATA_EXCEPTION)
+#
+#     return identity.confirm_sign_up(username, confirmation_code, force_alias_creation)
 
 
 def forgot_password(data, param_mapping=None):
@@ -70,7 +94,7 @@ def forgot_password(data, param_mapping=None):
     except Exception as ex:
         raise ValueError(BAD_DATA_EXCEPTION)
 
-    return actions.forgot_password(username)
+    return identity.forgot_password(username)
 
 
 def confirm_forgot_password(data, param_mapping=None):
@@ -82,7 +106,7 @@ def confirm_forgot_password(data, param_mapping=None):
     except Exception as ex:
         raise ValueError(BAD_DATA_EXCEPTION)
 
-    return actions.confirm_forgot_password(username, code, new_password)
+    return identity.confirm_forgot_password(username, code, new_password)
 
 
 def admin_get_user(data, param_mapping=None):
@@ -92,7 +116,7 @@ def admin_get_user(data, param_mapping=None):
     except Exception as ex:
         raise ValueError(BAD_DATA_EXCEPTION)
 
-    return actions.admin_get_user(username)
+    return identity.admin_get_user(username)
 
 
 def admin_update_user_attributes(data, param_mapping=None):
@@ -102,7 +126,7 @@ def admin_update_user_attributes(data, param_mapping=None):
     except Exception as ex:
         raise ValueError(BAD_DATA_EXCEPTION)
 
-    return actions.admin_update_user_attributes(username, user_attributes)
+    return identity.admin_update_user_attributes(username, user_attributes)
 
 
 def admin_disable_user(data, param_mapping=None):
@@ -111,7 +135,7 @@ def admin_disable_user(data, param_mapping=None):
     except Exception as ex:
         raise ValueError(BAD_DATA_EXCEPTION)
 
-    return actions.admin_disable_user(username)
+    return identity.admin_disable_user(username)
 
 
 def admin_delete_user(data, param_mapping=None):
@@ -120,7 +144,7 @@ def admin_delete_user(data, param_mapping=None):
     except Exception as ex:
         raise ValueError(BAD_DATA_EXCEPTION)
 
-    return actions.admin_delete_user(username)
+    return identity.admin_delete_user(username)
 
 
 def admin_create_user(data, param_mapping=None):
@@ -135,7 +159,7 @@ def admin_create_user(data, param_mapping=None):
     except Exception as ex:
         raise ValueError(BAD_DATA_EXCEPTION)
 
-    return actions.admin_create_user(username, user_attributes, temporary_password)
+    return identity.admin_create_user(username, user_attributes, temporary_password)
 
 
 def parse_parameter(data, param_mapping, param=None):

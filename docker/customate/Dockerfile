@@ -34,7 +34,7 @@ COPY docker/customate/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 #COPY docker/frontend_api/setup_cython.py /usr/local/lib/python3.6/site-packages/setup_cython.py
 RUN mkdir -p /service/www/customate
 COPY ./customate /service/www/customate
-COPY ./customate/requirements.txt /serivce/www/customate/requirements.txt
+COPY ./customate/requirements.txt /service/www/customate/requirements.txt
 WORKDIR /service/www/customate
 RUN pip install --upgrade pip
 RUN pip install -r /service/www/customate/requirements.txt

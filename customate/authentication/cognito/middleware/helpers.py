@@ -20,9 +20,12 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def validate_token(access_token, refresh_token=None):
+def validate_token(access_token, id_token, refresh_token=None):
+
     try:
         header, payload = decode_token(access_token)
+        id_header, id_payload = decode_token(id_token)
+        logger.error(f'id_payload {id_payload}')
     except Exception as ex:
         # Invalid token or token we can't decode for whatever reason
         raise Exception("Invalid token")
@@ -30,8 +33,8 @@ def validate_token(access_token, refresh_token=None):
     public_keys = utils.get_public_keys()
 
     [matching_key] = [key for key in public_keys['keys'] if key['kid'] == header['kid']]
-
-    if matching_key is None:
+    [id_matching_key] = [key for key in public_keys['keys'] if key['kid'] == id_header['kid']]
+    if matching_key is None or id_matching_key is None:
         raise Exception("Invalid token public key")
     else:
         # Verify signature using the public key for this pool, as defined the the AWS documentation
@@ -47,12 +50,13 @@ def validate_token(access_token, refresh_token=None):
         raise Exception("Invalid token audience")
 
     # Verify that the issuer matches the URL for the Cognito user pool, as defined by the AWS documentation
-    if payload['iss'] != "https://cognito-idp." + constants.POOL_ID.split("_", 1)[0] + ".amazonaws.com/" \
+    if payload['iss'] != id_payload['iss'] or id_payload['iss'] != "https://cognito-idp." + constants.POOL_ID.split("_", 1)[0] + ".amazonaws.com/" \
             + constants.POOL_ID:
         raise Exception("Invalid token issuer")
 
     # Verify that the token is either not expired, or if expired, that we have a refresh token to refresh it
-    if payload['exp'] <= datetime.datetime.timestamp(datetime.datetime.utcnow()):
+    if payload['exp'] <= datetime.datetime.timestamp(datetime.datetime.utcnow()) or \
+            id_payload['exp'] <= datetime.datetime.timestamp(datetime.datetime.utcnow()):
 
         if not refresh_token:
             # The current access token is expired and no refresh token was provided, authentication fails
@@ -70,13 +74,16 @@ def validate_token(access_token, refresh_token=None):
                 #
                 # TODO: DON'T return refresh token here, for methods that require a refresh token we should implement
                 # them somewhere else, or differently
-                return result['AuthenticationResult']['AccessToken'], refresh_token
+                data = result['AuthenticationResult']
+                logger.error(f"tokens {data['AccessToken']}, {data['IdToken']}, {refresh_token}")
+                return data['AccessToken'], data['IdToken'], refresh_token
             else:
                 # Something went wrong with the authentication
                 raise Exception("An error occurred while attempting to refresh the access token")
     else:
         # The token validated successfully, we don't need to do anything else here
-        return None, None
+        logger.error(f"tokens None, None, None")
+        return None, None, None
 
 
 def decode_token(access_token):
@@ -90,20 +97,20 @@ def decode_token(access_token):
     return header, payload
 
 
-def process_request(request):
+def process_request(request, propogate_error=False):
     try:
         # logger.error('process_request helpels')
         # logger.error(f'meta {request.META}')
         access_token = request.META.get('HTTP_ACCESSTOKEN')
         refresh_token = request.META.get('HTTP_REFRESHTOKEN')
         id_token = request.META.get('HTTP_IDTOKEN')
-        # logger.error(f'access_token: {access_token} refresh_token: {refresh_token}')
+        logger.error(f'access_token: {access_token} refresh_token: {refresh_token}  id_token: {id_token}')
         if not access_token or not refresh_token or not id_token:
             # Need to have this to authenticate, error out
             raise Exception("No valid tokens were found in the request")
         else:
             # logger.error('start validation')
-            new_access_token, new_refresh_token = validate_token(access_token, refresh_token)
+            new_access_token, new_id_token, new_refresh_token = validate_token(access_token, id_token, refresh_token)
 
             # logger.error(f'new_access_token: {new_access_token} new_refresh_token: {new_refresh_token}')
             header, payload = decode_token(access_token)
@@ -114,6 +121,9 @@ def process_request(request):
                 user = get_user_model().objects.get(username=id_payload['email'])
             except Exception as ex:
                 logger.error(f'process_request {ex} {payload["username"]}')
+                if propogate_error:
+                    raise ex
+
                 if settings.AUTO_CREATE_USER:
                     aws_user = actions.admin_get_user(payload['username'])
 
@@ -126,10 +136,12 @@ def process_request(request):
 
                     user.save()
                 else:
-                    return AnonymousUser, None, None
+                    return AnonymousUser, None, None, None
 
-        return user, new_access_token, new_refresh_token
+        return user, new_access_token, new_id_token, new_refresh_token
 
     except Exception as ex:
         logger.error(f'process_request Exception: {ex}')
-        return AnonymousUser(), None, None
+        if propogate_error:
+            raise ex
+        return AnonymousUser(), None, None, None

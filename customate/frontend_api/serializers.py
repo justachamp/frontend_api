@@ -5,13 +5,14 @@ from rest_framework_json_api.relations import ResourceRelatedField
 
 from core.models import User
 from frontend_api.models import Address
-
+import logging
+logger = logging.getLogger(__name__)
 # from rest_framework import serializers
 # from frontend_api.models import Snippet, LANGUAGE_CHOICES, STYLE_CHOICES
 
 
 
-# erializers.HyperlinkedModelSerializer
+
 # Polymorphic
 class UserSerializer(serializers.HyperlinkedModelSerializer):
     # snippets = serializers.PrimaryKeyRelatedField(many=True, queryset=Snippet.objects.all())
@@ -26,8 +27,21 @@ class UserSerializer(serializers.HyperlinkedModelSerializer):
         related_link_view_name='user-related',
         related_link_url_kwarg='pk',
         self_link_view_name='user-relationships',
+        required=False
 
     )
+
+    # def update(self, validated_data, test):
+    #     logger.error(f'validated_data {validated_data} {test}')
+
+    # def create(self, validated_data):
+    #     logger.error(f'validated_data {validated_data}')
+
+        # tracks_data = validated_data.pop('tracks')
+        # album = Album.objects.create(**validated_data)
+        # for track_data in tracks_data:
+        #     Track.objects.create(album=album, **track_data)
+        # return album
 
 
 
@@ -47,7 +61,7 @@ class UserSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class AddressSerializer(serializers.ModelSerializer):
-    user = serializers.ReadOnlyField(source='user.username')
+    user = serializers.ReadOnlyField(source='user.id')
 
     class Meta:
         model = Address

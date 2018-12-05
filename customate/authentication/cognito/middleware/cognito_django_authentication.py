@@ -20,7 +20,7 @@ class AwsDjangoAuthentication:
         # TODO: Remove this hackiness. Should only return a user from this method as Django seems to only expect a user
         # and not a tuple with a token
         if username is None:
-            user, _, _ = m_helpers.process_request(request)
+            user, _, _, _ = m_helpers.process_request(request)
 
             return user
         else:
