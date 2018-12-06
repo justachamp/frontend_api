@@ -1,5 +1,6 @@
 from rest_framework_json_api import serializers, exceptions
 from rest_framework.fields import Field, DictField, ListField
+from rest_framework import status as status_codes
 from authentication.cognito.models import Identity, Verification
 from django.contrib.auth import get_user_model
 from authentication.cognito.core import helpers
@@ -47,7 +48,27 @@ class CognitoAuthAttributeVerifySerializer(serializers.Serializer):
         try:
             data = helpers.verify_attribute(validated_data)
             status = data.get('ResponseMetadata').get('HTTPStatusCode')
-            return
+            return status_codes.HTTP_204_NO_CONTENT if status == status_codes.HTTP_200_OK else status
+        except Exception as ex:
+            logger.error(f'general {ex}')
+            raise Unauthorized(ex)
+
+
+class CognitoAuthForgotPasswordSerializer(serializers.Serializer):
+    resource_name = 'identities'
+    username = serializers.EmailField(required=True, write_only=True)
+    attribute_name = serializers.ChoiceField(required=False, read_only=True, choices=('email', 'phone_number'))
+    destination = serializers.CharField(max_length=50, required=False, read_only=True)
+
+    @staticmethod
+    def forgot_password(validated_data):
+        try:
+            data = helpers.forgot_password(validated_data).get('CodeDeliveryDetails')
+            attributes = {
+                'destination': data.get('Destination'),
+                'attribute_name': data.get('AttributeName')
+            }
+            return Verification(**attributes)
         except Exception as ex:
             logger.error(f'general {ex}')
             raise Unauthorized(ex)
@@ -56,21 +77,14 @@ class CognitoAuthAttributeVerifySerializer(serializers.Serializer):
 class CognitoAuthPasswordRestoreSerializer(serializers.Serializer):
     resource_name = 'identities'
     username = serializers.EmailField(required=True, write_only=True)
-    code = serializers.CharField(max_length=50, required=True, write_only=True)
-    new_password = serializers.CharField(max_length=50, required=False, write_only=True)
-
-    @staticmethod
-    def forgot_password(validated_data):
-        try:
-            return helpers.forgot_password(validated_data)
-        except Exception as ex:
-            logger.error(f'general {ex}')
-            raise Unauthorized(ex)
+    code = serializers.CharField(max_length=50, required=False, write_only=True)
+    password = serializers.CharField(min_length=6, max_length=50, required=False, write_only=True)
 
     @staticmethod
     def confirm_forgot_password(validated_data):
         try:
-            return helpers.confirm_forgot_password(validated_data)
+            status = helpers.confirm_forgot_password(validated_data)
+            return status_codes.HTTP_204_NO_CONTENT if status == status_codes.HTTP_200_OK else status
         except Exception as ex:
             logger.error(f'general {ex}')
             raise Unauthorized(ex)

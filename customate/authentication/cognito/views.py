@@ -4,8 +4,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from authentication.cognito.core import helpers
 from authentication.cognito.serializers import CognitoAuthSerializer, CogrnitoAuthRetreiveSerializer, \
-    CogrnitoSignOutSerializer, CognitoAuthPasswordRestoreSerializer, CognitoAuthVerificationSerializer, \
-    CognitoAuthAttributeVerifySerializer
+    CogrnitoSignOutSerializer, CognitoAuthForgotPasswordSerializer, CognitoAuthPasswordRestoreSerializer,\
+    CognitoAuthVerificationSerializer, CognitoAuthAttributeVerifySerializer
 
 from authentication.cognito.core.base import CognitoException, CognitoUser
 from rest_framework_json_api.views import viewsets
@@ -84,19 +84,16 @@ class AuthView(viewsets.ViewSet):
 
     @action(methods=['POST'], detail=False, name='Forgot password')
     def forgot_password(self, request):
-        # data = json.loads(request.body.decode('utf-8'))
-        serializer = CognitoAuthPasswordRestoreSerializer(data=request.data)
+        serializer = CognitoAuthForgotPasswordSerializer(data=request.data)
         if serializer.is_valid(True):
             entity = serializer.forgot_password(serializer.validated_data)
-            return response.Response(CognitoAuthPasswordRestoreSerializer(instance=entity).data)
+            return response.Response(CognitoAuthForgotPasswordSerializer(instance=entity).data)
 
     @action(methods=['POST'], detail=False, name='Confirm forgot password')
     def confirm_forgot_password(self, request):
-        # data = json.loads(request.body.decode('utf-8'))
         serializer = CognitoAuthPasswordRestoreSerializer(data=request.data)
         if serializer.is_valid(True):
-            entity = serializer.confirm_forgot_password(serializer.validated_data)
-            return response.Response(CognitoAuthPasswordRestoreSerializer(instance=entity).data)
+            return response.Response(status=serializer.confirm_forgot_password(serializer.validated_data))
 
 
 # @csrf_exempt

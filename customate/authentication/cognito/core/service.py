@@ -221,13 +221,13 @@ class Identity:
         except constants.AWS_EXCEPTIONS as ex:
             raise CognitoException.create_from_exception(ex)
 
-    def confirm_forgot_password(self, username, code, new_password):
+    def confirm_forgot_password(self, username, code, password):
         secret_hash = utils.get_cognito_secret_hash(username)
 
         params = {
             'ClientId': constants.CLIENT_ID,
             'Username': username,
-            'Password': new_password,
+            'Password': password,
             'ConfirmationCode': code
         }
 
