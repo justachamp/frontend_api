@@ -93,12 +93,13 @@ def sign_up(data, param_mapping=None):
     try:
         username = parse_parameter(data, param_mapping, 'username')
         password = parse_parameter(data, param_mapping, 'password')
+        account_type = parse_parameter(data, param_mapping, 'account_type')
         user_attributes = parse_parameter(data, param_mapping, 'user_attributes')
 
     except Exception as ex:
         raise ValueError(BAD_DATA_EXCEPTION)
 
-    return identity.sign_up(username, password, user_attributes)
+    return identity.sign_up(username, password, account_type, user_attributes)
 
 
 # def confirm_sign_up(data, param_mapping=None):

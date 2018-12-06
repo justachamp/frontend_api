@@ -63,7 +63,6 @@ class AuthView(viewsets.ViewSet):
 
     @action(methods=['POST'], detail=False, name='Sign up', resource_name='identity')
     def sign_up(self, request):
-        # data = json.loads(request.body.decode('utf-8'))
         serializer = CognitoAuthSerializer(data=request.data)
         if serializer.is_valid(True):
             entity = serializer.create(serializer.validated_data)

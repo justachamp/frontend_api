@@ -107,7 +107,7 @@ class CogrnitoSignOutSerializer(serializers.Serializer):
 class CogrnitoAuthRetreiveSerializer(serializers.Serializer):
     resource_name = 'identities'
     id = serializers.UUIDField(read_only=True)
-    username = serializers.EmailField(required=True,  source='preferred_username', write_only=True)
+    username = serializers.EmailField(required=True, source='preferred_username', write_only=True)
     password = serializers.CharField(max_length=50, required=False, write_only=True)
     id_token = serializers.CharField(read_only=True)
     access_token = serializers.CharField(read_only=True)
@@ -147,7 +147,9 @@ class CogrnitoAuthRetreiveSerializer(serializers.Serializer):
 class CognitoAuthSerializer(CogrnitoAuthRetreiveSerializer):
 
     user_attributes = ListField(child=CognitoAttributeFiled(required=True), required=True)
-
+    username = serializers.EmailField(required=True, source='preferred_username', write_only=True)
+    password = serializers.CharField(max_length=50, required=False, write_only=True)
+    account_type = serializers.ChoiceField(choices=('business', 'personal'))
     id_token = serializers.CharField(max_length=256, write_only=True, required=False)
     access_token = serializers.CharField(max_length=256, write_only=True, required=False)
     refresh_token = serializers.CharField(max_length=256, write_only=True, required=False)

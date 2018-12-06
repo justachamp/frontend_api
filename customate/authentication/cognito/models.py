@@ -14,7 +14,8 @@ class Entity(object):
 
 class Identity(object):
     def __init__(self, **kwargs):
-        for field in ('id', 'preferred_username', 'user_attributes', 'id_token', 'access_token', 'refresh_token'):
+        for field in ('id', 'preferred_username', 'user_attributes', 'id_token', 'access_token', 'refresh_token',
+                      'account_type'):
             setattr(self, field, kwargs.get(field, None))
 
         self.pk = getattr(self, 'id')
