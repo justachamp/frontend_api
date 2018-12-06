@@ -71,7 +71,7 @@ class AddressSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Address
-        fields = ('address', 'country', 'address_line_1', 'address_line_2', 'city', 'locality', 'postcode', 'user')
+        fields = ('address', 'account', 'country', 'address_line_1', 'address_line_2', 'city', 'locality', 'postcode', 'user')
 
 
 class AccountSerializer(serializers.ModelSerializer):
