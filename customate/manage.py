@@ -2,9 +2,9 @@
 import os
 import sys
 
-sys.path.append('pycharm-debug-py3k.egg')
-import pydevd
-pydevd.settrace('docker.for.mac.localhost', port=1234,  suspend=True, stdoutToServer=True, stderrToServer=True)
+# sys.path.append('pycharm-debug-py3k.egg')
+# import pydevd
+# pydevd.settrace('docker.for.mac.localhost', port=1234,  suspend=True, stdoutToServer=True, stderrToServer=True)
 
 if __name__ == '__main__':
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'customate.settings')
