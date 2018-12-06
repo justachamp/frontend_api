@@ -1,6 +1,6 @@
 from rest_framework_json_api import serializers, exceptions
 from rest_framework.fields import Field, DictField, ListField
-from authentication.cognito.models import Identity
+from authentication.cognito.models import Identity, Verification
 from django.contrib.auth import get_user_model
 from authentication.cognito.core import helpers
 from authentication.cognito.exceptions import Unauthorized
@@ -21,8 +21,7 @@ class CognitoAttributeFiled(Field):
 class CognitoAuthVerificationSerializer(serializers.Serializer):
     resource_name = 'identities'
     attribute_name = serializers.ChoiceField(required=True, allow_blank=False, choices=('email', 'phone_number'))
-    destination = serializers.CharField(max_length=50, required=False, read_only=True, source='Destination')
-    code = serializers.CharField(max_length=50, required=False, write_only=True)
+    destination = serializers.CharField(max_length=50, required=False, read_only=True)
     access_token = serializers.CharField(write_only=True, required=True)
 
     @staticmethod
@@ -31,15 +30,24 @@ class CognitoAuthVerificationSerializer(serializers.Serializer):
             data = helpers.verification_code(validated_data)
             response = data.get('CodeDeliveryDetails')
             validated_data['destination'] = response.get('Destination')
-            return validated_data
+            return Verification(**validated_data)
         except Exception as ex:
             logger.error(f'general {ex}')
             raise Unauthorized(ex)
 
+
+class CognitoAuthAttributeVerifySerializer(serializers.Serializer):
+    resource_name = 'identities'
+    attribute_name = serializers.ChoiceField(required=True, allow_blank=False, choices=('email', 'phone_number'))
+    access_token = serializers.CharField(write_only=True, required=True)
+    code = serializers.CharField(max_length=50, required=False, write_only=True)
+
     @staticmethod
-    def confirm_forgot_password(validated_data):
+    def verify_attribute(validated_data):
         try:
-            return helpers.confirm_forgot_password(validated_data)
+            data = helpers.verify_attribute(validated_data)
+            status = data.get('ResponseMetadata').get('HTTPStatusCode')
+            return
         except Exception as ex:
             logger.error(f'general {ex}')
             raise Unauthorized(ex)
@@ -48,7 +56,7 @@ class CognitoAuthVerificationSerializer(serializers.Serializer):
 class CognitoAuthPasswordRestoreSerializer(serializers.Serializer):
     resource_name = 'identities'
     username = serializers.EmailField(required=True, write_only=True)
-    code = serializers.CharField(max_length=50, required=False, write_only=True)
+    code = serializers.CharField(max_length=50, required=True, write_only=True)
     new_password = serializers.CharField(max_length=50, required=False, write_only=True)
 
     @staticmethod
@@ -167,6 +175,7 @@ class CognitoAuthSerializer(CogrnitoAuthRetreiveSerializer):
             return Identity(id=result.get('UserSub'), **validated_data)
         except Exception as ex:
             logger.error(f'general {ex}')
+            # raise exceptions.exceptions.ValidationError(detail=ex.args[0])
             raise Unauthorized(ex)
 
     @staticmethod

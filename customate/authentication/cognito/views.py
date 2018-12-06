@@ -4,7 +4,9 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from authentication.cognito.core import helpers
 from authentication.cognito.serializers import CognitoAuthSerializer, CogrnitoAuthRetreiveSerializer, \
-    CogrnitoSignOutSerializer, CognitoAuthPasswordRestoreSerializer, CognitoAuthVerificationSerializer
+    CogrnitoSignOutSerializer, CognitoAuthPasswordRestoreSerializer, CognitoAuthVerificationSerializer, \
+    CognitoAuthAttributeVerifySerializer
+
 from authentication.cognito.core.base import CognitoException, CognitoUser
 from rest_framework_json_api.views import viewsets
 from rest_framework.views import APIView
@@ -69,11 +71,16 @@ class AuthView(viewsets.ViewSet):
 
     @action(methods=['POST'], detail=False, name='Forgot password')
     def verification_code(self, request):
-        # data = json.loads(request.body.decode('utf-8'))
         serializer = CognitoAuthVerificationSerializer(data=request.data)
         if serializer.is_valid(True):
             entity = serializer.verification_code(serializer.validated_data)
-            return response.Response(entity)
+            return response.Response(CognitoAuthVerificationSerializer(instance=entity).data)
+
+    @action(methods=['POST'], detail=False, name='Forgot password')
+    def verify(self, request):
+        serializer = CognitoAuthAttributeVerifySerializer(data=request.data)
+        if serializer.is_valid(True):
+            return response.Response(status=serializer.verify_attribute(serializer.validated_data))
 
     @action(methods=['POST'], detail=False, name='Forgot password')
     def forgot_password(self, request):
@@ -92,18 +99,18 @@ class AuthView(viewsets.ViewSet):
             return response.Response(CognitoAuthPasswordRestoreSerializer(instance=entity).data)
 
 
-@csrf_exempt
-@require_http_methods(['POST'])
-def initiate_auth(request):
-    try:
-        data = json.loads(request.body.decode('utf-8'))
-        result = helpers.initiate_auth(data)
-
-        return JsonResponse(result)
-    except CognitoException as ex:
-        return JsonResponse(ex.args[0], status=ex.status)
-    except ValueError as ex:
-        return JsonResponse({"error": ex.args[0]}, status=400)
+# @csrf_exempt
+# @require_http_methods(['POST'])
+# def initiate_auth(request):
+#     try:
+#         data = json.loads(request.body.decode('utf-8'))
+#         result = helpers.initiate_auth(data)
+#
+#         return JsonResponse(result)
+#     except CognitoException as ex:
+#         return JsonResponse(ex.args[0], status=ex.status)
+#     except ValueError as ex:
+#         return JsonResponse({"error": ex.args[0]}, status=400)
 
 
 # @csrf_exempt

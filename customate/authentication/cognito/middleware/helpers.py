@@ -20,6 +20,7 @@ import logging
 logger = logging.getLogger(__name__)
 identity = service.Identity()
 
+
 def validate_token(access_token, id_token, refresh_token=None):
 
     try:

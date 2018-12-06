@@ -61,6 +61,20 @@ def verification_code(data, param_mapping=None):
         raise ValueError("Unsupported auth flow")
 
 
+def verify_attribute(data, param_mapping=None):
+    if ("attribute_name" in data and "access_token" in data and "code" in data) \
+            or ("attribute_name" in param_mapping and "access_token" in param_mapping and "code" in param_mapping):
+
+        attribute_name = parse_parameter(data, param_mapping, "attribute_name")
+        access_token = parse_parameter(data, param_mapping, "access_token")
+        code = parse_parameter(data, param_mapping, "code")
+
+        return identity.verify_attribute(attribute_name=attribute_name, access_token=access_token, code=code)
+
+    else:
+        raise ValueError("Unsupported auth flow")
+
+
 def respond_to_auth_challenge(data, param_mapping=None):
     try:
         username = parse_parameter(data, param_mapping, 'username')

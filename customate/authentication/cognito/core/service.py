@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from authentication.cognito.core import constants
 from authentication.cognito import utils
 
-# from botocore.exceptions import ParamValidationError
+from botocore.exceptions import ParamValidationError
 # import the logging library
 import logging
 # Get an instance of a logger
@@ -23,10 +23,22 @@ class CognitoException(Exception):
     def create_from_exception(ex):
         return CognitoException(ex.response['Error']['Message'], ex.response['ResponseMetadata']['HTTPStatusCode'])
 
-    # @staticmethod
-    # def create_from_boto_exception(ex):
-    #
-    #     return exceptions.APIException(ex)
+    @staticmethod
+    def create_from_boto_exception(ex):
+
+        # for message in response.data:
+        #     errors.append({
+        #         'detail': message,
+        #         'source': {
+        #             'pointer': '/data',
+        #         },
+        #         'status': encoding.force_text(response.status_code),
+        #     })
+
+
+        return Exception({'password': 'test', 'username': 'some'})
+
+        # return exceptions.APIException(ex)
 
 
 class Identity:
@@ -63,10 +75,9 @@ class Identity:
             user.save()
             return cognito_user
 
-        # except ParamValidationError as ex:
-        #     raise Exception(ex)
-            # logger.error(f'BOTOCORE_EXCEPTIONS {ex}')
-            # raise CognitoException.create_from_exception(ex)
+        except ParamValidationError as ex:
+            logger.error(f'BOTOCORE_EXCEPTIONS {ex}')
+            raise CognitoException.create_from_boto_exception(ex)
 
         except constants.AWS_EXCEPTIONS as ex:
             logger.error(f'AWS_EXCEPTIONS {ex}')
@@ -172,6 +183,17 @@ class Identity:
     def verification_code(self, attribute_name, access_token):
         try:
             return self.client.get_user_attribute_verification_code(AttributeName=attribute_name, AccessToken=access_token)
+        except constants.AWS_EXCEPTIONS as ex:
+            logger.error(f'AWS_EXCEPTIONS {ex}')
+            raise CognitoException.create_from_exception(ex)
+
+        except Exception as ex:
+            logger.error(f'general {ex}')
+            raise Exception(ex)
+
+    def verify_attribute(self, attribute_name, access_token, code):
+        try:
+            return self.client.verify_user_attribute(AttributeName=attribute_name, AccessToken=access_token, Code=code)
         except constants.AWS_EXCEPTIONS as ex:
             logger.error(f'AWS_EXCEPTIONS {ex}')
             raise CognitoException.create_from_exception(ex)
