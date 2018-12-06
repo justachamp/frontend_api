@@ -4,26 +4,32 @@ from rest_framework.serializers import HyperlinkedIdentityField
 from rest_framework_json_api.relations import ResourceRelatedField
 
 from core.models import User
-from frontend_api.models import Address
+from frontend_api.models import Address, Account
 import logging
 logger = logging.getLogger(__name__)
-# from rest_framework import serializers
-# from frontend_api.models import Snippet, LANGUAGE_CHOICES, STYLE_CHOICES
 
 
-
-
-# Polymorphic
 class UserSerializer(serializers.HyperlinkedModelSerializer):
     # snippets = serializers.PrimaryKeyRelatedField(many=True, queryset=Snippet.objects.all())
 
     related_serializers = {
-        'address': 'frontend_api.serializers.AddressSerializer'
+        'address': 'frontend_api.serializers.AddressSerializer',
+        'account': 'frontend_api.serializers.AccountSerializer'
     }
 
     address = ResourceRelatedField(
         many=True,
         queryset=Address.objects,
+        related_link_view_name='user-related',
+        related_link_url_kwarg='pk',
+        self_link_view_name='user-relationships',
+        required=False
+
+    )
+
+    account = ResourceRelatedField(
+        many=True,
+        queryset=Account.objects,
         related_link_view_name='user-related',
         related_link_url_kwarg='pk',
         self_link_view_name='user-relationships',
@@ -65,7 +71,15 @@ class AddressSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Address
-        fields = ('address', 'country', 'adress_line_1', 'adress_line_2', 'city', 'locality', 'postcode', 'user')
+        fields = ('address', 'country', 'address_line_1', 'address_line_2', 'city', 'locality', 'postcode', 'user')
+
+
+class AccountSerializer(serializers.ModelSerializer):
+    user = serializers.ReadOnlyField(source='user.id')
+
+    class Meta:
+        model = Account
+        fields = ('account_type', 'user')
 
 
 class GroupSerializer(serializers.ModelSerializer):

@@ -81,9 +81,10 @@ class CognitoAuthPasswordRestoreSerializer(serializers.Serializer):
     password = serializers.CharField(min_length=6, max_length=50, required=False, write_only=True)
 
     @staticmethod
-    def confirm_forgot_password(validated_data):
+    def restore_password(validated_data):
         try:
-            status = helpers.confirm_forgot_password(validated_data)
+            data = helpers.restore_password(validated_data)
+            status = data.get('ResponseMetadata').get('HTTPStatusCode')
             return status_codes.HTTP_204_NO_CONTENT if status == status_codes.HTTP_200_OK else status
         except Exception as ex:
             logger.error(f'general {ex}')

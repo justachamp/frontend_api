@@ -123,16 +123,16 @@ def forgot_password(data, param_mapping=None):
     return identity.forgot_password(username)
 
 
-def confirm_forgot_password(data, param_mapping=None):
+def restore_password(data, param_mapping=None):
     try:
         username = parse_parameter(data, param_mapping, 'username')
-        password = parse_parameter(data, param_mapping, 'passworkd')
+        password = parse_parameter(data, param_mapping, 'password')
         code = parse_parameter(data, param_mapping, 'code')
 
     except Exception as ex:
         raise ValueError(BAD_DATA_EXCEPTION)
 
-    return identity.confirm_forgot_password(username, code, password)
+    return identity.restore_password(username, code, password)
 
 
 def admin_get_user(data, param_mapping=None):

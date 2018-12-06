@@ -11,8 +11,8 @@ from rest_framework.response import Response
 from rest_framework.reverse import reverse
 # from django.http import Http404
 
-from frontend_api.models import Address
-from frontend_api.serializers import AddressSerializer
+from frontend_api.models import Address, Account
+from frontend_api.serializers import AddressSerializer, AccountSerializer
 
 from django.contrib.auth.models import Group
 from core.models import User
@@ -55,6 +55,7 @@ class UserViewSet(views.ModelViewSet):
 class UserRelationshipView(RelationshipView):
     queryset = User.objects
 
+
 class GroupViewSet(views.ModelViewSet):
     """
     API endpoint that allows groups to be viewed or edited.
@@ -75,6 +76,30 @@ class AddressViewSet(views.ModelViewSet):
 
     def get_queryset(self):
         queryset = super(AddressViewSet, self).get_queryset()
+
+        # if this viewset is accessed via the 'order-lineitems-list' route,
+        # it wll have been passed the `order_pk` kwarg and the queryset
+        # needs to be filtered accordingly; if it was accessed via the
+        # unnested '/lineitems' route, the queryset should include all LineItems
+        if 'user_pk' in self.kwargs:
+            user_pk = self.kwargs['user_pk']
+            queryset.filter(user__pk=user_pk)
+
+        return queryset
+
+
+class AccountViewSet(views.ModelViewSet):
+
+    queryset = Account.objects.all()
+    serializer_class = AccountSerializer
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def perform_create(self, serializer):
+        logger.error('perform create')
+        serializer.save(user=self.request.user)
+
+    def get_queryset(self):
+        queryset = super(AccountViewSet, self).get_queryset()
 
         # if this viewset is accessed via the 'order-lineitems-list' route,
         # it wll have been passed the `order_pk` kwarg and the queryset

@@ -90,10 +90,10 @@ class AuthView(viewsets.ViewSet):
             return response.Response(CognitoAuthForgotPasswordSerializer(instance=entity).data)
 
     @action(methods=['POST'], detail=False, name='Confirm forgot password')
-    def confirm_forgot_password(self, request):
+    def restore_password(self, request):
         serializer = CognitoAuthPasswordRestoreSerializer(data=request.data)
         if serializer.is_valid(True):
-            return response.Response(status=serializer.confirm_forgot_password(serializer.validated_data))
+            return response.Response(status=serializer.restore_password(serializer.validated_data))
 
 
 # @csrf_exempt

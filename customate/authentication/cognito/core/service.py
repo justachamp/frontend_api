@@ -3,6 +3,7 @@ import boto3
 from django.contrib.auth import get_user_model
 from authentication.cognito.core import constants
 from authentication.cognito import utils
+from frontend_api.models import Account
 
 from botocore.exceptions import ParamValidationError
 # import the logging library
@@ -12,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 from rest_framework import exceptions, status
 from rest_framework_json_api import exceptions
-
+from django.db import transaction
 class CognitoException(Exception):
     def __init__(self, message, status):
         super(CognitoException, self).__init__(message)
@@ -47,7 +48,8 @@ class Identity:
 
     user_class = get_user_model()
 
-    def sign_up(self, username, password, user_attributes, validation_data=None):
+    @transaction.atomic()
+    def sign_up(self, username, password, account_type, user_attributes, validation_data=None):
         try:
             logger.error(username)
             logger.error(password)
@@ -67,12 +69,16 @@ class Identity:
             cognito_user = self.client.sign_up(**params)
             logger.error(f'cognito user {cognito_user}')
             logger.error(f'user_params {user_params}')
-            user = self.user_class.objects.create(
-                username=username, email=username, cognito_id=cognito_user['UserSub']
-                # first_name=user_params.get('given_name'), last_name=user_params.get('family_name')
-            )
-
-            user.save()
+            # user = TenantUser.objects.create_user(email="user@evilcorp.com", password='password', is_active=True)
+            with transaction.atomic():
+                user = self.user_class.objects.create(
+                    username=username,
+                    email=username,
+                    cognito_id=cognito_user['UserSub']
+                    # first_name=user_params.get('given_name'), last_name=user_params.get('family_name')
+                )
+                user.account.create(account_type=account_type)
+                user.save()
             return cognito_user
 
         except ParamValidationError as ex:
@@ -86,7 +92,6 @@ class Identity:
         except Exception as ex:
             logger.error(f'general {ex}')
             raise Exception(ex)
-
 
     def confirm_sign_up(self, username, confirmation_code, force_alias_creation):
         try:
@@ -221,7 +226,7 @@ class Identity:
         except constants.AWS_EXCEPTIONS as ex:
             raise CognitoException.create_from_exception(ex)
 
-    def confirm_forgot_password(self, username, code, password):
+    def restore_password(self, username, code, password):
         secret_hash = utils.get_cognito_secret_hash(username)
 
         params = {
@@ -235,7 +240,8 @@ class Identity:
             params['SecretHash'] = secret_hash
 
         try:
-            return self.client.confirm_forgot_password(**params)
+            data = self.client.confirm_forgot_password(**params)
+            return data
         except constants.AWS_EXCEPTIONS as ex:
             raise CognitoException.create_from_exception(ex)
 
