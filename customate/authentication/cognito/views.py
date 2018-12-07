@@ -36,14 +36,14 @@ class AuthView(viewsets.ViewSet):
         serializer = CogrnitoAuthRetreiveSerializer(data=request.data)
         if serializer.is_valid(True):
             entity = serializer.retreive(serializer.validated_data)
-            return response.Response(CogrnitoAuthRetreiveSerializer(instance=entity).data)
+            return response.Response(CogrnitoAuthRetreiveSerializer(instance=entity, context={'request': request}).data)
         # result = helpers.initiate_auth(request.data)
         # return response.Response(result)
 
     @action(methods=['POST'], detail=False, name='Logout')
     def sign_out(self, request):
 
-        serializer = CogrnitoSignOutSerializer(data=request.data)
+        serializer = CogrnitoSignOutSerializer(data=request.data, )
         if serializer.is_valid(True):
             serializer.sign_out(serializer.validated_data)
             return response.Response(serializer.data)
@@ -65,8 +65,9 @@ class AuthView(viewsets.ViewSet):
     def sign_up(self, request):
         serializer = CognitoAuthSerializer(data=request.data)
         if serializer.is_valid(True):
-            entity = serializer.create(serializer.validated_data)
-            return response.Response(CognitoAuthSerializer(instance=entity).data)
+            serializer.create(serializer.validated_data)
+            return self.sign_in(request)
+            # return response.Response(CognitoAuthSerializer(instance=entity).data)
 
     @action(methods=['POST'], detail=False, name='Forgot password')
     def verification_code(self, request):

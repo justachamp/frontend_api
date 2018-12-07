@@ -43,7 +43,7 @@ services:
             - db
 #            - nginx
 
-#        command: "gunicorn -c gunicorn.py customate.wsgi"
+#        command: "gunicorn -c gunicorn_app.py customate.wsgi"
     db:
         image: postgres:10
         ports:

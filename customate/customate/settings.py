@@ -315,6 +315,8 @@ CORS_ORIGIN_ALLOW_ALL = True
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, "static")
 AUTH_USER_MODEL = 'core.User'
+ALLOWED_HOSTS = ['*']
+
 
 
 

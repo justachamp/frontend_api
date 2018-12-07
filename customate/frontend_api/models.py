@@ -8,7 +8,7 @@ from rest_framework.utils import formatting
 from pygments.lexers import get_lexer_by_name
 from pygments.formatters.html import HtmlFormatter
 from pygments import highlight
-from core.models import Model, User
+from core.models import Model
 
 # LEXERS = [item for item in get_all_lexers() if item[1]]
 # LANGUAGE_CHOICES = sorted([(item[1][0], item[0]) for item in LEXERS])
@@ -18,7 +18,7 @@ from core.models import Model, User
 
 
 class Address(Model):
-    user = models.ForeignKey(User, related_name='address', on_delete=models.CASCADE)
+    # user = models.ForeignKey(User, related_name='address', on_delete=models.CASCADE)
     address = models.CharField(max_length=250)
     country = models.CharField(max_length=50)
     address_line_1 = models.CharField(max_length=100)
@@ -32,7 +32,7 @@ class Address(Model):
 
 
 class Account(Model):
-    user = models.ForeignKey(User, related_name='account', on_delete=models.CASCADE)
+    # user = models.ForeignKey(User, related_name='account', on_delete=models.CASCADE)
     COLOR_CHOICES = (
         ('Personal', 'personal'),
         ('Business', 'business')
@@ -42,6 +42,23 @@ class Account(Model):
 
     def __str__(self):
         return "%s the account" % self.type
+
+# class CustomateUser(User):
+#     address = models.OneToOneField(
+#         Address,
+#         on_delete=models.CASCADE,
+#         unique=True,
+#         blank=True,
+#         null=True
+#     )
+#     account = models.OneToOneField(
+#         Account,
+#         on_delete=models.CASCADE,
+#         unique=True,
+#         blank=True,
+#         null=True
+#     )
+
 
 # class Snippet(Model):
 #     created = models.DateTimeField(auto_now_add=True)

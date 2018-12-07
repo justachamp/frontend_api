@@ -106,7 +106,7 @@ def process_request(request, propogate_error=False):
         refresh_token = request.META.get('HTTP_REFRESHTOKEN')
         id_token = request.META.get('HTTP_IDTOKEN')
         logger.error(f'access_token: {access_token} refresh_token: {refresh_token}  id_token: {id_token}')
-        if not access_token or not refresh_token or not id_token:
+        if not access_token  or not id_token:
             # Need to have this to authenticate, error out
             raise Exception("No valid tokens were found in the request")
         else:

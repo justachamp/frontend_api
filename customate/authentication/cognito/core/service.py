@@ -1,6 +1,7 @@
 from django.conf import settings
 import boto3
 from django.contrib.auth import get_user_model
+# from frontend_api.models import CustomateUser as User
 from authentication.cognito.core import constants
 from authentication.cognito import utils
 from frontend_api.models import Account
@@ -47,6 +48,7 @@ class Identity:
                           aws_secret_access_key=settings.AWS_SECRET_KEY, region_name=settings.AWS_REGION)
 
     user_class = get_user_model()
+    # user_class = User
 
     @transaction.atomic()
     def sign_up(self, username, password, account_type, user_attributes, validation_data=None):
@@ -77,7 +79,10 @@ class Identity:
                     cognito_id=cognito_user['UserSub']
                     # first_name=user_params.get('given_name'), last_name=user_params.get('family_name')
                 )
-                user.account.create(account_type=account_type)
+                account = Account.objects.create(account_type=account_type)
+                account.save()
+                user.account = account
+                # user.account.create(account_type=account_type)
                 user.save()
             return cognito_user
 

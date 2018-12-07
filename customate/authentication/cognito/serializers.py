@@ -7,6 +7,7 @@ from authentication.cognito.core import helpers
 from authentication.cognito.exceptions import Unauthorized
 from authentication.cognito.middleware import helpers as mid_helpers
 import logging
+from  frontend_api.serializers import UserSerializer
 logger = logging.getLogger(__name__)
 
 
@@ -112,6 +113,15 @@ class CogrnitoAuthRetreiveSerializer(serializers.Serializer):
     id_token = serializers.CharField(read_only=True)
     access_token = serializers.CharField(read_only=True)
     refresh_token = serializers.CharField(read_only=False, required=False)
+    user = serializers.SerializerMethodField()
+    # user = UserSerializer
+
+    def get_user(self, data):
+        return UserSerializer(instance=data.user, context=self.context).data
+
+    related_serializers = {
+        'user': 'frontend_api.serializers.UserSerializer',
+    }
 
     def validate(self, data):
         if not data.get('refresh_token') and not data.get('password'):
@@ -138,6 +148,7 @@ class CogrnitoAuthRetreiveSerializer(serializers.Serializer):
 
             if not user:
                 raise serializers.ValidationError("User not found")
+            validated_data['user'] = user
             return Identity(id=user.cognito_id, **validated_data)
         except Exception as ex:
             logger.error(f'general {ex}')
@@ -189,6 +200,7 @@ class CognitoAuthSerializer(CogrnitoAuthRetreiveSerializer):
             # "type": 'personal|business"
             validated_data['username'] = validated_data['preferred_username']
             result = helpers.sign_up(validated_data)
+            return CogrnitoAuthRetreiveSerializer.retreive(validated_data)
             return Identity(id=result.get('UserSub'), **validated_data)
         except Exception as ex:
             logger.error(f'general {ex}')
