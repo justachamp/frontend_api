@@ -41,6 +41,18 @@ class UserViewSet(views.ModelViewSet):
 
     permission_classes = (IsOwnerOrReadOnly,)
 
+    def update(self, serializer):
+        logger.error('update')
+        user = self.request.user
+
+    def create(self, serializer):
+        logger.error('update')
+        user = self.request.user
+
+    def save(self, serializer):
+        logger.error('update')
+        user = self.request.user
+
     # def get_permissions(self):
     #     """
     #     Instantiates and returns the list of permissions that this view requires.
@@ -54,6 +66,19 @@ class UserViewSet(views.ModelViewSet):
 
 class UserRelationshipView(RelationshipView):
     queryset = User.objects
+
+
+    def update(self, serializer):
+        logger.error('update')
+        user = self.request.user
+
+    def create(self, serializer):
+        logger.error('update')
+        user = self.request.user
+
+    def save(self, serializer):
+        logger.error('update')
+        user = self.request.user
 
 
 class GroupViewSet(views.ModelViewSet):
@@ -72,7 +97,26 @@ class AddressViewSet(views.ModelViewSet):
 
     def perform_create(self, serializer):
         logger.error('perform create')
-        serializer.save(user=self.request.user)
+        user = self.request.user
+        # serializer.request.user.address = serializer.save(user=self.request.user)
+        if user.address:
+           pass
+        user.address = serializer.save()
+        user.save()
+
+    def perform_update(self, serializer):
+        logger.error('perform create')
+        user = self.request.user
+        # serializer.request.user.address = serializer.save(user=self.request.user)
+        if user.address:
+           pass
+        user.address = serializer.save()
+        user.save()
+
+    def update(self, serializer):
+        logger.error('update')
+        user = self.request.user
+
 
     def get_queryset(self):
         queryset = super(AddressViewSet, self).get_queryset()

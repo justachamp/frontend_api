@@ -19,62 +19,6 @@ class UserSerializer(serializers.HyperlinkedModelSerializer):
     }
 
     address = ResourceRelatedField(
-        many=True,
-        queryset=Address.objects,
-        related_link_view_name='user-related',
-        related_link_url_kwarg='pk',
-        self_link_view_name='user-relationships',
-        required=False
-
-    )
-
-    account = ResourceRelatedField(
-        many=True,
-        queryset=Account.objects,
-        related_link_view_name='user-related',
-        related_link_url_kwarg='pk',
-        self_link_view_name='user-relationships',
-        required=False
-
-    )
-
-    # def update(self, validated_data, test):
-    #     logger.error(f'validated_data {validated_data} {test}')
-
-    # def create(self, validated_data):
-    #     logger.error(f'validated_data {validated_data}')
-
-        # tracks_data = validated_data.pop('tracks')
-        # album = Album.objects.create(**validated_data)
-        # for track_data in tracks_data:
-        #     Track.objects.create(album=album, **track_data)
-        # return album
-
-
-
-# class UserSerializer(serializers.HyperlinkedModelSerializer):
-#     snippets = serializers.HyperlinkedRelatedField(many=True, view_name='api-root', read_only=True)
-#     snippets = ResourceRelatedField(
-#         queryset=Snippet.objects,
-#         many=True,
-#         # related_link_view_name='user-snippet-list',
-#         related_link_url_kwarg='user_pk',
-#         # self_link_view_name='snippet-list'
-#     )
-
-    class Meta:
-        model = User
-        fields = ('url', 'username', 'email', 'groups', 'address', 'account')
-
-class UserSerializer(serializers.HyperlinkedModelSerializer):
-    # snippets = serializers.PrimaryKeyRelatedField(many=True, queryset=Snippet.objects.all())
-
-    related_serializers = {
-        'address': 'frontend_api.serializers.AddressSerializer',
-        'account': 'frontend_api.serializers.AccountSerializer'
-    }
-
-    address = ResourceRelatedField(
         many=False,
         queryset=Address.objects,
         related_link_view_name='user-related',
@@ -120,7 +64,8 @@ class UserSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = User
-        fields = ('url', 'username', 'email', 'groups', 'address', 'account')
+        fields = ('url', 'username', 'first_name', 'last_name', 'middle_name', 'phone', 'birth_date', 'last_name', 'email', 'groups', 'address', 'account')
+
 
 
 class AddressSerializer(serializers.HyperlinkedModelSerializer):

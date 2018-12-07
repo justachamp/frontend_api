@@ -12,6 +12,7 @@ from authentication import settings
 from authentication.cognito import utils
 from authentication.cognito.core import constants, service
 from authentication.cognito.utils import PublicKey
+from rest_framework.exceptions import AuthenticationFailed
 
 # import the logging library
 import logging
@@ -61,7 +62,7 @@ def validate_token(access_token, id_token, refresh_token=None):
 
         if not refresh_token:
             # The current access token is expired and no refresh token was provided, authentication fails
-            raise Exception("The access token provided has expired. Please login again.")
+            raise AuthenticationFailed("The access token provided has expired. Please login again.")
         else:
             # This token is expired, potentially check for a refresh token? Return this token in the auth return
             # variable?
@@ -140,6 +141,9 @@ def process_request(request, propogate_error=False):
                     return AnonymousUser, None, None, None
 
         return user, new_access_token, new_id_token, new_refresh_token
+    except AuthenticationFailed as ex:
+        raise ex
+        # logger.error(f'process_request Exception: {ex}')
 
     except Exception as ex:
         logger.error(f'process_request Exception: {ex}')

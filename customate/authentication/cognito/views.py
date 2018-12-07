@@ -53,7 +53,7 @@ class AuthView(viewsets.ViewSet):
         serializer = CogrnitoAuthRetreiveSerializer(data=request.data)
         if serializer.is_valid(True):
             entity = serializer.retreive(serializer.validated_data)
-            return response.Response(CogrnitoAuthRetreiveSerializer(instance=entity).data)
+            return response.Response(CogrnitoAuthRetreiveSerializer(instance=entity, context={'request': request}).data)
         # result = helpers.initiate_auth(request.data)
         # return response.Response(result)
 
