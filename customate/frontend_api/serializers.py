@@ -69,11 +69,25 @@ class UserSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class AddressSerializer(serializers.HyperlinkedModelSerializer):
-    user = serializers.ReadOnlyField(source='user.id')
+    # user = serializers.ReadOnlyField(source='user.id')
+
+    related_serializers = {
+        'user': 'frontend_api.serializers.UserSerializer'
+    }
+
+    user = ResourceRelatedField(
+        many=False,
+        queryset=User.objects,
+        related_link_view_name='address-related',
+        related_link_url_kwarg='pk',
+        self_link_view_name='address-relationships',
+        required=False
+
+    )
 
     class Meta:
         model = Address
-        fields = ('address', 'country', 'address_line_1', 'address_line_2', 'city', 'locality', 'postcode', 'user')
+        fields = ('url', 'address', 'country', 'address_line_1', 'address_line_2', 'city', 'locality', 'postcode', 'user')
 
 
 class AccountSerializer(serializers.HyperlinkedModelSerializer):
@@ -81,7 +95,7 @@ class AccountSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = Account
-        fields = ('account_type', 'user')
+        fields = ('url', 'account_type', 'user')
 
 
 class GroupSerializer(serializers.ModelSerializer):

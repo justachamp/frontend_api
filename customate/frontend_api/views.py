@@ -41,17 +41,17 @@ class UserViewSet(views.ModelViewSet):
 
     permission_classes = (IsOwnerOrReadOnly,)
 
-    def update(self, serializer):
-        logger.error('update')
-        user = self.request.user
+    # def update(self, request, *args, **kwargs):
+    #     logger.error('update')
+    #     user = self.request.user
 
-    def create(self, serializer):
-        logger.error('update')
-        user = self.request.user
-
-    def save(self, serializer):
-        logger.error('update')
-        user = self.request.user
+    # def create(self, request, *args, **kwargs):
+    #     logger.error('update')
+    #     user = self.request.user
+    #
+    # def save(self, request, *args, **kwargs):
+    #     logger.error('update')
+    #     user = self.request.user
 
     # def get_permissions(self):
     #     """
@@ -68,17 +68,21 @@ class UserRelationshipView(RelationshipView):
     queryset = User.objects
 
 
-    def update(self, serializer):
+    def update(self, request, *args, **kwargs):
         logger.error('update')
         user = self.request.user
 
-    def create(self, serializer):
+    def create(self, request, *args, **kwargs):
         logger.error('update')
         user = self.request.user
 
-    def save(self, serializer):
+    def save(self, request, *args, **kwargs):
         logger.error('update')
         user = self.request.user
+
+
+class AddressRelationshipView(RelationshipView):
+    queryset = Address.objects
 
 
 class GroupViewSet(views.ModelViewSet):
@@ -104,18 +108,18 @@ class AddressViewSet(views.ModelViewSet):
         user.address = serializer.save()
         user.save()
 
-    def perform_update(self, serializer):
-        logger.error('perform create')
-        user = self.request.user
-        # serializer.request.user.address = serializer.save(user=self.request.user)
-        if user.address:
-           pass
-        user.address = serializer.save()
-        user.save()
+    # def perform_update(self, serializer):
+    #     logger.error('perform гзвфеу')
+    #     user = self.request.user
+    #     # serializer.request.user.address = serializer.save(user=self.request.user)
+    #     if user.address:
+    #        pass
+    #     user.address = serializer.save()
+    #     user.save()
 
-    def update(self, serializer):
-        logger.error('update')
-        user = self.request.user
+    # def update(self, request, *args, **kwargs):
+    #     logger.error('update')
+    #     user = self.request.user
 
 
     def get_queryset(self):
