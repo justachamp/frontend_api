@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/2.1/ref/settings/
 """
 
 import os
+from corsheaders.defaults import default_headers
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -313,6 +314,14 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.1/howto/static-files/
 CORS_ORIGIN_ALLOW_ALL = True
+
+
+CORS_ALLOW_HEADERS = default_headers + (
+    'ACCESSTOKEN',
+    'IDTOKEN',
+    'REFRESHTOKEN'
+)
+
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, "static")
 AUTH_USER_MODEL = 'core.User'
