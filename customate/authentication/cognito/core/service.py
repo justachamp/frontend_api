@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 # from frontend_api.models import CustomateUser as User
 from authentication.cognito.core import constants
 from authentication.cognito import utils
-from frontend_api.models import Account
+from frontend_api.models import Account, Company
 
 from botocore.exceptions import ParamValidationError
 # import the logging library
@@ -14,7 +14,10 @@ logger = logging.getLogger(__name__)
 
 from rest_framework import exceptions, status
 from rest_framework_json_api import exceptions
+BUSINESS_ACCOUNT = 'business'
 from django.db import transaction
+
+
 class CognitoException(Exception):
     def __init__(self, message, status):
         super(CognitoException, self).__init__(message)
@@ -80,6 +83,10 @@ class Identity:
                     # first_name=user_params.get('given_name'), last_name=user_params.get('family_name')
                 )
                 account = Account.objects.create(account_type=account_type)
+
+                company = Company.objects.create(is_active=(account_type == BUSINESS_ACCOUNT))
+                account.company = company
+                company.save()
                 account.save()
                 user.account = account
                 # user.account.create(account_type=account_type)
