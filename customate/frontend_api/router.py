@@ -6,6 +6,7 @@ router = routers.DefaultRouter()
 router.register('users', views.UserViewSet)
 router.register('company', views.CompanyViewSet)
 # router.register('groups', views.GroupViewSet)
+router.register('shareholders', views.ShareholderViewSet)
 router.register('addresses', views.AddressViewSet)
 router.register('accounts', views.AccountViewSet)
 

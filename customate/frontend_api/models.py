@@ -33,14 +33,14 @@ class Address(Model):
 
 class Company(Model):
     COMPANY_TYPES = (
-        ('PUBLIC LIMITED COMPANY (PLC)', 'public_limited'),
-        ('PRIVATE COMPANY LIMITED BY SHARES (LTD)', 'private_limited_by_shares'),
-        ('COMPANY LIMITED BY GUARANTEE', 'limited_by_guarantee'),
-        ('UNLIMITED COMPANY (UNLTD)', 'unlimited'),
-        ('LIMITED LIABILITY PARTNERSHIP (LLP)', 'limited_liability_partnership'),
-        ('COMMUNITY INTEREST COMPANY', 'community_interest'),
-        ('INDUSTRIAL AND PROVIDENT SOCIETY (IPS)', 'industrial_provident_society'),
-        ('ROYAL CHARTER (RC)', 'royal_charter'),
+        ('public_limited', 'PUBLIC LIMITED COMPANY (PLC)'),
+        ('private_limited_by_shares', 'PRIVATE COMPANY LIMITED BY SHARES (LTD)'),
+        ('limited_by_guarantee', 'COMPANY LIMITED BY GUARANTEE'),
+        ('unlimited', 'UNLIMITED COMPANY (UNLTD)'),
+        ('limited_liability_partnership', 'LIMITED LIABILITY PARTNERSHIP (LLP)'),
+        ('community_interest', 'COMMUNITY INTEREST COMPANY'),
+        ('industrial_provident_society', 'INDUSTRIAL AND PROVIDENT SOCIETY (IPS)'),
+        ('royal_charter', 'ROYAL CHARTER (RC)'),
     )
     # account = models.ForeignKey(Account, related_name='account', on_delete=models.CASCADE, null=True)
 
@@ -78,9 +78,9 @@ class Company(Model):
 
 class Account(Model):
     # user = models.ForeignKey(User, related_name='account', on_delete=models.CASCADE)
-    COLOR_CHOICES = (
-        ('Personal', 'personal'),
-        ('Business', 'business')
+    ACCOUNT_CHOICES = (
+        ('personal', 'Personal'),
+        ('personal', 'Business')
     )
     company = models.OneToOneField(
         Company,
@@ -90,7 +90,7 @@ class Account(Model):
         null=True,
         related_name='account'
     )
-    account_type = models.CharField(max_length=10, choices=COLOR_CHOICES, default='Personal')
+    account_type = models.CharField(max_length=10, choices=ACCOUNT_CHOICES, default='Personal')
     position = models.CharField(max_length=50, blank=True, null=True)
 
     def __str__(self):
@@ -102,7 +102,7 @@ class Shareholder(Model):
     first_name = models.CharField(_('first name'), max_length=30)
     last_name = models.CharField(_('last name'), max_length=150)
     birth_date = models.DateField(_('day of birth'))
-    country_of_residence = models.DateField(_('country of residence'))
+    country_of_residence = models.CharField(_('country of residence'), max_length=30)
     is_active = models.BooleanField(
         _('active'),
         default=True,

@@ -15,8 +15,10 @@ from collections import Iterable
 from django.db.models.manager import Manager
 from frontend_api.models import Address, Account, Company, Shareholder
 from frontend_api.serializers import UserAddressSerializer, CompanyAddressSerializer, \
-    AccountSerializer, CompanySerializer, ShareholderSerializer, AddressSerializer
+    AccountSerializer, CompanySerializer, ShareholderSerializer, AddressSerializer, \
+    RelativeResourceIdentifierObjectSerializer
 
+from rest_framework.exceptions import NotFound
 from django.contrib.auth.models import Group
 from core.models import User
 from rest_framework import viewsets, generics
@@ -29,21 +31,13 @@ from rest_framework import renderers
 
 from rest_framework_json_api.views import RelationshipView
 from django.db import transaction
+from django.forms.models import model_to_dict
 
 import logging
 logger = logging.getLogger(__name__)
 
 
-
-class UserViewSet(views.ModelViewSet):
-    """
-    API endpoint that allows users to be viewed or edited.
-    """
-    queryset = User.objects.all().order_by('-date_joined')
-    serializer_class = UserSerializer
-
-    permission_classes = (IsOwnerOrReadOnly,)
-
+class PatchRelatedMixin(object):
     def patch_related(self, request, *args, **kwargs):
         serializer_kwargs = {}
         instance = self.get_related_instance()
@@ -65,6 +59,16 @@ class UserViewSet(views.ModelViewSet):
         serializer.is_valid(True)
         serializer.save()
         return Response(serializer.data)
+
+
+class UserViewSet(views.ModelViewSet, PatchRelatedMixin):
+    """
+    API endpoint that allows users to be viewed or edited.
+    """
+    queryset = User.objects.all().order_by('-date_joined')
+    serializer_class = UserSerializer
+
+    permission_classes = (IsOwnerOrReadOnly,)
 
 
 class UserRelationshipView(RelationshipView):
@@ -134,52 +138,79 @@ class AccountRelationshipView(RelationshipView):
     #     return Response(result_serializer.data)
 
 
+
 class CompanyRelationshipView(RelationshipView):
     queryset = Company.objects
 
+    serializer_class = RelativeResourceIdentifierObjectSerializer
+
     _related_serializers = {
-        'address': CompanyAddressSerializer
+        'address': CompanyAddressSerializer,
+        'shareholders': ShareholderSerializer
     }
 
     def get_related_serializer(self, serializer_name):
         return self._related_serializers.get(serializer_name) if serializer_name in self._related_serializers else None
 
+    def get_related_handler(self, releted_field):
+        try:
+            return getattr(self, f'post_{releted_field}')
+        except AttributeError:
+            raise NotFound
+
+    def post_address(self, request, *args, **kwargs):
+        related_field = kwargs.get('related_field')
+        related_serializer = self.get_related_serializer(related_field)
+        user = self.get_object()
+        company = user.account.company
+
+        if company.address:
+            raise MethodNotAllowed('POST')
+
+        serializer = related_serializer(data=request.data.get('attributes'), context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        company.address = serializer.save()
+        company.save()
+
+        return serializer
+
+    def post_shareholders(self, request, *args, **kwargs):
+        related_field = kwargs.get('related_field')
+        related_serializer = self.get_related_serializer(related_field)
+        user = self.get_object()
+        company = user.account.company
+        company = model_to_dict(company)
+        company['type'] = 'Company'
+        data = [rec.get('attributes') for rec in request.data]
+        data = []
+        for rec in request.data:
+            rec = rec.get('attributes')
+            rec['company'] = company
+            data.append(rec)
+
+        serializer = related_serializer(data=data, context={'request': request}, many=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return serializer
+
+
     @transaction.atomic()
     def post(self, request, *args, **kwargs):
-        related_serializer = self.get_related_serializer(kwargs.get('related_field'))
-        user = self.get_object()
+        related_field = kwargs.get('related_field')
+        related_serializer = self.get_related_serializer(related_field)
         if related_serializer:
-            if user.address:
-                raise MethodNotAllowed('POST')
+            handler = self.get_related_handler(related_field)
+            serializer = handler(request, *args, **kwargs)
 
-            serializer = related_serializer(data=request.data.get('attributes'), context={'request': request})
-            serializer.is_valid(raise_exception=True)
-            user.address = serializer.save()
-            user.save()
             return Response(serializer.data)
         else:
-            related_instance_or_manager = self.get_related_instance()
+            raise MethodNotAllowed('POST')
 
-            if isinstance(related_instance_or_manager, Manager):
-                related_model_class = related_instance_or_manager.model
-                serializer = self.get_serializer(
-                    data=request.data, model_class=related_model_class, many=True
-                )
-                serializer.is_valid(raise_exception=True)
-                if frozenset(serializer.validated_data) <= frozenset(related_instance_or_manager.all()):
-                    return Response(status=204)
-                related_instance_or_manager.add(*serializer.validated_data)
-            else:
-                raise MethodNotAllowed('POST')
-            result_serializer = self._instantiate_serializer(related_instance_or_manager)
-            return Response(result_serializer.data)
-
-            # return super().post(request, *args, **kwargs)
 
 
 class ShareholderRelationshipView(RelationshipView):
     queryset = Shareholder.objects
-
 
 # class GroupViewSet(views.ModelViewSet):
 #     """
@@ -189,12 +220,11 @@ class ShareholderRelationshipView(RelationshipView):
 #     serializer_class = GroupSerializer
 
 
-class UserAddressViewSet(views.ModelViewSet):
+class UserAddressViewSet(views.ModelViewSet, PatchRelatedMixin):
 
     queryset = Address.objects.all()
     serializer_class = UserAddressSerializer
     permission_classes = (permissions.IsAuthenticated,)
-
 
     def perform_create(self, serializer):
         logger.error('perform create')
@@ -204,35 +234,8 @@ class UserAddressViewSet(views.ModelViewSet):
             user.address = serializer.save()
             user.save()
 
-    # def perform_update(self, serializer):
-    #     logger.error('perform гзвфеу')
-    #     user = self.request.user
-    #     # serializer.request.user.address = serializer.save(user=self.request.user)
-    #     if user.address:
-    #        pass
-    #     user.address = serializer.save()
-    #     user.save()
 
-    # def update(self, request, *args, **kwargs):
-    #     logger.error('update')
-    #     user = self.request.user
-
-
-    # def get_queryset(self):
-    #     queryset = super(UserAddressViewSet, self).get_queryset()
-    #
-    #     # if this viewset is accessed via the 'order-lineitems-list' route,
-    #     # it wll have been passed the `order_pk` kwarg and the queryset
-    #     # needs to be filtered accordingly; if it was accessed via the
-    #     # unnested '/lineitems' route, the queryset should include all LineItems
-    #     if 'pk' in self.kwargs:
-    #         pk = self.kwargs['pk']
-    #         queryset.filter(user__pk=pk)
-    #
-    #     return queryset
-
-
-class AddressViewSet(views.ModelViewSet):
+class AddressViewSet(views.ModelViewSet, PatchRelatedMixin):
 
     queryset = Address.objects.all()
     serializer_class = AddressSerializer
@@ -254,7 +257,7 @@ class AddressViewSet(views.ModelViewSet):
     #
     #     return queryset
 
-class CompanyAddressViewSet(views.ModelViewSet):
+class CompanyAddressViewSet(views.ModelViewSet, PatchRelatedMixin):
 
     queryset = Address.objects.all()
     serializer_class = CompanyAddressSerializer
@@ -277,7 +280,7 @@ class CompanyAddressViewSet(views.ModelViewSet):
     #     return queryset
 
 
-class AccountViewSet(views.ModelViewSet):
+class AccountViewSet(views.ModelViewSet, PatchRelatedMixin):
 
     queryset = Account.objects.all()
     serializer_class = AccountSerializer
@@ -291,43 +294,8 @@ class AccountViewSet(views.ModelViewSet):
             user.account = serializer.save()
             user.save()
 
-    def patch_related(self, request, *args, **kwargs):
-        serializer_kwargs = {}
-        instance = self.get_related_instance()
 
-        if hasattr(instance, 'all'):
-            instance = instance.all()
-
-        if callable(instance):
-            instance = instance()
-
-        if instance is None:
-            return Response(data=None)
-
-        if isinstance(instance, Iterable):
-            serializer_kwargs['many'] = True
-        serializer_kwargs['data'] = request.data
-
-        serializer = self.get_serializer(instance, **serializer_kwargs)
-        serializer.is_valid(True)
-        serializer.save()
-        return Response(serializer.data)
-
-    # def get_queryset(self):
-    #     queryset = super(AccountViewSet, self).get_queryset()
-    #
-    #     # if this viewset is accessed via the 'order-lineitems-list' route,
-    #     # it wll have been passed the `order_pk` kwarg and the queryset
-    #     # needs to be filtered accordingly; if it was accessed via the
-    #     # unnested '/lineitems' route, the queryset should include all LineItems
-    #     if 'pk' in self.kwargs:
-    #         pk = self.kwargs['pk']
-    #         queryset.filter(account__pk=pk)
-    #
-    #     return queryset
-
-
-class CompanyViewSet(views.ModelViewSet):
+class CompanyViewSet(views.ModelViewSet, PatchRelatedMixin):
 
     queryset = Company.objects.all()
     serializer_class = CompanySerializer
@@ -341,91 +309,9 @@ class CompanyViewSet(views.ModelViewSet):
             user.account.company = serializer.save()
             user.account.save()
 
-    def patch_related(self, request, *args, **kwargs):
-        serializer_kwargs = {}
-        instance = self.get_related_instance()
 
-        if hasattr(instance, 'all'):
-            instance = instance.all()
-
-        if callable(instance):
-            instance = instance()
-
-        if instance is None:
-            return Response(data=None)
-
-        if isinstance(instance, Iterable):
-            serializer_kwargs['many'] = True
-        serializer_kwargs['data'] = request.data
-
-        serializer = self.get_serializer(instance, **serializer_kwargs)
-        serializer.is_valid(True)
-        serializer.save()
-        return Response(serializer.data)
-
-
-    # def get_queryset(self):
-    #     queryset = super(CompanyViewSet, self).get_queryset()
-    #
-    #     # if this viewset is accessed via the 'order-lineitems-list' route,
-    #     # it wll have been passed the `order_pk` kwarg and the queryset
-    #     # needs to be filtered accordingly; if it was accessed via the
-    #     # unnested '/lineitems' route, the queryset should include all LineItems
-    #     if 'pk' in self.kwargs:
-    #         pk = self.kwargs['pk']
-    #         queryset.filter(company__pk=pk)
-    #
-    #     return queryset
-
-
-class ShareholderViewSet(views.ModelViewSet):
+class ShareholderViewSet(views.ModelViewSet, PatchRelatedMixin):
 
     queryset = Shareholder.objects.all()
     serializer_class = ShareholderSerializer
     permission_classes = (permissions.IsAuthenticated,)
-
-    # def get_queryset(self):
-    #     queryset = super(ShareholderViewSet, self).get_queryset()
-    #
-    #     # if this viewset is accessed via the 'order-lineitems-list' route,
-    #     # it wll have been passed the `order_pk` kwarg and the queryset
-    #     # needs to be filtered accordingly; if it was accessed via the
-    #     # unnested '/lineitems' route, the queryset should include all LineItems
-    #     if 'pk' in self.kwargs:
-    #         pk = self.kwargs['pk']
-    #         queryset.filter(shareholder__pk=pk)
-    #
-    #     return queryset
-
-    # def get_permissions(self):
-    #     """
-    #     Instantiates and returns the list of permissions that this view requires.
-    #     """
-    #     if self.action == 'list':
-    #         permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
-    #     else:
-    #         permission_classes = (permissions.IsAuthenticated,)
-    #     return [permission() for permission in permission_classes]
-
-
-# class SnippetHighlight(views.generics.GenericAPIView):
-#     queryset = Snippet.objects.all()
-#     renderer_classes = (renderers.StaticHTMLRenderer,)
-#
-#     def get(self, request, *args, **kwargs):
-#         snippet = self.get_object()
-#         return Response(snippet.highlighted)
-#
-#     @classmethod
-#     def get_extra_actions(cls):
-#         return []
-
-
-
-
-# @api_view(['GET'])
-# def api_root(request, format=None):
-#     return Response({
-#         'users': reverse('user-list', request=request, format=format),
-#         'snippets': reverse('snippet-list', request=request, format=format)
-#     })

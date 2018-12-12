@@ -86,7 +86,7 @@ COGNITO_APP_SECRET_KEY = os.environ.get('COGNITO_APP_SECRET_KEY')
 AWS_ACCESS_KEY = os.environ.get('AWS_ACCESS_KEY')
 AWS_SECRET_KEY = os.environ.get('AWS_SECRET_KEY')
 
-AWS_REGION = os.environ.get('AWS_REGION')
+AWS_REGION = os.environ.get('AWS_REGION', '')
 COGNITO_ATTR_MAPPING = {
         'email': 'email',
         'given_name': 'first_name',
@@ -321,6 +321,7 @@ CORS_ALLOW_HEADERS = default_headers + (
     'IDTOKEN',
     'REFRESHTOKEN'
 )
+
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, "static")

@@ -2,6 +2,7 @@ from django.contrib.auth.models import Group
 from rest_framework_json_api import serializers
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.serializers import HyperlinkedIdentityField
+from rest_framework_json_api.serializers import ResourceIdentifierObjectSerializer
 from rest_framework_json_api.relations import ResourceRelatedField
 from rest_framework_json_api.utils import (
     get_resource_type_from_model
@@ -11,6 +12,26 @@ from frontend_api.models import Address, Account, Shareholder, Company
 import logging
 logger = logging.getLogger(__name__)
 
+
+class RelativeResourceIdentifierObjectSerializer(ResourceIdentifierObjectSerializer):
+
+    def to_internal_value(self, data):
+        if data['type'] != get_resource_type_from_model(self.model_class):
+            self.fail(
+                'incorrect_model_type', model_type=self.model_class, received_type=data['type']
+            )
+        # pk = data['id']
+        try:
+            # if pk != 'null':
+            #     return self.model_class.objects.get(pk=pk)
+            # else:
+            model = self.model_class(data.get('attributes'))
+            model.save()
+            return model
+        # except ObjectDoesNotExist:
+        #     self.fail('does_not_exist', pk_value=pk)
+        except (TypeError, ValueError):
+            self.fail('incorrect_type', data_type=type(data['pk']).__name__)
 
 
 class UserSerializer(serializers.HyperlinkedModelSerializer):
@@ -229,7 +250,7 @@ class ShareholderSerializer(serializers.HyperlinkedModelSerializer):
 
     company = ResourceRelatedField(
         many=False,
-        queryset=Shareholder.objects,
+        queryset=Company.objects,
         related_link_view_name='shareholder-related',
         related_link_url_kwarg='pk',
         self_link_view_name='shareholder-relationships',
@@ -241,25 +262,9 @@ class ShareholderSerializer(serializers.HyperlinkedModelSerializer):
             "Serializers update test"
         )
 
-    def to_internal_value(self, data):
-        if data['type'] != get_resource_type_from_model(self.model_class):
-            self.fail(
-                'incorrect_model_type', model_type=self.model_class, received_type=data['type']
-            )
-        pk = data['id']
-        try:
-            if pk is not 'null':
-                return self.model_class.objects.get(pk=pk)
-            else:
-                return data.get('attributes')
-        except ObjectDoesNotExist:
-            self.fail('does_not_exist', pk_value=pk)
-        except (TypeError, ValueError):
-            self.fail('incorrect_type', data_type=type(data['pk']).__name__)
-
     class Meta:
         model = Shareholder
-        fields = ('url', 'company','is_active', 'first_name', 'last_name', 'birth_date', 'country_of_residence')
+        fields = ('url', 'company', 'is_active', 'first_name', 'last_name', 'birth_date', 'country_of_residence')
 
 # class GroupSerializer(serializers.ModelSerializer):
 #     class Meta:
