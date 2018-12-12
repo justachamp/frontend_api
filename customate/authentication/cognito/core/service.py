@@ -30,6 +30,7 @@ class CognitoException(Exception):
 
     @staticmethod
     def create_from_boto_exception(ex):
+        raise ex;
 
         # for message in response.data:
         #     errors.append({
@@ -43,7 +44,7 @@ class CognitoException(Exception):
 
         # return Exception({'password': 'test', 'username': 'some'})
 
-        return exceptions.APIException(ex)
+        # return exceptions.APIException(ex)
 
 
 class Identity:
