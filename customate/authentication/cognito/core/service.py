@@ -41,9 +41,9 @@ class CognitoException(Exception):
         #     })
 
 
-        return Exception({'password': 'test', 'username': 'some'})
+        # return Exception({'password': 'test', 'username': 'some'})
 
-        # return exceptions.APIException(ex)
+        return exceptions.APIException(ex)
 
 
 class Identity:
