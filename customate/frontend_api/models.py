@@ -23,7 +23,7 @@ class Address(Model):
 
 
 class Company(Model):
-    company_type = EnumField(CompanyType, max_length=30, blank=True)
+    company_type = EnumField(CompanyType, max_length=30, blank=True, null=True)
     registration_business_name = models.CharField(max_length=50, blank=True)
     registration_number = models.CharField(max_length=8, blank=True)
     address = models.OneToOneField(
