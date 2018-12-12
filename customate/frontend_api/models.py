@@ -66,7 +66,7 @@ class Account(Model):
         null=True,
         related_name='account'
     )
-    account_type = EnumField(AccountType, max_length=10, default=AccountType.PERSONAL)
+    account_type = EnumField(AccountType, max_length=10, default=AccountType.personal)
     position = models.CharField(max_length=50, blank=True, null=True)
 
     def __str__(self):

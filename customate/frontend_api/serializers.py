@@ -9,8 +9,25 @@ from rest_framework_json_api.utils import (
 )
 from core.models import User
 from frontend_api.models import Address, Account, Shareholder, Company
+from frontend_api.fields import AccountType, CompanyType
 import logging
 logger = logging.getLogger(__name__)
+
+
+class EnumField(serializers.ChoiceField):
+    def __init__(self, enum, **kwargs):
+        self.enum = enum
+        kwargs['choices'] = [(e.name, e.name) for e in enum]
+        super(EnumField, self).__init__(**kwargs)
+
+    def to_representation(self, obj):
+        return obj.value
+
+    def to_internal_value(self, data):
+        try:
+            return self.enum[data]
+        except KeyError:
+            self.fail('invalid_choice', input=data)
 
 
 class RelativeResourceIdentifierObjectSerializer(ResourceIdentifierObjectSerializer):
@@ -170,6 +187,8 @@ class AccountSerializer(serializers.HyperlinkedModelSerializer):
         required=False
     )
 
+    account_type = EnumField(enum=AccountType)
+
     class Meta:
         model = Account
         fields = ('url', 'account_type', 'position', 'user', 'company')
@@ -209,6 +228,8 @@ class CompanySerializer(serializers.HyperlinkedModelSerializer):
         self_link_view_name='company-relationships',
         required=False
     )
+
+    company_type = EnumField(enum=CompanyType)
 
     class Meta:
         model = Company

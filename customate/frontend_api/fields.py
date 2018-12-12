@@ -1,34 +1,37 @@
-from enumfields import Enum  # Uses Ethan Furman's "enum34" backport
+from enumfields import Enum, EnumField  # Uses Ethan Furman's "enum34" backport
+
 
 class CompanyType(Enum):
+    public_limited = 'public_limited'
+    private_limited_by_shares = 'private_limited_by_shares'
+    limited_by_guarantee = 'limited_by_guarantee'
+    unlimited = 'unlimited'
+    limited_liability_partnership = 'limited_liability_partnership'
+    community_interest = 'community_interest'
+    industrial_provident_society = 'industrial_provident_society'
+    royal_charter = 'royal_charter'
 
-        PUBLIC_LIMITED = 'public_limited'
-        SHARE_LIMITED = 'private_limited_by_shares'
-        GUARANTEE_LIMITED = 'limited_by_guarantee'
-        UNLIMITED = 'unlimited'
-        PARTNERSHIP_LIMITED = 'limited_liability_partnership'
-        COMMUNITY_INTEREST = 'community_interest'
-        INDUSTRIAL_PROVIDENT = 'industrial_provident_society'
-        ROYAL_CHARTER = 'royal_charter'
-
-        class Labels:
-            PUBLIC_LIMITED = 'PUBLIC LIMITED COMPANY (PLC)'
-            SHARE_LIMITED = 'PRIVATE COMPANY LIMITED BY SHARES (LTD)'
-            GUARANTEE_LIMITED = 'COMPANY LIMITED BY GUARANTEE'
-            UNLIMITED = 'UNLIMITED COMPANY (UNLTD)'
-            PARTNERSHIP_LIMITED = 'LIMITED LIABILITY PARTNERSHIP (LLP)'
-            COMMUNITY_INTEREST = 'COMMUNITY INTEREST COMPANY'
-            INDUSTRIAL_PROVIDENT = 'INDUSTRIAL AND PROVIDENT SOCIETY (IPS)'
-            ROYAL_CHARTER = 'ROYAL CHARTER (RC)'
+    class Labels:
+        public_limited = 'PUBLIC LIMITED COMPANY (PLC)'
+        private_limited_by_shares = 'PRIVATE COMPANY LIMITED BY SHARES (LTD)'
+        limited_by_guarantee = 'COMPANY LIMITED BY GUARANTEE'
+        unlimited = 'UNLIMITED COMPANY (UNLTD)'
+        limited_liability_partnership = 'LIMITED LIABILITY PARTNERSHIP (LLP)'
+        community_interest = 'COMMUNITY INTEREST COMPANY'
+        industrial_provident_society = 'INDUSTRIAL AND PROVIDENT SOCIETY (IPS)'
+        royal_charter = 'ROYAL CHARTER (RC)'
 
 
 class AccountType(Enum):
 
-    PERSONAL = 'personal'
-    BUSINESS = 'business'
+    personal = 'personal'
+    business = 'business'
 
     class Labels:
-        PERSONAL = 'Personal'
-        BUSINESS = 'Business'
+        personal = 'Personal'
+        business = 'Business'
+
+    def __repr__(self):
+        return self.value
 
 
