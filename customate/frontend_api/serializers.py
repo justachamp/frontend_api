@@ -89,9 +89,7 @@ class UserAddressSerializer(serializers.HyperlinkedModelSerializer):
                   'city', 'locality', 'postcode', 'user')
 
 
-
 class AddressSerializer(serializers.HyperlinkedModelSerializer):
-    # user = serializers.ReadOnlyField(source='user.id')
 
     related_serializers = {
         'user': 'frontend_api.serializers.UserSerializer',

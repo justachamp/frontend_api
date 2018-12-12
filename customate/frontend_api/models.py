@@ -1,25 +1,15 @@
 from django.db import models
-from django.conf import settings
-from django.contrib.auth import get_user_model
-from pygments.lexers import get_all_lexers
-from pygments.styles import get_all_styles
-from rest_framework.utils import formatting
-
-from pygments.lexers import get_lexer_by_name
-from pygments.formatters.html import HtmlFormatter
-from pygments import highlight
 from django.utils.translation import gettext_lazy as _
+
 from core.models import Model
+from enumfields import EnumField
+from frontend_api.fields import AccountType, CompanyType
 
-# LEXERS = [item for item in get_all_lexers() if item[1]]
-# LANGUAGE_CHOICES = sorted([(item[1][0], item[0]) for item in LEXERS])
-# STYLE_CHOICES = sorted((item, item) for item in get_all_styles())
+from django.db import models
 
-# Create your models here.
 
 
 class Address(Model):
-    # user = models.ForeignKey(User, related_name='address', on_delete=models.CASCADE)
     address = models.CharField(max_length=250)
     country = models.CharField(max_length=50)
     address_line_1 = models.CharField(max_length=100)
@@ -31,27 +21,11 @@ class Address(Model):
     def __str__(self):
         return "%s the address" % self.address
 
-class Company(Model):
-    COMPANY_TYPES = (
-        ('public_limited', 'PUBLIC LIMITED COMPANY (PLC)'),
-        ('private_limited_by_shares', 'PRIVATE COMPANY LIMITED BY SHARES (LTD)'),
-        ('limited_by_guarantee', 'COMPANY LIMITED BY GUARANTEE'),
-        ('unlimited', 'UNLIMITED COMPANY (UNLTD)'),
-        ('limited_liability_partnership', 'LIMITED LIABILITY PARTNERSHIP (LLP)'),
-        ('community_interest', 'COMMUNITY INTEREST COMPANY'),
-        ('industrial_provident_society', 'INDUSTRIAL AND PROVIDENT SOCIETY (IPS)'),
-        ('royal_charter', 'ROYAL CHARTER (RC)'),
-    )
-    # account = models.ForeignKey(Account, related_name='account', on_delete=models.CASCADE, null=True)
 
-    is_active = models.BooleanField(
-        _('active'),
-        default=False,
-        help_text=_(
-            'Designates whether this company should be treated as active. '
-            'Unselect this instead of deleting companies.'
-        ),
-    )
+class Company(Model):
+    company_type = EnumField(CompanyType, max_length=30, blank=True)
+    registration_business_name = models.CharField(max_length=50, blank=True)
+    registration_number = models.CharField(max_length=8, blank=True)
     address = models.OneToOneField(
         Address,
         on_delete=models.CASCADE,
@@ -59,10 +33,6 @@ class Company(Model):
         blank=True,
         null=True
     )
-
-    company_type = models.CharField(choices=COMPANY_TYPES, max_length=30, blank=True)
-    registration_business_name = models.CharField(max_length=50, blank=True)
-    registration_number = models.CharField(max_length=8, blank=True)
     is_private = models.BooleanField(
         _('private'),
         default=True,
@@ -72,16 +42,22 @@ class Company(Model):
         ),
     )
 
+    is_active = models.BooleanField(
+        _('active'),
+        default=True,
+        help_text=_(
+            'Designates whether this shareholder should be treated as active. '
+            'Unselect this instead of deleting it.'
+        ),
+    )
+
+
     def __str__(self):
         return "%s the business address" % self.registration_business_name
 
 
 class Account(Model):
-    # user = models.ForeignKey(User, related_name='account', on_delete=models.CASCADE)
-    ACCOUNT_CHOICES = (
-        ('personal', 'Personal'),
-        ('personal', 'Business')
-    )
+
     company = models.OneToOneField(
         Company,
         on_delete=models.CASCADE,
@@ -90,7 +66,7 @@ class Account(Model):
         null=True,
         related_name='account'
     )
-    account_type = models.CharField(max_length=10, choices=ACCOUNT_CHOICES, default='Personal')
+    account_type = EnumField(AccountType, max_length=10, default=AccountType.PERSONAL)
     position = models.CharField(max_length=50, blank=True, null=True)
 
     def __str__(self):
@@ -108,36 +84,9 @@ class Shareholder(Model):
         default=True,
         help_text=_(
             'Designates whether this shareholder should be treated as active. '
-            'Unselect this instead of deleting shareholder.'
+            'Unselect this instead of deleting id.'
         ),
     )
 
     def __str__(self):
-        return "%s the business address" % self.last_name
-
-#
-# class Snippet(Model):
-#     created = models.DateTimeField(auto_now_add=True)
-#     title = models.CharField(max_length=100, blank=True, default='')
-#     code = models.TextField()
-#     linenos = models.BooleanField(default=False)
-#     language = models.CharField(choices=LANGUAGE_CHOICES, default='python', max_length=100)
-#     style = models.CharField(choices=STYLE_CHOICES, default='friendly', max_length=100)
-#     owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='snippets', on_delete=models.CASCADE)
-#     highlighted = models.TextField()
-#
-#     def save(self, *args, **kwargs):
-#         """
-#         Use the `pygments` library to create a highlighted HTML
-#         representation of the code snippet.
-#         """
-#         lexer = get_lexer_by_name(self.language)
-#         linenos = 'table' if self.linenos else False
-#         options = {'title': self.title} if self.title else {}
-#         formatter = HtmlFormatter(style=self.style, linenos=linenos,
-#                                   full=True, **options)
-#         self.highlighted = highlight(self.code, lexer, formatter)
-#         super(Snippet, self).save(*args, **kwargs)
-#
-#     class Meta:
-#         ordering = ('created',)
+        return "%s the shareholder" % self.last_name
