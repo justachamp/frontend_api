@@ -70,6 +70,12 @@ class UserViewSet(views.ModelViewSet, PatchRelatedMixin):
 
     permission_classes = (IsOwnerOrReadOnly,)
 
+    def update(self, request, *args, **kwargs):
+        return super().update(request, *args, **kwargs)
+
+    def perform_update(self, serializer):
+        serializer.save()
+
 
 class UserRelationshipView(RelationshipView):
     queryset = User.objects

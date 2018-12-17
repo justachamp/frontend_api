@@ -79,14 +79,13 @@ def respond_to_auth_challenge(data, param_mapping=None):
     try:
         username = parse_parameter(data, param_mapping, 'username')
         challenge_name = parse_parameter(data, param_mapping, 'challenge_name')
-        responses = parse_parameter(data, param_mapping, 'responses')
+        responses = parse_parameter(data, param_mapping, 'challenge_response')
         session = parse_parameter(data, param_mapping, 'session')
-
     except Exception as ex:
         raise ValueError(BAD_DATA_EXCEPTION)
 
     return identity.respond_to_auth_challenge(username=username, challenge_name=challenge_name,
-                                             responses=responses, session=session)
+                                              responses=responses, session=session)
 
 
 def sign_up(data, param_mapping=None):

@@ -5,8 +5,9 @@ from django.views.decorators.http import require_http_methods
 from authentication.cognito.core import helpers
 from authentication.cognito.serializers import CognitoAuthSerializer, CogrnitoAuthRetreiveSerializer, \
     CogrnitoSignOutSerializer, CognitoAuthForgotPasswordSerializer, CognitoAuthPasswordRestoreSerializer,\
-    CognitoAuthVerificationSerializer, CognitoAuthAttributeVerifySerializer
+    CognitoAuthVerificationSerializer, CognitoAuthAttributeVerifySerializer, CognitoAuthChallengeSerializer
 
+from authentication.cognito.models import Challenge
 from authentication.cognito.core.base import CognitoException, CognitoUser
 from rest_framework_json_api.views import viewsets
 from rest_framework.views import APIView
@@ -27,7 +28,6 @@ class AuthView(viewsets.ViewSet):
     serializer_class = CognitoAuthSerializer
     # queryset = User.objects.all().order_by('-date_joined')
 
-
     resource_name = 'identity'
     permission_classes = (AllowAny,)
 
@@ -36,9 +36,24 @@ class AuthView(viewsets.ViewSet):
         serializer = CogrnitoAuthRetreiveSerializer(data=request.data)
         if serializer.is_valid(True):
             entity = serializer.retreive(serializer.validated_data)
-            return response.Response(CogrnitoAuthRetreiveSerializer(instance=entity, context={'request': request}).data)
-        # result = helpers.initiate_auth(request.data)
-        # return response.Response(result)
+            if type(entity) == Challenge:
+                return response.Response(
+                    CognitoAuthChallengeSerializer(instance=entity, context={'request': request}).data)
+            else:
+                return response.Response(
+                    CogrnitoAuthRetreiveSerializer(instance=entity, context={'request': request}).data)
+
+    @action(methods=['POST'], detail=False, name='Challenge')
+    def challenge(slef, request):
+        serializer = CognitoAuthChallengeSerializer(data=request.data)
+        if serializer.is_valid(True):
+            entity = serializer.auth_challenge(serializer.validated_data)
+            return response.Response(
+                    CogrnitoAuthRetreiveSerializer(instance=entity, context={'request': request}).data)
+
+
+
+
 
     @action(methods=['POST'], detail=False, name='Logout')
     def sign_out(self, request):
@@ -122,18 +137,18 @@ class AuthView(viewsets.ViewSet):
 #         return JsonResponse({"error": ex.args[0]}, status=400)
 
 
-@require_http_methods(['POST'])
-def respond_to_auth_challenge(request):
-    try:
-        data = json.loads(request.body.decode('utf-8'))
-        result = helpers.respond_to_auth_challenge(data)
-
-        return JsonResponse(result)
-    except CognitoException as ex:
-        return JsonResponse(ex.args[0], status=ex.status)
-    except ValueError as ex:
-        return JsonResponse({"error": ex.args[0]}, status=400)
-    pass
+# @require_http_methods(['POST'])
+# def respond_to_auth_challenge(request):
+#     try:
+#         data = json.loads(request.body.decode('utf-8'))
+#         result = helpers.respond_to_auth_challenge(data)
+#
+#         return JsonResponse(result)
+#     except CognitoException as ex:
+#         return JsonResponse(ex.args[0], status=ex.status)
+#     except ValueError as ex:
+#         return JsonResponse({"error": ex.args[0]}, status=400)
+#     pass
 
 
 # @csrf_exempt
@@ -151,19 +166,19 @@ def respond_to_auth_challenge(request):
 #     pass
 
 
-@csrf_exempt
-@require_http_methods(['POST'])
-def confirm_forgot_password(request):
-    try:
-        data = json.loads(request.body.decode('utf-8'))
-        result = helpers.confirm_forgot_password(data)
-
-        return JsonResponse(result)
-    except CognitoException as ex:
-        return JsonResponse(ex.args[0], status=ex.status)
-    except ValueError as ex:
-        return JsonResponse({"error": ex.args[0]}, status=400)
-    pass
+# @csrf_exempt
+# @require_http_methods(['POST'])
+# def confirm_forgot_password(request):
+#     try:
+#         data = json.loads(request.body.decode('utf-8'))
+#         result = helpers.confirm_forgot_password(data)
+#
+#         return JsonResponse(result)
+#     except CognitoException as ex:
+#         return JsonResponse(ex.args[0], status=ex.status)
+#     except ValueError as ex:
+#         return JsonResponse({"error": ex.args[0]}, status=400)
+#     pass
 
 
 # @csrf_exempt

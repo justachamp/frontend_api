@@ -1,13 +1,15 @@
 from rest_framework_json_api import serializers, exceptions
 from rest_framework.fields import Field, DictField, ListField
 from rest_framework import status as status_codes
-from authentication.cognito.models import Identity, Verification
+from authentication.cognito.models import Identity, Verification, Challenge
 from django.contrib.auth import get_user_model
 from authentication.cognito.core import helpers
 from authentication.cognito.exceptions import Unauthorized
 from authentication.cognito.middleware import helpers as mid_helpers
 import logging
-from  frontend_api.serializers import UserSerializer
+from frontend_api.serializers import UserSerializer
+from authentication.cognito.core.mixins import AuthSerializerMixin
+from authentication.cognito.middleware import helpers as m_helpers
 logger = logging.getLogger(__name__)
 
 
@@ -38,17 +40,31 @@ class CognitoAuthVerificationSerializer(serializers.Serializer):
             raise Unauthorized(ex)
 
 
-class CognitoAuthAttributeVerifySerializer(serializers.Serializer):
+class CognitoAuthAttributeVerifySerializer(serializers.Serializer, AuthSerializerMixin):
     resource_name = 'identities'
     attribute_name = serializers.ChoiceField(required=True, allow_blank=False, choices=('email', 'phone_number'))
     access_token = serializers.CharField(write_only=True, required=True)
     code = serializers.CharField(max_length=50, required=False, write_only=True)
 
-    @staticmethod
-    def verify_attribute(validated_data):
+    # @staticmethod
+    def verify_attribute(self, validated_data):
         try:
             data = helpers.verify_attribute(validated_data)
+
             status = data.get('ResponseMetadata').get('HTTPStatusCode')
+            if status == status_codes.HTTP_200_OK:
+                user, _, _, _ = m_helpers.get_tokens(access_token=validated_data['access_token'])
+                attribute = validated_data['attribute_name']
+                if getattr(user, attribute):
+                    if attribute == 'email':
+                        user.email_verified = True
+                    elif attribute == 'phone_number':
+                        user.phone_number_verified = True
+
+                    user.save()
+
+                return status_codes.HTTP_204_NO_CONTENT
+
             return status_codes.HTTP_204_NO_CONTENT if status == status_codes.HTTP_200_OK else status
         except Exception as ex:
             logger.error(f'general {ex}')
@@ -105,6 +121,41 @@ class CogrnitoSignOutSerializer(serializers.Serializer):
             raise Unauthorized(ex)
 
 
+class CognitoAuthChallengeSerializer(serializers.Serializer):
+
+    id = serializers.UUIDField(read_only=True)
+    username = serializers.EmailField(required=True)
+    challenge_name = serializers.CharField(max_length=20, required=True)
+    challenge_response = serializers.CharField(required=True, write_only=True)
+    challenge_delivery = serializers.CharField(max_length=20, required=True)
+    destination = serializers.CharField(max_length=14, required=True)
+    session = serializers.CharField(required=True)
+
+    def auth_challenge(self, validated_data):
+        try:
+
+            result = helpers.respond_to_auth_challenge(validated_data)
+            tokens = result.get('AuthenticationResult')
+            data = mid_helpers.decode_token(tokens.get('IdToken'))
+            validated_data['id_token'] = tokens.get('IdToken')
+            validated_data['access_token'] = tokens.get('AccessToken')
+            if not validated_data.get('refresh_token'):
+                validated_data['refresh_token'] = tokens.get('RefreshToken')
+
+            user = get_user_model().objects.get(cognito_id=data[1].get('cognito:username')) if len(data) else None
+
+            if not user:
+                raise serializers.ValidationError("User not found")
+            validated_data['user'] = user
+            return Identity(id=user.id, **validated_data)
+
+        except Exception as ex:
+            logger.error(f'general {ex}')
+            raise Unauthorized(ex)
+
+
+
+
 class CogrnitoAuthRetreiveSerializer(serializers.Serializer):
     resource_name = 'identities'
     id = serializers.UUIDField(read_only=True)
@@ -129,30 +180,54 @@ class CogrnitoAuthRetreiveSerializer(serializers.Serializer):
 
         return data
 
-    @staticmethod
-    def retreive(validated_data):
+    def retreive(self, validated_data):
         try:
             validated_data['username'] = validated_data['preferred_username']
             if validated_data.get('refresh_token'):
                 result = helpers.refresh_session(validated_data)
             else:
                 result = helpers.initiate_auth(validated_data)
-            tokens = result.get('AuthenticationResult')
-            data = mid_helpers.decode_token(tokens.get('IdToken'))
-            validated_data['id_token'] = tokens.get('IdToken')
-            validated_data['access_token'] = tokens.get('AccessToken')
-            if not validated_data.get('refresh_token'):
-                validated_data['refresh_token'] = tokens.get('RefreshToken')
 
-            user = get_user_model().objects.get(email=data[1].get('email')) if len(data) else None
+            if result.get('AuthenticationResult'):
+                return self._retreive_auth_result(validated_data, result)
+            elif result.get('ChallengeName'):
+                return self._retreive_auth_challenge(validated_data, result)
 
-            if not user:
-                raise serializers.ValidationError("User not found")
-            validated_data['user'] = user
-            return Identity(id=user.cognito_id, **validated_data)
         except Exception as ex:
             logger.error(f'general {ex}')
             raise Unauthorized(ex)
+
+
+    @staticmethod
+    def _retreive_auth_result(validated_data, result):
+        tokens = result.get('AuthenticationResult')
+
+        data = mid_helpers.decode_token(tokens.get('IdToken'))
+        validated_data['id_token'] = tokens.get('IdToken')
+        validated_data['access_token'] = tokens.get('AccessToken')
+        if not validated_data.get('refresh_token'):
+            validated_data['refresh_token'] = tokens.get('RefreshToken')
+
+        user = get_user_model().objects.get(cognito_id=data[1].get('cognito:username')) if len(data) else None
+
+        if not user:
+            raise serializers.ValidationError("User not found")
+        validated_data['user'] = user
+        return Identity(id=user.id, **validated_data)
+
+
+    @staticmethod
+    def _retreive_auth_challenge(validated_data, result):
+        params = result.get('ChallengeParameters')
+        session = result.get('Session')
+        id = params.get('USER_ID_FOR_SRP')
+        validated_data['challenge_name'] = result.get('ChallengeName')
+        validated_data['challenge_delivery'] = params.get('CODE_DELIVERY_DELIVERY_MEDIUM')
+        validated_data['destination'] = params.get('CODE_DELIVERY_DESTINATION')
+        validated_data['session'] = session
+        # validated_data['id'] = id
+
+        return Challenge(id=id, **validated_data)
 
 
 class CognitoAuthSerializer(CogrnitoAuthRetreiveSerializer):
@@ -197,14 +272,12 @@ class CognitoAuthSerializer(CogrnitoAuthRetreiveSerializer):
     @staticmethod
     def create(validated_data):
         try:
-            # "type": 'personal|business"
             validated_data['username'] = validated_data['preferred_username']
             result = helpers.sign_up(validated_data)
             return CogrnitoAuthRetreiveSerializer.retreive(validated_data)
-            return Identity(id=result.get('UserSub'), **validated_data)
+            # return Identity(id=result.get('UserSub'), **validated_data)
         except Exception as ex:
             logger.error(f'general {ex}')
-            # raise exceptions.exceptions.ValidationError(detail=ex.args[0])
             raise Unauthorized(ex)
 
     @staticmethod

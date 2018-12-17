@@ -26,8 +26,10 @@ def validate_token(access_token, id_token, refresh_token=None):
 
     try:
         header, payload = decode_token(access_token)
-        id_header, id_payload = decode_token(id_token)
-        logger.error(f'id_payload {id_payload}')
+        if id_token:
+            id_header, id_payload = decode_token(id_token)
+
+            logger.error(f'id_payload {id_payload}')
     except Exception as ex:
         # Invalid token or token we can't decode for whatever reason
         raise Exception("Invalid token")
@@ -35,8 +37,14 @@ def validate_token(access_token, id_token, refresh_token=None):
     public_keys = utils.get_public_keys()
 
     [matching_key] = [key for key in public_keys['keys'] if key['kid'] == header['kid']]
-    [id_matching_key] = [key for key in public_keys['keys'] if key['kid'] == id_header['kid']]
-    if matching_key is None or id_matching_key is None:
+    # [id_matching_key] = [key for key in public_keys['keys'] if key['kid'] == id_header['kid']]
+
+    # if id_payload:
+    #     [id_matching_key] = [key for key in public_keys['keys'] if key['kid'] == id_header['kid']]
+    #     if id_matching_key is None:
+    #         raise Exception("Invalid token public key")
+
+    if matching_key is None:
         raise Exception("Invalid token public key")
     else:
         # Verify signature using the public key for this pool, as defined the the AWS documentation
@@ -52,13 +60,12 @@ def validate_token(access_token, id_token, refresh_token=None):
         raise Exception("Invalid token audience")
 
     # Verify that the issuer matches the URL for the Cognito user pool, as defined by the AWS documentation
-    if payload['iss'] != id_payload['iss'] or id_payload['iss'] != "https://cognito-idp." + constants.POOL_ID.split("_", 1)[0] + ".amazonaws.com/" \
+    if payload['iss'] != "https://cognito-idp." + constants.POOL_ID.split("_", 1)[0] + ".amazonaws.com/" \
             + constants.POOL_ID:
         raise Exception("Invalid token issuer")
 
     # Verify that the token is either not expired, or if expired, that we have a refresh token to refresh it
-    if payload['exp'] <= datetime.datetime.timestamp(datetime.datetime.utcnow()) or \
-            id_payload['exp'] <= datetime.datetime.timestamp(datetime.datetime.utcnow()):
+    if payload['exp'] <= datetime.datetime.timestamp(datetime.datetime.utcnow()):
 
         if not refresh_token:
             # The current access token is expired and no refresh token was provided, authentication fails
@@ -99,17 +106,24 @@ def decode_token(access_token):
     return header, payload
 
 
-def process_request(request, propogate_error=False):
-    try:
-        # logger.error('process_request helpels')
-        # logger.error(f'meta {request.META}')
+def process_request(request, propagate_error=False):
+
         access_token = request.META.get('HTTP_ACCESSTOKEN')
         refresh_token = request.META.get('HTTP_REFRESHTOKEN')
         id_token = request.META.get('HTTP_IDTOKEN')
-        logger.error(f'access_token: {access_token} refresh_token: {refresh_token}  id_token: {id_token}')
-        if not access_token  or not id_token:
+
+        return get_tokens(access_token=access_token, id_token=id_token, refresh_token=refresh_token,
+                          propagate_error=propagate_error)
+
+
+def get_tokens(access_token, id_token=None, refresh_token=None, propagate_error=False):
+    logger.error(f'access_token: {access_token} refresh_token: {refresh_token}  id_token: {id_token}')
+    try:
+            # logger.error('process_request helpels')
+            # logger.error(f'meta {request.META}')
+        if not access_token:
             # Need to have this to authenticate, error out
-            raise Exception("No valid tokens were found in the request")
+            raise Exception("No valid Access token were found in the request")
         else:
             # logger.error('start validation')
             new_access_token, new_id_token, new_refresh_token = validate_token(access_token, id_token, refresh_token)
@@ -117,13 +131,20 @@ def process_request(request, propogate_error=False):
             # logger.error(f'new_access_token: {new_access_token} new_refresh_token: {new_refresh_token}')
             header, payload = decode_token(access_token)
             logger.error(f'header: {header} payload: {payload}')
-            id_header, id_payload = decode_token(id_token)
-            logger.error(f'header: {id_header} payload: {id_payload}')
+            if id_token:
+                id_header, id_payload = decode_token(id_token)
+                logger.error(f'header: {id_header} payload: {id_payload}')
+            else:
+                id_payload = None
+
             try:
-                user = get_user_model().objects.get(username=id_payload['email'])
+                if id_payload:
+                    user = get_user_model().objects.get(cognito_id=id_payload.get('cognito:username'))
+                else:
+                    user = get_user_model().objects.get(cognito_id=payload.get('username'))
             except Exception as ex:
-                logger.error(f'process_request {ex} {payload["username"]}')
-                if propogate_error:
+                logger.error(f'process_request {ex} {payload["cognito:username"]}')
+                if propagate_error:
                     raise ex
 
                 if settings.AUTO_CREATE_USER:
@@ -140,13 +161,13 @@ def process_request(request, propogate_error=False):
                 else:
                     return AnonymousUser, None, None, None
 
-        return user, new_access_token, new_id_token, new_refresh_token
+            return user, new_access_token, new_id_token, new_refresh_token
     except AuthenticationFailed as ex:
         raise ex
         # logger.error(f'process_request Exception: {ex}')
 
     except Exception as ex:
         logger.error(f'process_request Exception: {ex}')
-        if propogate_error:
+        if propagate_error:
             raise ex
         return AnonymousUser(), None, None, None

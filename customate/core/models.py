@@ -16,6 +16,24 @@ class User(AbstractUser, Model):
     birth_date = models.DateField(_('day of birth'), blank=True, null=True)
     phone_number = PhoneNumberField(blank=True)
 
+    phone_number_verified = models.BooleanField(
+        _('phone number verified'),
+        default=False,
+        help_text=_(
+            'Designates whether this company has only owner. '
+            'Unselect this to add ability adding shareholders.'
+        ),
+    )
+
+    email_verified = models.BooleanField(
+        _('phone number verified'),
+        default=False,
+        help_text=_(
+            'Designates whether this company has only owner. '
+            'Unselect this to add ability adding shareholders.'
+        ),
+    )
+
     def get_username(self):
         return self.email
 

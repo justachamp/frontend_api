@@ -15,6 +15,8 @@ logger = logging.getLogger(__name__)
 from rest_framework import exceptions, status
 from rest_framework_json_api import exceptions
 BUSINESS_ACCOUNT = 'business'
+BAD_DATA_EXCEPTION = "The required parameters were not passed through in the data dictionary"
+
 from django.db import transaction
 
 
@@ -30,7 +32,7 @@ class CognitoException(Exception):
 
     @staticmethod
     def create_from_boto_exception(ex):
-        raise ex;
+        raise ex
 
         # for message in response.data:
         #     errors.append({
@@ -220,8 +222,47 @@ class Identity:
             logger.error(f'general {ex}')
             raise Exception(ex)
 
-    def respond_to_auth_challenge(self):
-        pass
+    @staticmethod
+    def _get_challenge_responses(username, challenge_name, responses):
+        secret_hash = utils.get_cognito_secret_hash(username)
+        # challenge_hash = f' , {secret_hash}' if secret_hash else ''
+
+        if challenge_name == 'SMS_MFA':
+            params = {
+                'SMS_MFA_CODE': responses,
+                'USERNAME': username
+            }
+            if secret_hash:
+                params['SECRET_HASH'] = secret_hash
+
+            return params
+
+        else:
+            raise Exception('Unsupported challenge name')
+
+    def respond_to_auth_challenge(self, username, challenge_name, responses, session):
+        try:
+
+            responses = self._get_challenge_responses(username, challenge_name, responses)
+            params = {"ClientId": constants.CLIENT_ID,
+                      "ChallengeName": challenge_name,
+                      "Session": session,
+                      "ChallengeResponses": responses
+                      }
+
+            return self.client.respond_to_auth_challenge(**params)
+        except ParamValidationError as ex:
+            logger.error(f'BOTOCORE_EXCEPTIONS {ex}')
+            raise CognitoException.create_from_boto_exception(ex)
+
+        except constants.AWS_EXCEPTIONS as ex:
+            logger.error(f'AWS_EXCEPTIONS {ex}')
+            raise CognitoException.create_from_exception(ex)
+
+        except Exception as ex:
+            logger.error(f'general {ex}')
+            raise Exception(ex)
+
 
     def forgot_password(self, username):
         secret_hash = utils.get_cognito_secret_hash(username)
@@ -258,8 +299,18 @@ class Identity:
         except constants.AWS_EXCEPTIONS as ex:
             raise CognitoException.create_from_exception(ex)
 
-    def admin_get_user(self):
-        pass
+    def admin_get_user(self, username):
+        params = {
+            'UserPoolId': constants.POOL_ID,
+            'Username': username
+        }
+
+        try:
+            data = self.client.admin_get_user(**params)
+            return data
+        except constants.AWS_EXCEPTIONS as ex:
+            raise CognitoException.create_from_exception(ex)
+
 
     def admin_disable_user(self):
         pass

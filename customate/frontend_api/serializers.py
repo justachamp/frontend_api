@@ -8,6 +8,7 @@ from rest_framework_json_api.utils import (
     get_resource_type_from_model
 )
 from core.models import User
+from authentication.cognito.core.mixins import AuthSerializerMixin
 from frontend_api.models import Address, Account, Shareholder, Company
 from frontend_api.fields import AccountType, CompanyType
 import logging
@@ -51,7 +52,8 @@ class RelativeResourceIdentifierObjectSerializer(ResourceIdentifierObjectSeriali
             self.fail('incorrect_type', data_type=type(data['pk']).__name__)
 
 
-class UserSerializer(serializers.HyperlinkedModelSerializer):
+class UserSerializer(serializers.HyperlinkedModelSerializer, AuthSerializerMixin):
+
 
     related_serializers = {
         'address': 'frontend_api.serializers.UserAddressSerializer',
@@ -74,13 +76,42 @@ class UserSerializer(serializers.HyperlinkedModelSerializer):
         related_link_url_kwarg='pk',
         self_link_view_name='user-relationships',
         required=False
-
     )
+
+    def validate_phone_number(self, value):
+        """
+        Check that the blog post is about Django.
+        """
+        if self.auth.check('phone_number', value):
+            self.initial_data['phone_number_verified'] = self.auth.check('phone_number_verified', True)
+        else:
+            self.initial_data['phone_number_verified'] = False
+            self.auth.update_attribute('phone_number', value)
+
+        return value
+
+    def validate_email(self, value):
+        """
+        Check that the blog post is about Django.
+        """
+        if self.auth.check('email', value):
+            self.initial_data['email_verified'] = self.auth.check('email_verified', True)
+        else:
+            self.initial_data['email_verified'] = False
+            self.auth.update_attribute('email', value)
+
+        self.initial_data['username'] = value
+        self.instance.username = value
+
+        return value
+
 
     class Meta:
         model = User
         fields = ('url', 'username', 'first_name', 'last_name', 'middle_name', 'phone_number',
+                  'phone_number_verified', 'email_verified',
                   'birth_date', 'last_name', 'email', 'groups', 'address', 'account')
+        # extra_kwargs = {'username': {'write_only': True}}
 
 
 class UserAddressSerializer(serializers.HyperlinkedModelSerializer):

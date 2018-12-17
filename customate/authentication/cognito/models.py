@@ -21,5 +21,9 @@ class Identity(object):
         self.pk = getattr(self, 'id')
 
 
+class Challenge(Entity):
+    fields = ('id', 'username', 'challenge_name', 'challenge_delivery', 'destination', 'session')
+
+
 class Verification(Entity):
     fields = ('id', 'attribute_name', 'destination')
