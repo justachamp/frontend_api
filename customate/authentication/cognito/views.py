@@ -3,7 +3,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from authentication.cognito.core import helpers
-from authentication.cognito.serializers import CognitoAuthSerializer, CogrnitoAuthRetreiveSerializer, \
+from authentication.cognito.serializers import CognitoAuthSerializer, CogrnitoAuthRetrieveSerializer, \
     CogrnitoSignOutSerializer, CognitoAuthForgotPasswordSerializer, CognitoAuthPasswordRestoreSerializer,\
     CognitoAuthVerificationSerializer, CognitoAuthAttributeVerifySerializer, CognitoAuthChallengeSerializer
 
@@ -33,15 +33,16 @@ class AuthView(viewsets.ViewSet):
 
     @action(methods=['POST'], detail=False, name='Login')
     def sign_in(self, request):
-        serializer = CogrnitoAuthRetreiveSerializer(data=request.data)
+        serializer = CogrnitoAuthRetrieveSerializer(data=request.data)
         if serializer.is_valid(True):
-            entity = serializer.retreive(serializer.validated_data)
+            entity = serializer.retrieve(serializer.validated_data)
             if type(entity) == Challenge:
                 return response.Response(
                     CognitoAuthChallengeSerializer(instance=entity, context={'request': request}).data)
             else:
                 return response.Response(
-                    CogrnitoAuthRetreiveSerializer(instance=entity, context={'request': request}).data)
+                    CogrnitoAuthRetrieveSerializer(instance=entity, context={'request': request}).data)
+
 
     @action(methods=['POST'], detail=False, name='Challenge')
     def challenge(slef, request):
@@ -49,15 +50,10 @@ class AuthView(viewsets.ViewSet):
         if serializer.is_valid(True):
             entity = serializer.auth_challenge(serializer.validated_data)
             return response.Response(
-                    CogrnitoAuthRetreiveSerializer(instance=entity, context={'request': request}).data)
-
-
-
-
+                    CogrnitoAuthRetrieveSerializer(instance=entity, context={'request': request}).data)
 
     @action(methods=['POST'], detail=False, name='Logout')
     def sign_out(self, request):
-
         serializer = CogrnitoSignOutSerializer(data=request.data, )
         if serializer.is_valid(True):
             serializer.sign_out(serializer.validated_data)
@@ -65,12 +61,10 @@ class AuthView(viewsets.ViewSet):
 
     @action(methods=['POST'], detail=False, name='Refresh')
     def refresh(self, request):
-        serializer = CogrnitoAuthRetreiveSerializer(data=request.data)
+        serializer = CogrnitoAuthRetrieveSerializer(data=request.data)
         if serializer.is_valid(True):
-            entity = serializer.retreive(serializer.validated_data)
-            return response.Response(CogrnitoAuthRetreiveSerializer(instance=entity, context={'request': request}).data)
-        # result = helpers.initiate_auth(request.data)
-        # return response.Response(result)
+            entity = serializer.retrieve(serializer.validated_data)
+            return response.Response(CogrnitoAuthRetrieveSerializer(instance=entity, context={'request': request}).data)
 
     @action(methods=['POST'], detail=True, name='Confirm login')
     def confirm_login(self):
@@ -83,6 +77,13 @@ class AuthView(viewsets.ViewSet):
             serializer.create(serializer.validated_data)
             return self.sign_in(request)
             # return response.Response(CognitoAuthSerializer(instance=entity).data)
+
+    @action(methods=['POST'], detail=False, name='Forgot password')
+    def verification_code(self, request):
+        serializer = CognitoAuthVerificationSerializer(data=request.data)
+        if serializer.is_valid(True):
+            entity = serializer.verification_code(serializer.validated_data)
+            return response.Response(CognitoAuthVerificationSerializer(instance=entity).data)
 
     @action(methods=['POST'], detail=False, name='Forgot password')
     def verification_code(self, request):

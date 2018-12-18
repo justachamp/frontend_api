@@ -156,7 +156,7 @@ class CognitoAuthChallengeSerializer(serializers.Serializer):
 
 
 
-class CogrnitoAuthRetreiveSerializer(serializers.Serializer):
+class CogrnitoAuthRetrieveSerializer(serializers.Serializer):
     resource_name = 'identities'
     id = serializers.UUIDField(read_only=True)
     username = serializers.EmailField(required=True, source='preferred_username', write_only=True)
@@ -180,7 +180,7 @@ class CogrnitoAuthRetreiveSerializer(serializers.Serializer):
 
         return data
 
-    def retreive(self, validated_data):
+    def retrieve(self, validated_data):
         try:
             validated_data['username'] = validated_data['preferred_username']
             if validated_data.get('refresh_token'):
@@ -189,9 +189,9 @@ class CogrnitoAuthRetreiveSerializer(serializers.Serializer):
                 result = helpers.initiate_auth(validated_data)
 
             if result.get('AuthenticationResult'):
-                return self._retreive_auth_result(validated_data, result)
+                return self._retrieve_auth_result(validated_data, result)
             elif result.get('ChallengeName'):
-                return self._retreive_auth_challenge(validated_data, result)
+                return self._retrieve_auth_challenge(validated_data, result)
 
         except Exception as ex:
             logger.error(f'general {ex}')
@@ -199,7 +199,7 @@ class CogrnitoAuthRetreiveSerializer(serializers.Serializer):
 
 
     @staticmethod
-    def _retreive_auth_result(validated_data, result):
+    def _retrieve_auth_result(validated_data, result):
         tokens = result.get('AuthenticationResult')
 
         data = mid_helpers.decode_token(tokens.get('IdToken'))
@@ -217,7 +217,7 @@ class CogrnitoAuthRetreiveSerializer(serializers.Serializer):
 
 
     @staticmethod
-    def _retreive_auth_challenge(validated_data, result):
+    def _retrieve_auth_challenge(validated_data, result):
         params = result.get('ChallengeParameters')
         session = result.get('Session')
         id = params.get('USER_ID_FOR_SRP')
@@ -230,7 +230,7 @@ class CogrnitoAuthRetreiveSerializer(serializers.Serializer):
         return Challenge(id=id, **validated_data)
 
 
-class CognitoAuthSerializer(CogrnitoAuthRetreiveSerializer):
+class CognitoAuthSerializer(CogrnitoAuthRetrieveSerializer):
 
     user_attributes = ListField(child=CognitoAttributeFiled(required=True), required=True)
     username = serializers.EmailField(required=True, source='preferred_username', write_only=True)
@@ -274,7 +274,8 @@ class CognitoAuthSerializer(CogrnitoAuthRetreiveSerializer):
         try:
             validated_data['username'] = validated_data['preferred_username']
             result = helpers.sign_up(validated_data)
-            return CogrnitoAuthRetreiveSerializer.retreive(validated_data)
+            serializer = CogrnitoAuthRetrieveSerializer()
+            return serializer.retrieve(validated_data)
             # return Identity(id=result.get('UserSub'), **validated_data)
         except Exception as ex:
             logger.error(f'general {ex}')
