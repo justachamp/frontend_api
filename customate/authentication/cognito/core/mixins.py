@@ -1,6 +1,7 @@
 from authentication.cognito.core.service import Identity
 from authentication.cognito.core.actions import admin_update_user_attributes, admin_get_user
 from authentication.cognito.middleware import helpers as m_helpers
+from django.contrib.auth.models import AnonymousUser
 
 
 class Auth(object):
@@ -24,7 +25,10 @@ class Auth(object):
         return self.__user
 
     def update_attribute(self, name, value):
-        return admin_update_user_attributes(str(self.__request.user.cognito_id), [{'Name': name, 'Value': value}])
+        user = self.__request.user
+        if user and type(user) is not AnonymousUser:
+            return admin_update_user_attributes(str(self.__request.user.cognito_id), [{'Name': name, 'Value': value}])
+
 
     @property
     def idenity(self):
@@ -40,7 +44,4 @@ class AuthSerializerMixin(object):
     def auth(self):
         if not self.__auth:
             self.__auth = Auth(self.context.get('request'))
-
-
-
         return self.__auth

@@ -178,14 +178,15 @@ def admin_create_user(data, param_mapping=None):
         username = parse_parameter(data, param_mapping, 'username')
         user_attributes = parse_parameter(data, param_mapping, 'user_attributes')
         temporary_password = parse_parameter(data, param_mapping, 'temporary_password')
-
-        if "suppress" in data or "suppress" in param_mapping:
-            supress = parse_parameter(data, param_mapping, 'suppress')
+        action = parse_parameter(data, param_mapping, 'action')
+        delivery = parse_parameter(data, param_mapping, 'delivery')
+        # if "suppress" in data or "suppress" in param_mapping:
+        #     supress = parse_parameter(data, param_mapping, 'suppress')
 
     except Exception as ex:
         raise ValueError(BAD_DATA_EXCEPTION)
 
-    return identity.admin_create_user(username, user_attributes, temporary_password)
+    return identity.admin_create_user(username, user_attributes, temporary_password, action, delivery)
 
 
 def parse_parameter(data, param_mapping, param=None):

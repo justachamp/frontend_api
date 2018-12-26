@@ -41,6 +41,25 @@ urlpatterns = [
             view=views.AccountRelationshipView.as_view(),
             name='account-relationships'
             ),
+
+    re_path(r'^sub_user_accounts/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
+            views.SubUserAccountViewSet.as_view({'get': 'retrieve_related', 'patch': 'patch_related'}),
+            name='sub-user-account-related'),
+
+    re_path(r'^sub_user_accounts/(?P<pk>[^/.]+)/relationships/(?P<related_field>[^/.]+)$',
+            view=views.SubUserAccountRelationshipView.as_view(),
+            name='sub-user-account-relationships'
+            ),
+
+    re_path(r'^admin-user-accounts/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
+            views.AdminUserAccountViewSet.as_view({'get': 'retrieve_related', 'patch': 'patch_related'}),
+            name='admin-user-account-related'),
+
+    re_path(r'^admin-user-accounts/(?P<pk>[^/.]+)/relationships/(?P<related_field>[^/.]+)$',
+            view=views.AdminUserAccountRelationshipView.as_view(),
+            name='admin-user-account-relationships'
+            ),
+
     re_path(r'^shareholders/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
             views.ShareholderViewSet.as_view({'get': 'retrieve_related', 'patch': 'patch_related'}),
             name='shareholder-related'),

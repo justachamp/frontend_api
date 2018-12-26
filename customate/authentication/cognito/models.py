@@ -1,6 +1,3 @@
-from django.db import models
-
-# Create your models here.
 
 class Entity(object):
     fields = []
@@ -12,13 +9,13 @@ class Entity(object):
         self.pk = getattr(self, 'id')
 
 
-class Identity(object):
-    def __init__(self, **kwargs):
-        for field in ('id', 'preferred_username', 'user_attributes', 'id_token', 'access_token', 'refresh_token',
-                      'account_type', 'user'):
-            setattr(self, field, kwargs.get(field, None))
+class Identity(Entity):
+    fields = ('id', 'preferred_username', 'user_attributes', 'id_token', 'access_token', 'refresh_token',
+             'account_type', 'user')
 
-        self.pk = getattr(self, 'id')
+
+class Invitation(Entity):
+    fields = ('id', 'username', 'temporary_password', 'action', 'delivery', 'user_attributes')
 
 
 class Challenge(Entity):

@@ -1,25 +1,12 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from core.models import Model
+from core.models import Model, Address
+from django.contrib.auth import get_user_model
 from enumfields import EnumField
 from frontend_api.fields import AccountType, CompanyType
 
 from django.db import models
-
-
-
-class Address(Model):
-    address = models.CharField(max_length=250)
-    country = models.CharField(max_length=50)
-    address_line_1 = models.CharField(max_length=100)
-    address_line_2 = models.CharField(max_length=100)
-    city = models.CharField(max_length=50)
-    locality = models.CharField(max_length=50)
-    postcode = models.CharField(max_length=20)
-
-    def __str__(self):
-        return "%s the address" % self.address
 
 
 class Company(Model):
@@ -51,12 +38,17 @@ class Company(Model):
         ),
     )
 
-
     def __str__(self):
         return "%s the business address" % self.registration_business_name
 
 
 class Account(Model):
+    user = models.OneToOneField(
+        get_user_model(),
+        on_delete=models.CASCADE,
+        unique=True,
+        blank=False
+    )
 
     company = models.OneToOneField(
         Company,
@@ -66,11 +58,38 @@ class Account(Model):
         null=True,
         related_name='account'
     )
+
     account_type = EnumField(AccountType, max_length=10, default=AccountType.personal)
     position = models.CharField(max_length=50, blank=True, null=True)
 
     def __str__(self):
-        return "%s the account" % self.account_type
+        return "User account %s type" % self.account_type
+
+
+class AdminUserAccount(Model):
+    user = models.OneToOneField(
+        get_user_model(),
+        on_delete=models.CASCADE,
+        unique=True,
+        blank=False
+    )
+
+    def __str__(self):
+        return "Admin account"
+
+
+class SubUserAccount(Model):
+    user = models.OneToOneField(
+        get_user_model(),
+        on_delete=models.CASCADE,
+        unique=True,
+        blank=False
+    )
+
+    owner_account = models.ForeignKey(Account, on_delete=models.CASCADE, related_name="sub_user_accounts")
+
+    def __str__(self):
+        return "Sub user account"
 
 
 class Shareholder(Model):

@@ -43,9 +43,8 @@ class AuthView(viewsets.ViewSet):
                 return response.Response(
                     CogrnitoAuthRetrieveSerializer(instance=entity, context={'request': request}).data)
 
-
     @action(methods=['POST'], detail=False, name='Challenge')
-    def challenge(slef, request):
+    def challenge(self, request):
         serializer = CognitoAuthChallengeSerializer(data=request.data)
         if serializer.is_valid(True):
             entity = serializer.auth_challenge(serializer.validated_data)
@@ -76,23 +75,15 @@ class AuthView(viewsets.ViewSet):
         if serializer.is_valid(True):
             serializer.create(serializer.validated_data)
             return self.sign_in(request)
-            # return response.Response(CognitoAuthSerializer(instance=entity).data)
 
-    @action(methods=['POST'], detail=False, name='Forgot password')
+    @action(methods=['POST'], detail=False, name='Send verification code')
     def verification_code(self, request):
         serializer = CognitoAuthVerificationSerializer(data=request.data)
         if serializer.is_valid(True):
             entity = serializer.verification_code(serializer.validated_data)
             return response.Response(CognitoAuthVerificationSerializer(instance=entity).data)
 
-    @action(methods=['POST'], detail=False, name='Forgot password')
-    def verification_code(self, request):
-        serializer = CognitoAuthVerificationSerializer(data=request.data)
-        if serializer.is_valid(True):
-            entity = serializer.verification_code(serializer.validated_data)
-            return response.Response(CognitoAuthVerificationSerializer(instance=entity).data)
-
-    @action(methods=['POST'], detail=False, name='Forgot password')
+    @action(methods=['POST'], detail=False, name='Verify')
     def verify(self, request):
         serializer = CognitoAuthAttributeVerifySerializer(data=request.data)
         if serializer.is_valid(True):

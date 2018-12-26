@@ -4,8 +4,9 @@ from django.contrib.auth import get_user_model
 # from frontend_api.models import CustomateUser as User
 from authentication.cognito.core import constants
 from authentication.cognito import utils
-from frontend_api.models import Account, Company
 
+from frontend_api.models import Account, Company
+from core.fields import UserRole
 from botocore.exceptions import ParamValidationError
 # import the logging library
 import logging
@@ -60,8 +61,8 @@ class Identity:
     def sign_up(self, username, password, account_type, user_attributes, validation_data=None):
         try:
             logger.error(username)
-            logger.error(password)
             logger.error(user_attributes)
+
             secret_hash = utils.get_cognito_secret_hash(username)
             params = {"ClientId": constants.CLIENT_ID,
                       "Username": username, "Password": password,
@@ -77,22 +78,22 @@ class Identity:
             cognito_user = self.client.sign_up(**params)
             logger.error(f'cognito user {cognito_user}')
             logger.error(f'user_params {user_params}')
-            # user = TenantUser.objects.create_user(email="user@evilcorp.com", password='password', is_active=True)
             with transaction.atomic():
+
                 user = self.user_class.objects.create(
                     username=username,
                     email=username,
+                    role=UserRole.owner,
                     cognito_id=cognito_user['UserSub']
                     # first_name=user_params.get('given_name'), last_name=user_params.get('family_name')
                 )
-                account = Account.objects.create(account_type=account_type)
-
-                company = Company.objects.create(is_active=(account_type == BUSINESS_ACCOUNT))
-                account.company = company
-                company.save()
+                account = Account.objects.create(account_type=account_type, user=user)
+                # company = Company.objects.create(is_active=(account_type == BUSINESS_ACCOUNT))
+                # account.company = company
+                # company.save()
                 account.save()
-                user.account = account
-                # user.account.create(account_type=account_type)
+
+                # user.account = account
                 user.save()
             return cognito_user
 
@@ -236,7 +237,15 @@ class Identity:
                 params['SECRET_HASH'] = secret_hash
 
             return params
+        elif challenge_name == 'NEW_PASSWORD_REQUIRED':
+            params = {
+                'NEW_PASSWORD': responses,
+                'USERNAME': username
+            }
+            if secret_hash:
+                params['SECRET_HASH'] = secret_hash
 
+            return params
         else:
             raise Exception('Unsupported challenge name')
 
@@ -262,7 +271,6 @@ class Identity:
         except Exception as ex:
             logger.error(f'general {ex}')
             raise Exception(ex)
-
 
     def forgot_password(self, username):
         secret_hash = utils.get_cognito_secret_hash(username)
@@ -311,6 +319,45 @@ class Identity:
         except constants.AWS_EXCEPTIONS as ex:
             raise CognitoException.create_from_exception(ex)
 
+    def admin_create_user(self, username, user_attributes, password=None, action=None, delivery=None, validation_data=None):
+        try:
+            logger.error(username)
+            logger.error(user_attributes)
+
+            params = {
+                'UserPoolId': constants.POOL_ID,
+                'Username': username,
+                'UserAttributes': user_attributes,
+                'TemporaryPassword': password
+            }
+
+            if action:
+                params['MessageAction'] = action
+
+            if delivery:
+                params['DesiredDeliveryMediums'] = delivery
+
+            if validation_data:
+                params['ValidationData'] = validation_data
+
+            user_params = utils.cognito_to_dict(user_attributes, settings.COGNITO_ATTR_MAPPING)
+            cognito_user = self.client.admin_create_user(**params)
+            logger.error(f'cognito user params {params}')
+            logger.error(f'cognito user {cognito_user}')
+            logger.error(f'user_params {user_params}')
+            return cognito_user.get('User')
+
+        except ParamValidationError as ex:
+            logger.error(f'BOTOCORE_EXCEPTIONS {ex}')
+            raise CognitoException.create_from_boto_exception(ex)
+
+        except constants.AWS_EXCEPTIONS as ex:
+            logger.error(f'AWS_EXCEPTIONS {ex}')
+            raise CognitoException.create_from_exception(ex)
+
+        except Exception as ex:
+            logger.error(f'general {ex}')
+            raise Exception(ex)
 
     def admin_disable_user(self):
         pass
@@ -319,9 +366,6 @@ class Identity:
         pass
 
     def admin_confirm_sign_up(self):
-        pass
-
-    def admin_create_user(self):
         pass
 
     def admin_update_user_attributes(self):

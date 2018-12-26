@@ -42,10 +42,11 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
+    # 'polymorphic',
     'phonenumber_field',
-    'frontend_api.apps.FrontendApiConfig',
     'authentication.apps.AuthenticationConfig',
     'authentication.cognito.apps.CognitoConfig',
+    'frontend_api.apps.FrontendApiConfig',
 ]
 
 MIDDLEWARE = [

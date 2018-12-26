@@ -7,6 +7,14 @@ from authentication.cognito import utils
 import logging
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
+User = get_user_model()
+
+
+def generate_password():
+    part1 = User.objects.make_random_password(3, 'abcdefghjkmnpqrstuvwxyz')
+    part2 = User.objects.make_random_password(3, 'ABCDEFGHJKLMNPQRSTUVWXYZ')
+    part3 = User.objects.make_random_password(3, '123456789')
+    return f'{part1}-{part2}-{part3}'
 
 
 class CognitoClient:
@@ -26,7 +34,7 @@ class CognitoException(Exception):
 
 
 class CognitoUser(CognitoClient):
-    user_class = get_user_model()
+    user_class = User
 
     def _prepare_kwargs(self, kwargs):
         try:
@@ -37,7 +45,6 @@ class CognitoUser(CognitoClient):
 
     def sign_up(self, username, password, user_attributes, validation_data=None):
         logger.error(username)
-        logger.error(password)
         logger.error(user_attributes)
         secret_hash = utils.get_cognito_secret_hash(username)
         params = {"ClientId": constants.CLIENT_ID,

@@ -146,20 +146,7 @@ def get_tokens(access_token, id_token=None, refresh_token=None, propagate_error=
                 logger.error(f'process_request {ex} {payload["cognito:username"]}')
                 if propagate_error:
                     raise ex
-
-                if settings.AUTO_CREATE_USER:
-                    aws_user = identity.admin_get_user(payload['username'])
-
-                    user_attributes = {k: v for dict in [{d['Name']: d['Value']} for d in aws_user['UserAttributes']]
-                                       for k, v in dict.items()}
-                    logger.error(f'process_request user_attributes: {user_attributes}')
-                    user = get_user_model().objects.create(username=payload['email'], email=user_attributes['email'],
-                                                           first_name=user_attributes['given_name'],
-                                                           last_name=user_attributes['family_name'])
-
-                    user.save()
-                else:
-                    return AnonymousUser, None, None, None
+                return AnonymousUser, None, None, None
 
             return user, new_access_token, new_id_token, new_refresh_token
     except AuthenticationFailed as ex:

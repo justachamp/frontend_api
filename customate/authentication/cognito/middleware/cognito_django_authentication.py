@@ -16,7 +16,7 @@ class AwsDjangoAuthentication:
         # and decide whether or not they are authenticated
         logger.error('authenticate AwsDjangoAuthentication')
         logger.error(f'request {request}')
-        logger.error(f'user {user} password: {password}')
+        logger.error(f'user {user}')
         # TODO: Remove this hackiness. Should only return a user from this method as Django seems to only expect a user
         # and not a tuple with a token
         if username is None:
