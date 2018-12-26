@@ -36,7 +36,7 @@ class User(AbstractUser, Model):
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
     status = EnumField(UserStatus, max_length=10, default=UserStatus.inactive)
-    role = EnumField(UserRole, max_length=10)
+    role = EnumField(UserRole, max_length=10, null=True)
     middle_name = models.CharField(_('first name'), max_length=30, blank=True)
     birth_date = models.DateField(_('day of birth'), blank=True, null=True)
     phone_number = PhoneNumberField(blank=True)
