@@ -311,7 +311,7 @@ class CognitoInviteUserSerializer(serializers.Serializer, BaseAuthValidationMixi
                 {'Name': 'custom:account_type', 'Value': validated_data['role']}
             ]
             validated_data['temporary_password'] = generate_password()
-            validated_data['action'] = validated_data.get('action', 'SUPPRESS')
+            validated_data['action'] = validated_data.get('action', '') #SUPPRESS
             validated_data['delivery'] = validated_data.get('delivery', ['EMAIL'])
             user = helpers.admin_create_user(validated_data)
 
