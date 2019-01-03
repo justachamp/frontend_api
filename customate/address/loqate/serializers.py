@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 class SearchAddressSerializer(serializers.Serializer):
     Id = serializers.CharField(max_length=250, required=False, source='id', allow_blank=True, allow_null=True)
     Type = serializers.CharField(max_length=200, source='type', required=False, allow_blank=True)
-    Text = serializers.CharField(max_length=250, source='text', required=False, allow_blank=False)
+    Text = serializers.CharField(max_length=250, source='text', required=False, allow_blank=True)
     Highlight = serializers.CharField(max_length=100, source='highlight', required=False, allow_blank=True)
     Description = serializers.CharField(max_length=250, source='description', required=False, allow_blank=True)
     Origin = serializers.CharField(max_length=100, source='origin', required=False, allow_blank=True)

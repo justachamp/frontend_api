@@ -250,10 +250,10 @@ class AddressViewSet(PatchRelatedMixin, views.ModelViewSet):
 
         }
         serializer = SearchAddressSerializer(data=params)
-        if serializer.is_valid(True):
+        if serializer.is_valid(True) and serializer.validated_data.get('text'):
             return response.Response(serializer.find(serializer.validated_data))
 
-        return response.Response()
+        return response.Response([])
 
     @action(methods=['POST'], detail=False, name='Retrieve address detail')
     def search_detail(self, request):
