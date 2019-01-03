@@ -9,6 +9,7 @@ from frontend_api.serializers import UserAddressSerializer, CompanyAddressSerial
     SubUserAccountSerializer, AdminUserAccountSerializer, \
     SubUserSerializer
 
+from address.loqate.serializers import RetrieveAddressSerializer, SearchAddressSerializer
 from authentication.cognito.serializers import CognitoInviteUserSerializer
 from rest_framework.exceptions import NotFound
 from django.contrib.auth.models import Group
@@ -238,6 +239,29 @@ class AddressViewSet(PatchRelatedMixin, views.ModelViewSet):
         if not user.account.company.address:
             user.account.company.address = serializer.save()
             user.account.company.save()
+
+    @action(methods=['POST'], detail=False, name='Search address')
+    def search(self, request):
+        data = request.data
+        params = {
+            'Id': data.get('id'),
+            'Text': data.get('text'),
+            'Limit': data.get('limit', 10),
+
+        }
+        serializer = SearchAddressSerializer(data=params)
+        if serializer.is_valid(True):
+            return response.Response(serializer.find(serializer.validated_data))
+
+        return response.Response()
+
+    @action(methods=['POST'], detail=False, name='Retrieve address detail')
+    def search_detail(self, request):
+        data = request.data
+        id = data.get('id')
+        serializer = RetrieveAddressSerializer(data={'Id': id})
+        if serializer.is_valid(True):
+            return response.Response(serializer.retrieve(id))
     #
     # def get_queryset(self):
     #     queryset = super(CompanyAddressViewSet, self).get_queryset()

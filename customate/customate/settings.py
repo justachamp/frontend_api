@@ -46,6 +46,9 @@ INSTALLED_APPS = [
     'phonenumber_field',
     'authentication.apps.AuthenticationConfig',
     'authentication.cognito.apps.CognitoConfig',
+    'address.apps.AddressConfig',
+    'address.gbg.apps.GbgConfig',
+    'address.loqate.apps.LoqateConfig',
     'frontend_api.apps.FrontendApiConfig',
 ]
 
