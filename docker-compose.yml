@@ -34,7 +34,7 @@ services:
             - '8000:8000'
             - '2222:22'
         env_file:
-            - ./docker/environment
+            - ./docker/.env
         stdin_open: true
         tty: true
         links:
