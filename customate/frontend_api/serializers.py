@@ -10,7 +10,7 @@ from rest_framework_json_api.utils import (
 from core.models import User, Address
 from core.fields import UserRole, UserStatus
 from authentication.cognito.core.mixins import AuthSerializerMixin
-from frontend_api.models import Account, Shareholder, Company, SubUserAccount, AdminUserAccount
+from frontend_api.models import Account, Shareholder, Company, SubUserAccount, AdminUserAccount, AdminUserPermission, SubUserPermission
 from frontend_api.fields import AccountType, CompanyType
 
 import logging
@@ -57,7 +57,7 @@ class EnumField(serializers.ChoiceField):
 
 class BaseUserSerializer(serializers.HyperlinkedModelSerializer):
     role = EnumField(enum=UserRole, read_only=True)
-    status = EnumField(enum=UserStatus)
+    status = EnumField(enum=UserStatus, read_only=True)
 
     class Meta:
         model = User
@@ -154,6 +154,8 @@ class SubUserSerializer(BaseUserSerializer):
 
     def create(self, validated_data):
         user = User(**validated_data)
+        user.role = UserRole.sub_user
+        user.status = UserStatus.pending
         user.save()
         owner_account = self.context.get('request').user.account
         account = SubUserAccount(owner_account=owner_account, user=user)
@@ -338,6 +340,28 @@ class SubUserAccountSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('url', 'user', 'owner_account')
 
 
+class SubUserPermissionSerializer(serializers.HyperlinkedModelSerializer):
+
+    related_serializers = {
+        'user': 'frontend_api.serializers.SubUserSerializer',
+        'account': 'frontend_api.serializers.SubUserAccountSerializer'
+    }
+
+    user = ResourceRelatedField(
+        many=False,
+        queryset=User.objects,
+        related_link_view_name='sub-user-account-related',
+        related_link_url_kwarg='pk',
+        self_link_view_name='sub-user-account-relationships',
+        required=False
+    )
+
+    class Meta:
+        model = SubUserPermission
+        fields = ('url', 'user', 'account', 'manage_sub_user', 'manage_funding_sources', 'manage_unload_accounts'
+                  'create_transaction', 'create_contract', 'load_funds', 'unload_funds')
+
+
 class AdminUserAccountSerializer(serializers.HyperlinkedModelSerializer):
 
     related_serializers = {
@@ -356,6 +380,27 @@ class AdminUserAccountSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = AdminUserAccount
         fields = ('url', 'user')
+
+
+class AdminUserPermissionSerializer(serializers.HyperlinkedModelSerializer):
+
+    related_serializers = {
+        'user': 'frontend_api.serializers.AdminUserSerializer',
+        'account': 'frontend_api.serializers.AdminUserAccountSerializer'
+    }
+
+    user = ResourceRelatedField(
+        many=False,
+        queryset=User.objects,
+        related_link_view_name='admin-user-account-related',
+        related_link_url_kwarg='pk',
+        self_link_view_name='admin-user-account-relationships',
+        required=False
+    )
+
+    class Meta:
+        model = AdminUserPermission
+        fields = ('url', 'user', 'account', 'manage_admin_user', 'manage_tax', 'manage_fee', 'can_login_as_user',)
 
 
 class CompanySerializer(serializers.HyperlinkedModelSerializer):

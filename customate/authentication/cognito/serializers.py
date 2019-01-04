@@ -1,6 +1,8 @@
 from rest_framework_json_api import serializers, exceptions
 from rest_framework.fields import Field, DictField, ListField
 from rest_framework import status as status_codes
+
+from authentication.cognito.core.constants import NEW_PASSWORD_CHALLENGE
 from authentication.cognito.models import Identity, Verification, Challenge, Invitation
 from django.contrib.auth import get_user_model
 from authentication.cognito.core import helpers
@@ -16,7 +18,8 @@ from frontend_api.serializers import UserSerializer
 from authentication.cognito.core.mixins import AuthSerializerMixin
 from authentication import settings
 from authentication.cognito.middleware import helpers as m_helpers
-from core.fields import UserRole
+from core.fields import UserRole, UserStatus
+
 logger = logging.getLogger(__name__)
 
 
@@ -171,6 +174,9 @@ class CognitoAuthChallengeSerializer(serializers.Serializer):
 
             if not user:
                 raise serializers.ValidationError("User not found")
+            if validated_data['challenge_name'] == NEW_PASSWORD_CHALLENGE:
+                user.status = UserStatus.inactive
+                user.save()
             validated_data['user'] = user
             return Identity(id=user.id, **validated_data)
 

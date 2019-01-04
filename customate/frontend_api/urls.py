@@ -51,6 +51,15 @@ urlpatterns = [
             name='sub-user-account-relationships'
             ),
 
+    re_path(r'^sub_user_permissions/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
+            views.SubUserPermissionViewSet.as_view({'get': 'retrieve_related', 'patch': 'patch_related'}),
+            name='sub-user-permission-related'),
+
+    re_path(r'^sub_user_permissions/(?P<pk>[^/.]+)/relationships/(?P<related_field>[^/.]+)$',
+            view=views.SubUserPermissionRelationshipView.as_view(),
+            name='sub-user-permission-relationships'
+            ),
+
     re_path(r'^admin-user-accounts/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
             views.AdminUserAccountViewSet.as_view({'get': 'retrieve_related', 'patch': 'patch_related'}),
             name='admin-user-account-related'),
@@ -58,6 +67,15 @@ urlpatterns = [
     re_path(r'^admin-user-accounts/(?P<pk>[^/.]+)/relationships/(?P<related_field>[^/.]+)$',
             view=views.AdminUserAccountRelationshipView.as_view(),
             name='admin-user-account-relationships'
+            ),
+
+    re_path(r'^admin_user_permissions/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
+            views.AdminUserPermissionViewSet.as_view({'get': 'retrieve_related', 'patch': 'patch_related'}),
+            name='admin-user-permission-related'),
+
+    re_path(r'^admin_user_permissions/(?P<pk>[^/.]+)/relationships/(?P<related_field>[^/.]+)$',
+            view=views.AdminUserPermissionRelationshipView.as_view(),
+            name='admin-user-permission-relationships'
             ),
 
     re_path(r'^shareholders/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',

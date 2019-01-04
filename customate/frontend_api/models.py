@@ -85,11 +85,35 @@ class SubUserAccount(Model):
         unique=True,
         blank=False
     )
-
     owner_account = models.ForeignKey(Account, on_delete=models.CASCADE, related_name="sub_user_accounts")
 
     def __str__(self):
         return "Sub user account"
+
+
+class SubUserPermission(Model):
+    user = models.ForeignKey(SubUserAccount, on_delete=models.CASCADE, related_name="sub_user_permissions")
+    manage_sub_user = models.BooleanField(_('manage sub users'), default=False)
+    manage_funding_sources = models.BooleanField(_('manage funding sources'), default=False)
+    manage_unload_accounts = models.BooleanField(_('manage unload accounts'), default=False)
+    create_transaction = models.BooleanField(_('create transaction'), default=False)
+    create_contract = models.BooleanField(_('create contract'), default=False)
+    load_funds = models.BooleanField(_('create transaction'), default=False)
+    unload_funds = models.BooleanField(_('create transaction'), default=False)
+
+    def __str__(self):
+        return "Sub user permission"
+
+
+class AdminUserPermission(Model):
+    user = models.ForeignKey(AdminUserAccount, on_delete=models.CASCADE, related_name="admin_user_permissions")
+    manage_admin_user = models.BooleanField(_('manage admins'), default=False)
+    manage_tax = models.BooleanField(_('manage tax'), default=False)
+    manage_fee = models.BooleanField(_('manage fee'), default=False)
+    can_login_as = models.BooleanField(_('can login'), default=False)
+
+    def __str__(self):
+        return "Sub user permission"
 
 
 class Shareholder(Model):

@@ -3,11 +3,12 @@ from rest_framework.response import Response
 from rest_framework.exceptions import MethodNotAllowed
 from rest_framework import response
 from collections import Iterable
-from frontend_api.models import Address, Account, Company, Shareholder, SubUserAccount, AdminUserAccount
+from frontend_api.models import Address, Account, Company, Shareholder, SubUserAccount, AdminUserAccount, \
+    SubUserPermission, AdminUserPermission
 from frontend_api.serializers import UserAddressSerializer, CompanyAddressSerializer, \
     AccountSerializer, CompanySerializer, ShareholderSerializer, AddressSerializer, \
-    SubUserAccountSerializer, AdminUserAccountSerializer, \
-    SubUserSerializer
+    SubUserAccountSerializer, AdminUserAccountSerializer, SubUserSerializer, SubUserPermissionSerializer, \
+    AdminUserPermissionSerializer
 
 from address.loqate.serializers import RetrieveAddressSerializer, SearchAddressSerializer
 from authentication.cognito.serializers import CognitoInviteUserSerializer
@@ -128,6 +129,14 @@ class AdminUserAccountRelationshipView(RelationshipView):
 
 class SubUserAccountRelationshipView(RelationshipView):
     queryset = SubUserAccount.objects
+
+
+class SubUserPermissionRelationshipView(RelationshipView):
+    queryset = SubUserPermission.objects
+
+
+class AdminUserPermissionRelationshipView(RelationshipView):
+    queryset = AdminUserPermission.objects
 
 
 class AccountRelationshipView(RelationshipPostMixin, RelationshipView):
@@ -308,7 +317,7 @@ class AccountViewSet(PatchRelatedMixin, views.ModelViewSet):
             'username': username,
             'email': username,
             'role': UserRole.sub_user.value,
-            'status': UserStatus.pending.value,
+            # 'status': UserStatus.pending.value,
             'first_name': request.data.get('first_name', ''),
             'middle_name': request.data.get('middle_name', ''),
             'last_name': request.data.get('last_name', ''),
@@ -345,6 +354,36 @@ class SubUserAccountViewSet(PatchRelatedMixin, views.ModelViewSet):
         if not user.account:
             user.account = serializer.save()
             user.save()
+
+
+class SubUserPermissionViewSet(PatchRelatedMixin, views.ModelViewSet):
+
+    queryset = SubUserPermission.objects.all()
+    serializer_class = SubUserPermissionSerializer
+    permission_classes = (IsOwnerOrReadOnly,)
+
+    def perform_create(self, serializer):
+        logger.error('perform create')
+        user = self.request.user
+
+        if not user.account.permission:
+            user.account.permission = serializer.save()
+            user.account.save()
+
+
+class AdminUserPermissionViewSet(PatchRelatedMixin, views.ModelViewSet):
+
+    queryset = AdminUserPermission.objects.all()
+    serializer_class = AdminUserPermissionSerializer
+    permission_classes = (IsOwnerOrReadOnly,)
+
+    def perform_create(self, serializer):
+        logger.error('perform create')
+        user = self.request.user
+
+        if not user.account.permission:
+            user.account.permission = serializer.save()
+            user.account.save()
 
 
 class CompanyViewSet(PatchRelatedMixin, views.ModelViewSet):
