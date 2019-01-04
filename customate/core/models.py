@@ -74,7 +74,9 @@ class User(AbstractUser, Model):
     )
 
     def check_verification(self):
-        self.is_verified = self.email_verified and self.phone_number_verified and self.address.verified
+        address_verified = self.address and self.address.verified
+        contact_verified = self.email_verified and self.phone_number_verified
+        self.is_verified = contact_verified and address_verified
         is_changeable = self.status not in (UserStatus.banned, UserStatus.blocked)
         if self.is_verified and is_changeable:
             self.status = UserStatus.active
