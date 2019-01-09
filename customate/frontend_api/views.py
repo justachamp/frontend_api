@@ -8,12 +8,12 @@ from frontend_api.models import Address, Account, Company, Shareholder, SubUserA
 from frontend_api.serializers import UserAddressSerializer, CompanyAddressSerializer, \
     AccountSerializer, CompanySerializer, ShareholderSerializer, AddressSerializer, \
     SubUserAccountSerializer, AdminUserAccountSerializer, SubUserSerializer, SubUserPermissionSerializer, \
-    AdminUserPermissionSerializer, UserAccountSerializer
+    AdminUserSerializer, AdminUserPermissionSerializer, UserAccountSerializer
 
 from address.loqate.serializers import RetrieveAddressSerializer, SearchAddressSerializer
 from authentication.cognito.serializers import CognitoInviteUserSerializer
 from rest_framework.exceptions import NotFound
-from django.contrib.auth.models import Group
+from django.contrib.auth.models import Group, AnonymousUser
 from core.models import User
 
 from rest_framework_json_api import views
@@ -79,6 +79,45 @@ class RelationshipPostMixin(object):
             return Response(serializer.data)
         else:
             raise MethodNotAllowed('POST')
+
+
+class AdminUserViewSet(PatchRelatedMixin, views.ModelViewSet):
+    """
+    API endpoint that allows users to be viewed or edited.
+    """
+    queryset = User.objects.all().filter(role=UserRole.admin).order_by('-date_joined')
+    serializer_class = AdminUserSerializer
+
+    permission_classes = (IsOwnerOrReadOnly,)
+
+    def update(self, request, *args, **kwargs):
+        return super().update(request, *args, **kwargs)
+
+    def perform_update(self, serializer):
+        serializer.save()
+
+    def get_serializer_class(self):
+
+        field = self.kwargs.get('related_field')
+
+        if field == 'account':
+            user = self.request.user
+            pk = self.kwargs.get('pk')
+
+            try:
+                user = User.objects.get(id=pk)
+            except Exception as e:
+                raise NotFound(f'Account not found {pk}')
+
+            if user.is_owner:
+                return UserAccountSerializer
+            elif user.is_subuser:
+                return SubUserAccountSerializer
+            elif user.is_admin:
+                return AdminUserAccountSerializer
+
+        else:
+            return super().get_serializer_class()
 
 
 class UserViewSet(PatchRelatedMixin, views.ModelViewSet):
@@ -389,11 +428,78 @@ class AccountViewSet(PatchRelatedMixin, views.ModelViewSet):
                 CognitoInviteUserSerializer(instance=invitation, context={'request': request}).data)
 
 
-class AdminUserAccountViewSet(PatchRelatedMixin, views.ModelViewSet):
+class AdminUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.ModelViewSet):
 
     queryset = AdminUserAccount.objects.all()
     serializer_class = AdminUserAccountSerializer
     permission_classes = (IsOwnerOrReadOnly,)
+
+    _related_serializers = {
+        'permission': AdminUserPermissionSerializer
+    }
+
+    def perform_create(self, serializer):
+        logger.error('perform create')
+        user = self.request.user
+
+        if not user.account:
+            user.account = serializer.save()
+            user.save()
+
+    def post_permission(self, request, *args, **kwargs):
+        related_field = kwargs.get('related_field')
+        related_serializer = self.get_related_serializer(related_field)
+        account = self.get_object()
+
+        if account.permission:
+            raise MethodNotAllowed('POST')
+        data = request.data.get('attributes') or {}
+        data['account'] = account
+        data['account_id'] = account.id
+        serializer = related_serializer(data=data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        permission = AdminUserPermission(**serializer.validated_data, account=account)
+        permission.save()
+        # account.permission = serializer.save()
+        # account.save()
+
+        return serializer
+
+
+    @staticmethod
+    def _initiate_admin(data):
+        return User.objects.filter(role=UserRole.admin).count() > 0 and data.get('initiate', False)
+
+    @action(methods=['POST'], detail=False, name='Invite admin')
+    @transaction.atomic()
+    def invite(self, request):
+        user = request.user
+        request_data = request.data
+        if (type(user) is not AnonymousUser and user.is_admin) or self._initiate_admin(request_data):
+            raise MethodNotAllowed('invite')
+
+        username = request_data.get('username').lower()
+        data = {
+            'username': username,
+            'email': username,
+            'role': UserRole.admin.value,
+            # 'status': UserStatus.pending.value,
+            'first_name': request_data.get('first_name', ''),
+            'middle_name': request_data.get('middle_name', ''),
+            'last_name': request_data.get('last_name', ''),
+        }
+
+        serializer = AdminUserSerializer(data=data, context={'request': request})
+        if serializer.is_valid(True):
+            user = serializer.save()
+            invitation = CognitoInviteUserSerializer.invite(data)
+            user.cognito_id = invitation.id
+            user.save()
+
+            return response.Response(
+                CognitoInviteUserSerializer(instance=invitation, context={'request': request}).data)
+
+
 
 
 class SubUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.ModelViewSet):
@@ -419,7 +525,7 @@ class SubUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.Mode
         related_serializer = self.get_related_serializer(related_field)
         account = self.get_object()
 
-        if account.permission and account.permission.count() > 0:
+        if account.permission:
             raise MethodNotAllowed('POST')
         data = request.data.get('attributes') or {}
         data['account'] = account

@@ -55,7 +55,6 @@ class EnumField(serializers.ChoiceField):
 #             self.fail('incorrect_type', data_type=type(data['pk']).__name__)
 
 
-
 class BaseUserSerializer(serializers.HyperlinkedModelSerializer):
     role = EnumField(enum=UserRole, read_only=True)
     status = EnumField(enum=UserStatus, read_only=True)
@@ -157,13 +156,24 @@ class AdminUserSerializer(BaseUserSerializer):
 
     account = PolymorphicResourceRelatedField(
         'AdminUserAccountSerializer',
-        many=True,
+        many=False,
         queryset=AdminUserAccount.objects,
-        related_link_view_name='sub-user-account-related',
+        related_link_view_name='user-related',
         related_link_url_kwarg='pk',
-        self_link_view_name='sub-user-account-relationships',
+        self_link_view_name='user-relationships',
         required=False
     )
+
+    def create(self, validated_data):
+        user = User(**validated_data)
+        user.role = UserRole.admin
+        user.status = UserStatus.pending
+        user.save()
+        account = AdminUserAccount(user=user)
+        account.save()
+        permission = AdminUserPermission(account=account)
+        permission.save()
+        return user
 
 
 class UserAddressSerializer(serializers.HyperlinkedModelSerializer):
@@ -410,7 +420,7 @@ class AdminUserPermissionSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = AdminUserPermission
-        fields = ('url', 'user', 'account', 'manage_admin_user', 'manage_tax', 'manage_fee', 'can_login_as_user',)
+        fields = ('url', 'account', 'manage_admin_user', 'manage_tax', 'manage_fee', 'can_login_as_user',)
 
 
 class CompanySerializer(serializers.HyperlinkedModelSerializer):

@@ -108,7 +108,7 @@ class AdminUserPermission(Model):
     manage_admin_user = models.BooleanField(_('manage admins'), default=False)
     manage_tax = models.BooleanField(_('manage tax'), default=False)
     manage_fee = models.BooleanField(_('manage fee'), default=False)
-    can_login_as = models.BooleanField(_('can login'), default=False)
+    can_login_as_user = models.BooleanField(_('can login'), default=False)
 
     def __str__(self):
         return "Sub user permission"
