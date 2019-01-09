@@ -333,8 +333,11 @@ class AccountViewSet(PatchRelatedMixin, views.ModelViewSet):
             related = self.kwargs.get('related_field')
             if related == 'sub_user_accounts':
                 return SubUserAccountSerializer
-            if related == 'admin_user_accounts':
-                return AdminUserAccount
+            elif related == 'admin_user_accounts':
+                return AdminUserAccountSerializer
+            else:
+                super().get_serializer_class()
+
 
         else:
             try:
