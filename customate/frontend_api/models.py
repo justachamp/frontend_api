@@ -90,7 +90,7 @@ class SubUserAccount(Account):
 
 
 class SubUserPermission(Model):
-    account = models.ForeignKey(SubUserAccount, on_delete=models.CASCADE, related_name="permission")
+    account = models.OneToOneField(SubUserAccount, on_delete=models.CASCADE, related_name="permission")
     manage_sub_user = models.BooleanField(_('manage sub users'), default=False)
     manage_funding_sources = models.BooleanField(_('manage funding sources'), default=False)
     manage_unload_accounts = models.BooleanField(_('manage unload accounts'), default=False)
@@ -104,7 +104,7 @@ class SubUserPermission(Model):
 
 
 class AdminUserPermission(Model):
-    account = models.ForeignKey(AdminUserAccount, on_delete=models.CASCADE, related_name="permission")
+    account = models.OneToOneField(AdminUserAccount, on_delete=models.CASCADE, related_name="permission")
     manage_admin_user = models.BooleanField(_('manage admins'), default=False)
     manage_tax = models.BooleanField(_('manage tax'), default=False)
     manage_fee = models.BooleanField(_('manage fee'), default=False)
