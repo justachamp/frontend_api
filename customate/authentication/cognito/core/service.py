@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from authentication.cognito.core import constants
 from authentication.cognito import utils
 
-from frontend_api.models import Account, Company
+from frontend_api.models import Account, Company, UserAccount
 from core.fields import UserRole
 from botocore.exceptions import ParamValidationError
 # import the logging library
@@ -87,7 +87,7 @@ class Identity:
                     cognito_id=cognito_user['UserSub']
                     # first_name=user_params.get('given_name'), last_name=user_params.get('family_name')
                 )
-                account = Account.objects.create(account_type=account_type, user=user)
+                account = UserAccount.objects.create(account_type=account_type, user=user)
                 # company = Company.objects.create(is_active=(account_type == BUSINESS_ACCOUNT))
                 # account.company = company
                 # company.save()
