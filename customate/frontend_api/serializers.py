@@ -117,8 +117,9 @@ class SubUserSerializer(BaseUserSerializer):
         required=False
     )
 
-    account = ResourceRelatedField(
-        many=True,
+    account = PolymorphicResourceRelatedField(
+        'SubUserAccountSerializer',
+        many=False,
         queryset=SubUserAccount.objects,
         related_link_view_name='sub-user-account-related',
         related_link_url_kwarg='pk',
@@ -154,7 +155,8 @@ class AdminUserSerializer(BaseUserSerializer):
         required=False
     )
 
-    account = ResourceRelatedField(
+    account = PolymorphicResourceRelatedField(
+        'AdminUserAccountSerializer',
         many=True,
         queryset=AdminUserAccount.objects,
         related_link_view_name='sub-user-account-related',
