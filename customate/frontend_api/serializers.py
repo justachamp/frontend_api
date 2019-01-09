@@ -132,10 +132,10 @@ class SubUserSerializer(BaseUserSerializer):
         user.status = UserStatus.pending
         user.save()
         owner_account = self.context.get('request').user.account
-        permission = SubUserPermission()
-        permission.save()
-        account = SubUserAccount(owner_account=owner_account, user=user, permission=permission)
+        account = SubUserAccount(owner_account=owner_account, user=user)
         account.save()
+        permission = SubUserPermission(account=account)
+        permission.save()
         return user
 
 
