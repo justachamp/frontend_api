@@ -42,6 +42,10 @@ urlpatterns = [
             name='account-relationships'
             ),
 
+# url(r'^accounts/(?P<pk>[^/.]+)/$',
+#         views.AccountViewSet.as_view({'get': 'retrieve'}),
+#         name='useraccount-detail'),
+
     re_path(r'^sub_user_accounts/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
             views.SubUserAccountViewSet.as_view({'get': 'retrieve_related', 'patch': 'patch_related'}),
             name='sub-user-account-related'),

@@ -73,6 +73,19 @@ class User(AbstractUser, Model):
         null=True
     )
 
+    @property
+    def is_owner(self):
+        return self.role == UserRole.owner
+
+    @property
+    def is_subuser(self):
+        return self.role == UserRole.sub_user
+
+    @property
+    def is_admin(self):
+        return self.role == UserRole.admin
+
+
     def check_verification(self):
         address_verified = self.address and self.address.verified
         contact_verified = self.email_verified and self.phone_number_verified

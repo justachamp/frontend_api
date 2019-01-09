@@ -4,11 +4,11 @@ from rest_framework.exceptions import MethodNotAllowed
 from rest_framework import response
 from collections import Iterable
 from frontend_api.models import Address, Account, Company, Shareholder, SubUserAccount, AdminUserAccount, \
-    SubUserPermission, AdminUserPermission
+    SubUserPermission, AdminUserPermission, UserAccount
 from frontend_api.serializers import UserAddressSerializer, CompanyAddressSerializer, \
     AccountSerializer, CompanySerializer, ShareholderSerializer, AddressSerializer, \
     SubUserAccountSerializer, AdminUserAccountSerializer, SubUserSerializer, SubUserPermissionSerializer, \
-    AdminUserPermissionSerializer
+    AdminUserPermissionSerializer, UserAccountSerializer
 
 from address.loqate.serializers import RetrieveAddressSerializer, SearchAddressSerializer
 from authentication.cognito.serializers import CognitoInviteUserSerializer
@@ -20,6 +20,7 @@ from rest_framework_json_api import views
 from frontend_api.serializers import UserSerializer
 from core.fields import UserRole, UserStatus
 from rest_framework import permissions
+from rest_framework.permissions import IsAuthenticated
 from frontend_api.permissions import IsOwnerOrReadOnly
 
 from rest_framework_json_api.views import RelationshipView
@@ -95,6 +96,29 @@ class UserViewSet(PatchRelatedMixin, views.ModelViewSet):
     def perform_update(self, serializer):
         serializer.save()
 
+    def get_serializer_class(self):
+
+        field = self.kwargs.get('related_field')
+
+        if field == 'account':
+            user = self.request.user
+            id = self.kwargs.get('pk')
+
+            try:
+                user = User.objects.get(id=id)
+            except Exception as e:
+                raise NotFound(f'Account not found {id}')
+
+            if user.is_owner:
+                return UserAccountSerializer
+            elif user.is_subuser:
+                return SubUserAccountSerializer
+            elif user.is_admin:
+                return AdminUserAccountSerializer
+
+        else:
+            return super().get_serializer_class()
+
 
 class UserRelationshipView(RelationshipPostMixin, RelationshipView):
     queryset = User.objects
@@ -142,7 +166,7 @@ class AdminUserPermissionRelationshipView(RelationshipView):
 class AccountRelationshipView(RelationshipPostMixin, RelationshipView):
     queryset = Account.objects
 
-    # serializer_class = RelativeResourceIdentifierObjectSerializer
+    serializer_class = AccountSerializer
 
     _related_serializers = {
         'company': CompanySerializer,
@@ -299,7 +323,35 @@ class AccountViewSet(PatchRelatedMixin, views.ModelViewSet):
 
     queryset = Account.objects.all()
     serializer_class = AccountSerializer
-    permission_classes = (IsOwnerOrReadOnly,)
+    permission_classes = (IsAuthenticated,)
+
+    def get_serializer_class(self):
+        user = self.request.user
+        id = self.kwargs.get('pk')
+        action = self.action
+        if action == 'retrieve_related':
+            related = self.kwargs.get('related_field')
+            if related == 'sub_user_accounts':
+                return SubUserAccountSerializer
+            if related == 'admin_user_accounts':
+                return AdminUserAccount
+
+        else:
+            try:
+                account = Account.objects.get(id=id)
+                user = account.user
+
+                if user.is_owner:
+                    return UserAccountSerializer
+                elif user.is_subuser:
+                    return SubUserAccountSerializer
+                elif user.is_admin:
+                    return AdminUserAccountSerializer
+
+            except Exception as e:
+                raise NotFound(f'Account not found {id}')
+
+
 
     def perform_create(self, serializer):
         logger.error('perform create')
@@ -341,11 +393,15 @@ class AdminUserAccountViewSet(PatchRelatedMixin, views.ModelViewSet):
     permission_classes = (IsOwnerOrReadOnly,)
 
 
-class SubUserAccountViewSet(PatchRelatedMixin, views.ModelViewSet):
+class SubUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.ModelViewSet):
 
     queryset = SubUserAccount.objects.all()
     serializer_class = SubUserAccountSerializer
     permission_classes = (IsOwnerOrReadOnly,)
+
+    _related_serializers = {
+        'permission': SubUserPermissionSerializer
+    }
 
     def perform_create(self, serializer):
         logger.error('perform create')
@@ -354,6 +410,26 @@ class SubUserAccountViewSet(PatchRelatedMixin, views.ModelViewSet):
         if not user.account:
             user.account = serializer.save()
             user.save()
+
+    def post_permission(self, request, *args, **kwargs):
+        related_field = kwargs.get('related_field')
+        related_serializer = self.get_related_serializer(related_field)
+        account = self.get_object()
+
+        if account.permission and account.permission.count() > 0:
+            raise MethodNotAllowed('POST')
+        data = request.data.get('attributes') or {}
+        data['account'] = account
+        data['account_id'] = account.id
+        serializer = related_serializer(data=data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        permission = SubUserPermission(**serializer.validated_data, account=account)
+        permission.save()
+
+        # account.permission = serializer.save()
+        # account.save()
+
+        return serializer
 
 
 class SubUserPermissionViewSet(PatchRelatedMixin, views.ModelViewSet):

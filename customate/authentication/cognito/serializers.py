@@ -13,7 +13,7 @@ from authentication.cognito.core.base import generate_password
 import logging
 
 from frontend_api.fields import AccountType
-from frontend_api.models import Account, Company, AdminUserAccount, SubUserAccount
+from frontend_api.models import Account, Company, AdminUserAccount, SubUserAccount, UserAccount
 from frontend_api.serializers import UserSerializer
 from authentication.cognito.core.mixins import AuthSerializerMixin
 from authentication import settings
@@ -273,7 +273,7 @@ class CogrnitoAuthRetrieveSerializer(serializers.Serializer):
     def _restore_account(user):
         role = user.role
         if role == UserRole.owner:
-            account = Account.objects.create(account_type=AccountType.personal, user=user)
+            account = UserAccount.objects.create(account_type=AccountType.personal, user=user)
             account.save()
         elif role == UserRole.admin:
             account = AdminUserAccount.objects.create(user=user)

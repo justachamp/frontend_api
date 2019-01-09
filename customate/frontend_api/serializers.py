@@ -3,14 +3,15 @@ from rest_framework_json_api import serializers
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.serializers import HyperlinkedIdentityField
 from rest_framework_json_api.serializers import ResourceIdentifierObjectSerializer
-from rest_framework_json_api.relations import ResourceRelatedField
+from rest_framework_json_api.relations import ResourceRelatedField, PolymorphicResourceRelatedField
 from rest_framework_json_api.utils import (
     get_resource_type_from_model
 )
 from core.models import User, Address
 from core.fields import UserRole, UserStatus
 from authentication.cognito.core.mixins import AuthSerializerMixin
-from frontend_api.models import Account, Shareholder, Company, SubUserAccount, AdminUserAccount, AdminUserPermission, SubUserPermission
+from frontend_api.models import Account, Shareholder, Company, SubUserAccount, AdminUserAccount, \
+    AdminUserPermission, SubUserPermission, UserAccount
 from frontend_api.fields import AccountType, CompanyType
 
 import logging
@@ -101,33 +102,6 @@ class BaseAuthUserSerializereMixin(AuthSerializerMixin):
         return value
 
 
-class UserSerializer(BaseUserSerializer, BaseAuthUserSerializereMixin):
-
-
-    related_serializers = {
-        'address': 'frontend_api.serializers.UserAddressSerializer',
-        'account': 'frontend_api.serializers.AccountSerializer'
-    }
-
-    address = ResourceRelatedField(
-        many=False,
-        queryset=Address.objects,
-        related_link_view_name='user-related',
-        related_link_url_kwarg='pk',
-        self_link_view_name='user-relationships',
-        required=False
-    )
-
-    account = ResourceRelatedField(
-        many=False,
-        queryset=Account.objects,
-        related_link_view_name='user-related',
-        related_link_url_kwarg='pk',
-        self_link_view_name='user-relationships',
-        required=False
-    )
-
-
 class SubUserSerializer(BaseUserSerializer):
     related_serializers = {
         'address': 'frontend_api.serializers.UserAddressSerializer',
@@ -160,7 +134,6 @@ class SubUserSerializer(BaseUserSerializer):
         owner_account = self.context.get('request').user.account
         account = SubUserAccount(owner_account=owner_account, user=user)
         account.save()
-
         return user
 
 
@@ -181,7 +154,7 @@ class AdminUserSerializer(BaseUserSerializer):
 
     account = ResourceRelatedField(
         many=True,
-        queryset=SubUserAccount.objects,
+        queryset=AdminUserAccount.objects,
         related_link_view_name='sub-user-account-related',
         related_link_url_kwarg='pk',
         self_link_view_name='sub-user-account-relationships',
@@ -267,7 +240,51 @@ class CompanyAddressSerializer(serializers.HyperlinkedModelSerializer):
                   'city', 'locality', 'postcode', 'company')
 
 
-class AccountSerializer(serializers.HyperlinkedModelSerializer):
+class SubUserAccountSerializer(serializers.HyperlinkedModelSerializer):
+
+    related_serializers = {
+        'user': 'frontend_api.serializers.SubUserSerializer',
+        'owner_account': 'frontend_api.serializers.UserAccountSerializer',
+        'permission': 'frontend_api.serializers.SubUserPermissionSerializer'
+    }
+
+    permission = ResourceRelatedField(
+        many=False,
+        queryset=SubUserPermission.objects,
+        related_link_view_name='sub-user-account-related',
+        related_link_url_kwarg='pk',
+        self_link_view_name='sub-user-account-relationships',
+        required=False
+    )
+
+    owner_account = PolymorphicResourceRelatedField(
+        'UserAccountSerializer',
+        many=False,
+        queryset=UserAccount.objects,
+        related_link_view_name='sub-user-account-related',
+        related_link_url_kwarg='pk',
+        self_link_view_name='sub-user-account-relationships',
+        required=False
+    )
+
+    user = ResourceRelatedField(
+        many=False,
+        queryset=User.objects,
+        related_link_view_name='sub-user-account-related',
+        related_link_url_kwarg='pk',
+        self_link_view_name='sub-user-account-relationships',
+        required=False
+    )
+
+    class Meta:
+        model = SubUserAccount
+        fields = ('url', 'user',
+                  'owner_account',
+                  'permission'
+                  )
+
+
+class UserAccountSerializer(serializers.HyperlinkedModelSerializer):
     # user = serializers.ReadOnlyField(source='user.id')
 
     related_serializers = {
@@ -276,9 +293,10 @@ class AccountSerializer(serializers.HyperlinkedModelSerializer):
         'sub_user_accounts': 'frontend_api.serializers.SubUserAccountSerializer'
     }
 
-    sub_user_accounts = ResourceRelatedField(
+    sub_user_accounts = PolymorphicResourceRelatedField(
+        'SubUserAccountSerializer',
         many=True,
-        queryset=SubUserAccount.objects,
+        queryset=SubUserAccount.objects.all(),
         related_link_view_name='account-related',
         related_link_url_kwarg='pk',
         self_link_view_name='account-relationships',
@@ -296,7 +314,7 @@ class AccountSerializer(serializers.HyperlinkedModelSerializer):
 
     company = ResourceRelatedField(
         many=False,
-        queryset=User.objects,
+        queryset=Company.objects,
         related_link_view_name='account-related',
         related_link_url_kwarg='pk',
         self_link_view_name='account-relationships',
@@ -306,71 +324,59 @@ class AccountSerializer(serializers.HyperlinkedModelSerializer):
     account_type = EnumField(enum=AccountType)
 
     class Meta:
-        model = Account
-        fields = ('url', 'account_type', 'position', 'user', 'company', 'sub_user_accounts')
+        model = UserAccount
+        fields = (
+            'url',
+            'account_type',
+            'position',
+            'user',
+            'company',
+            'sub_user_accounts'
+        )
 
-
-class SubUserAccountSerializer(serializers.HyperlinkedModelSerializer):
-
-    related_serializers = {
-        'user': 'frontend_api.serializers.SubUserSerializer',
-        'owner_account': 'frontend_api.serializers.AccountSerializer'
-    }
-
-    owner_account = ResourceRelatedField(
-        many=False,
-        queryset=Account.objects,
-        related_link_view_name='user-related',
-        related_link_url_kwarg='pk',
-        self_link_view_name='user-relationships',
-        required=False
-    )
-
-    user = ResourceRelatedField(
-        many=False,
-        queryset=User.objects,
-        related_link_view_name='sub-user-account-related',
-        related_link_url_kwarg='pk',
-        self_link_view_name='sub-user-account-relationships',
-        required=False
-    )
-
-    class Meta:
-        model = SubUserAccount
-        fields = ('url', 'user', 'owner_account')
 
 
 class SubUserPermissionSerializer(serializers.HyperlinkedModelSerializer):
 
     related_serializers = {
-        'user': 'frontend_api.serializers.SubUserSerializer',
         'account': 'frontend_api.serializers.SubUserAccountSerializer'
     }
-
-    user = ResourceRelatedField(
+    # account_id =
+    account = PolymorphicResourceRelatedField(
+        'SubUserAccountSerializer',
         many=False,
-        queryset=User.objects,
-        related_link_view_name='sub-user-account-related',
+        queryset=SubUserAccount.objects.all(),
+        related_link_view_name='sub-user-permission-related',
         related_link_url_kwarg='pk',
-        self_link_view_name='sub-user-account-relationships',
+        self_link_view_name='sub-user-permission-relationships',
         required=False
     )
 
     class Meta:
         model = SubUserPermission
-        fields = ('url', 'user', 'account', 'manage_sub_user', 'manage_funding_sources', 'manage_unload_accounts'
+        fields = ('url', 'account', 'manage_sub_user', 'manage_funding_sources', 'manage_unload_accounts',
                   'create_transaction', 'create_contract', 'load_funds', 'unload_funds')
 
 
 class AdminUserAccountSerializer(serializers.HyperlinkedModelSerializer):
 
     related_serializers = {
-        'user': 'frontend_api.serializers.AdminUserSerializer'
+        'user': 'frontend_api.serializers.AdminUserSerializer',
+        'permission': 'frontend_api.serializers.AdminUserPermissionSerializer'
     }
 
     user = ResourceRelatedField(
         many=False,
         queryset=User.objects,
+        related_link_view_name='admin-user-account-related',
+        related_link_url_kwarg='pk',
+        self_link_view_name='admin-user-account-relationships',
+        required=False
+    )
+
+    permission = ResourceRelatedField(
+        many=False,
+        queryset=AdminUserPermission.objects,
         related_link_view_name='admin-user-account-related',
         related_link_url_kwarg='pk',
         self_link_view_name='admin-user-account-relationships',
@@ -379,22 +385,22 @@ class AdminUserAccountSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = AdminUserAccount
-        fields = ('url', 'user')
+        fields = ('url', 'user', 'permission')
 
 
 class AdminUserPermissionSerializer(serializers.HyperlinkedModelSerializer):
 
     related_serializers = {
-        'user': 'frontend_api.serializers.AdminUserSerializer',
         'account': 'frontend_api.serializers.AdminUserAccountSerializer'
     }
 
-    user = ResourceRelatedField(
+    account = PolymorphicResourceRelatedField(
+        'AdminUserAccountSerializer',
         many=False,
-        queryset=User.objects,
-        related_link_view_name='admin-user-account-related',
+        queryset=AdminUserAccount.objects.all(),
+        related_link_view_name='admin-user-permission-related',
         related_link_url_kwarg='pk',
-        self_link_view_name='admin-user-account-relationships',
+        self_link_view_name='admin-user-permission-relationships',
         required=False
     )
 
@@ -406,14 +412,14 @@ class AdminUserPermissionSerializer(serializers.HyperlinkedModelSerializer):
 class CompanySerializer(serializers.HyperlinkedModelSerializer):
 
     related_serializers = {
-        'account': 'frontend_api.serializers.AccountSerializer',
+        'account': 'frontend_api.serializers.UserAccountSerializer',
         'address': 'frontend_api.serializers.CompanyAddressSerializer',
         'shareholders': 'frontend_api.serializers.ShareholderSerializer'
     }
 
     account = ResourceRelatedField(
         many=False,
-        queryset=Account.objects,
+        queryset=UserAccount.objects,
         related_link_view_name='company-related',
         related_link_url_kwarg='pk',
         self_link_view_name='company-relationships',
@@ -464,6 +470,50 @@ class ShareholderSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Shareholder
         fields = ('url', 'company', 'is_active', 'first_name', 'last_name', 'birth_date', 'country_of_residence')
+
+
+class AccountSerializer(serializers.PolymorphicModelSerializer):
+    polymorphic_serializers = [UserAccountSerializer, AdminUserAccountSerializer, SubUserAccountSerializer]
+
+    class Meta:
+        model = Account
+
+
+class UserSerializer(BaseUserSerializer, BaseAuthUserSerializereMixin):
+
+    related_serializers = {
+        'address': 'frontend_api.serializers.UserAddressSerializer',
+        'account': 'frontend_api.serializers.AccountSerializer'
+    }
+
+    address = ResourceRelatedField(
+        many=False,
+        queryset=Address.objects,
+        related_link_view_name='user-related',
+        related_link_url_kwarg='pk',
+        self_link_view_name='user-relationships',
+        required=False
+    )
+
+    # account = PolymorphicResourceRelatedField(
+    #     AccountSerializer,
+    #     queryset=Account.objects,
+    #     related_link_view_name='user-related',
+    #     related_link_url_kwarg='pk',
+    #     self_link_view_name='user-relationships',
+    # )
+
+
+
+    account = ResourceRelatedField(
+        many=False,
+        queryset=Account.objects,
+        related_link_view_name='user-related',
+        related_link_url_kwarg='pk',
+        self_link_view_name='user-relationships',
+        required=False
+    )
+
 
 # class GroupSerializer(serializers.ModelSerializer):
 #     class Meta:

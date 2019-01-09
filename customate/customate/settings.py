@@ -42,7 +42,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
-    # 'polymorphic',
+    'polymorphic',
     'phonenumber_field',
     'authentication.apps.AuthenticationConfig',
     'authentication.cognito.apps.CognitoConfig',

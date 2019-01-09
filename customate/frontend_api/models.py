@@ -8,6 +8,7 @@ from frontend_api.fields import AccountType, CompanyType
 
 from django.db import models
 
+from polymorphic.models import PolymorphicModel
 
 class Company(Model):
     company_type = EnumField(CompanyType, max_length=30, blank=True, null=True)
@@ -42,13 +43,18 @@ class Company(Model):
         return "%s the business address" % self.registration_business_name
 
 
-class Account(Model):
+class Account(PolymorphicModel, Model):
     user = models.OneToOneField(
         get_user_model(),
         on_delete=models.CASCADE,
         unique=True,
         blank=False
     )
+
+
+class UserAccount(Account):
+    account_type = EnumField(AccountType, max_length=10, default=AccountType.personal)
+    position = models.CharField(max_length=50, blank=True, null=True)
 
     company = models.OneToOneField(
         Company,
@@ -59,40 +65,32 @@ class Account(Model):
         related_name='account'
     )
 
-    account_type = EnumField(AccountType, max_length=10, default=AccountType.personal)
-    position = models.CharField(max_length=50, blank=True, null=True)
+    class JSONAPIMeta:
+        resource_name = "UserAccount"
 
     def __str__(self):
-        return "User account %s type" % self.account_type
+        return "Owner account"
 
 
-class AdminUserAccount(Model):
-    user = models.OneToOneField(
-        get_user_model(),
-        on_delete=models.CASCADE,
-        unique=True,
-        blank=False
-    )
+class AdminUserAccount(Account):
 
     def __str__(self):
         return "Admin account"
 
 
-class SubUserAccount(Model):
-    user = models.OneToOneField(
-        get_user_model(),
-        on_delete=models.CASCADE,
-        unique=True,
-        blank=False
-    )
-    owner_account = models.ForeignKey(Account, on_delete=models.CASCADE, related_name="sub_user_accounts")
+class SubUserAccount(Account):
+    owner_account = models.ForeignKey(UserAccount, on_delete=models.CASCADE, related_name="sub_user_accounts")
 
     def __str__(self):
         return "Sub user account"
 
 
+    # class JSONAPIMeta:
+    #     resource_name = "SubUserAccount"
+
+
 class SubUserPermission(Model):
-    user = models.ForeignKey(SubUserAccount, on_delete=models.CASCADE, related_name="sub_user_permissions")
+    account = models.ForeignKey(SubUserAccount, on_delete=models.CASCADE, related_name="permission")
     manage_sub_user = models.BooleanField(_('manage sub users'), default=False)
     manage_funding_sources = models.BooleanField(_('manage funding sources'), default=False)
     manage_unload_accounts = models.BooleanField(_('manage unload accounts'), default=False)
@@ -106,7 +104,7 @@ class SubUserPermission(Model):
 
 
 class AdminUserPermission(Model):
-    user = models.ForeignKey(AdminUserAccount, on_delete=models.CASCADE, related_name="admin_user_permissions")
+    account = models.ForeignKey(AdminUserAccount, on_delete=models.CASCADE, related_name="permission")
     manage_admin_user = models.BooleanField(_('manage admins'), default=False)
     manage_tax = models.BooleanField(_('manage tax'), default=False)
     manage_fee = models.BooleanField(_('manage fee'), default=False)
