@@ -469,7 +469,7 @@ class AdminUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.Mo
 
     @staticmethod
     def _initiate_admin(data):
-        return User.objects.filter(role=UserRole.admin).count() > 0 and data.get('initiate', False)
+        return User.objects.filter(role=UserRole.admin).count() == 0 and data.get('initiate', False)
 
     @action(methods=['POST'], detail=False, name='Invite admin')
     @transaction.atomic()
@@ -496,6 +496,7 @@ class AdminUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.Mo
             invitation = CognitoInviteUserSerializer.invite(data)
             user.cognito_id = invitation.id
             user.save()
+            invitation.pk = user.id
 
             return response.Response(
                 CognitoInviteUserSerializer(instance=invitation, context={'request': request}).data)
