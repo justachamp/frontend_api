@@ -423,6 +423,7 @@ class AccountViewSet(PatchRelatedMixin, views.ModelViewSet):
             invitation = CognitoInviteUserSerializer.invite(data)
             user.cognito_id = invitation.id
             user.save()
+            invitation.pk = user.id
 
             return response.Response(
                 CognitoInviteUserSerializer(instance=invitation, context={'request': request}).data)
@@ -498,8 +499,6 @@ class AdminUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.Mo
 
             return response.Response(
                 CognitoInviteUserSerializer(instance=invitation, context={'request': request}).data)
-
-
 
 
 class SubUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.ModelViewSet):
