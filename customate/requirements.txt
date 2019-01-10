@@ -63,3 +63,4 @@ uritemplate==3.0.0
 urllib3==1.24.1
 wcwidth==0.1.7
 zeep==3.2.0
+django-storages
