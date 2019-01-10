@@ -7,6 +7,7 @@ import zeep
 from zeep.transports import Transport
 from zeep.wsse.username import UsernameToken
 from functools import lru_cache
+from address import settings
 import logging.config
 
 logging.config.dictConfig({
@@ -33,14 +34,13 @@ logging.config.dictConfig({
 })
 
 
-
 class ZeepProvider:
 
     _client = None
     _transport = None
     _session = None
 
-    def  __init__(self, user_name, password, wsdl):
+    def __init__(self, user_name, password, wsdl):
         self.user_name = user_name
         self.password = password
         self.wsdl = wsdl
@@ -50,16 +50,7 @@ class ZeepProvider:
     def client(self):
         if not self._client:
             token = UsernameToken(self.user_name, self.password)
-            # print('token', token, 'wsdl', self.wsdl, 'transport', self.transport, 'token', token)
-            # wsse = token
             self._client = zeep.Client(wsdl=self.wsdl, transport=self.transport, wsse=token)
-            # self._client = zeep.Client(self.wsdl, transport=self.transport)
-            # self._client = zeep.Client(
-            #     'https://pilot.id3global.com/ID3gWS/ID3global.svc?wsdl', transport=self.transport, wsse=token)
-
-            # service = client.bind('ID3global', 'wsHttpBinding_GlobalCredentials')
-            # service.CheckCredentials('foo', 'bar')
-
         return self._client
 
     @property
@@ -85,18 +76,18 @@ class ZeepProvider:
         return self.client.bind(service, port)
 
 
-
 class ID3Client:
-
     _provider = None
+    _parser = None
     _service = {}
 
-    def __init__(self, user_name, password, wsdl, profile_id, profile_version):
-        self.user_name = user_name
-        self.password = password
-        self.wsdl = wsdl
-        self.profile_id = profile_id
-        self.profile_version = profile_version
+    def __init__(self, parser=None):
+        self.user_name = getattr(settings, 'GBG_ACCOUNT')
+        self.password = getattr(settings, 'GBG_PASSWORD')
+        self.wsdl = getattr(settings, 'GBG_WDSL')
+        self.profile_id = getattr(settings, 'GBG_PROFILE_ID')
+        self.profile_version = getattr(settings, 'GBG_PROFILE_VERSION')
+        self._parser = parser
         self.logger = logging.getLogger(__name__)
 
     @property
@@ -126,120 +117,85 @@ class ID3Client:
         return self.cred_service.CheckCredentials(AccountName=self.user_name, Password=self.password)
 
     def auth_sp(self, payload, profile_id=None, profile_version=None):
+        input_data = self._parser().parse(payload)
         profile_id = profile_id or self.profile_id
         profile_version = profile_version or self.profile_version
         # '109cd19c-5cc0-4826-8df9-2d544996c844'
-        return self.auth_service.AuthenticateSP(ProfileIDVersion={'ID': profile_id, 'Version': profile_version}, InputData=payload)
+        return self.auth_service.AuthenticateSP(ProfileIDVersion={'ID': profile_id, 'Version': profile_version}, InputData=input_data)
 
     def wsdl_dump(self):
         self.provider.client.wsdl.dump()
 
 
+class ModelParser(object):
 
-personal_details = {
-    'Title': 'Mr',
-    'Forename': 'Dworkin',
-    'MiddleName': 'John',
-    'Surname': 'Barimen',
-    'Gender': 'Male',
-    'DOBDay': '20',
-    'DOBMonth': '8',
-    'DOBYear': '1922'
-    # 'Birth': '20-08-1922 00:00:00'
-}
-address_details = {
-    'Country': 'uk',
-    'ZipPostcode': 90210,
-    'AddressLine1': 'Dungeon 1',
-    'AddressLine2': 'Courts of Amber'
-}
+    _data = None
 
-contact_details = {
-    # 'LandTelephone': 1234567890,
-    'MobileTelephone': 1234567890,
-    'WorkTelephone': 1234567890,
-    'Email': 'dworkin@thepattern.net'
-}
-
-identity = {
-    # 'ProfileIDVersion': {'ID': 'PROFILEID', 'Version': 0},
-    'Personal': {'PersonalDetails': personal_details},
-    'ContactDetails': contact_details,
-    'Addresses': {'CurrentAddress': address_details}
-}
-
-data = {
-'user_name': 'alexander.tarasenko@customate.net',
-# 'password': 'Oo8&xvDop*3LEaxT',
-#     'password': '__MryBrsQzDzHL9wy',
-    'password': '*5rES3JWY5JMVv5C',
-'wsdl': 'https://pilot.id3global.com/ID3gWS/ID3global.svc?wsdl',
-    'profile_id': '109cd19c-5cc0-4826-8df9-2d544996c844',
-    'profile_version': 0
-}
-# Oo8&xvDop*3LEaxT
-# cust05rES3JWY5JMVv5C
-# AkmbyvYVAkt2L8M
-# __MryBrsQzDzHL9wy
-# data = {
-# 'user_name': 'alexandertarasenko@customate.net',
-# 'password': '*5rES3JWY5JMVv5C',
-# 'wsdl': 'https://www.id3global.com/ID3gWS/ID3global.svc?wsdl',
-#     'profile_id': 'e8ee100e-57dc-4d70-8538-bd2fa8013096',
-#     'profile_version': 0
-# }
-
-# data = {
-#     'user_name': 'admin@customate.net',
-#     'password': 'Customate123456789@',
-#     'wsdl': 'https://www.id3global.com/ID3gWS/ID3global.svc?wsdl',
-# }
+    def __init__(self):
+        self._personal_details = None
+        self._current_address = None
+        self._contact_details = None
 
 
-id3 = ID3Client(**data)
-# id3.check_credential()
-id3.auth_sp(payload=identity)
-# id3.wsdl_dump()
-# service.CheckCredentials(AccountName=userName, Password=password)
+    @property
+    def personal_details(self):
+        return self._personal_details
 
-#
-# Title: xsd:string,
-# Forename: xsd:string,
-# MiddleName: xsd:string,
-# Surname: xsd:string,
-# Gender: {http://www.id3global.com/ID3gWS/2013/04}GlobalGender,
-# DOBDay: xsd:int,
-# DOBMonth: xsd:int,
-# DOBYear: xsd:int,
-# Birth: {http://www.id3global.com/ID3gWS/2013/04}GlobalUKBirth,
-# CountryOfBirth: xsd:string,
-# SecondSurname: xsd:string,
-# AdditionalMiddleNames: {http://schemas.microsoft.com/2003/10/Serialization/Arrays}ArrayOfstring`
+    @personal_details.setter
+    def personal_details(self, user):
+        self._personal_details = {
+            # 'Title': 'Mr',
+            'Forename': user.first_name,
+            'MiddleName': user.middle_name,
+            'Surname': user.last_name,
+            # 'Gender': 'Male',
+        }
 
-# service.CheckCredentialsWithPIN(AccountName=userName, Password=password, PINSequence='1234')
-# service.Address()
-#
-# print(service)
-# service
-# service.AuthenticateSP(InputData=identity)
-# ProfileIDVersion='1235test'
+        if user.birth_date:
+            self._personal_details['DOBDay'] = user.birth_date.strftime('%d')
+            self._personal_details['DOBMonth'] = user.birth_date.strftime('%m')
+            self._personal_details['DOBYear'] = user.birth_date.strftime('%Y')
+            self._personal_details['Birth'] = user.birth_date.strftime('%d-%m-%Y %H:%M:%S')
 
-# # service.AddressLookup('AccountName', 'Password')
-# service.AddressLookup({
-#     # 'country': 'nz',
-#     'ZipPostcode': '90210',
-#     # 'AddressLine1': 'Dungeon 1',
-#     # 'AddressLine2': 'Courts of Amber'
-# })
+    @property
+    def current_address(self):
+        return self._current_address
 
-# client.wsdl.dump()
-# http://www.id3globalsupport.com/Website/content/Web-Service/WSDL%20Page/WSDL%20HTML/ID3%20Global%20WSDL-%20Live.xhtml#op.d1e6784
-# http://www.id3globalsupport.com/Website/content/Web-Service/WSDL%20Page/WSDL%20HTML/ID3%20Global%20WSDL-%20Live.xhtml#src.d1e6784
-# http://www.id3globalsupport.com/Website/content/Web-Service/WSDL%20Page/WSDL%20HTML/ID3%20Global%20WSDL-%20Live.xhtml#port.d1e6783
-# http://www.id3globalsupport.com/Website/content/Sample%20Code/Web%20Dev%20Guide%20HTML/html/9f536f03-cd64-63b3-d21b-b400994ff43e.htm#
-# http://www.id3globalsupport.com/Website/content/Sample%20Code/Web%20Dev%20Guide%20HTML/html/aedc65f7-bb15-7d52-cd85-f14cdb124075.htm
-# http://www.id3globalsupport.com/Website/content/Sample%20Code/Web%20Dev%20Guide%20HTML/html/11998094-bef9-97b0-6af3-350de9749e6c.htm
-# http://www.id3globalsupport.com/Website/content/Sample%20Code/Web%20Dev%20Guide%20HTML/html/11998094-bef9-97b0-6af3-350de9749e6c.htm
-# https://www.id3global.com/ID3gWS/ID3global.svc?wsdl=
-# http://www.id3globalsupport.com/Website/content/Web-Service/WSDL%20Page/WSDL%20HTML/ID3%20Global%20WSDL-%20Live.xhtml#op.d1e6784
+    @current_address.setter
+    def current_address(self, address):
+
+        self._current_address = {
+            'Country': address.country,
+            'ZipPostcode': address.postcode,
+            'AddressLine1': address.address_line_1,
+            'AddressLine2': address.address_line_2
+        }
+
+    @property
+    def contact_details(self):
+        return self._contact_details
+
+    @contact_details.setter
+    def contact_details(self, user):
+
+        self._contact_details = {
+            # 'LandTelephone': 1234567890,
+            'MobileTelephone': user.phone_number,
+            'WorkTelephone': user.phone_number,
+            'Email': user.email
+        }
+
+    def parse(self, address):
+        user = address.user
+        self.personal_details = user
+        self.contact_details = user
+        self.current_address = address
+
+        self._data = {
+            'Personal': {'PersonalDetails': self.personal_details},
+            'ContactDetails': self.contact_details,
+            'Addresses': {'CurrentAddress': self.current_address}
+        }
+
+        return self._data
 

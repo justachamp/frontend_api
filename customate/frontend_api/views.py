@@ -304,13 +304,13 @@ class AddressViewSet(PatchRelatedMixin, views.ModelViewSet):
     serializer_class = AddressSerializer
     permission_classes = (IsOwnerOrReadOnly,)
 
-    def perform_create(self, serializer):
-        logger.error('perform create')
-        user = self.request.user
-        # serializer.request.user.address = serializer.save(user=self.request.user)
-        if not user.account.company.address:
-            user.account.company.address = serializer.save()
-            user.account.company.save()
+    # def perform_create(self, serializer):
+    #     logger.error('perform create')
+    #     user = self.request.user
+    #     # serializer.request.user.address = serializer.save(user=self.request.user)
+    #     if not user.account.company.address:
+    #         user.account.company.address = serializer.save()
+    #         user.account.company.save()
 
     @action(methods=['POST'], detail=False, name='Search address')
     def search(self, request):
