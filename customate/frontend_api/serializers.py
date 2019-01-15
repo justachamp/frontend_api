@@ -425,6 +425,8 @@ class AdminUserPermissionSerializer(serializers.HyperlinkedModelSerializer):
 
 class CompanySerializer(serializers.HyperlinkedModelSerializer):
 
+    registration_number = serializers.CharField(min_length=6, max_length=8, allow_blank=True)
+
     related_serializers = {
         'account': 'frontend_api.serializers.UserAccountSerializer',
         'address': 'frontend_api.serializers.CompanyAddressSerializer',
