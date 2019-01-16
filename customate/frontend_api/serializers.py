@@ -18,6 +18,13 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+class ResourceRelatedField(ResourceRelatedField):
+
+    def use_pk_only_optimization(self):
+        # TODO workaround
+        #  Original exception text was: 'PKOnlyObject' object has no attribute 'address'.
+        return False
+
 class EnumField(serializers.ChoiceField):
     def __init__(self, enum, **kwargs):
         self.enum = enum
