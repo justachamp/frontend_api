@@ -107,6 +107,11 @@ class SubUserSerializer(BaseUserSerializer):
         'account': 'frontend_api.serializers.SubUserAccountSerializer'
     }
 
+    included_serializers = {
+        'address': 'frontend_api.serializers.UserAddressSerializer',
+        'account': 'frontend_api.serializers.SubUserAccountSerializer'
+    }
+
     address = ResourceRelatedField(
         many=False,
         queryset=Address.objects,
@@ -141,6 +146,11 @@ class SubUserSerializer(BaseUserSerializer):
 
 class AdminUserSerializer(BaseUserSerializer):
     related_serializers = {
+        'address': 'frontend_api.serializers.UserAddressSerializer',
+        'account': 'frontend_api.serializers.AdminUserAccountSerializer'
+    }
+
+    included_serializers = {
         'address': 'frontend_api.serializers.UserAddressSerializer',
         'account': 'frontend_api.serializers.AdminUserAccountSerializer'
     }
@@ -183,6 +193,10 @@ class UserAddressSerializer(serializers.HyperlinkedModelSerializer):
         'user': 'frontend_api.serializers.UserSerializer'
     }
 
+    included_serializers = {
+        'user': 'frontend_api.serializers.UserSerializer'
+    }
+
     user = ResourceRelatedField(
         many=False,
         queryset=User.objects,
@@ -202,6 +216,11 @@ class UserAddressSerializer(serializers.HyperlinkedModelSerializer):
 class AddressSerializer(serializers.HyperlinkedModelSerializer):
 
     related_serializers = {
+        'user': 'frontend_api.serializers.UserSerializer',
+        'company': 'frontend_api.serializers.CompanySerializer'
+    }
+
+    included_serializers = {
         'user': 'frontend_api.serializers.UserSerializer',
         'company': 'frontend_api.serializers.CompanySerializer'
     }
@@ -239,6 +258,10 @@ class CompanyAddressSerializer(serializers.HyperlinkedModelSerializer):
         'company': 'frontend_api.serializers.CompanySerializer'
     }
 
+    included_serializers = {
+        'company': 'frontend_api.serializers.CompanySerializer'
+    }
+
     company = ResourceRelatedField(
         many=False,
         queryset=Company.objects,
@@ -257,6 +280,12 @@ class CompanyAddressSerializer(serializers.HyperlinkedModelSerializer):
 class SubUserAccountSerializer(serializers.HyperlinkedModelSerializer):
 
     related_serializers = {
+        'user': 'frontend_api.serializers.SubUserSerializer',
+        'owner_account': 'frontend_api.serializers.UserAccountSerializer',
+        'permission': 'frontend_api.serializers.SubUserPermissionSerializer'
+    }
+
+    included_serializers = {
         'user': 'frontend_api.serializers.SubUserSerializer',
         'owner_account': 'frontend_api.serializers.UserAccountSerializer',
         'permission': 'frontend_api.serializers.SubUserPermissionSerializer'
@@ -302,6 +331,12 @@ class UserAccountSerializer(serializers.HyperlinkedModelSerializer):
     # user = serializers.ReadOnlyField(source='user.id')
 
     related_serializers = {
+        'user': 'frontend_api.serializers.UserSerializer',
+        'company': 'frontend_api.serializers.CompanySerializer',
+        'sub_user_accounts': 'frontend_api.serializers.SubUserAccountSerializer'
+    }
+
+    included_serializers = {
         'user': 'frontend_api.serializers.UserSerializer',
         'company': 'frontend_api.serializers.CompanySerializer',
         'sub_user_accounts': 'frontend_api.serializers.SubUserAccountSerializer'
@@ -355,7 +390,11 @@ class SubUserPermissionSerializer(serializers.HyperlinkedModelSerializer):
     related_serializers = {
         'account': 'frontend_api.serializers.SubUserAccountSerializer'
     }
-    # account_id =
+
+    included_serializers = {
+        'account': 'frontend_api.serializers.SubUserAccountSerializer'
+    }
+
     account = PolymorphicResourceRelatedField(
         'SubUserAccountSerializer',
         many=False,
@@ -375,6 +414,11 @@ class SubUserPermissionSerializer(serializers.HyperlinkedModelSerializer):
 class AdminUserAccountSerializer(serializers.HyperlinkedModelSerializer):
 
     related_serializers = {
+        'user': 'frontend_api.serializers.AdminUserSerializer',
+        'permission': 'frontend_api.serializers.AdminUserPermissionSerializer'
+    }
+
+    included_serializers = {
         'user': 'frontend_api.serializers.AdminUserSerializer',
         'permission': 'frontend_api.serializers.AdminUserPermissionSerializer'
     }
@@ -408,6 +452,10 @@ class AdminUserPermissionSerializer(serializers.HyperlinkedModelSerializer):
         'account': 'frontend_api.serializers.AdminUserAccountSerializer'
     }
 
+    included_serializers = {
+        'account': 'frontend_api.serializers.AdminUserAccountSerializer'
+    }
+
     account = PolymorphicResourceRelatedField(
         'AdminUserAccountSerializer',
         many=False,
@@ -428,6 +476,12 @@ class CompanySerializer(serializers.HyperlinkedModelSerializer):
     registration_number = serializers.CharField(min_length=6, max_length=8, allow_blank=True)
 
     related_serializers = {
+        'account': 'frontend_api.serializers.UserAccountSerializer',
+        'address': 'frontend_api.serializers.CompanyAddressSerializer',
+        'shareholders': 'frontend_api.serializers.ShareholderSerializer'
+    },
+
+    included_serializers = {
         'account': 'frontend_api.serializers.UserAccountSerializer',
         'address': 'frontend_api.serializers.CompanyAddressSerializer',
         'shareholders': 'frontend_api.serializers.ShareholderSerializer'
@@ -474,6 +528,10 @@ class ShareholderSerializer(serializers.HyperlinkedModelSerializer):
         'company': 'frontend_api.serializers.CompanySerializer',
     }
 
+    included_serializers = {
+        'company': 'frontend_api.serializers.CompanySerializer',
+    }
+
     company = ResourceRelatedField(
         many=False,
         queryset=Company.objects,
@@ -498,6 +556,11 @@ class AccountSerializer(serializers.PolymorphicModelSerializer):
 class UserSerializer(BaseUserSerializer, BaseAuthUserSerializereMixin):
 
     related_serializers = {
+        'address': 'frontend_api.serializers.UserAddressSerializer',
+        'account': 'frontend_api.serializers.AccountSerializer'
+    }
+# Account&#39; has no attribute &#39;sub_user_account
+    included_serializers = {
         'address': 'frontend_api.serializers.UserAddressSerializer',
         'account': 'frontend_api.serializers.AccountSerializer'
     }
