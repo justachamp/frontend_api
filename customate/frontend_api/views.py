@@ -55,12 +55,16 @@ class PatchRelatedMixin(object):
         return Response(serializer.data)
 
 
-class RelationshipPostMixin(object):
-    # serializer_class = RelativeResourceIdentifierObjectSerializer
+class RelationshipMixin(object):
     _related_serializers = {}
 
     def get_related_serializer(self, serializer_name):
         return self._related_serializers.get(serializer_name) if serializer_name in self._related_serializers else None
+
+
+class RelationshipPostMixin(RelationshipMixin):
+    # serializer_class = RelativeResourceIdentifierObjectSerializer
+
 
     def get_related_handler(self, releted_field):
         try:
@@ -358,25 +362,26 @@ class CompanyAddressViewSet(PatchRelatedMixin, views.ModelViewSet):
             user.account.company.save()
 
 
-class AccountViewSet(PatchRelatedMixin, views.ModelViewSet):
+class AccountViewSet(RelationshipMixin, PatchRelatedMixin, views.ModelViewSet):
 
     queryset = Account.objects.all()
     serializer_class = AccountSerializer
     permission_classes = (IsAuthenticated,)
 
-    def get_serializer_class(self):
-        user = self.request.user
-        id = self.kwargs.get('pk')
-        action = self.action
-        if action == 'retrieve_related':
-            related = self.kwargs.get('related_field')
-            if related == 'sub_user_accounts':
-                return SubUserAccountSerializer
-            elif related == 'admin_user_accounts':
-                return AdminUserAccountSerializer
-            else:
-                super().get_serializer_class()
+    _related_serializers = {
+        'sub_user_accounts': SubUserAccountSerializer,
+        'admin_user_accounts': AdminUserAccountSerializer,
+        'company': CompanySerializer
+    }
 
+    def get_serializer_class(self):
+        # TODO imposible get related_serializers/included_serializers from polymorphic instance
+        # user = self.request.user
+        id = self.kwargs.get('pk')
+        related_field = self.kwargs.get('related_field')
+        if related_field:
+            related_serializer = self.get_related_serializer(related_field)
+            return related_serializer or super().get_serializer_class()
 
         else:
             try:
@@ -392,8 +397,6 @@ class AccountViewSet(PatchRelatedMixin, views.ModelViewSet):
 
             except Exception as e:
                 raise NotFound(f'Account not found {id}')
-
-
 
     def perform_create(self, serializer):
         logger.error('perform create')
