@@ -185,8 +185,6 @@ class CognitoAuthChallengeSerializer(serializers.Serializer):
             raise Unauthorized(ex)
 
 
-
-
 class CogrnitoAuthRetrieveSerializer(serializers.Serializer):
     resource_name = 'identities'
     id = serializers.UUIDField(read_only=True)
@@ -204,6 +202,10 @@ class CogrnitoAuthRetrieveSerializer(serializers.Serializer):
     related_serializers = {
         'user': 'frontend_api.serializers.UserSerializer',
     }
+
+    @staticmethod
+    def validate_username(email):
+        return email.lower()
 
     def validate(self, data):
         if not data.get('refresh_token') and not data.get('password'):
@@ -327,7 +329,7 @@ class CognitoInviteUserSerializer(serializers.Serializer, BaseAuthValidationMixi
             raise Unauthorized(ex)
 
 
-class CognitoAuthSerializer(CogrnitoAuthRetrieveSerializer, BaseAuthValidationMixin):
+class CognitoAuthSerializer(BaseAuthValidationMixin, CogrnitoAuthRetrieveSerializer):
 
     user_attributes = ListField(child=CognitoAttributeFiled(required=True), required=True)
     username = serializers.EmailField(required=True, source='preferred_username', write_only=True)
