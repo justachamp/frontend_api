@@ -39,7 +39,7 @@ class BaseAuthValidationMixin(object):
                 email = item['Value'].lower()
                 item['Value'] = email
             if get_user_model().objects.filter(email=email).exists():
-                raise serializers.ValidationError("Not unique email")
+                raise serializers.ValidationError("Email already exists you cannot register the same email twice")
 
         return data
 
@@ -47,7 +47,7 @@ class BaseAuthValidationMixin(object):
     def validate_username(email):
         email = email.lower()
         if get_user_model().objects.filter(email=email).exists():
-            raise serializers.ValidationError("Not unique email")
+            raise serializers.ValidationError("Email already exists you cannot register the same email twice")
         return email
 
 class CognitoAuthVerificationSerializer(serializers.Serializer):
@@ -175,7 +175,7 @@ class CognitoAuthChallengeSerializer(serializers.Serializer):
             if not user:
                 raise serializers.ValidationError("User not found")
             if validated_data['challenge_name'] == NEW_PASSWORD_CHALLENGE:
-                user.status = UserStatus.inactive
+                user.status = UserStatus.active
                 user.save()
             validated_data['user'] = user
             return Identity(id=user.id, **validated_data)
@@ -267,7 +267,9 @@ class CogrnitoAuthRetrieveSerializer(serializers.Serializer):
                 user = None
 
         if not user:
-            raise serializers.ValidationError("User not found")
+            raise Exception("User not found")
+        # elif user.status == UserStatus.inactive:
+        #     raise Exception("User is inactive")
         validated_data['user'] = user
         return Identity(id=user.id, **validated_data)
 
