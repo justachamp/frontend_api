@@ -1,5 +1,6 @@
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
 from rest_framework.exceptions import MethodNotAllowed
 from rest_framework import response
 from collections import Iterable
@@ -165,7 +166,7 @@ class UserViewSet(PatchRelatedMixin, views.ModelViewSet):
 
 class UserRelationshipView(RelationshipPostMixin, RelationshipView):
     queryset = User.objects
-
+    permission_classes = (AllowAny,)
     _related_serializers = {
         'address': UserAddressSerializer
     }
