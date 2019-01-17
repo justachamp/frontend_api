@@ -35,7 +35,7 @@ class User(AbstractUser, Model):
     email = models.EmailField(_('email address'), unique=True, blank=False)
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
-    status = EnumField(UserStatus, max_length=10, default=UserStatus.inactive)
+    status = EnumField(UserStatus, max_length=10, default=UserStatus.active)
     role = EnumField(UserRole, max_length=10, null=True)
     middle_name = models.CharField(_('first name'), max_length=30, blank=True)
     birth_date = models.DateField(_('day of birth'), blank=True, null=True)
@@ -90,11 +90,11 @@ class User(AbstractUser, Model):
         address_verified = self.address and self.address.verified
         contact_verified = self.email_verified and self.phone_number_verified
         self.is_verified = contact_verified and address_verified
-        is_changeable = self.status not in (UserStatus.banned, UserStatus.blocked)
-        if self.is_verified and is_changeable:
-            self.status = UserStatus.active
-        elif is_changeable:
-            self.status = UserStatus.inactive
+        # is_changeable = self.status not in (UserStatus.banned, UserStatus.blocked)
+        # if self.is_verified:
+        #     self.is_active = True
+        # else:
+        #     self.is_active = False
 
     def get_username(self):
         return self.email

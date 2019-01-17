@@ -12,13 +12,15 @@ from botocore.exceptions import ParamValidationError
 import logging
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
-
+from django.db import transaction
 from rest_framework import exceptions, status
 from rest_framework_json_api import exceptions
 BUSINESS_ACCOUNT = 'business'
 BAD_DATA_EXCEPTION = "The required parameters were not passed through in the data dictionary"
 
-from django.db import transaction
+COGNITO_EXCEPTIONS = {
+    'UserNotFoundException': 'Email address does not exist'
+}
 
 
 class CognitoException(Exception):
@@ -29,7 +31,8 @@ class CognitoException(Exception):
 
     @staticmethod
     def create_from_exception(ex):
-        return CognitoException(ex.response['Error']['Message'], ex.response['ResponseMetadata']['HTTPStatusCode'])
+        msg = COGNITO_EXCEPTIONS.get(ex.response['Error']['Code'], ex.response['Error']['Message'])
+        return CognitoException(msg, ex.response['ResponseMetadata']['HTTPStatusCode'])
 
     @staticmethod
     def create_from_boto_exception(ex):
