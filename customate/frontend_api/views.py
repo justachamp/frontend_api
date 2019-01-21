@@ -130,7 +130,7 @@ class UserViewSet(PatchRelatedMixin, views.ModelViewSet):
     API endpoint that allows users to be viewed or edited.
     """
 
-    queryset = User.objects.all().filter(role=UserRole.owner).order_by('-date_joined')
+    queryset = User.objects.all().order_by('-date_joined')
     serializer_class = UserSerializer
 
     permission_classes = (IsOwnerOrReadOnly,)
