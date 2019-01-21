@@ -558,6 +558,7 @@ class AccountSerializer(serializers.PolymorphicModelSerializer):
 
     class Meta:
         model = Account
+        fields = '__all__'
 
 
 class UserSerializer(BaseUserSerializer, BaseAuthUserSerializereMixin):

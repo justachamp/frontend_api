@@ -385,7 +385,7 @@ class AccountViewSet(RelationshipMixin, PatchRelatedMixin, views.ModelViewSet):
             related_serializer = self.get_related_serializer(related_field)
             return related_serializer or super().get_serializer_class()
 
-        else:
+        elif id:
             try:
                 account = Account.objects.get(id=id)
                 user = account.user
@@ -399,6 +399,8 @@ class AccountViewSet(RelationshipMixin, PatchRelatedMixin, views.ModelViewSet):
 
             except Exception as e:
                 raise NotFound(f'Account not found {id}')
+        else:
+            return super().get_serializer_class()
 
     def perform_create(self, serializer):
         logger.error('perform create')
