@@ -64,11 +64,11 @@ url(r'^accounts/(?P<pk>[^/.]+)/$',
             name='sub-user-permission-relationships'
             ),
 
-    re_path(r'^admin-user-accounts/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
+    re_path(r'^admin_user_accounts/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
             views.AdminUserAccountViewSet.as_view({'get': 'retrieve_related', 'patch': 'patch_related'}),
             name='admin-user-account-related'),
 
-    re_path(r'^admin-user-accounts/(?P<pk>[^/.]+)/relationships/(?P<related_field>[^/.]+)$',
+    re_path(r'^admin_user_accounts/(?P<pk>[^/.]+)/relationships/(?P<related_field>[^/.]+)$',
             view=views.AdminUserAccountRelationshipView.as_view(),
             name='admin-user-account-relationships'
             ),
