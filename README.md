@@ -68,6 +68,15 @@
     psql -U customate -h 127.0.0.1 -p 5442
     ssh -p 2222 root@localhost
 
+### S3 static 
+    add to environemnt next variables:
+    AWS_ACCESS_KEY_ID=
+    AWS_SECRET_ACCESS_KEY=
+    AWS_S3_STORAGE_BUCKET_NAME=customate-dev-django
+    
+    For sync static files need execute:
+    python3.7 manage.py collectstatic
+
 ## Git workflow
 
 ###  Branch    
