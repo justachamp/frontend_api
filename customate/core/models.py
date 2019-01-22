@@ -90,11 +90,6 @@ class User(AbstractUser, Model):
         address_verified = self.address and self.address.verified
         contact_verified = self.email_verified and self.phone_number_verified
         self.is_verified = contact_verified and address_verified
-        # is_changeable = self.status not in (UserStatus.banned, UserStatus.blocked)
-        # if self.is_verified:
-        #     self.is_active = True
-        # else:
-        #     self.is_active = False
 
     def get_username(self):
         return self.email
