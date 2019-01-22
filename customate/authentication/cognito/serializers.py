@@ -268,8 +268,8 @@ class CogrnitoAuthRetrieveSerializer(serializers.Serializer):
 
         if not user:
             raise Exception("User not found")
-        # elif user.status == UserStatus.inactive:
-        #     raise Exception("User is inactive")
+        elif user.status == UserStatus.inactive:
+            raise Exception("User is inactive")
         validated_data['user'] = user
         return Identity(id=user.id, **validated_data)
 

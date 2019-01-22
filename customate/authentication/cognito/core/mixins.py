@@ -26,7 +26,7 @@ class Auth(object):
 
     def update_attribute(self, name, value):
         user = self.__request.user
-        if user and type(user) is not AnonymousUser:
+        if user and type(user) is not AnonymousUser and not self.check(name, value):
             return admin_update_user_attributes(str(self.__request.user.cognito_id), [{'Name': name, 'Value': value}])
 
 

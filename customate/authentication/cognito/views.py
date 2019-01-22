@@ -72,7 +72,7 @@ class AuthView(viewsets.ViewSet):
 
     @action(methods=['POST'], detail=False, name='Send verification code')
     def verification_code(self, request):
-        serializer = CognitoAuthVerificationSerializer(data=request.data)
+        serializer = CognitoAuthVerificationSerializer(data=request.data, context={'request': request})
         if serializer.is_valid(True):
             entity = serializer.verification_code(serializer.validated_data)
             return response.Response(CognitoAuthVerificationSerializer(instance=entity).data)

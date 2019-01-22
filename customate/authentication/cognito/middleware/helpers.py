@@ -48,9 +48,9 @@ def validate_token(access_token, id_token, refresh_token=None):
         raise Exception("Invalid token public key")
     else:
         # Verify signature using the public key for this pool, as defined the the AWS documentation
-        decode = jwt.decode(access_token, PublicKey(matching_key).pem, algorithms=[header['alg']],
+        pem = PublicKey(matching_key).pem
+        decode = jwt.decode(access_token, pem, algorithms=[header['alg']],
                             options={'verify_exp': False})
-        pass
 
     # TODO: Documentation says aud should be the key, but this doesn't exist and client_id has the data aud
     # should have
