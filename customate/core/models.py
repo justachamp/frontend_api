@@ -85,7 +85,6 @@ class User(AbstractUser, Model):
     def is_admin(self):
         return self.role == UserRole.admin
 
-
     def check_verification(self):
         address_verified = self.address and self.address.verified
         contact_verified = self.email_verified and self.phone_number_verified
