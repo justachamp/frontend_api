@@ -362,6 +362,19 @@ class Identity:
             logger.error(f'general {ex}')
             raise Exception(ex)
 
+    def set_user_mfa_preference(self, enable, access_token):
+
+        params = {
+            'SMSMfaSettings': {'Enabled': enable},
+            'AccessToken': access_token,
+        }
+
+        try:
+            data = self.client.set_user_mfa_preference(**params)
+            return data
+        except constants.AWS_EXCEPTIONS as ex:
+            raise CognitoException.create_from_exception(ex)
+
     def admin_disable_user(self):
         pass
 

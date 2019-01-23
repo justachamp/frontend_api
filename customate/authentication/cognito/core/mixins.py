@@ -27,7 +27,16 @@ class Auth(object):
     def update_attribute(self, name, value):
         user = self.__request.user
         if user and type(user) is not AnonymousUser and not self.check(name, value):
+            if name == 'phone_number' and user.mfa_enabled and self.mfa_enabled:
+                raise ValueError('Multi factor authentication enabled.')
             return admin_update_user_attributes(str(self.__request.user.cognito_id), [{'Name': name, 'Value': value}])
+
+    @property
+    def mfa_enabled(self):
+        user = self.user
+        mfa_settings = user.get('UserMFASettingList', [])
+        return 'SMS_MFA' in mfa_settings
+
 
 
     @property

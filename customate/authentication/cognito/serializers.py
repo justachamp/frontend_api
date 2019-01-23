@@ -68,6 +68,35 @@ class CognitoAuthVerificationSerializer(serializers.Serializer):
             raise Unauthorized(ex)
 
 
+class CognitoMfaSerializer(serializers.Serializer):
+    resource_name = 'identities'
+    id = serializers.UUIDField(read_only=True)
+    access_token = serializers.CharField(write_only=True, required=True)
+    enable = serializers.BooleanField(write_only=True, required=True)
+
+    @staticmethod
+    def mfa_preference(validated_data):
+        try:
+            data = helpers.mfa_preference(validated_data)
+            user, _, _, _ = m_helpers.get_tokens(access_token=validated_data['access_token'])
+            enable_mfa = validated_data['enable']
+            if enable_mfa and not user.phone_number_verified:
+                raise ValueError("Phone number unverified")
+
+            status = data.get('ResponseMetadata').get('HTTPStatusCode')
+            if status == status_codes.HTTP_200_OK:
+                # TODO reomve user from serializer
+
+                user.mfa_enabled = enable_mfa
+                user.save()
+                return status_codes.HTTP_204_NO_CONTENT
+
+            return status
+        except Exception as ex:
+            logger.error(f'general {ex}')
+            raise Unauthorized(ex)
+
+
 class CognitoAuthAttributeVerifySerializer(serializers.Serializer, AuthSerializerMixin):
     resource_name = 'identities'
     id = serializers.UUIDField(read_only=True)
@@ -82,6 +111,7 @@ class CognitoAuthAttributeVerifySerializer(serializers.Serializer, AuthSerialize
 
             status = data.get('ResponseMetadata').get('HTTPStatusCode')
             if status == status_codes.HTTP_200_OK:
+                # TODO reomve user from serializer
                 user, _, _, _ = m_helpers.get_tokens(access_token=validated_data['access_token'])
                 attribute = validated_data['attribute_name']
                 if getattr(user, attribute):
@@ -173,7 +203,7 @@ class CognitoAuthChallengeSerializer(serializers.Serializer):
             user = get_user_model().objects.get(cognito_id=data[1].get('cognito:username')) if len(data) else None
 
             if not user:
-                raise serializers.ValidationError("User not found")
+                raise ValueError("User not found")
             if validated_data['challenge_name'] == NEW_PASSWORD_CHALLENGE:
                 user.status = UserStatus.active
                 user.save()

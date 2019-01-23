@@ -1,7 +1,8 @@
 
 from authentication.cognito.serializers import CognitoAuthSerializer, CogrnitoAuthRetrieveSerializer, \
     CogrnitoSignOutSerializer, CognitoAuthForgotPasswordSerializer, CognitoAuthPasswordRestoreSerializer,\
-    CognitoAuthVerificationSerializer, CognitoAuthAttributeVerifySerializer, CognitoAuthChallengeSerializer
+    CognitoAuthVerificationSerializer, CognitoAuthAttributeVerifySerializer, CognitoAuthChallengeSerializer, \
+    CognitoMfaSerializer
 
 from authentication.cognito.models import Challenge
 from rest_framework_json_api.views import viewsets
@@ -69,6 +70,13 @@ class AuthView(viewsets.ViewSet):
         if serializer.is_valid(True):
             serializer.create(serializer.validated_data)
             return self.sign_in(request)
+
+    @action(methods=['POST'], detail=False, name='Set mfa preference', resource_name='identity')
+    def mfa_preference(self, request):
+        serializer = CognitoMfaSerializer(data=request.data)
+        if serializer.is_valid(True):
+
+            return response.Response(status=serializer.mfa_preference(serializer.validated_data))
 
     @action(methods=['POST'], detail=False, name='Send verification code')
     def verification_code(self, request):

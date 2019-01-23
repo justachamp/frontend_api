@@ -48,6 +48,15 @@ class User(AbstractUser, Model):
         ),
     )
 
+    mfa_enabled = models.BooleanField(
+        _('user mfa status'),
+        default=False,
+        help_text=_(
+            'Designates whether this user authorize '
+            'using multi factor authentication.'
+        ),
+    )
+
     phone_number_verified = models.BooleanField(
         _('phone number verified'),
         default=False,

@@ -69,7 +69,7 @@ class BaseUserSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = User
         fields = ('url', 'role', 'status', 'username', 'first_name', 'last_name', 'middle_name', 'phone_number',
-                  'phone_number_verified', 'email_verified',
+                  'phone_number_verified', 'email_verified', 'mfa_enabled',
                   'birth_date', 'last_name', 'email', 'address', 'account')
 
 
@@ -78,6 +78,9 @@ class BaseAuthUserSerializereMixin(AuthSerializerMixin):
         if self.auth.check('phone_number', value):
             self.initial_data['phone_number_verified'] = self.auth.check('phone_number_verified', True)
         else:
+            user = self.context.get('request').user
+            if user and user.mfa_enabled:
+                raise serializers.ValidationError('Multi factor authentication enabled.')
             self.initial_data['phone_number_verified'] = False
             self.auth.update_attribute('phone_number', value)
 
