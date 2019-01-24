@@ -97,8 +97,8 @@ class SubUserPermission(Model):
     manage_unload_accounts = models.BooleanField(_('manage unload accounts'), default=False)
     create_transaction = models.BooleanField(_('create transaction'), default=False)
     create_contract = models.BooleanField(_('create contract'), default=False)
-    load_funds = models.BooleanField(_('create transaction'), default=False)
-    unload_funds = models.BooleanField(_('create transaction'), default=False)
+    load_funds = models.BooleanField(_('load funds'), default=False)
+    unload_funds = models.BooleanField(_('unload funds'), default=False)
 
     def __str__(self):
         return "Sub user permission"

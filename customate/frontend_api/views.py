@@ -429,6 +429,7 @@ class AccountViewSet(RelationshipMixin, PatchRelatedMixin, views.ModelViewSet):
             user = serializer.save()
             invitation = CognitoInviteUserSerializer.invite(data)
             user.cognito_id = invitation.id
+            user.email_verified = True
             user.save()
             invitation.pk = user.id
 
@@ -502,6 +503,7 @@ class AdminUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.Mo
             user = serializer.save()
             invitation = CognitoInviteUserSerializer.invite(data)
             user.cognito_id = invitation.id
+            user.email_verified = True
             user.save()
             invitation.pk = user.id
 

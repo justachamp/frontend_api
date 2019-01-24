@@ -281,7 +281,7 @@ class CogrnitoAuthRetrieveSerializer(serializers.Serializer):
                     user = get_user_model().objects.create(
                         username=email,
                         email=email,
-                        email_verified=cognito_user.get('email_verified'),
+                        email_verified=cognito_user.get('email_verified', True),
                         phone_number=cognito_user.get('phone_number', ''),
                         phone_number_verified=cognito_user.get('phone_number_verified', False),
                         cognito_id=cognito_user.get('cognito:username'),
