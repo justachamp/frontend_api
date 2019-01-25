@@ -15,6 +15,7 @@ class Company(Model):
     company_type = EnumField(CompanyType, max_length=30, blank=True, null=True)
     registration_business_name = models.CharField(max_length=50, blank=True)
     registration_number = models.CharField(max_length=8, blank=True)
+    vat_number = models.CharField(max_length=8, blank=True)
     address = models.OneToOneField(
         Address,
         on_delete=models.CASCADE,
@@ -112,7 +113,7 @@ class AdminUserPermission(Model):
     can_login_as_user = models.BooleanField(_('can login'), default=False)
 
     def __str__(self):
-        return "Sub user permission"
+        return "Admin user permission"
 
 
 class Shareholder(Model):

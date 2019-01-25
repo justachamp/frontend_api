@@ -528,7 +528,7 @@ class CompanySerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = Company
-        fields = ('url', 'company_type','is_active', 'registration_business_name', 'registration_number',
+        fields = ('url', 'company_type', 'is_active', 'registration_business_name', 'vat_number', 'registration_number',
                   'is_private', 'shareholders', 'account', 'address')
 
 
