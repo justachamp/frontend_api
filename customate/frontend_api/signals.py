@@ -11,16 +11,16 @@ logger = logging.getLogger(__name__)
 
 @receiver(pre_save, sender=Address)
 def verify_address(sender, instance, **kwargs):
-    # try:
-    gbg = ID3Client(parser=ModelParser)
-    verification = gbg.auth_sp(instance)
-    score = verification.Score
-    instance.is_verified = score > 5
-    logger.error(f'instance.is_verified: {instance.is_verified}, score: {score}')
+    try:
+        gbg = ID3Client(parser=ModelParser)
+        verification = gbg.auth_sp(instance)
+        score = verification.Score
+        instance.is_verified = score > 5
+        logger.error(f'instance.is_verified: {instance.is_verified}, score: {score}')
 
     # user = instance.user
     # user.check_verification()
     # user.save()
 
-    # except Exception as e:
-    #     pass
+    except Exception as e:
+        pass
