@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'address.loqate.apps.LoqateConfig',
     'frontend_api.apps.FrontendApiConfig',
     'storages',
+    'guardian'
 ]
 
 MIDDLEWARE = [
@@ -78,6 +79,7 @@ MIDDLEWARE = [
 
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
+    'guardian.backends.ObjectPermissionBackend'
 ]
 # AUTHENTICATION_BACKENDS = [
 #     # 'django.contrib.auth.backends.ModelBackend',
@@ -319,7 +321,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.1/howto/static-files/
 CORS_ORIGIN_ALLOW_ALL = True
-
+# GUARDIAN_GET_CONTENT_TYPE = 'polymorphic.contrib.guardian.get_polymorphic_base_content_type'
 
 CORS_ALLOW_HEADERS = default_headers + (
     'ACCESSTOKEN',

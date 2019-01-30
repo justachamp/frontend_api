@@ -373,7 +373,8 @@ class AccountViewSet(RelationshipMixin, PatchRelatedMixin, views.ModelViewSet):
     _related_serializers = {
         'sub_user_accounts': SubUserAccountSerializer,
         'admin_user_accounts': AdminUserAccountSerializer,
-        'company': CompanySerializer
+        'company': CompanySerializer,
+        'user': UserSerializer
     }
 
     def get_serializer_class(self):
