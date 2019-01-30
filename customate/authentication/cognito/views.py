@@ -1,3 +1,4 @@
+from django.db import transaction
 
 from authentication.cognito.serializers import CognitoAuthSerializer, CogrnitoAuthRetrieveSerializer, \
     CogrnitoSignOutSerializer, CognitoAuthForgotPasswordSerializer, CognitoAuthPasswordRestoreSerializer,\
@@ -68,8 +69,9 @@ class AuthView(viewsets.ViewSet):
     def sign_up(self, request):
         serializer = CognitoAuthSerializer(data=request.data)
         if serializer.is_valid(True):
-            serializer.create(serializer.validated_data)
-            return self.sign_in(request)
+            with transaction.atomic():
+                serializer.create(serializer.validated_data)
+                return self.sign_in(request)
 
     @action(methods=['POST'], detail=False, name='Set mfa preference', resource_name='identity')
     def mfa_preference(self, request):

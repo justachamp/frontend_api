@@ -55,6 +55,10 @@ url(r'^accounts/(?P<pk>[^/.]+)/$',
             name='sub-user-account-relationships'
             ),
 
+# url(r'^sub_user_accounts/(?P<pk>[^/.]+)/$',
+#         views.SubUserAccountViewSet.as_view({'get': 'retrieve'}),
+#         name='subuseraccount-detail'),
+
     re_path(r'^sub_user_permissions/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
             views.SubUserPermissionViewSet.as_view({'get': 'retrieve_related', 'patch': 'patch_related'}),
             name='sub-user-permission-related'),
@@ -72,6 +76,10 @@ url(r'^accounts/(?P<pk>[^/.]+)/$',
             view=views.AdminUserAccountRelationshipView.as_view(),
             name='admin-user-account-relationships'
             ),
+
+# url(r'^admin_user_accounts/(?P<pk>[^/.]+)/$',
+#         views.AdminUserAccountViewSet.as_view({'get': 'retrieve'}),
+#         name='adminuseraccount-detail'),
 
     re_path(r'^admin_user_permissions/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
             views.AdminUserPermissionViewSet.as_view({'get': 'retrieve_related', 'patch': 'patch_related'}),

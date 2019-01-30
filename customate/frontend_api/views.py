@@ -144,22 +144,32 @@ class UserViewSet(PatchRelatedMixin, views.ModelViewSet):
     def get_serializer_class(self):
 
         field = self.kwargs.get('related_field')
+        user = self.request.user
+        id = self.kwargs.get('pk')
+        if field:
+            if field == 'account':
+                id = self.kwargs.get('pk')
 
-        if field == 'account':
-            user = self.request.user
-            id = self.kwargs.get('pk')
+                try:
+                    user = User.objects.get(id=id)
+                except Exception as e:
+                    raise NotFound(f'Account not found {id}')
 
-            try:
-                user = User.objects.get(id=id)
-            except Exception as e:
-                raise NotFound(f'Account not found {id}')
-
+                if user.is_owner:
+                    return UserAccountSerializer
+                elif user.is_subuser:
+                    return SubUserAccountSerializer
+                elif user.is_admin:
+                    return AdminUserAccountSerializer
+            else:
+                return super().get_serializer_class()
+        elif id:
             if user.is_owner:
-                return UserAccountSerializer
+                return UserSerializer
             elif user.is_subuser:
-                return SubUserAccountSerializer
+                return SubUserSerializer
             elif user.is_admin:
-                return AdminUserAccountSerializer
+                return AdminUserSerializer
 
         else:
             return super().get_serializer_class()
@@ -411,7 +421,7 @@ class AccountViewSet(RelationshipMixin, PatchRelatedMixin, views.ModelViewSet):
             user.save()
 
     @action(methods=['POST'], detail=True, name='Invite sub user')
-    @transaction.atomic()
+    @transaction.atomic
     def invite(self, request, pk):
         username = request.data.get('username').lower()
         data = {

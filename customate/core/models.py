@@ -18,7 +18,7 @@ class Address(Model):
     locality = models.CharField(max_length=50)
     postcode = models.CharField(max_length=20)
 
-    verified = models.BooleanField(
+    is_verified = models.BooleanField(
         _('address verified'),
         default=False,
         help_text=_(
@@ -95,9 +95,9 @@ class User(AbstractUser, Model):
         return self.role == UserRole.admin
 
     def check_verification(self):
-        address_verified = self.address and self.address.verified
+        address_verified = self.address and self.address.is_verified
         contact_verified = self.email_verified and self.phone_number_verified
-        self.is_verified = contact_verified and address_verified
+        self.is_verified = address_verified and contact_verified
 
     def get_username(self):
         return self.email

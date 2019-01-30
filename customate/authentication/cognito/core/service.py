@@ -11,6 +11,8 @@ from botocore.exceptions import ParamValidationError
 # import the logging library
 import logging
 # Get an instance of a logger
+from frontend_api.utils import assign_permissions
+
 logger = logging.getLogger(__name__)
 from django.db import transaction
 from rest_framework import exceptions, status
@@ -91,13 +93,10 @@ class Identity:
                     # first_name=user_params.get('given_name'), last_name=user_params.get('family_name')
                 )
                 account = UserAccount.objects.create(account_type=account_type, user=user)
-                # company = Company.objects.create(is_active=(account_type == BUSINESS_ACCOUNT))
-                # account.company = company
-                # company.save()
                 account.save()
-
-                # user.account = account
                 user.save()
+                assign_permissions(user)
+
             return cognito_user
 
         except ParamValidationError as ex:
