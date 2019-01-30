@@ -69,7 +69,7 @@ class BaseUserSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = User
         fields = ('url', 'role', 'status', 'username', 'first_name', 'last_name', 'middle_name', 'phone_number',
-                  'phone_number_verified', 'email_verified', 'mfa_enabled',
+                  'phone_number_verified', 'email_verified', 'mfa_enabled', 'is_verified',
                   'birth_date', 'last_name', 'email', 'address', 'account')
 
 
@@ -220,7 +220,7 @@ class UserAddressSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Address
         fields = ('url', 'address', 'country', 'address_line_1', 'address_line_2',
-                  'city', 'locality', 'postcode', 'user')
+                  'city', 'locality', 'postcode', 'user', 'is_verified')
 
 
 class AddressSerializer(serializers.HyperlinkedModelSerializer):
@@ -258,7 +258,7 @@ class AddressSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Address
         fields = ('url', 'address', 'country', 'address_line_1', 'address_line_2',
-                  'city', 'locality', 'postcode', 'user', 'company')
+                  'city', 'locality', 'postcode', 'user', 'company', 'is_verified')
 
 
 class CompanyAddressSerializer(serializers.HyperlinkedModelSerializer):
@@ -284,7 +284,7 @@ class CompanyAddressSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Address
         fields = ('url', 'address', 'country', 'address_line_1', 'address_line_2',
-                  'city', 'locality', 'postcode', 'company')
+                  'city', 'locality', 'postcode', 'company', 'is_verified')
 
 
 class SubUserAccountSerializer(serializers.HyperlinkedModelSerializer):
@@ -418,7 +418,7 @@ class SubUserPermissionSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = SubUserPermission
         fields = ('url', 'account', 'manage_sub_user', 'manage_funding_sources', 'manage_unload_accounts',
-                  'create_transaction', 'create_contract', 'load_funds', 'unload_funds')
+                  'manage_contract')
 
 
 class AdminUserAccountSerializer(serializers.HyperlinkedModelSerializer):
@@ -568,12 +568,12 @@ class UserSerializer(BaseUserSerializer, BaseAuthUserSerializereMixin):
 
     related_serializers = {
         'address': 'frontend_api.serializers.UserAddressSerializer',
-        'account': 'frontend_api.serializers.AccountSerializer'
+        'account': 'frontend_api.serializers.UserAccountSerializer'
     }
 # Account&#39; has no attribute &#39;sub_user_account
     included_serializers = {
         'address': 'frontend_api.serializers.UserAddressSerializer',
-        'account': 'frontend_api.serializers.AccountSerializer'
+        'account': 'frontend_api.serializers.UserAccountSerializer'
     }
 
     address = ResourceRelatedField(
@@ -595,9 +595,10 @@ class UserSerializer(BaseUserSerializer, BaseAuthUserSerializereMixin):
 
 
 
-    account = ResourceRelatedField(
+    account = PolymorphicResourceRelatedField(
+        UserAccountSerializer,
         many=False,
-        queryset=Account.objects,
+        queryset=UserAccount.objects,
         related_link_view_name='user-related',
         related_link_url_kwarg='pk',
         self_link_view_name='user-relationships',

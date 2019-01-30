@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import models, transaction
 from django.utils.translation import gettext_lazy as _
 
 from core.models import Model, Address
@@ -9,6 +9,8 @@ from frontend_api.fields import AccountType, CompanyType
 from django.db import models
 
 from polymorphic.models import PolymorphicModel
+
+
 
 
 class Company(Model):
@@ -70,11 +72,34 @@ class UserAccount(Account):
     class JSONAPIMeta:
         resource_name = "UserAccount"
 
+    class Meta:
+        permissions = (
+            ('owner_access', 'Account owner'),
+            ('owner_account_access', 'Owner account access'),
+            ('owner_group_account_access', 'Owner group account access'),
+            ('sub_user_account_access', 'Sud user account access'),
+            ('sub_user_group_account_access', 'Sud user group account access'),
+            ('manage_sub_user', 'Manage sub-users'),
+            ('manage_funding_sources', 'Manage funding sources'),
+            ('manage_unload_accounts', 'Manage unload accounts'),
+            ('manage_contract', 'Manage contract'),
+        )
+
     def __str__(self):
         return "Owner account"
 
 
 class AdminUserAccount(Account):
+
+    class Meta:
+        permissions = (
+            ('admin_account_access', 'Admin account access'),
+            ('admin_group_account_access', 'Admin group account access'),
+            ('manage_admin_user', 'Manage admins'),
+            ('manage_tax', 'Manage tax'),
+            ('manage_fee', 'Manage fee'),
+            ('login_as_user', 'Login as user')
+        )
 
     def __str__(self):
         return "Admin account"
@@ -96,10 +121,14 @@ class SubUserPermission(Model):
     manage_sub_user = models.BooleanField(_('manage sub users'), default=False)
     manage_funding_sources = models.BooleanField(_('manage funding sources'), default=False)
     manage_unload_accounts = models.BooleanField(_('manage unload accounts'), default=False)
-    create_transaction = models.BooleanField(_('create transaction'), default=False)
-    create_contract = models.BooleanField(_('create contract'), default=False)
-    load_funds = models.BooleanField(_('load funds'), default=False)
-    unload_funds = models.BooleanField(_('unload funds'), default=False)
+    manage_contract = models.BooleanField(_('create contract'), default=False)
+
+    @transaction.atomic
+    def save(self, *args, **kwargs):
+        from frontend_api.utils import sync_sub_user_permissions
+        sync_sub_user_permissions(self)
+        return super().save(*args, **kwargs)
+
 
     def __str__(self):
         return "Sub user permission"
@@ -111,6 +140,12 @@ class AdminUserPermission(Model):
     manage_tax = models.BooleanField(_('manage tax'), default=False)
     manage_fee = models.BooleanField(_('manage fee'), default=False)
     can_login_as_user = models.BooleanField(_('can login'), default=False)
+
+    @transaction.atomic
+    def save(self, *args, **kwargs):
+        from frontend_api.utils import sync_admin_user_permissions
+        sync_admin_user_permissions(self)
+        return super().save(*args, **kwargs)
 
     def __str__(self):
         return "Admin user permission"

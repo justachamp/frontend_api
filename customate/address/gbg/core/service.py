@@ -155,7 +155,7 @@ class ModelParser(object):
             self._personal_details['DOBDay'] = user.birth_date.strftime('%d')
             self._personal_details['DOBMonth'] = user.birth_date.strftime('%m')
             self._personal_details['DOBYear'] = user.birth_date.strftime('%Y')
-            self._personal_details['Birth'] = user.birth_date.strftime('%d-%m-%Y %H:%M:%S')
+            self._personal_details['Birth'] = user.birth_date.strftime('%d-%m-%Y')
 
     @property
     def current_address(self):
