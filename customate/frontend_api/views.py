@@ -130,7 +130,7 @@ class UserViewSet(PatchRelatedMixin, views.ModelViewSet):
     API endpoint that allows users to be viewed or edited.
     """
 
-    queryset = User.objects.all().order_by('-date_joined')
+    queryset = User.objects.all().filter(role=UserRole.owner).exclude(email='AnonymousUser').order_by('-date_joined')
     serializer_class = UserSerializer
 
     permission_classes = (IsOwnerOrReadOnly,)
@@ -146,30 +146,33 @@ class UserViewSet(PatchRelatedMixin, views.ModelViewSet):
         field = self.kwargs.get('related_field')
         user = self.request.user
         id = self.kwargs.get('pk')
-        try:
-            user = User.objects.get(id=id)
-        except Exception as e:
-            raise NotFound(f'Account not found {id}')
+        if id:
+            try:
+                user = User.objects.get(id=id)
+            except Exception as e:
+                raise NotFound(f'Account not found {id}')
 
-        if field:
-            if field == 'account':
+            if field:
+                if field == 'account':
+                    if user.is_owner:
+                        return UserAccountSerializer
+                    elif user.is_subuser:
+                        return SubUserAccountSerializer
+                    elif user.is_admin:
+                        return AdminUserAccountSerializer
+                else:
+                    return super().get_serializer_class()
+            else:
                 if user.is_owner:
-                    return UserAccountSerializer
+                    return UserSerializer
                 elif user.is_subuser:
-                    return SubUserAccountSerializer
+                    return SubUserSerializer
                 elif user.is_admin:
-                    return AdminUserAccountSerializer
-            else:
-                return super().get_serializer_class()
+                    return AdminUserSerializer
+                else:
+                    return super().get_serializer_class()
         else:
-            if user.is_owner:
-                return UserSerializer
-            elif user.is_subuser:
-                return SubUserSerializer
-            elif user.is_admin:
-                return AdminUserSerializer
-            else:
-                return super().get_serializer_class()
+            return super().get_serializer_class()
 
 
 class UserRelationshipView(RelationshipPostMixin, RelationshipView):
