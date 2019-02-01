@@ -11,8 +11,6 @@ from django.db import models
 from polymorphic.models import PolymorphicModel
 
 
-
-
 class Company(Model):
     company_type = EnumField(CompanyType, max_length=30, blank=True, null=True)
     registration_business_name = models.CharField(max_length=50, blank=True)

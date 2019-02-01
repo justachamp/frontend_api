@@ -17,7 +17,7 @@ from rest_framework.exceptions import NotFound
 from django.contrib.auth.models import Group, AnonymousUser
 from core.models import User
 
-from rest_framework_json_api import views
+from core import views
 from frontend_api.serializers import UserSerializer
 from core.fields import UserRole, UserStatus
 from rest_framework import permissions
