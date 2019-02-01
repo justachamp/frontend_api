@@ -60,3 +60,55 @@ class UserPermission(permissions.BasePermission):
     #
     # load_funds = models.BooleanField(_('create transaction'), default=False)
     # unload_funds = models.BooleanField(_('create transaction'), default=False)
+
+
+class AccountUserPermission(UserPermission):
+    """
+    Custom permission to only allow owners of an object to edit it.
+    """
+    def has_object_permission(self, request, view, obj):
+        # Read permissions are allowed to any request,
+        # so we'll always allow GET, HEAD or OPTIONS requests.
+        logger.error('IsOwnerOrReadOnly')
+        if request.method in permissions.SAFE_METHODS:
+            return True
+
+        # Write permissions are only allowed to the owner of the snippet.
+        # raise Exception(f'obj {obj}')
+
+        return True  # obj.owner == request.user
+
+
+class SubUserPermission(UserPermission):
+    """
+    Custom permission to only allow owners of an object to edit it.
+    """
+    def has_object_permission(self, request, view, obj):
+        # Read permissions are allowed to any request,
+        # so we'll always allow GET, HEAD or OPTIONS requests.
+        logger.error('IsOwnerOrReadOnly')
+        if request.method in permissions.SAFE_METHODS:
+            return True
+
+        # Write permissions are only allowed to the owner of the snippet.
+        # raise Exception(f'obj {obj}')
+
+        return True  # obj.owner == request.user
+
+
+
+class AdminUserPermission(UserPermission):
+    """
+    Custom permission to only allow owners of an object to edit it.
+    """
+    def has_object_permission(self, request, view, obj):
+        # Read permissions are allowed to any request,
+        # so we'll always allow GET, HEAD or OPTIONS requests.
+        logger.error('IsOwnerOrReadOnly')
+        if request.method in permissions.SAFE_METHODS:
+            return True
+
+        # Write permissions are only allowed to the owner of the snippet.
+        # raise Exception(f'obj {obj}')
+
+        return True  # obj.owner == request.user
