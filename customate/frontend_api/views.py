@@ -146,15 +146,13 @@ class UserViewSet(PatchRelatedMixin, views.ModelViewSet):
         field = self.kwargs.get('related_field')
         user = self.request.user
         id = self.kwargs.get('pk')
+        try:
+            user = User.objects.get(id=id)
+        except Exception as e:
+            raise NotFound(f'Account not found {id}')
+
         if field:
             if field == 'account':
-                id = self.kwargs.get('pk')
-
-                try:
-                    user = User.objects.get(id=id)
-                except Exception as e:
-                    raise NotFound(f'Account not found {id}')
-
                 if user.is_owner:
                     return UserAccountSerializer
                 elif user.is_subuser:
@@ -163,16 +161,15 @@ class UserViewSet(PatchRelatedMixin, views.ModelViewSet):
                     return AdminUserAccountSerializer
             else:
                 return super().get_serializer_class()
-        elif id:
+        else:
             if user.is_owner:
                 return UserSerializer
             elif user.is_subuser:
                 return SubUserSerializer
             elif user.is_admin:
                 return AdminUserSerializer
-
-        else:
-            return super().get_serializer_class()
+            else:
+                return super().get_serializer_class()
 
 
 class UserRelationshipView(RelationshipPostMixin, RelationshipView):
