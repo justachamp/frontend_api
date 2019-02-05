@@ -145,6 +145,9 @@ class SubUserSerializer(BaseUserSerializer):
         user = User(**validated_data)
         user.role = UserRole.sub_user
         user.status = UserStatus.pending
+        address = Address()
+        address.save()
+        user.address = address
         user.save()
         owner_account = self.context.get('request').user.account
         account = SubUserAccount(owner_account=owner_account, user=user)
@@ -188,6 +191,8 @@ class AdminUserSerializer(BaseUserSerializer):
         user = User(**validated_data)
         user.role = UserRole.admin
         user.status = UserStatus.pending
+        address = Address()
+        address.save()
         user.save()
         account = AdminUserAccount(user=user)
         account.save()

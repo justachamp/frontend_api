@@ -7,6 +7,7 @@ from core.fields import UserRole
 SUB_USER_PERMS = ('manage_sub_user', 'manage_funding_sources', 'manage_unload_accounts', 'manage_contract')
 ADMIN_USER_PERMS = ('manage_admin_user', 'manage_tax', 'manage_fee', 'can_login_as_user')
 
+
 def _assign_sub_user_perms(user, account):
     perms = SubUserPermission(instance=user.account.permission)
     for perm in SUB_USER_PERMS:

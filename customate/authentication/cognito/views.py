@@ -22,7 +22,6 @@ logger.setLevel(logging.INFO)
 
 class AuthView(viewsets.ViewSet):
     serializer_class = CognitoAuthSerializer
-    # queryset = User.objects.all().order_by('-date_joined')
 
     resource_name = 'identity'
     permission_classes = (AllowAny,)

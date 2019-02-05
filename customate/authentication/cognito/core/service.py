@@ -1,22 +1,15 @@
 from django.conf import settings
 import boto3
-from django.contrib.auth import get_user_model
-# from frontend_api.models import CustomateUser as User
+from botocore.exceptions import ParamValidationError
 from authentication.cognito.core import constants
 from authentication.cognito import utils
+from core.services.user import UserService
 
-from frontend_api.models import Account, Company, UserAccount
-from core.fields import UserRole
-from botocore.exceptions import ParamValidationError
 # import the logging library
 import logging
 # Get an instance of a logger
-from frontend_api.utils import assign_permissions
-
 logger = logging.getLogger(__name__)
-from django.db import transaction
-from rest_framework import exceptions, status
-from rest_framework_json_api import exceptions
+
 BUSINESS_ACCOUNT = 'business'
 BAD_DATA_EXCEPTION = "The required parameters were not passed through in the data dictionary"
 
@@ -59,10 +52,15 @@ class Identity:
     client = boto3.client('cognito-idp', aws_access_key_id=settings.AWS_ACCESS_KEY,
                           aws_secret_access_key=settings.AWS_SECRET_KEY, region_name=settings.AWS_REGION)
 
-    user_class = get_user_model()
-    # user_class = User
+    _user_service = None
 
-    @transaction.atomic()
+    @property
+    def user_service(self):
+        if not self._user_service:
+            self._user_service = UserService()
+
+        return self._user_service
+
     def sign_up(self, username, password, account_type, user_attributes, validation_data=None):
         try:
             logger.error(username)
@@ -83,20 +81,7 @@ class Identity:
             cognito_user = self.client.sign_up(**params)
             logger.error(f'cognito user {cognito_user}')
             logger.error(f'user_params {user_params}')
-            with transaction.atomic():
-
-                user = self.user_class.objects.create(
-                    username=username,
-                    email=username,
-                    role=UserRole.owner,
-                    cognito_id=cognito_user['UserSub']
-                    # first_name=user_params.get('given_name'), last_name=user_params.get('family_name')
-                )
-                account = UserAccount.objects.create(account_type=account_type, user=user)
-                account.save()
-                user.save()
-                assign_permissions(user)
-
+            self.user_service.create_user(username, account_type, cognito_user['UserSub'])
             return cognito_user
 
         except ParamValidationError as ex:

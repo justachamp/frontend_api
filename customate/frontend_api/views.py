@@ -378,7 +378,7 @@ class AccountViewSet(RelationshipMixin, PatchRelatedMixin, views.ModelViewSet):
 
     queryset = Account.objects.all()
     serializer_class = AccountSerializer
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsOwnerOrReadOnly,)
 
     _related_serializers = {
         'sub_user_accounts': SubUserAccountSerializer,
@@ -429,7 +429,6 @@ class AccountViewSet(RelationshipMixin, PatchRelatedMixin, views.ModelViewSet):
             'username': username,
             'email': username,
             'role': UserRole.sub_user.value,
-            # 'status': UserStatus.pending.value,
             'first_name': request.data.get('first_name', ''),
             'middle_name': request.data.get('middle_name', ''),
             'last_name': request.data.get('last_name', ''),
@@ -503,7 +502,6 @@ class AdminUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.Mo
             'username': username,
             'email': username,
             'role': UserRole.admin.value,
-            # 'status': UserStatus.pending.value,
             'first_name': request_data.get('first_name', ''),
             'middle_name': request_data.get('middle_name', ''),
             'last_name': request_data.get('last_name', ''),
