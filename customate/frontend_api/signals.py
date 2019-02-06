@@ -5,7 +5,7 @@ from django.db.models.signals import pre_save
 from django.dispatch import receiver
 from address.gbg.core.service import ID3Client, ModelParser
 import logging
-GBG_SUCCESS_STATUS = 'PASS'
+GBG_SUCCESS_STATUS = 'Pass'
 
 
 # Get an instance of a logger
@@ -20,11 +20,11 @@ def verify_address(sender, **kwargs):
         if user:
             gbg = ID3Client(parser=ModelParser)
             verification = gbg.auth_sp(address)
-            band_text = verification.Score
+            band_text = verification.BandText
             address.is_verified = band_text == GBG_SUCCESS_STATUS
             logger.error(f'instance.is_verified: {address.is_verified}, band text: {band_text}')
             user.check_verification()
             user.save()
 
     except Exception as e:
-        pass
+        address.is_verified = False

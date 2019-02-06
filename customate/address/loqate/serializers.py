@@ -3,6 +3,7 @@ from address.loqate.models import RetrieveAddress
 from address.loqate.core.service import Address as SearchAddressService
 import logging
 logger = logging.getLogger(__name__)
+AVAILABLE_COUNTRIES = ('GB', 'IE', 'DE', 'IT', 'NL', 'FR', 'ES', 'PT')
 
 
 class SearchAddressSerializer(serializers.Serializer):
@@ -16,22 +17,33 @@ class SearchAddressSerializer(serializers.Serializer):
     Limit = serializers.IntegerField(max_value=100, min_value=1, required=False, source='limit')
     Language = serializers.CharField(max_length=100, source='language', required=False, allow_blank=True)
 
-    def find(self, data):
+    @staticmethod
+    def _prepare_countries(data):
+        countries = data.get('countries', '')
+        countries = [country.strip() for country in countries.split(',') if country.strip() in AVAILABLE_COUNTRIES]
 
+        if not len(countries):
+            countries = AVAILABLE_COUNTRIES
+        else:
+            countries = ','.join(countries)
+        return countries
+
+    def find(self, data):
         service = SearchAddressService()
-        # countries = data.get('countries', 'EU')
 
         params = {
             "Text": data.get('text'),
-            # "Origin": data.get('origin', countries),
-            # "Countries": countries,
-            "Limit": data.get('limit', 10),
+            "Countries": self._prepare_countries(data),
+            "Limit": data.get('limit', 20),
             "Language": data.get('language', ''),
         }
+        origin = data.get('origin', None)
+
+        if origin and origin in AVAILABLE_COUNTRIES:
+            params['origin'] = origin
 
         if data.get('id'):
             params['Container'] = data.get('id')
-
 
         data = service.find(params)
         logger.error(f'retrieve validated_data {data}')
