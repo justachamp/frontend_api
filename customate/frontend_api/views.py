@@ -130,7 +130,7 @@ class UserViewSet(PatchRelatedMixin, views.ModelViewSet):
     API endpoint that allows users to be viewed or edited.
     """
 
-    queryset = User.objects.all().filter(role=UserRole.owner).exclude(email='AnonymousUser').order_by('-date_joined')
+    queryset = User.objects.all().exclude(email='AnonymousUser').order_by('-date_joined')
     serializer_class = UserSerializer
 
     permission_classes = (IsOwnerOrReadOnly,)
@@ -549,10 +549,6 @@ class SubUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.Mode
         serializer.is_valid(raise_exception=True)
         permission = SubUserPermission(**serializer.validated_data, account=account)
         permission.save()
-
-        # account.permission = serializer.save()
-        # account.save()
-
         return serializer
 
 
