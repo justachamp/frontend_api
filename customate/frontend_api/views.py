@@ -247,9 +247,7 @@ class AccountRelationshipView(RelationshipPostMixin, RelationshipView):
 
 class CompanyRelationshipView(RelationshipPostMixin, RelationshipView):
     queryset = Company.objects
-
-    # serializer_class = RelativeResourceIdentifierObjectSerializer
-
+    permission_classes = (AllowAny,)
     _related_serializers = {
         'address': CompanyAddressSerializer,
         'shareholders': ShareholderSerializer
@@ -388,7 +386,6 @@ class AccountViewSet(RelationshipMixin, PatchRelatedMixin, views.ModelViewSet):
     }
 
     def get_serializer_class(self):
-        # TODO imposible get related_serializers/included_serializers from polymorphic instance
         # user = self.request.user
         id = self.kwargs.get('pk')
         related_field = self.kwargs.get('related_field')

@@ -494,7 +494,7 @@ class CompanySerializer(serializers.HyperlinkedModelSerializer):
         'account': 'frontend_api.serializers.UserAccountSerializer',
         'address': 'frontend_api.serializers.CompanyAddressSerializer',
         'shareholders': 'frontend_api.serializers.ShareholderSerializer'
-    },
+    }
 
     included_serializers = {
         'account': 'frontend_api.serializers.UserAccountSerializer',

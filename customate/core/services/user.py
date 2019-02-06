@@ -31,15 +31,17 @@ class UserService(object):
         )
         account = UserAccount.objects.create(account_type=account_type, user=user)
 
-
         if account_type == AccountType.business.value:
             company = Company()
+            address = Address()
+            address.save()
+            company.address = address
+
             company.save()
             account.company = company
 
         account.save()
         user.save()
-
         assign_permissions(user)
 
     def get_user_by_external_identity(self, identity, user_data=None, auto_create=False):
@@ -94,6 +96,10 @@ class UserService(object):
     @staticmethod
     def _restore_account(user):
         role = user.role
+        address = Address()
+        address.save()
+        user.address = address()
+        user.save()
         if role == UserRole.owner:
             account = UserAccount.objects.create(account_type=AccountType.personal, user=user)
             account.save()
