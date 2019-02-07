@@ -18,6 +18,7 @@ from django.contrib.auth.models import Group, AnonymousUser
 from core.models import User
 
 from core import views
+from core.serializers import BulkExtensionMixin
 from frontend_api.serializers import UserSerializer
 from core.fields import UserRole, UserStatus
 from rest_framework import permissions
@@ -597,8 +598,15 @@ class CompanyViewSet(PatchRelatedMixin, views.ModelViewSet):
             user.account.save()
 
 
-class ShareholderViewSet(PatchRelatedMixin, views.ModelViewSet):
+class ShareholderViewSet(BulkExtensionMixin, PatchRelatedMixin, views.ModelViewSet):
 
     queryset = Shareholder.objects.all()
     serializer_class = ShareholderSerializer
-    permission_classes = (IsOwnerOrReadOnly,)
+    permission_classes = (AllowAny,)
+
+    @transaction.atomic
+    def perform_create(self, serializer):
+        company = self.request.user.account.company
+        company.shareholders.all().delete()
+        company.shareholders.set(serializer.save())
+        company.save()
