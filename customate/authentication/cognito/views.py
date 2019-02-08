@@ -68,9 +68,8 @@ class AuthView(viewsets.ViewSet):
     def sign_up(self, request):
         serializer = CognitoAuthSerializer(data=request.data)
         if serializer.is_valid(True):
-            with transaction.atomic():
-                serializer.create(serializer.validated_data)
-                return self.sign_in(request)
+            serializer.create(serializer.validated_data)
+            return response.Response(serializer.data)
 
     @action(methods=['POST'], detail=False, name='Set mfa preference', resource_name='identity')
     def mfa_preference(self, request):
