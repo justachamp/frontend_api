@@ -1,3 +1,5 @@
+import requests
+import os
 from rest_framework_json_api import serializers
 from rest_framework.fields import Field, ListField
 from rest_framework import status as status_codes
@@ -332,6 +334,19 @@ class CognitoInviteUserSerializer(serializers.Serializer, BaseAuthValidationMixi
         except Exception as ex:
             logger.error(f'general {ex}')
             raise Unauthorized(ex)
+
+
+class CognitoConfirmEmailSerializer(serializers.Serializer, BaseAuthValidationMixin, UserServiceMixin):
+    client_id = serializers.CharField(max_length=50, required=True)
+    username = serializers.CharField(max_length=50, required=True)
+    code = serializers.CharField(max_length=50, required=True)
+
+    def create(self, validated_data):
+        requests.get("https://" + os.environ.get("COGNITO_POOL_NAME") + ".auth."+os.environ.get('COGNITO_POOL_REGION')
+                     + ".amazoncognito.com/confirmUser?"
+                     + "client_id=" + validated_data['client_id']
+                     + "&user_name=" + validated_data['username']
+                     + "&confirmation_code=" + validated_data['code'])
 
 
 class CognitoAuthSerializer(BaseAuthValidationMixin, CogrnitoAuthRetrieveSerializer, UserServiceMixin):
