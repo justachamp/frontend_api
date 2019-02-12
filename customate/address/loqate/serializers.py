@@ -1,25 +1,25 @@
 from rest_framework_json_api import serializers
 from address.loqate.models import RetrieveAddress
 from address.loqate.core.service import Address as SearchAddressService
+
 import logging
 logger = logging.getLogger(__name__)
 AVAILABLE_COUNTRIES = ('GB', 'IE', 'DE', 'IT', 'NL', 'FR', 'ES', 'PT')
 
-
 class SearchAddressSerializer(serializers.Serializer):
-    Id = serializers.CharField(max_length=250, required=False, source='id', allow_blank=True, allow_null=True)
-    Type = serializers.CharField(max_length=200, source='type', required=False, allow_blank=True)
-    Text = serializers.CharField(max_length=250, source='text', required=False, allow_blank=True)
-    Highlight = serializers.CharField(max_length=100, source='highlight', required=False, allow_blank=True)
-    Description = serializers.CharField(max_length=250, source='description', required=False, allow_blank=True)
-    Origin = serializers.CharField(max_length=100, source='origin', required=False, allow_blank=True)
-    Countries = serializers.CharField(max_length=100, source='countries', required=False, allow_blank=True)
-    Limit = serializers.IntegerField(max_value=100, min_value=1, required=False, source='limit')
-    Language = serializers.CharField(max_length=100, source='language', required=False, allow_blank=True)
+    id = serializers.CharField(max_length=250, required=False, source='Id', allow_blank=True, allow_null=True)
+    type = serializers.CharField(max_length=200, source='Type', required=False, allow_blank=True)
+    text = serializers.CharField(max_length=250, source='Text', required=False, allow_blank=True)
+    highlight = serializers.CharField(max_length=100, source='Highlight', required=False, allow_blank=True)
+    description = serializers.CharField(max_length=250, source='Description', required=False, allow_blank=True)
+    origin = serializers.CharField(max_length=100, source='Origin', required=False, allow_blank=True)
+    countries = serializers.CharField(max_length=100, source='Countries', required=False, allow_blank=True)
+    limit = serializers.IntegerField(max_value=100, min_value=1, required=False, source='Limit')
+    language = serializers.CharField(max_length=100, source='Language', required=False, allow_blank=True)
 
     @staticmethod
     def _prepare_countries(data):
-        countries = data.get('countries', '')
+        countries = data.get('Countries', '')
         countries = [country.strip() for country in countries.split(',') if country.strip() in AVAILABLE_COUNTRIES]
 
         if not len(countries):
@@ -30,27 +30,20 @@ class SearchAddressSerializer(serializers.Serializer):
 
     def find(self, data):
         service = SearchAddressService()
+        if data.get('Origin', None) not in AVAILABLE_COUNTRIES:
+            data.pop('Origin', None)
 
-        params = {
-            "Text": data.get('text'),
-            "Countries": self._prepare_countries(data),
-            "Limit": data.get('limit', 20),
-            "Language": data.get('language', ''),
-        }
-        origin = data.get('origin', None)
+        container = data.pop('id', None)
+        data['Countries'] = self._prepare_countries(data)
 
-        if origin and origin in AVAILABLE_COUNTRIES:
-            params['origin'] = origin
+        if container:
+            data['Container'] = container
 
-        if data.get('id'):
-            params['Container'] = data.get('id')
-
-        data = service.find(params)
+        data = service.find(data)
         logger.error(f'retrieve validated_data {data}')
 
-        serializer = SearchAddressSerializer(data=data,  many=True)
-        if serializer.is_valid(True):
-            return serializer.validated_data
+        serializer = SearchAddressSerializer(instance=data, many=True)
+        return [dict(**rec) for rec in serializer.data]
 
 
 class RetrieveAddressSerializer(serializers.Serializer):

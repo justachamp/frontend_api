@@ -7,7 +7,7 @@ class Entity(object):
         for field in self.fields:
             setattr(self, field, kwargs.get(field, None))
 
-        self.pk = getattr(self, 'id')
+        # self.pk = getattr(self, 'id')
 
 
 class RetrieveAddress(Entity):
