@@ -3,7 +3,7 @@ from django.db import transaction
 from authentication.cognito.serializers import CognitoAuthSerializer, CogrnitoAuthRetrieveSerializer, \
     CogrnitoSignOutSerializer, CognitoAuthForgotPasswordSerializer, CognitoAuthPasswordRestoreSerializer,\
     CognitoAuthVerificationSerializer, CognitoAuthAttributeVerifySerializer, CognitoAuthChallengeSerializer, \
-    CognitoMfaSerializer
+    CognitoMfaSerializer, CognitoConfirmEmailSerializer
 
 from authentication.cognito.models import Challenge
 from rest_framework_json_api.views import viewsets
@@ -63,6 +63,13 @@ class AuthView(viewsets.ViewSet):
     @action(methods=['POST'], detail=True, name='Confirm login')
     def confirm_login(self):
         pass
+
+    @action(methods=['POST'], detail=False, name='Confirm Email')
+    def confirm_email(self, request):
+        serializer = CognitoConfirmEmailSerializer(data=request.data)
+        if serializer.is_valid(True):
+            serializer.create(serializer.validated_data)
+            return response.Response(serializer.data)
 
     @action(methods=['POST'], detail=False, name='Sign up', resource_name='identity')
     def sign_up(self, request):
