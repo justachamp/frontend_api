@@ -98,7 +98,7 @@ class UserService(object):
         role = user.role
         address = Address()
         address.save()
-        user.address = address()
+        user.address = address
         user.save()
         if role == UserRole.owner:
             account = UserAccount.objects.create(account_type=AccountType.personal, user=user)
