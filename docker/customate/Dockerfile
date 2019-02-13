@@ -1,4 +1,4 @@
-FROM python:3.6
+FROM python:3.7
 
 MAINTAINER Alex Tarasenko <alextar.21@gmail.com>
 
