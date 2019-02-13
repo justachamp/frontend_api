@@ -68,7 +68,7 @@ class AuthView(viewsets.ViewSet):
     def confirm_email(self, request):
         serializer = CognitoConfirmEmailSerializer(data=request.data)
         if serializer.is_valid(True):
-            serializer.create(serializer.validated_data)
+            serializer.verify(serializer.validated_data)
             return response.Response(serializer.data)
 
     @action(methods=['POST'], detail=False, name='Sign up', resource_name='identity')

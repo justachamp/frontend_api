@@ -3,6 +3,7 @@ import os
 from rest_framework_json_api import serializers
 from rest_framework.fields import Field, ListField
 from rest_framework import status as status_codes
+from rest_framework.exceptions import NotFound
 
 from authentication.cognito.core.constants import NEW_PASSWORD_CHALLENGE
 from authentication.cognito.models import Identity, Verification, Challenge, Invitation
@@ -18,6 +19,7 @@ from frontend_api.serializers import UserSerializer
 from authentication.cognito.core.mixins import AuthSerializerMixin
 from authentication import settings
 from core.services.user import UserService
+from core.models import User
 
 logger = logging.getLogger(__name__)
 
@@ -341,12 +343,18 @@ class CognitoConfirmEmailSerializer(serializers.Serializer, BaseAuthValidationMi
     username = serializers.CharField(max_length=50, required=True)
     code = serializers.CharField(max_length=50, required=True)
 
-    def create(self, validated_data):
-        requests.get("https://" + os.environ.get("COGNITO_POOL_NAME") + ".auth."+os.environ.get('COGNITO_POOL_REGION')
-                     + ".amazoncognito.com/confirmUser?"
-                     + "client_id=" + validated_data['client_id']
-                     + "&user_name=" + validated_data['username']
-                     + "&confirmation_code=" + validated_data['code'])
+    def verify(self, validated_data):
+        try:
+            User.objects.get(cognito_id=validated_data["username"])
+        except Exception as e:
+            raise NotFound(f'Account not found {validated_data["username"]}')
+
+        try:
+            result = helpers.confirm_sign_up(validated_data)
+            logger.error(result)
+        except Exception as ex:
+            logger.error(f'general {ex}')
+            raise Unauthorized(ex)
 
 
 class CognitoAuthSerializer(BaseAuthValidationMixin, CogrnitoAuthRetrieveSerializer, UserServiceMixin):
