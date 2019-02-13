@@ -96,14 +96,14 @@ class Identity:
             logger.error(f'general {ex}')
             raise Exception(ex)
 
-    def confirm_sign_up(self, username, confirmation_code, force_alias_creation):
+    def confirm_sign_up(self, username, confirmation_code):
         try:
             secret_hash = utils.get_cognito_secret_hash(username)
 
             params = {
                 'ClientId': constants.CLIENT_ID,
                 'Username': username,
-                'ForceAliasCreation': False, # force_alias_creation,
+                'ForceAliasCreation': False,
                 'ConfirmationCode': confirmation_code
             }
 
