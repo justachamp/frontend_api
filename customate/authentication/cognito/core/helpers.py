@@ -113,14 +113,14 @@ def sign_up(data, param_mapping=None):
 
 
 def confirm_sign_up(data, param_mapping=None):
-     try:
-         username = parse_parameter(data, param_mapping, 'username')
-         confirmation_code = parse_parameter(data, param_mapping, 'code')
+    try:
+        username = parse_parameter(data, param_mapping, 'username')
+        confirmation_code = parse_parameter(data, param_mapping, 'code')
 
-     except Exception as ex:
-         raise ValueError(BAD_DATA_EXCEPTION)
+    except Exception as ex:
+        raise ValueError(BAD_DATA_EXCEPTION)
 
-     return identity.confirm_sign_up(username, confirmation_code)
+    return identity.confirm_sign_up(username, confirmation_code)
 
 
 def forgot_password(data, param_mapping=None):
