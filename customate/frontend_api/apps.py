@@ -5,4 +5,6 @@ class FrontendApiConfig(AppConfig):
     name = 'frontend_api'
 
     def ready(self):
-        import frontend_api.signals
+        # import frontend_api.signals
+        pass
+
