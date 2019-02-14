@@ -245,7 +245,7 @@ class CogrnitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
     user = serializers.SerializerMethodField()
 
     def get_user(self, data):
-        if 'user' in data:
+        if hasattr(data, 'user'):
             return UserSerializer(instance=data.user, context=self.context).data
         return None
 
