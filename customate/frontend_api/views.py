@@ -443,7 +443,7 @@ class AdminUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.Mo
 
     queryset = AdminUserAccount.objects.all()
     serializer_class = AdminUserAccountSerializer
-    permission_classes = (IsOwnerOrReadOnly,)
+    permission_classes = (AllowAny,)
 
     _related_serializers = {
         'permission': AdminUserPermissionSerializer
