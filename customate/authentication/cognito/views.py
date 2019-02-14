@@ -3,7 +3,7 @@ from django.db import transaction
 from authentication.cognito.serializers import CognitoAuthSerializer, CogrnitoAuthRetrieveSerializer, \
     CogrnitoSignOutSerializer, CognitoAuthForgotPasswordSerializer, CognitoAuthPasswordRestoreSerializer,\
     CognitoAuthVerificationSerializer, CognitoAuthAttributeVerifySerializer, CognitoAuthChallengeSerializer, \
-    CognitoMfaSerializer
+    CognitoMfaSerializer, CognitoConfirmSignUpSerializer
 
 from authentication.cognito.models import Challenge
 from rest_framework_json_api.views import viewsets
@@ -60,17 +60,19 @@ class AuthView(viewsets.ViewSet):
             entity = serializer.retrieve(serializer.validated_data)
             return response.Response(CogrnitoAuthRetrieveSerializer(instance=entity, context={'request': request}).data)
 
-    @action(methods=['POST'], detail=True, name='Confirm login')
-    def confirm_login(self):
-        pass
+    @action(methods=['POST'], detail=False, name='Confirm Email')
+    def confirm_sign_up(self, request):
+        serializer = CognitoConfirmSignUpSerializer(data=request.data)
+        if serializer.is_valid(True):
+            serializer.verify(serializer.validated_data)
+            return response.Response(serializer.data)
 
     @action(methods=['POST'], detail=False, name='Sign up', resource_name='identity')
     def sign_up(self, request):
         serializer = CognitoAuthSerializer(data=request.data)
         if serializer.is_valid(True):
-            with transaction.atomic():
-                serializer.create(serializer.validated_data)
-                return self.sign_in(request)
+            serializer.create(serializer.validated_data)
+            return response.Response(serializer.data)
 
     @action(methods=['POST'], detail=False, name='Set mfa preference', resource_name='identity')
     def mfa_preference(self, request):

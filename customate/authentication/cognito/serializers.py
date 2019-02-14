@@ -1,6 +1,9 @@
+import requests
+import os
 from rest_framework_json_api import serializers
 from rest_framework.fields import Field, ListField
 from rest_framework import status as status_codes
+from rest_framework.exceptions import NotFound
 
 from authentication.cognito.core.constants import NEW_PASSWORD_CHALLENGE
 from authentication.cognito.models import Identity, Verification, Challenge, Invitation
@@ -16,6 +19,7 @@ from frontend_api.serializers import UserSerializer
 from authentication.cognito.core.mixins import AuthSerializerMixin
 from authentication import settings
 from core.services.user import UserService
+from core.models import User
 
 logger = logging.getLogger(__name__)
 
@@ -241,7 +245,9 @@ class CogrnitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
     user = serializers.SerializerMethodField()
 
     def get_user(self, data):
-        return UserSerializer(instance=data.user, context=self.context).data
+        if 'user' in data:
+            return UserSerializer(instance=data.user, context=self.context).data
+        return None
 
     related_serializers = {
         'user': 'frontend_api.serializers.UserSerializer',
@@ -332,6 +338,25 @@ class CognitoInviteUserSerializer(serializers.Serializer, BaseAuthValidationMixi
             raise Unauthorized(ex)
 
 
+class CognitoConfirmSignUpSerializer(serializers.Serializer, BaseAuthValidationMixin, UserServiceMixin):
+    client_id = serializers.CharField(max_length=50, required=True)
+    username = serializers.CharField(max_length=50, required=True)
+    code = serializers.CharField(max_length=50, required=True)
+
+    def verify(self, validated_data):
+        try:
+            user = self.user_service.get_user_by_external_identity(identity=validated_data["username"])
+        except Exception as e:
+            raise NotFound(f'Account not found {validated_data["username"]}')
+
+        try:
+            helpers.confirm_sign_up(validated_data)
+            self.user_service.verify_attribute(user, "email")
+        except Exception as ex:
+            logger.error(f'general {ex}')
+            raise Unauthorized(ex)
+
+
 class CognitoAuthSerializer(BaseAuthValidationMixin, CogrnitoAuthRetrieveSerializer, UserServiceMixin):
 
     user_attributes = ListField(child=CognitoAttributeFiled(required=True), required=True)
@@ -348,11 +373,10 @@ class CognitoAuthSerializer(BaseAuthValidationMixin, CogrnitoAuthRetrieveSeriali
             validated_data['username'] = validated_data['preferred_username']
             validated_data['user_attributes'] = [
                 {'Name': 'email', 'Value': validated_data['preferred_username']},
-                {'Name': 'custom:account_type', 'Value': str(self.user_service.user_role)}
+                {'Name': 'custom:account_type', 'Value': str(self.user_service.user_role)},
             ]
             helpers.sign_up(validated_data)
-            serializer = CogrnitoAuthRetrieveSerializer()
-            return serializer.retrieve(validated_data)
+            return self
         except Exception as ex:
             logger.error(f'general {ex}')
             raise Unauthorized(ex)
