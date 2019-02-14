@@ -23,14 +23,6 @@ class Address(Model):
     locality = models.CharField(max_length=50)
     postcode = models.CharField(max_length=20)
 
-    is_verified = models.BooleanField(
-        _('address verified'),
-        default=False,
-        help_text=_(
-            'Designates whether this address is verified by GBG.'
-        ),
-    )
-
     def __str__(self):
         return "%s the address" % self.address
 
@@ -102,9 +94,8 @@ class User(AbstractUser, Model):
 
     @property
     def is_verified(self):
-        address_verified = self.address and self.address.is_verified
         contact_verified = self.email_verified and self.phone_number_verified
-        return address_verified and contact_verified and self.age_verified
+        return contact_verified and self.age_verified
 
     @property
     def age(self):
