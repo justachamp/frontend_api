@@ -345,13 +345,14 @@ class CognitoConfirmEmailSerializer(serializers.Serializer, BaseAuthValidationMi
 
     def verify(self, validated_data):
         try:
-            User.objects.get(cognito_id=validated_data["username"])
+            user = User.objects.get(cognito_id=validated_data["username"])
         except Exception as e:
             raise NotFound(f'Account not found {validated_data["username"]}')
 
         try:
-            result = helpers.confirm_sign_up(validated_data)
-            logger.error(result)
+            helpers.confirm_sign_up(validated_data)
+            user.email_verified = True
+            user.save()
         except Exception as ex:
             logger.error(f'general {ex}')
             raise Unauthorized(ex)
