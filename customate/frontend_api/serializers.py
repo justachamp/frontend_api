@@ -218,7 +218,7 @@ class UserAddressSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Address
         fields = ('url', 'address', 'country', 'address_line_1', 'address_line_2',
-                  'city', 'locality', 'postcode', 'user', 'is_verified')
+                  'city', 'locality', 'postcode', 'user')
 
 
 class AddressSerializer(serializers.HyperlinkedModelSerializer):
@@ -256,7 +256,7 @@ class AddressSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Address
         fields = ('url', 'address', 'country', 'address_line_1', 'address_line_2',
-                  'city', 'locality', 'postcode', 'user', 'company', 'is_verified')
+                  'city', 'locality', 'postcode', 'user', 'company')
 
 
 class CompanyAddressSerializer(serializers.HyperlinkedModelSerializer):
@@ -282,7 +282,7 @@ class CompanyAddressSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Address
         fields = ('url', 'address', 'country', 'address_line_1', 'address_line_2',
-                  'city', 'locality', 'postcode', 'company', 'is_verified')
+                  'city', 'locality', 'postcode', 'company')
 
 
 class SubUserAccountSerializer(serializers.HyperlinkedModelSerializer):
