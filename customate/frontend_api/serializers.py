@@ -1,12 +1,5 @@
-from django.contrib.auth.models import Group
 from rest_framework_json_api import serializers
-from django.core.exceptions import ObjectDoesNotExist
-from rest_framework.serializers import HyperlinkedIdentityField
-from rest_framework_json_api.serializers import ResourceIdentifierObjectSerializer
 from rest_framework_json_api.relations import ResourceRelatedField, PolymorphicResourceRelatedField
-from rest_framework_json_api.utils import (
-    get_resource_type_from_model
-)
 from core.models import User, Address
 from core.fields import UserRole, UserStatus
 from authentication.cognito.core.mixins import AuthSerializerMixin
@@ -64,7 +57,6 @@ class EnumField(serializers.ChoiceField):
 
 class BaseUserSerializer(serializers.HyperlinkedModelSerializer):
     role = EnumField(enum=UserRole, read_only=True)
-    status = EnumField(enum=UserStatus, read_only=True)
 
     class Meta:
         model = User
