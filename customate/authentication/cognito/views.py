@@ -72,14 +72,12 @@ class AuthView(viewsets.ViewSet):
         if serializer.is_valid(True):
             serializer.create(serializer.validated_data)
             result_sign_in = self.sign_in(request)
-            serializer = CognitoAuthVerificationSerializer(data={
-                'id': uuid.uuid1(),
+            serializer = CognitoAuthVerificationSerializer()
+            serializer.verification_code({
                 'attribute_name': 'email',
                 'access_token': result_sign_in.data['access_token']
             })
-            if serializer.is_valid(True):
-                serializer.verification_code(serializer.validated_data)
-                return result_sign_in
+            return result_sign_in
 
     @action(methods=['POST'], detail=False, name='Set mfa preference', resource_name='identity')
     def mfa_preference(self, request):
