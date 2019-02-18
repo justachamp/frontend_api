@@ -1,5 +1,3 @@
-from django.db import transaction
-
 from authentication.cognito.serializers import CognitoAuthSerializer, CogrnitoAuthRetrieveSerializer, \
     CogrnitoSignOutSerializer, CognitoAuthForgotPasswordSerializer, CognitoAuthPasswordRestoreSerializer,\
     CognitoAuthVerificationSerializer, CognitoAuthAttributeVerifySerializer, CognitoAuthChallengeSerializer, \
@@ -14,6 +12,7 @@ from rest_framework import response
 
 # import the logging library
 import logging
+import uuid
 
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
@@ -72,7 +71,13 @@ class AuthView(viewsets.ViewSet):
         serializer = CognitoAuthSerializer(data=request.data)
         if serializer.is_valid(True):
             serializer.create(serializer.validated_data)
-            return response.Response(serializer.data)
+            result_sign_in = self.sign_in(request)
+            serializer = CognitoAuthVerificationSerializer()
+            serializer.verification_code({
+                'attribute_name': 'email',
+                'access_token': result_sign_in.data['access_token']
+            })
+            return result_sign_in
 
     @action(methods=['POST'], detail=False, name='Set mfa preference', resource_name='identity')
     def mfa_preference(self, request):

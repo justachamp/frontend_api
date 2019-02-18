@@ -245,9 +245,7 @@ class CogrnitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
     user = serializers.SerializerMethodField()
 
     def get_user(self, data):
-        if hasattr(data, 'user'):
-            return UserSerializer(instance=data.user, context=self.context).data
-        return None
+        return UserSerializer(instance=data.user, context=self.context).data
 
     related_serializers = {
         'user': 'frontend_api.serializers.UserSerializer',
@@ -376,7 +374,8 @@ class CognitoAuthSerializer(BaseAuthValidationMixin, CogrnitoAuthRetrieveSeriali
                 {'Name': 'custom:account_type', 'Value': str(self.user_service.user_role)},
             ]
             helpers.sign_up(validated_data)
-            return self
+            serializer = CogrnitoAuthRetrieveSerializer()
+            return serializer.retrieve(validated_data)
         except Exception as ex:
             logger.error(f'general {ex}')
             raise Unauthorized(ex)
