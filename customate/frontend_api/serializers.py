@@ -57,7 +57,7 @@ class EnumField(serializers.ChoiceField):
 
 class BaseUserSerializer(serializers.HyperlinkedModelSerializer):
     role = EnumField(enum=UserRole, read_only=True)
-    status = EnumField(enum=UserStatus)
+    status = EnumField(enum=UserStatus, required=False)
     
     class Meta:
         model = User
