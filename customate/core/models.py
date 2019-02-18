@@ -15,7 +15,7 @@ USER_MIN_AGE = 18
 
 class Address(Model):
     address = models.CharField(max_length=250)
-    country = models.CharField(max_length=100)
+    country = EnumField(Country, max_length=2, blank=True, null=True)
     address_line_1 = models.CharField(max_length=200)
     address_line_2 = models.CharField(max_length=200, blank=True)
     address_line_3 = models.CharField(max_length=200, blank=True)

@@ -3,6 +3,7 @@ import datetime
 from django.db import models, transaction
 from django.utils.translation import gettext_lazy as _
 from django.contrib.postgres.fields import JSONField
+from django.core.serializers.json import DjangoJSONEncoder
 
 from core.models import Model, Address
 from django.contrib.auth import get_user_model
@@ -51,7 +52,7 @@ class Company(Model):
 
 class Account(PolymorphicModel, Model):
     verification_status = models.fields.CharField(max_length=100, blank=True, default='Fail')
-    data = JSONField()
+    data = JSONField(encoder=DjangoJSONEncoder)
     user = models.OneToOneField(
         get_user_model(),
         on_delete=models.CASCADE,
@@ -64,6 +65,20 @@ class Account(PolymorphicModel, Model):
         data = self.data
         gbg = data.get('gbg', {'version': 1})
         return gbg
+
+    @gbg.setter
+    def gbg(self, gbg):
+        self.data['gbg'] = gbg
+
+    @property
+    def country_fields(self):
+        country_fields = self.gbg.get('country_fields', {})
+        return country_fields
+
+    @country_fields.setter
+    def country_fields(self, country_fields):
+        gbg = self.gbg
+        gbg['country_fields'] = country_fields
 
     @property
     def gbg_authentication_identity(self):

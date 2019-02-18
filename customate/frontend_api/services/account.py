@@ -7,14 +7,21 @@ import logging
 
 
 # Get an instance of a logger
+from frontend_api.models import Account
+
 logger = logging.getLogger(__name__)
 
 
 class AccountService:
 
-    def verify(self, user: User):
+    def __init__(self, account: Account):
+        self.account = account
+
+
+    def verify(self):
         try:
-            account = user.account
+            account = self.account
+            user = account.user
             if user.is_verified and account.need_to_verify:
                 gbg = ID3Client(parser=ModelParser)
                 authentication_id = account.gbg_authentication_identity
@@ -31,3 +38,9 @@ class AccountService:
 
         except Exception as e:
             logger.error(f'GBG verification exception: {e}')
+
+    def get_account_country(self):
+        return self.account.user.address.country
+
+    def save_profile(self, data):
+        pass
