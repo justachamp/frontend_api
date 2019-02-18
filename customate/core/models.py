@@ -4,9 +4,9 @@ from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.models import AbstractBaseUser, AbstractUser
 from core.utils import Model
 from django.db import models
-# from frontend_api.models import Address
+
 from phonenumber_field.modelfields import PhoneNumberField
-# from polymorphic.models import PolymorphicModel
+
 from enumfields import EnumField
 from core.fields import UserStatus, UserRole, UserTitle, Gender, Country
 
