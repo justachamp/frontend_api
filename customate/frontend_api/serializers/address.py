@@ -1,10 +1,11 @@
 
 from rest_framework_json_api.serializers import HyperlinkedModelSerializer
 
+from core.fields import Country
 from core.models import User, Address
 from frontend_api.models import Company
 
-from ..serializers import ResourceRelatedField
+from ..serializers import ResourceRelatedField, EnumField
 
 import logging
 logger = logging.getLogger(__name__)
@@ -12,13 +13,11 @@ logger = logging.getLogger(__name__)
 
 class UserAddressSerializer(HyperlinkedModelSerializer):
 
-    related_serializers = {
-        'user': 'frontend_api.serializers.UserSerializer'
-    }
-
     included_serializers = {
         'user': 'frontend_api.serializers.UserSerializer'
     }
+
+    country = EnumField(enum=Country)
 
     user = ResourceRelatedField(
         many=False,
@@ -38,15 +37,12 @@ class UserAddressSerializer(HyperlinkedModelSerializer):
 
 class AddressSerializer(HyperlinkedModelSerializer):
 
-    related_serializers = {
-        'user': 'frontend_api.serializers.UserSerializer',
-        'company': 'frontend_api.serializers.CompanySerializer'
-    }
-
     included_serializers = {
         'user': 'frontend_api.serializers.UserSerializer',
         'company': 'frontend_api.serializers.CompanySerializer'
     }
+
+    country = EnumField(enum=Country)
 
     user = ResourceRelatedField(
         many=False,
@@ -55,7 +51,6 @@ class AddressSerializer(HyperlinkedModelSerializer):
         related_link_url_kwarg='pk',
         self_link_view_name='address-relationships',
         required=False
-
     )
 
     company = ResourceRelatedField(
@@ -76,13 +71,11 @@ class AddressSerializer(HyperlinkedModelSerializer):
 
 class CompanyAddressSerializer(HyperlinkedModelSerializer):
 
-    related_serializers = {
-        'company': 'frontend_api.serializers.CompanySerializer'
-    }
-
     included_serializers = {
         'company': 'frontend_api.serializers.CompanySerializer'
     }
+
+    country = EnumField(enum=Country)
 
     company = ResourceRelatedField(
         many=False,

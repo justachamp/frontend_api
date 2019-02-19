@@ -12,13 +12,15 @@ class ResourceRelatedField(ResourceRelatedField):
 
 
 class EnumField(ChoiceField):
-    def __init__(self, enum, **kwargs):
+    def __init__(self, enum, value_field='value', **kwargs):
         self.enum = enum
-        kwargs['choices'] = [(e.name, e.name) for e in enum]
+        self.value_field = value_field
+
+        kwargs['choices'] = [(e.name, getattr(e, value_field)) for e in enum]
         super(EnumField, self).__init__(**kwargs)
 
     def to_representation(self, obj):
-        return obj.value
+        return getattr(obj, self.value_field)
 
     def to_internal_value(self, data):
         try:
