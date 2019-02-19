@@ -26,7 +26,6 @@ class UserAddressSerializer(HyperlinkedModelSerializer):
         related_link_url_kwarg='pk',
         self_link_view_name='address-relationships',
         required=False
-
     )
 
     class Meta:
@@ -60,7 +59,6 @@ class AddressSerializer(HyperlinkedModelSerializer):
         related_link_url_kwarg='pk',
         self_link_view_name='address-relationships',
         required=False
-
     )
 
     class Meta:
