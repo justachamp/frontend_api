@@ -16,6 +16,7 @@ GBG_IDENTITY_VALID_DAYS = 90
 GBG_SUCCESS_STATUS = 'Pass'
 GBG_ALLOWED_VERIFICATION_COUNT = 3
 
+
 class Company(Model):
     company_type = EnumField(CompanyType, max_length=30, blank=True, null=True)
     registration_business_name = models.CharField(max_length=50, blank=True)

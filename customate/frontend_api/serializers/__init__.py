@@ -5,34 +5,25 @@ from rest_framework_json_api.serializers import CharField, PolymorphicModelSeria
 
 from .mixins import FlexFieldsJsonFieldSerializerMixin
 from .fields import ChoiceField, EnumField, ResourceRelatedField, PolymorphicResourceRelatedField
-from .account import UserAccountSerializer, SubUserAccountSerializer, AdminUserAccountSerializer
+from .account import AccountSerializer, UserAccountSerializer, SubUserAccountSerializer, AdminUserAccountSerializer
 from .user import UserSerializer, SubUserSerializer, AdminUserSerializer
+from .company import CompanySerializer
 from .address import AddressSerializer, UserAddressSerializer, CompanyAddressSerializer
 from .permission import SubUserPermissionSerializer, AdminUserPermissionSerializer
-
-
-ACCOUNT_ADDITIONAL_FIELDS = {
-    'GB': {
-        'driver_licence_number': CharField(source='country_fields.driver_licence_number', default=None),
-        'driver_licence_postcode': CharField(source='country_fields.driver_licence_postcode', default=None),
-        'driver_licence_issue_date': DateField(source='country_fields.driver_licence_issue_date', default=None)
-    },
-    'IT': {'tax_code': CharField(source='country_fields.tax_code', default=None)},
-    'DK': {'id_card_number': CharField(source='country_fields.id_card_number', default=None)},
-    'SP': {'tax_id': CharField(source='country_fields.tax_id', default=None)}
-}
+from .shareholder import ShareholderSerializer
 
 
 __all__ = [
-    ACCOUNT_ADDITIONAL_FIELDS,
     ValidationError,
     CharField,
+    DateField,
     PolymorphicModelSerializer,
     FlexFieldsJsonFieldSerializerMixin,
     ChoiceField,
     EnumField,
     ResourceRelatedField,
     PolymorphicResourceRelatedField,
+    AccountSerializer,
     UserAccountSerializer,
     SubUserAccountSerializer,
     AdminUserAccountSerializer,
@@ -40,8 +31,10 @@ __all__ = [
     SubUserSerializer,
     AdminUserSerializer,
     AddressSerializer,
+    CompanySerializer,
     UserAddressSerializer,
     CompanyAddressSerializer,
     SubUserPermissionSerializer,
-    AdminUserPermissionSerializer
+    AdminUserPermissionSerializer,
+    ShareholderSerializer
 ]

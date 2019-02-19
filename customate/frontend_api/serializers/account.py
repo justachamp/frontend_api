@@ -24,19 +24,42 @@ from ..serializers import (
     PolymorphicResourceRelatedField,
     FlexFieldsJsonFieldSerializerMixin,
     PolymorphicModelSerializer,
-    ACCOUNT_ADDITIONAL_FIELDS)
+    CharField,
+    DateField
+)
 
 import logging
 logger = logging.getLogger(__name__)
 
+ACCOUNT_ADDITIONAL_FIELDS = {
+    'GB': {
+        'driver_licence_number': CharField(source='country_fields.driver_licence_number', default=None),
+        'driver_licence_postcode': CharField(source='country_fields.driver_licence_postcode', default=None),
+        'driver_licence_issue_date': DateField(source='country_fields.driver_licence_issue_date', default=None)
+    },
+    'IT': {'tax_code': CharField(source='country_fields.tax_code', default=None)},
+    'DK': {'id_card_number': CharField(source='country_fields.id_card_number', default=None)},
+    'SP': {'tax_id': CharField(source='country_fields.tax_id', default=None)}
+}
 
-class SubUserAccountSerializer(FlexFieldsJsonFieldSerializerMixin, HyperlinkedModelSerializer):
 
-    related_serializers = {
-        'user': 'frontend_api.serializers.SubUserSerializer',
-        'owner_account': 'frontend_api.serializers.UserAccountSerializer',
-        'permission': 'frontend_api.serializers.SubUserPermissionSerializer'
-    }
+class AccountFlexFieldsJsonFieldSerializerMixin(FlexFieldsJsonFieldSerializerMixin):
+
+    def __init__(self):
+        self.__service = None
+
+    @property
+    def service(self):
+        if not self.__service:
+            self.__service = AccountService(self.instance)
+        return self.__service
+
+    @property
+    def additional_key(self):
+        return self.service.get_account_country()
+
+
+class SubUserAccountSerializer(AccountFlexFieldsJsonFieldSerializerMixin, HyperlinkedModelSerializer):
 
     included_serializers = {
         'user': 'frontend_api.serializers.SubUserSerializer',
@@ -74,27 +97,11 @@ class SubUserAccountSerializer(FlexFieldsJsonFieldSerializerMixin, HyperlinkedMo
 
     class Meta:
         model = SubUserAccount
-        fields = ('url', 'user',
-                  'owner_account',
-                  'permission'
-                  )
+        additional_fields = ACCOUNT_ADDITIONAL_FIELDS
+        fields = ('url', 'user', 'owner_account', 'permission')
 
 
-class UserAccountSerializer(FlexFieldsJsonFieldSerializerMixin, HyperlinkedModelSerializer):
-
-    @property
-    def service(self):
-        return AccountService(self.instance)
-
-    @property
-    def additional_key(self):
-        return self.service.get_account_country()
-
-    related_serializers = {
-        'user': 'frontend_api.serializers.UserSerializer',
-        'company': 'frontend_api.serializers.CompanySerializer',
-        'sub_user_accounts': 'frontend_api.serializers.SubUserAccountSerializer'
-    }
+class UserAccountSerializer(AccountFlexFieldsJsonFieldSerializerMixin, HyperlinkedModelSerializer):
 
     included_serializers = {
         'user': 'frontend_api.serializers.UserSerializer',
@@ -148,12 +155,7 @@ class UserAccountSerializer(FlexFieldsJsonFieldSerializerMixin, HyperlinkedModel
         )
 
 
-class AdminUserAccountSerializer(HyperlinkedModelSerializer):
-
-    related_serializers = {
-        'user': 'frontend_api.serializers.AdminUserSerializer',
-        'permission': 'frontend_api.serializers.AdminUserPermissionSerializer'
-    }
+class AdminUserAccountSerializer(AccountFlexFieldsJsonFieldSerializerMixin, HyperlinkedModelSerializer):
 
     included_serializers = {
         'user': 'frontend_api.serializers.AdminUserSerializer',
@@ -180,6 +182,7 @@ class AdminUserAccountSerializer(HyperlinkedModelSerializer):
 
     class Meta:
         model = AdminUserAccount
+        additional_fields = ACCOUNT_ADDITIONAL_FIELDS
         fields = ('url', 'user', 'permission')
 
 
