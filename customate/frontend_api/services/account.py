@@ -14,13 +14,18 @@ logger = logging.getLogger(__name__)
 
 class AccountService:
 
-    def __init__(self, account: Account):
-        self.account = account
+    __account = None
 
+    def __init__(self, account: Account):
+        if isinstance(account, Account):
+            self.__account = account
 
     def verify(self):
         try:
-            account = self.account
+            account = self.__account
+            if not account:
+                return None
+
             user = account.user
             if user.is_verified and account.need_to_verify:
                 gbg = ID3Client(parser=ModelParser)
@@ -40,7 +45,7 @@ class AccountService:
             logger.error(f'GBG verification exception: {e}')
 
     def get_account_country(self):
-        return self.account.user.address.country
+        return self.__account.user.address.country if self.__account else None
 
     def save_profile(self, data):
         pass

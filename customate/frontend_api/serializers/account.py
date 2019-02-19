@@ -45,8 +45,9 @@ ACCOUNT_ADDITIONAL_FIELDS = {
 
 class AccountFlexFieldsJsonFieldSerializerMixin(FlexFieldsJsonFieldSerializerMixin):
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         self.__service = None
+        return super().__init__(*args, **kwargs)
 
     @property
     def service(self):

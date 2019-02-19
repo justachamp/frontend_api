@@ -53,7 +53,7 @@ class Company(Model):
 
 class Account(PolymorphicModel, Model):
     verification_status = models.fields.CharField(max_length=100, blank=True, default='Fail')
-    data = JSONField(encoder=DjangoJSONEncoder)
+    data = JSONField(encoder=DjangoJSONEncoder, default={'version': 1, 'gbg': {}})
     user = models.OneToOneField(
         get_user_model(),
         on_delete=models.CASCADE,
