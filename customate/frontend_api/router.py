@@ -5,6 +5,7 @@ from rest_framework import routers
 router = routers.DefaultRouter()
 router.register('users', views.UserViewSet)
 router.register('admins', views.AdminUserViewSet, basename='admins')
+router.register('user_accounts', views.UserAccountViewSet)
 router.register('admin_user_accounts', views.AdminUserAccountViewSet)
 router.register('admin_user_permission', views.AdminUserPermissionViewSet)
 router.register('sub_user_accounts', views.SubUserAccountViewSet)

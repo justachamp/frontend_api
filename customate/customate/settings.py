@@ -51,7 +51,8 @@ INSTALLED_APPS = [
     'address.loqate.apps.LoqateConfig',
     'frontend_api.apps.FrontendApiConfig',
     'storages',
-    'guardian'
+    'guardian',
+    'django_filters'
 ]
 
 MIDDLEWARE = [

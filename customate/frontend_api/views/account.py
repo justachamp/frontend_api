@@ -14,6 +14,7 @@ from core.models import User
 
 from frontend_api.models import (
     Account,
+    UserAccount,
     SubUserAccount,
     AdminUserAccount,
     SubUserPermission,
@@ -74,6 +75,10 @@ class AccountRelationshipView(RelationshipPostMixin, RelationshipView):
         account.save()
 
         return serializer
+
+
+class UserAccountRelationshipView(RelationshipView):
+    queryset = UserAccount.objects
 
 
 class AdminUserAccountRelationshipView(RelationshipView):
@@ -163,6 +168,30 @@ class AccountViewSet(RelationshipMixin, PatchRelatedMixin, views.ModelViewSet):
 
             return response.Response(
                 CognitoInviteUserSerializer(instance=invitation, context={'request': request}).data)
+
+
+class UserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.ModelViewSet):
+
+    queryset = UserAccount.objects.all()
+    serializer_class = UserAccountSerializer
+    permission_classes = (AllowAny,)
+
+    filter_backends = (filters.QueryParameterValidationFilter, filters.OrderingFilter,
+                      django_filters.DjangoFilterBackend, SearchFilter)
+    filterset_fields = {
+        'user__status': ('exact', 'in'),
+        'user__email': ('icontains', 'contains', 'iexact', 'exact'),
+        'user__username': ('icontains', 'contains', 'iexact', 'exact'),
+    }
+    search_fields = ('user__email', 'user__status', 'user__username',)
+
+    def perform_create(self, serializer):
+        logger.error('perform create')
+        user = self.request.user
+
+        if not user.account:
+            user.account = serializer.save()
+            user.save()
 
 
 class AdminUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.ModelViewSet):

@@ -4,8 +4,10 @@ from .mixins import PatchRelatedMixin, RelationshipMixin, RelationshipPostMixin
 from .account import (
     AccountRelationshipView,
     AccountViewSet,
+    UserAccountViewSet,
     AdminUserAccountViewSet,
     SubUserAccountViewSet,
+    UserAccountRelationshipView,
     AdminUserAccountRelationshipView,
     SubUserAccountRelationshipView
 )
@@ -27,8 +29,10 @@ __all__ = [
     RelationshipPostMixin,
     AccountRelationshipView,
     AccountViewSet,
+    UserAccountViewSet,
     AdminUserAccountViewSet,
     SubUserAccountViewSet,
+    UserAccountRelationshipView,
     AdminUserAccountRelationshipView,
     SubUserAccountRelationshipView,
     UserAddressViewSet,

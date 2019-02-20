@@ -46,6 +46,15 @@ url(r'^accounts/(?P<pk>[^/.]+)/$',
         views.AccountViewSet.as_view({'get': 'retrieve'}),
         name='useraccount-detail'),
 
+    re_path(r'^user_accounts/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
+            views.UserAccountViewSet.as_view({'get': 'retrieve_related', 'patch': 'patch_related'}),
+            name='user-account-related'),
+
+    re_path(r'^user_accounts/(?P<pk>[^/.]+)/relationships/(?P<related_field>[^/.]+)$',
+            view=views.UserAccountRelationshipView.as_view(),
+            name='user-account-relationships'
+            ),
+
     re_path(r'^sub_user_accounts/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
             views.SubUserAccountViewSet.as_view({'get': 'retrieve_related', 'patch': 'patch_related'}),
             name='sub-user-account-related'),
