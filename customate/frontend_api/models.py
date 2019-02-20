@@ -149,6 +149,59 @@ class AdminUserPermission(Model):
         return "Admin user permission"
 
 
+class Tax(Model):
+    title = models.CharField(max_length=1, blank=False)
+    percent = models.DecimalField(max_digits=2, decimal_places=2)
+    isDefault = models.BooleanField(_('is default'), default=False)
+    taxIban = models.CharField(max_length=1, blank=True)
+    feeIban = models.CharField(max_length=1, blank=True)
+    createionDate = models.DateField(_('creation date'))
+
+    def __str__(self):
+        return "Tax"
+
+
+class UserTax(Model):
+    tax = models.ForeignKey(Tax, on_delete=models.CASCADE, related_name='users')
+    user = models.ForeignKey(UserAccount, on_delete=models.CASCADE, related_name="user_taxes")
+
+    def __str__(self):
+        return "User Tax"
+
+
+class FeeGroup(Model):
+    title = models.CharField(max_length=1, blank=False)
+    isDefault = models.BooleanField(_('is default'), default=False)
+    createionDate = models.DateField(_('creation date'))
+
+    def __str__(self):
+        return "Fee Group"
+
+
+class Fee(Model):
+    feeGroup = models.ForeignKey(FeeGroup, on_delete=models.CASCADE, related_name='fee_groups')
+    min = models.IntegerField(blank=True)
+    max = models.IntegerField(blank=True)
+    percent = models.DecimalField(max_digits=2, decimal_places=2)
+    fixedValue = models.BigIntegerField(blank=True)
+    type
+    operation
+
+    def __str__(self):
+        return "Fee"
+
+
+class UserFee(Model):
+    user = models.OneToOneField(AdminUserAccount, on_delete=models.CASCADE, related_name="user_fees")
+    feeGroup = models.ForeignKey(FeeGroup, on_delete=models.CASCADE, related_name='fee_groups')
+
+    def __str__(self):
+        return "User Fee"
+
+
+
+
+
 class Shareholder(Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='shareholders')
     first_name = models.CharField(_('first name'), max_length=30)
