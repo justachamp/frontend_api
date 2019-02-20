@@ -40,6 +40,11 @@ from ..views import (
     RelationshipPostMixin
 )
 
+from rest_framework_json_api import filters
+from rest_framework_json_api import django_filters
+from rest_framework.filters import SearchFilter
+
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -84,6 +89,15 @@ class AccountViewSet(RelationshipMixin, PatchRelatedMixin, views.ModelViewSet):
     queryset = Account.objects.all()
     serializer_class = AccountSerializer
     permission_classes = (IsOwnerOrReadOnly,)
+
+    filter_backends = (filters.QueryParameterValidationFilter, filters.OrderingFilter,
+                       django_filters.DjangoFilterBackend, SearchFilter)
+    filterset_fields = {
+        'user__status': ('exact', 'in'),
+        'user__email': ('icontains', 'contains', 'iexact', 'exact'),
+        'user__username': ('icontains', 'contains', 'iexact', 'exact'),
+    }
+    search_fields = ('user__email', 'user__username',)
 
     _related_serializers = {
         'sub_user_accounts': SubUserAccountSerializer,
@@ -157,6 +171,15 @@ class AdminUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.Mo
     serializer_class = AdminUserAccountSerializer
     permission_classes = (AllowAny,)
 
+    filter_backends = (filters.QueryParameterValidationFilter, filters.OrderingFilter,
+                      django_filters.DjangoFilterBackend, SearchFilter)
+    filterset_fields = {
+        'user__status': ('exact', 'in'),
+        'user__email': ('icontains', 'contains', 'iexact', 'exact'),
+        'user__username': ('icontains', 'contains', 'iexact', 'exact'),
+    }
+    search_fields = ('user__email', 'user__status', 'user__username',)
+
     _related_serializers = {
         'permission': AdminUserPermissionSerializer
     }
@@ -229,6 +252,17 @@ class SubUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.Mode
     queryset = SubUserAccount.objects.all()
     serializer_class = SubUserAccountSerializer
     permission_classes = (IsOwnerOrReadOnly,)
+
+    filter_backends = (filters.QueryParameterValidationFilter, filters.OrderingFilter,
+                       django_filters.DjangoFilterBackend, SearchFilter)
+    filterset_fields = {
+        'user__status': ('exact', 'in'),
+        'user__email': ('icontains', 'contains', 'iexact', 'exact'),
+        'user__username': ('icontains', 'contains', 'iexact', 'exact'),
+    }
+    search_fields = (
+        'user__email', 'user__status', 'user__username',
+    )
 
     _related_serializers = {
         'permission': SubUserPermissionSerializer
