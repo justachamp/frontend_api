@@ -275,6 +275,19 @@ class Identity:
         except constants.AWS_EXCEPTIONS as ex:
             raise CognitoException.create_from_exception(ex)
 
+    def change_password(self, previous, proposed, access_token):
+        params = {
+            'PreviousPassword': previous,
+            'ProposedPassword': proposed,
+            'AccessToken': access_token
+        }
+
+        try:
+            data = self.client.change_password(**params)
+            return data
+        except constants.AWS_EXCEPTIONS as ex:
+            raise CognitoException.create_from_exception(ex)
+
     def restore_password(self, username, code, password):
         secret_hash = utils.get_cognito_secret_hash(username)
 

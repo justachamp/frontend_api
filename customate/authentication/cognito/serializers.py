@@ -184,6 +184,23 @@ class CognitoAuthPasswordRestoreSerializer(serializers.Serializer):
             raise Unauthorized(ex)
 
 
+class CognitoAuthChangePasswordSerializer(serializers.Serializer):
+    resource_name = 'identities'
+    previous = serializers.CharField(max_length=250, required=True, write_only=True)
+    proposed = serializers.CharField(max_length=250, required=True, write_only=True)
+    access_token = serializers.CharField(write_only=True, required=True)
+
+    @staticmethod
+    def change_password(validated_data):
+        try:
+            data = helpers.change_password(validated_data)
+            status = data.get('ResponseMetadata').get('HTTPStatusCode')
+            return status_codes.HTTP_204_NO_CONTENT if status == status_codes.HTTP_200_OK else status
+        except Exception as ex:
+            logger.error(f'general {ex}')
+            raise Unauthorized(ex)
+
+
 class CogrnitoSignOutSerializer(serializers.Serializer):
     resource_name = 'identities'
     access_token = serializers.CharField(write_only=True, required=True)
