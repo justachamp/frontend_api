@@ -1,5 +1,3 @@
-import requests
-import os
 from rest_framework_json_api import serializers
 from rest_framework.fields import Field, ListField
 from rest_framework import status as status_codes
@@ -19,7 +17,6 @@ from frontend_api.serializers import UserSerializer
 from authentication.cognito.core.mixins import AuthSerializerMixin
 from authentication import settings
 from core.services.user import UserService
-from core.models import User
 
 logger = logging.getLogger(__name__)
 
@@ -371,7 +368,7 @@ class CognitoAuthSerializer(BaseAuthValidationMixin, CogrnitoAuthRetrieveSeriali
             validated_data['username'] = validated_data['preferred_username']
             validated_data['user_attributes'] = [
                 {'Name': 'email', 'Value': validated_data['preferred_username']},
-                {'Name': 'custom:account_type', 'Value': str(self.user_service.user_role)},
+                {'Name': 'custom:account_type', 'Value': str(self.user_service.user_role)}
             ]
             helpers.sign_up(validated_data)
             serializer = CogrnitoAuthRetrieveSerializer()

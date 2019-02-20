@@ -1,14 +1,20 @@
+import datetime
+
 from django.db import models, transaction
 from django.utils.translation import gettext_lazy as _
+from django.contrib.postgres.fields import JSONField
+from django.core.serializers.json import DjangoJSONEncoder
 
 from core.models import Model, Address
 from django.contrib.auth import get_user_model
 from enumfields import EnumField
 from frontend_api.fields import AccountType, CompanyType
 
-from django.db import models
-
 from polymorphic.models import PolymorphicModel
+
+GBG_IDENTITY_VALID_DAYS = 90
+GBG_SUCCESS_STATUS = 'Pass'
+GBG_ALLOWED_VERIFICATION_COUNT = 3
 
 
 class Company(Model):
@@ -46,12 +52,77 @@ class Company(Model):
 
 
 class Account(PolymorphicModel, Model):
+    verification_status = models.fields.CharField(max_length=100, blank=True, default='Fail')
+    data = JSONField(encoder=DjangoJSONEncoder, default={'version': 1, 'gbg': {}})
     user = models.OneToOneField(
         get_user_model(),
         on_delete=models.CASCADE,
         unique=True,
         blank=False
     )
+
+    @property
+    def gbg(self):
+        data = self.data
+        gbg = data.get('gbg', {'version': 1})
+        return gbg
+
+    @gbg.setter
+    def gbg(self, gbg):
+        self.data['gbg'] = gbg
+
+    @property
+    def country_fields(self):
+        country_fields = self.gbg.get('country_fields', {})
+        return country_fields
+
+    @country_fields.setter
+    def country_fields(self, country_fields):
+        gbg = self.gbg
+        gbg['country_fields'] = country_fields
+
+    @property
+    def gbg_authentication_identity(self):
+        id = None
+        data = self.data
+        gbg = data.get('gbg', None)
+        if gbg and gbg.get('id'):
+            last_date = gbg.get('date')
+            now_date = datetime.datetime.utcnow()
+            delta = now_date - last_date
+            if delta.days > GBG_IDENTITY_VALID_DAYS:
+                id = gbg.get('id')
+        return id
+
+    @gbg_authentication_identity.setter
+    def gbg_authentication_identity(self, authentication_id):
+        gbg = self.gbg
+        previous_id = self.gbg.get('id', None)
+        if authentication_id:
+            if authentication_id != previous_id:
+                gbg['id'] = authentication_id
+                gbg['date'] = datetime.date
+                gbg['authentication_count'] = gbg.get('authentication_count', 0)
+
+    @property
+    def gbg_authentication_count(self):
+        return self.gbg.get('authentication_count', 0)
+
+    @gbg_authentication_count.setter
+    def gbg_authentication_count(self, count):
+        self.gbg['authentication_count'] = count
+
+    @property
+    def is_verified(self):
+        return self.verification_status == GBG_SUCCESS_STATUS
+
+    @property
+    def possible_to_verify(self):
+        return self.gbg_authentication_count < GBG_ALLOWED_VERIFICATION_COUNT
+
+    @property
+    def can_be_verified(self):
+        return not self.is_verified and self.possible_to_verify
 
 
 class UserAccount(Account):
@@ -110,10 +181,6 @@ class SubUserAccount(Account):
         return "Sub user account"
 
 
-    # class JSONAPIMeta:
-    #     resource_name = "SubUserAccount"
-
-
 class SubUserPermission(Model):
     account = models.OneToOneField(SubUserAccount, on_delete=models.CASCADE, related_name="permission")
     manage_sub_user = models.BooleanField(_('manage sub users'), default=False)
@@ -126,7 +193,6 @@ class SubUserPermission(Model):
         from frontend_api.utils import sync_sub_user_permissions
         sync_sub_user_permissions(self)
         return super().save(*args, **kwargs)
-
 
     def __str__(self):
         return "Sub user permission"

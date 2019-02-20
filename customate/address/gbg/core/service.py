@@ -10,6 +10,8 @@ from functools import lru_cache
 from address import settings
 import logging.config
 
+from core.models import User
+
 logging.config.dictConfig({
     'version': 1,
     'formatters': {
@@ -120,8 +122,11 @@ class ID3Client:
         input_data = self._parser().parse(payload)
         profile_id = profile_id or self.profile_id
         profile_version = profile_version or self.profile_version
-        # '109cd19c-5cc0-4826-8df9-2d544996c844'
-        return self.auth_service.AuthenticateSP(ProfileIDVersion={'ID': profile_id, 'Version': profile_version}, InputData=input_data)
+
+        return self.auth_service.AuthenticateSP(
+            ProfileIDVersion={'ID': profile_id,
+                              'Version': profile_version
+                              }, InputData=input_data)
 
     def wsdl_dump(self):
         self.provider.client.wsdl.dump()
@@ -144,11 +149,11 @@ class ModelParser(object):
     @personal_details.setter
     def personal_details(self, user):
         self._personal_details = {
-            # 'Title': 'Mr',
+            'Title': user.title,
             'Forename': user.first_name,
             'MiddleName': user.middle_name,
             'Surname': user.last_name,
-            # 'Gender': 'Male',
+            'Gender': user.gender,
         }
 
         if user.birth_date:
@@ -185,11 +190,10 @@ class ModelParser(object):
             'Email': user.email
         }
 
-    def parse(self, address):
-        user = address.user
+    def parse(self, user:User):
         self.personal_details = user
         self.contact_details = user
-        self.current_address = address
+        self.current_address = user.address
 
         self._data = {
             'Personal': {'PersonalDetails': self.personal_details},

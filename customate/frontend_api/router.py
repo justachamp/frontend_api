@@ -14,6 +14,7 @@ router.register('company', views.CompanyViewSet)
 router.register('shareholders', views.ShareholderViewSet)
 router.register('addresses', views.AddressViewSet)
 router.register('accounts', views.AccountViewSet)
+router.register('dataset', views.DatasetView, base_name='dataset')
 # router.register('useraccounts', views.AccountViewSet)
 
 

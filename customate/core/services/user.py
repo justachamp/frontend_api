@@ -87,7 +87,6 @@ class UserService(object):
                 user.email_verified = True
             elif attribute == 'phone_number':
                 user.phone_number_verified = True
-            user.check_verification()
             user.save()
 
     def user_exists(self, email):
