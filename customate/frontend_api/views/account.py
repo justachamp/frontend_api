@@ -282,6 +282,9 @@ class SubUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.Mode
     serializer_class = SubUserAccountSerializer
     permission_classes = (IsOwnerOrReadOnly,)
 
+    def get_queryset(self, *args, **kwargs):
+        return SubUserAccount.objects.filter(owner_account__user__id=self.request.user.id).all()
+
     filter_backends = (filters.QueryParameterValidationFilter, filters.OrderingFilter,
                        django_filters.DjangoFilterBackend, SearchFilter)
     filterset_fields = {

@@ -215,7 +215,7 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.SessionAuthentication',
         'authentication.cognito.middleware.cognito_rest_authentication.AwsRestAuthentication',
     ),
-
+    'ORDERING_PARAM': 'sort',
 
 
     'DEFAULT_PERMISSION_CLASSES': (
