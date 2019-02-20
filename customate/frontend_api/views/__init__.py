@@ -9,6 +9,7 @@ from .account import (
     AdminUserAccountRelationshipView,
     SubUserAccountRelationshipView
 )
+from .dataset import DatasetView
 from .address import UserAddressViewSet, AddressViewSet, CompanyAddressViewSet, AddressRelationshipView
 from .company import CompanyRelationshipView, CompanyViewSet
 from .permission import (
@@ -42,6 +43,7 @@ __all__ = [
     ShareholderViewSet,
     AdminUserViewSet,
     UserViewSet,
+    DatasetView,
     UserRelationshipView,
     CompanyRelationshipView,
     CompanyViewSet
