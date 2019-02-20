@@ -8,7 +8,6 @@ from .fields import ChoiceField, EnumField, ResourceRelatedField, PolymorphicRes
 from .account import AccountSerializer, UserAccountSerializer, SubUserAccountSerializer, AdminUserAccountSerializer
 from .user import UserSerializer, SubUserSerializer, AdminUserSerializer
 from .company import CompanySerializer
-from .dataset import DatasetSerializer
 from .address import AddressSerializer, UserAddressSerializer, CompanyAddressSerializer
 from .permission import SubUserPermissionSerializer, AdminUserPermissionSerializer
 from .shareholder import ShareholderSerializer
@@ -32,7 +31,6 @@ __all__ = [
     AdminUserAccountSerializer,
     UserSerializer,
     SubUserSerializer,
-    DatasetSerializer,
     AdminUserSerializer,
     AddressSerializer,
     CompanySerializer,
