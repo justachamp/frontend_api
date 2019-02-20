@@ -265,9 +265,6 @@ class UserFee(Model):
         return "User Fee"
 
 
-
-
-
 class Shareholder(Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='shareholders')
     first_name = models.CharField(_('first name'), max_length=30)
