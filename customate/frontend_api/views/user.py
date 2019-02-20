@@ -20,6 +20,10 @@ from frontend_api.permissions import IsOwnerOrReadOnly
 
 from ..views import PatchRelatedMixin, RelationshipPostMixin
 
+from rest_framework_json_api import filters
+from rest_framework_json_api import django_filters
+from rest_framework.filters import SearchFilter
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -72,6 +76,15 @@ class UserViewSet(PatchRelatedMixin, views.ModelViewSet):
     serializer_class = UserSerializer
 
     permission_classes = (IsOwnerOrReadOnly,)
+
+    filter_backends = (filters.QueryParameterValidationFilter, filters.OrderingFilter,
+                       django_filters.DjangoFilterBackend, SearchFilter)
+    filterset_fields = {
+        'status': ('exact', 'in'),
+        'email': ('icontains', 'contains', 'iexact', 'exact'),
+        'username': ('icontains', 'contains', 'iexact', 'exact'),
+    }
+    search_fields = ('email', 'username',)
 
     def update(self, request, *args, **kwargs):
         return super().update(request, *args, **kwargs)

@@ -1,4 +1,5 @@
 from enumfields import Enum
+from customate.settings import COUNTRIES_AVAILABLE
 
 
 class UserStatus(Enum):
@@ -1047,3 +1048,23 @@ class CountryDialCode(Enum):
 
     def __repr__(self):
         return self.value
+
+
+class Dataset(object):
+
+    @staticmethod
+    def all():
+        return {
+            'titles': [title.label for title in UserTitle],
+            'genders': [gender.label for gender in Gender],
+            'countriesAvailable': [{
+                'iso': country.value,
+                'name': country.label,
+                'phoneCode': CountryDialCode[country.value].value
+            } for country in Country if (country.value in COUNTRIES_AVAILABLE)],
+            'countriesAll': [{
+                'iso': country.value,
+                'name': country.label,
+                'phoneCode': CountryDialCode[country.value].value
+            } for country in Country]
+        }
