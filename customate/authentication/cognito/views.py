@@ -1,7 +1,7 @@
 from authentication.cognito.serializers import CognitoAuthSerializer, CogrnitoAuthRetrieveSerializer, \
     CogrnitoSignOutSerializer, CognitoAuthForgotPasswordSerializer, CognitoAuthPasswordRestoreSerializer,\
     CognitoAuthVerificationSerializer, CognitoAuthAttributeVerifySerializer, CognitoAuthChallengeSerializer, \
-    CognitoMfaSerializer, CognitoConfirmSignUpSerializer
+    CognitoMfaSerializer, CognitoConfirmSignUpSerializer, CognitoAuthChangePasswordSerializer
 
 from authentication.cognito.models import Challenge
 from rest_framework_json_api.views import viewsets
@@ -111,5 +111,11 @@ class AuthView(viewsets.ViewSet):
         serializer = CognitoAuthPasswordRestoreSerializer(data=request.data)
         if serializer.is_valid(True):
             return response.Response(status=serializer.restore_password(serializer.validated_data))
+
+    @action(methods=['POST'], detail=False, name='Change password')
+    def change_password(self, request):
+        serializer = CognitoAuthChangePasswordSerializer(data=request.data)
+        if serializer.is_valid(True):
+            return response.Response(status=serializer.change_password(serializer.validated_data))
 
 

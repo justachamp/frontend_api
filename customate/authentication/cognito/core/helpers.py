@@ -133,6 +133,18 @@ def forgot_password(data, param_mapping=None):
     return identity.forgot_password(username)
 
 
+def change_password(data, param_mapping=None):
+    try:
+        previous = parse_parameter(data, param_mapping, 'previous')
+        proposed = parse_parameter(data, param_mapping, 'proposed')
+        access_token = parse_parameter(data, param_mapping, 'access_token')
+
+    except Exception as ex:
+        raise ValueError(BAD_DATA_EXCEPTION)
+
+    return identity.change_password(previous, proposed, access_token)
+
+
 def restore_password(data, param_mapping=None):
     try:
         username = parse_parameter(data, param_mapping, 'username')
