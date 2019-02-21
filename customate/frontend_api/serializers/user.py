@@ -155,6 +155,7 @@ class AdminUserSerializer(BaseUserSerializer):
         user.status = UserStatus.pending
         address = Address()
         address.save()
+        user.address = address
         user.save()
         account = AdminUserAccount(user=user)
         account.save()
