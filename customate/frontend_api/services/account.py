@@ -45,7 +45,8 @@ class AccountService:
             logger.error(f'GBG verification exception: {e}')
 
     def get_account_country(self):
-        return self.__account.user.address.country if self.__account else None
+        has_address = self.__account and self.__account.user and self.__account.user.address
+        return self.__account.user.address.country if has_address else None
 
     def save_profile(self, data):
         pass
