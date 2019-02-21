@@ -73,14 +73,6 @@ class UserService(object):
         user.save()
 
     @staticmethod
-    def enable_mfa(user, enable, propagate_error=False):
-        if enable and not user.phone_number_verified and propagate_error:
-            raise ValueError("Phone number unverified")
-
-        user.mfa_enabled = enable
-        user.save()
-
-    @staticmethod
     def verify_attribute(user, attribute):
         if getattr(user, attribute):
             if attribute == 'email':

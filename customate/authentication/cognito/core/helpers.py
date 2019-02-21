@@ -75,17 +75,6 @@ def verify_attribute(data, param_mapping=None):
         raise ValueError("Unsupported auth flow")
 
 
-def mfa_preference(data, param_mapping=None):
-    if "enable" in data and "access_token" in data:
-        enable = parse_parameter(data, param_mapping, "enable")
-        access_token = parse_parameter(data, param_mapping, "access_token")
-
-        return identity.set_user_mfa_preference(enable=enable, access_token=access_token)
-
-    else:
-        raise ValueError(BAD_DATA_EXCEPTION)
-
-
 def respond_to_auth_challenge(data, param_mapping=None):
     try:
         username = parse_parameter(data, param_mapping, 'username')

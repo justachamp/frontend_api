@@ -83,7 +83,7 @@ class BaseAuthValidationMixin(object):
 
 
 class CognitoAuthVerificationSerializer(serializers.Serializer):
-    id = serializers.UUIDField(write_only=True)
+    id = serializers.UUIDField(required=False, write_only=True)
     attribute_name = serializers.ChoiceField(required=True, allow_blank=False, choices=('email', 'phone_number'))
     destination = serializers.CharField(max_length=50, required=False, read_only=True)
     access_token = serializers.CharField(write_only=True, required=True)
@@ -95,29 +95,6 @@ class CognitoAuthVerificationSerializer(serializers.Serializer):
             response = data.get('CodeDeliveryDetails')
             validated_data['destination'] = response.get('Destination')
             return Verification(**validated_data)
-        except Exception as ex:
-            logger.error(f'general {ex}')
-            raise Unauthorized(ex)
-
-
-class CognitoMfaSerializer(serializers.Serializer, UserServiceMixin):
-    resource_name = 'identities'
-    id = serializers.UUIDField(read_only=True)
-    access_token = serializers.CharField(write_only=True, required=True)
-    enable = serializers.BooleanField(write_only=True, required=True)
-
-    def mfa_preference(self, validated_data):
-        try:
-            data = helpers.mfa_preference(validated_data)
-            user = self.user_service.get_user_from_token(access_token=validated_data['access_token'])
-            status = data.get('ResponseMetadata').get('HTTPStatusCode')
-            if status == status_codes.HTTP_200_OK:
-                enable_mfa = validated_data['enable']
-                self.user_service.enable_mfa(user=user, enable=enable_mfa, propagate_error=True)
-
-                return status_codes.HTTP_204_NO_CONTENT
-
-            return status
         except Exception as ex:
             logger.error(f'general {ex}')
             raise Unauthorized(ex)

@@ -46,15 +46,6 @@ class User(AbstractUser, Model):
     passport_date_expiry = models.DateField(_('day of birth'), blank=True, null=True)
     passport_country_origin = EnumField(Country, max_length=2, blank=True, null=True)
 
-    mfa_enabled = models.BooleanField(
-        _('user mfa status'),
-        default=False,
-        help_text=_(
-            'Designates whether this user authorize '
-            'using multi factor authentication.'
-        ),
-    )
-
     phone_number_verified = models.BooleanField(
         _('phone number verified'),
         default=False,

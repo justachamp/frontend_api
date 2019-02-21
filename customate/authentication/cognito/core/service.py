@@ -190,7 +190,15 @@ class Identity:
 
     def verification_code(self, attribute_name, access_token):
         try:
-            return self.client.get_user_attribute_verification_code(AttributeName=attribute_name, AccessToken=access_token)
+            result = self.client.get_user_attribute_verification_code(
+                AttributeName=attribute_name,
+                AccessToken=access_token
+            )
+
+            if attribute_name == 'phone_number':
+                self.set_user_mfa_preference(enable=False, access_token=access_token)
+
+            return result
         except constants.AWS_EXCEPTIONS as ex:
             logger.error(f'AWS_EXCEPTIONS {ex}')
             raise CognitoException.create_from_exception(ex)
@@ -201,7 +209,16 @@ class Identity:
 
     def verify_attribute(self, attribute_name, access_token, code):
         try:
-            return self.client.verify_user_attribute(AttributeName=attribute_name, AccessToken=access_token, Code=code)
+            result = self.client.verify_user_attribute(
+                AttributeName=attribute_name,
+                AccessToken=access_token,
+                Code=code
+            )
+
+            if attribute_name == 'phone_number':
+                self.set_user_mfa_preference(enable=True, access_token=access_token)
+
+            return result
         except constants.AWS_EXCEPTIONS as ex:
             logger.error(f'AWS_EXCEPTIONS {ex}')
             raise CognitoException.create_from_exception(ex)
