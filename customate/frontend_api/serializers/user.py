@@ -25,7 +25,7 @@ from ..serializers import (
 
 class BaseUserSerializer(HyperlinkedModelSerializer):
     role = EnumField(enum=UserRole, read_only=True)
-    status = EnumField(enum=UserStatus, required=False)
+    status = EnumField(enum=UserStatus, required=False, read_only=True)
 
     class Meta:
         model = User
@@ -159,6 +159,14 @@ class AdminUserSerializer(BaseUserSerializer):
         permission = AdminUserPermission(account=account)
         permission.save()
         return user
+
+
+class UserStatusSerializer(HyperlinkedModelSerializer):
+    status = EnumField(enum=UserStatus, required=True)
+
+    class Meta:
+        model = User
+        fields = ('status',)
 
 
 class UserSerializer(BaseUserSerializer, BaseAuthUserSerializereMixin):

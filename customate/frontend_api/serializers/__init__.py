@@ -6,7 +6,7 @@ from rest_framework_json_api.serializers import CharField, PolymorphicModelSeria
 from .mixins import FlexFieldsJsonFieldSerializerMixin
 from .fields import ChoiceField, EnumField, ResourceRelatedField, PolymorphicResourceRelatedField
 from .account import AccountSerializer, UserAccountSerializer, SubUserAccountSerializer, AdminUserAccountSerializer
-from .user import UserSerializer, SubUserSerializer, AdminUserSerializer
+from .user import UserSerializer, SubUserSerializer, AdminUserSerializer, UserStatusSerializer
 from .company import CompanySerializer
 from .address import AddressSerializer, UserAddressSerializer, CompanyAddressSerializer
 from .permission import SubUserPermissionSerializer, AdminUserPermissionSerializer
@@ -33,6 +33,7 @@ __all__ = [
     SubUserSerializer,
     AdminUserSerializer,
     AddressSerializer,
+    UserStatusSerializer,
     CompanySerializer,
     UserAddressSerializer,
     CompanyAddressSerializer,

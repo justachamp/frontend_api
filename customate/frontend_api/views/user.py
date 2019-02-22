@@ -13,7 +13,8 @@ from frontend_api.serializers import (
     SubUserSerializer,
     AdminUserSerializer,
     UserAccountSerializer,
-    UserSerializer
+    UserSerializer,
+    UserStatusSerializer
 )
 
 from frontend_api.permissions import IsOwnerOrReadOnly
@@ -111,6 +112,8 @@ class UserViewSet(PatchRelatedMixin, views.ModelViewSet):
                         return SubUserAccountSerializer
                     elif user.is_admin:
                         return AdminUserAccountSerializer
+                elif field == 'status':
+                    return UserStatusSerializer
                 else:
                     return super().get_serializer_class()
             else:
