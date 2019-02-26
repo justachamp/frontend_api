@@ -11,12 +11,11 @@ router.register('admin_user_permission', views.AdminUserPermissionViewSet)
 router.register('sub_user_accounts', views.SubUserAccountViewSet)
 router.register('sub_user_permission', views.SubUserPermissionViewSet)
 router.register('company', views.CompanyViewSet)
-# router.register('groups', views.GroupViewSet)
 router.register('shareholders', views.ShareholderViewSet)
 router.register('addresses', views.AddressViewSet)
 router.register('accounts', views.AccountViewSet)
 router.register('dataset', views.DatasetView, base_name='dataset')
-# router.register('useraccounts', views.AccountViewSet)
+# router.register('profiles', views.ProfileView.as_view())
 
 
 urlpatterns = router.urls

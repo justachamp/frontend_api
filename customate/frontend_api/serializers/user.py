@@ -19,12 +19,14 @@ from ..serializers import (
     PolymorphicResourceRelatedField,
     ValidationError,
     EnumField,
+    CharField,
     UserAccountSerializer
 )
 
 
 class BaseUserSerializer(HyperlinkedModelSerializer):
     role = EnumField(enum=UserRole, read_only=True)
+    username = CharField(read_only=True)
     status = EnumField(enum=UserStatus, required=False)
 
     class Meta:
@@ -33,41 +35,6 @@ class BaseUserSerializer(HyperlinkedModelSerializer):
                   'phone_number_verified', 'email_verified', 'is_verified',
                   'birth_date', 'last_name', 'email', 'address', 'account', 'title', 'gender', 'country_of_birth',
                   'mother_maiden_name', 'passport_number', 'passport_date_expiry', 'passport_country_origin')
-
-
-class BaseAuthUserSerializereMixin(AuthSerializerMixin):
-    def validate_phone_number(self, value):
-        if self.auth.check('phone_number', value):
-            self.initial_data['phone_number_verified'] = self.auth.check('phone_number_verified', True)
-        else:
-            self.initial_data['phone_number_verified'] = False
-            self.auth.update_attribute('phone_number', value)
-
-        return value
-
-    def validate_email(self, value):
-        if self.auth.check('email', value):
-            self.initial_data['email_verified'] = self.auth.check('email_verified', True)
-        else:
-            self.initial_data['email_verified'] = False
-            self.auth.update_attribute('email', value)
-
-        self.initial_data['username'] = value
-        self.instance.username = value
-
-        return value
-
-    def validate_first_name(self, value):
-        self.auth.update_attribute('given_name', value)
-        return value
-
-    def validate_last_name(self, value):
-        self.auth.update_attribute('family_name', value)
-        return value
-
-    def validate_role(self, value):
-        self.auth.update_attribute('custom:account_type', value.value)
-        return value
 
 
 class SubUserSerializer(BaseUserSerializer):
@@ -161,7 +128,7 @@ class AdminUserSerializer(BaseUserSerializer):
         return user
 
 
-class UserSerializer(BaseUserSerializer, BaseAuthUserSerializereMixin):
+class UserSerializer(BaseUserSerializer):
 
     related_serializers = {
         'address': 'frontend_api.serializers.UserAddressSerializer',
