@@ -188,6 +188,20 @@ class Identity:
             logger.error(f'general {ex}')
             raise Exception(ex)
 
+    def admin_sign_out(self, username):
+        try:
+            return self.client.admin_user_global_sign_out(
+                UserPoolId=constants.POOL_ID,
+                Username=username
+            )
+        except constants.AWS_EXCEPTIONS as ex:
+            logger.error(f'AWS_EXCEPTIONS {ex}')
+            raise CognitoException.create_from_exception(ex)
+
+        except Exception as ex:
+            logger.error(f'general {ex}')
+            raise Exception(ex)
+
     def verification_code(self, attribute_name, access_token):
         try:
             result = self.client.get_user_attribute_verification_code(
@@ -320,6 +334,17 @@ class Identity:
 
         try:
             data = self.client.confirm_forgot_password(**params)
+            return data
+        except constants.AWS_EXCEPTIONS as ex:
+            raise CognitoException.create_from_exception(ex)
+
+    def get_user(self, access_token):
+        params = {
+            'AccessToken': access_token,
+        }
+
+        try:
+            data = self.client.get_user(**params)
             return data
         except constants.AWS_EXCEPTIONS as ex:
             raise CognitoException.create_from_exception(ex)

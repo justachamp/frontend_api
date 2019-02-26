@@ -17,6 +17,7 @@ from frontend_api.serializers import UserSerializer
 from authentication.cognito.core.mixins import AuthSerializerMixin
 from authentication import settings
 from core.services.user import UserService
+from core.fields import UserStatus
 
 logger = logging.getLogger(__name__)
 
@@ -278,12 +279,16 @@ class CogrnitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
 
         data = mid_helpers.decode_token(tokens.get('IdToken'))
         identity, user_data = self._get_cognito_user(data)
-
         user = self.user_service.get_user_by_external_identity(
             identity=identity,
             user_data=user_data,
             auto_create=getattr(settings, 'AUTO_CREATE_USER', False)
         )
+        if user.status == UserStatus.banned:
+            raise Exception('User banned')
+
+        if user.status == UserStatus.blocked:
+            raise Exception('User blocked')
 
         validated_data['user'] = user
         return Identity(id=user.id, **validated_data)

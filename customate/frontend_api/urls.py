@@ -17,6 +17,10 @@ from django.conf.urls import url
 
 urlpatterns = [
     url(r'^', include(model_url)),
+    re_path(r'^users/(?P<pk>[^/.]+)/status/$',
+            views.UserViewSet.as_view({'patch': 'patch_status'}),
+            name='user-status'),
+
     re_path(r'^users/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
             views.UserViewSet.as_view({'get': 'retrieve_related', 'patch': 'patch_related'}),
             name='user-related'),
