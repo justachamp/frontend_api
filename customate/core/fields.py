@@ -1068,3 +1068,7 @@ class Dataset(object):
                 'phoneCode': CountryDialCode[country.value].value
             } for country in Country]
         }
+
+    @staticmethod
+    def available_country_codes():
+        return COUNTRIES_AVAILABLE
