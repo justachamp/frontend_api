@@ -139,9 +139,9 @@ class ProfileSerializer(DomainService, BaseAuthUserSerializerMixin, Serializer):
     account = SerializerField(resource=AccountSerializer, required=False)
 
     def validate(self, attrs):
-        self.service.validate_age()
-        self.service.validate_phone_number()
-        self.service.validate_address_country()
+        self.service.validate_age(attrs['user'])
+        self.service.validate_phone_number(attrs)
+        self.service.validate_address_country(attrs)
         self._validate_user(attrs)
         return attrs
 
@@ -151,7 +151,7 @@ class ProfileSerializer(DomainService, BaseAuthUserSerializerMixin, Serializer):
         user['email'] = self._validate_email(user, user['email'])
         user['first_name'] = self._validate_first_name(user['first_name'])
         user['last_name'] = self._validate_last_name(user['last_name'])
-        user['role'] = self.instance.user.role
+        # user['role'] = self.instance.user.role
         # user['role'] = self._validate_user_role(self.instance.user.role)
 
         return attrs
