@@ -134,7 +134,7 @@ class ProfileValidationService:
         if phone_country and address_country and phone_country != address_country.value:
             raise ValidationError({'address/country': 'Phone number should have the same country as address'})
 
-        if address_country.value not in self.available_countries:
+        if address_country and address_country.value not in self.available_countries:
             raise ValidationError({'address/phone_number': 'Address has unsupported country'})
 
     @property
