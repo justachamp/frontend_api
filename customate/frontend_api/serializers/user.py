@@ -1,4 +1,4 @@
-
+from rest_framework.fields import EmailField
 from rest_framework_json_api.serializers import (
     HyperlinkedModelSerializer,
 )
@@ -28,6 +28,8 @@ class BaseUserSerializer(HyperlinkedModelSerializer):
     role = EnumField(enum=UserRole, read_only=True)
     username = CharField(read_only=True)
     status = EnumField(enum=UserStatus, required=False)
+    email = EmailField(required=False)
+
 
     class Meta:
         model = User

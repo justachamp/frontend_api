@@ -34,7 +34,7 @@ class AdminUserViewSet(PatchRelatedMixin, views.ModelViewSet):
     """
     queryset = User.objects.all().filter(role=UserRole.admin).order_by('-date_joined')
     serializer_class = AdminUserSerializer
-
+    allowed_methods = ['head', 'get']
     permission_classes = (IsOwnerOrReadOnly,)
 
     def update(self, request, *args, **kwargs):
@@ -71,7 +71,7 @@ class UserViewSet(PatchRelatedMixin, views.ModelViewSet):
     """
     API endpoint that allows users to be viewed or edited.
     """
-
+    http_method_names = ['head', 'get']
     queryset = User.objects.all().exclude(email='AnonymousUser').order_by('-date_joined')
     serializer_class = UserSerializer
 
@@ -127,23 +127,24 @@ class UserViewSet(PatchRelatedMixin, views.ModelViewSet):
 
 
 class UserRelationshipView(RelationshipPostMixin, RelationshipView):
+    http_method_names = ['head', 'get']
     queryset = User.objects
     permission_classes = (AllowAny,)
-    _related_serializers = {
-        'address': UserAddressSerializer
-    }
-
-    def post_address(self, request, *args, **kwargs):
-        related_field = kwargs.get('related_field')
-        related_serializer = self.get_related_serializer(related_field)
-        user = self.get_object()
-
-        if user.address:
-                raise MethodNotAllowed('POST')
-
-        serializer = related_serializer(data=request.data.get('attributes'), context={'request': request})
-        serializer.is_valid(raise_exception=True)
-        user.address = serializer.save()
-        user.save()
-
-        return serializer
+    # _related_serializers = {
+    #     'address': UserAddressSerializer
+    # }
+    #
+    # def post_address(self, request, *args, **kwargs):
+    #     related_field = kwargs.get('related_field')
+    #     related_serializer = self.get_related_serializer(related_field)
+    #     user = self.get_object()
+    #
+    #     if user.address:
+    #             raise MethodNotAllowed('POST')
+    #
+    #     serializer = related_serializer(data=request.data.get('attributes'), context={'request': request})
+    #     serializer.is_valid(raise_exception=True)
+    #     user.address = serializer.save()
+    #     user.save()
+    #
+    #     return serializer

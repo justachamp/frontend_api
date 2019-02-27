@@ -82,9 +82,6 @@ class ProfileService:
         return ProfileRecord(pk=user.id, id=user.id, user=user, address=user.address, account=user.account)
 
 
-
-
-
 class ProfileValidationService:
 
     __profile = None
@@ -124,7 +121,7 @@ class ProfileValidationService:
                 raise ValidationError({'address/phone_number': 'Phone number has unsupported country'})
 
     def validate_address_country(self, profile):
-        address_country = profile.get('address').get('country')
+        address_country = profile.get('address', {}).get('country')
         phone_number = profile.get('user').get('phone_number')
         if phone_number:
             self.profile.user.phone_number = phone_number

@@ -42,8 +42,8 @@ logger = logging.getLogger(__name__)
 
 class DomainService:
 
-    _service_object=None
-    __service=None
+    _service_object = None
+    __service = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -92,12 +92,6 @@ class SerializerField(serializers.Field):
 class BaseAuthUserSerializerMixin(AuthSerializerMixin):
 
     def _validate_attribute_verification(self, attr, verify_attr, value, data, alias=None):
-        # try:
-        #     data = self.data
-        # except AssertionError as ex:
-        #     data = self.initial_data
-
-
 
         if self.auth.check(attr, value):
             data[verify_attr] = self.auth.check(verify_attr, True)
@@ -135,7 +129,7 @@ class ProfileSerializer(DomainService, BaseAuthUserSerializerMixin, Serializer):
     _service_object = ProfileValidationService
     id = UUIDField()
     user = SerializerField(resource=UserSerializer)
-    address = SerializerField(resource=UserAddressSerializer)
+    address = SerializerField(resource=UserAddressSerializer, required=False)
     account = SerializerField(resource=AccountSerializer, required=False)
 
     def validate(self, attrs):
@@ -146,11 +140,13 @@ class ProfileSerializer(DomainService, BaseAuthUserSerializerMixin, Serializer):
         return attrs
 
     def _validate_user(self, attrs):
-        user = attrs['user']
-        user['phone_number'] = self._validate_phone_number(user, user['phone_number'])
-        user['email'] = self._validate_email(user, user['email'])
-        user['first_name'] = self._validate_first_name(user['first_name'])
-        user['last_name'] = self._validate_last_name(user['last_name'])
+        user_data = attrs['user']
+        user = self.instance.user
+        user_data['phone_number'] = self._validate_phone_number(
+            user_data, user_data.get('phone_number', user.phone_number))
+        user_data['email'] = self._validate_email(user_data, user_data.get('email', user.email))
+        user_data['first_name'] = self._validate_first_name(user_data.get('first_name', user.first_name))
+        user_data['last_name'] = self._validate_last_name(user_data.get('last_name', user.last_name))
         # user['role'] = self.instance.user.role
         # user['role'] = self._validate_user_role(self.instance.user.role)
 
@@ -158,12 +154,6 @@ class ProfileSerializer(DomainService, BaseAuthUserSerializerMixin, Serializer):
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-
-
-    class Meta:
-        fields = (
-            'user'
-        )
 
     def retrieve(self, validated_data):
         instance = self.service.save_profile(validated_data)
@@ -176,8 +166,9 @@ class ProfileSerializer(DomainService, BaseAuthUserSerializerMixin, Serializer):
                 setattr(model, key, val)
             model.save()
 
-        update_model(instance.user, validated_data['user'])
-        update_model(instance.address, validated_data['address'])
+        update_model(instance.user, validated_data.get('user', {}))
+        update_model(instance.address, validated_data.get('address', {}))
+        # self.service.verify_profile(instance)
         # instance = self.service.update_profile(instance)
         return instance
 
