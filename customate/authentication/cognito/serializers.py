@@ -284,11 +284,6 @@ class CogrnitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
             user_data=user_data,
             auto_create=getattr(settings, 'AUTO_CREATE_USER', False)
         )
-        if user.status == UserStatus.banned:
-            raise Exception('User banned')
-
-        if user.status == UserStatus.blocked:
-            raise Exception('User blocked')
 
         validated_data['user'] = user
         return Identity(id=user.id, **validated_data)
