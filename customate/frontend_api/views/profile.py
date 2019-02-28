@@ -70,9 +70,10 @@ class ProfileView(DomainService, APIView):
         data = request.data
         self.service = request.user, data
 
-        if data.get('account'):
-            data['account']['type'] = self.request.user.account.__class__.__name__
-
+        account = data.get('account', {})
+        account['type'] = self.request.user.account.__class__.__name__
+        data['account'] = account
+        
         profile = self.service.profile
 
         serializer = ProfileSerializer(
