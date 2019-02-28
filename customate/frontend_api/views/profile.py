@@ -61,8 +61,9 @@ class ProfileView(DomainService, APIView):
     _service_object=ProfileService
 
     def get(self, request, pk):
-        self.service = request.user
-        serializer = ProfileSerializer(self.service.profile, context={'request': request})
+        self.service = request.user, None
+        profile = self.service.profile
+        serializer = ProfileSerializer(profile, context={'request': request, 'profile': profile})
         return response.Response(serializer.data)
 
     def patch(self, request, pk):

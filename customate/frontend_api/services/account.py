@@ -71,7 +71,7 @@ class ProfileService:
 
     def __init__(self, user: User, data=None):
         self.__user = user
-        self.__data = data
+        self.__data = data or {}
 
 
     @property
