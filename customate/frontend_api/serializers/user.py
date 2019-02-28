@@ -2,7 +2,7 @@ from rest_framework.fields import EmailField
 from rest_framework_json_api.serializers import (
     HyperlinkedModelSerializer,
 )
-from core.fields import UserRole, UserStatus
+from core.fields import UserRole, UserStatus, UserTitle, Gender, Country
 from core.models import User
 from authentication.cognito.core.mixins import AuthSerializerMixin
 from frontend_api.models import (
@@ -29,6 +29,10 @@ class BaseUserSerializer(HyperlinkedModelSerializer):
     username = CharField(read_only=True)
     status = EnumField(enum=UserStatus, required=False)
     email = EmailField(required=False)
+    title = EnumField(enum=UserTitle, required=False)
+    gender = EnumField(enum=Gender, required=False)
+    country_of_birth = EnumField(enum=Country)
+    passport_country_origin = EnumField(enum=Country)
 
 
     class Meta:
