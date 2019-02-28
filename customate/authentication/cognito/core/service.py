@@ -423,8 +423,18 @@ class Identity:
     def admin_confirm_sign_up(self):
         pass
 
-    def admin_update_user_attributes(self):
-        pass
+    def admin_update_user_attributes(self, username, user_attributes):
+        params = {
+            'UserPoolId': constants.POOL_ID,
+            'Username': username,
+            'UserAttributes': user_attributes
+        }
+
+        try:
+            data = self.client.admin_update_user_attributes(**params)
+            return data
+        except constants.AWS_EXCEPTIONS as ex:
+            raise CognitoException.create_from_exception(ex)
 
     def resend_confirmation_code(self):
         pass
