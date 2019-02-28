@@ -10,10 +10,9 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from authentication import settings
 from authentication.cognito import utils
-from authentication.cognito.core import constants, service
+from authentication.cognito.core import constants, service, helpers
 from authentication.cognito.utils import PublicKey
 from rest_framework.exceptions import AuthenticationFailed
-
 # import the logging library
 import logging
 
@@ -23,7 +22,6 @@ identity = service.Identity()
 
 
 def validate_token(access_token, id_token, refresh_token=None):
-
     try:
         header, payload = decode_token(access_token)
         if id_token:
@@ -148,10 +146,17 @@ def get_tokens(access_token, id_token=None, refresh_token=None, propagate_error=
                     raise ex
                 return AnonymousUser, None, None, None
 
+            cognito_user = None
+            try:
+                cognito_user = helpers.get_user({'access_token': access_token})
+            except Exception as ex:
+                if not cognito_user or not ('Username' in cognito_user):
+                    raise AuthenticationFailed("No valid Access token were found in the request")
+
             return user, new_access_token, new_id_token, new_refresh_token
     except AuthenticationFailed as ex:
+        logger.error(f'process_request Exception: {ex}')
         raise ex
-        # logger.error(f'process_request Exception: {ex}')
 
     except Exception as ex:
         logger.error(f'process_request Exception: {ex}')

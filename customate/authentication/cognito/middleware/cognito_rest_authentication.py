@@ -13,7 +13,6 @@ class AwsRestAuthentication(BaseAuthentication):
         # and decide whether or not they are authenticated
         logger.error('authenticate AwsRestAuthentication')
         user, access_token, id_token, refresh_token = helpers.process_request(request, False)
-
         # TODO: Potentially create a mixin for views overriding the .finalise_response method to ensure if we
         # end up with a new access token as part of this process, we are able to set it in the response
         #
