@@ -30,10 +30,10 @@ class BaseUserSerializer(HyperlinkedModelSerializer):
     username = CharField(required=False)
     status = EnumField(enum=UserStatus, required=False, read_only=True)
     email = EmailField(required=False)
-    title = EnumField(enum=UserTitle, required=False)
-    gender = EnumField(enum=Gender, required=False)
-    country_of_birth = EnumField(enum=Country, required=False)
-    passport_country_origin = EnumField(enum=Country, required=False)
+    title = EnumField(enum=UserTitle, required=False, allow_null=True, allow_blank=True)
+    gender = EnumField(enum=Gender, required=False, allow_null=True, allow_blank=True)
+    country_of_birth = EnumField(enum=Country, required=False, allow_null=True, allow_blank=True)
+    passport_country_origin = EnumField(enum=Country, required=False, allow_null=True, allow_blank=True)
 
     class Meta:
         model = User

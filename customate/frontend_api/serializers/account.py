@@ -52,7 +52,7 @@ class AccountFlexFieldsJsonFieldSerializerMixin(FlexFieldsJsonFieldSerializerMix
     @property
     def service(self):
         if not self.__service:
-            self.__service = AccountService(self.instance)
+            self.__service = AccountService(self.context.get('profile'))
         return self.__service
 
     @property
@@ -138,7 +138,7 @@ class UserAccountSerializer(AccountFlexFieldsJsonFieldSerializerMixin, Hyperlink
         required=False
     )
 
-    account_type = EnumField(enum=AccountType)
+    account_type = EnumField(enum=AccountType, required=False)
 
     class Meta:
         model = UserAccount

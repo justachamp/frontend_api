@@ -46,13 +46,13 @@ class DomainService:
 
     @property
     def service(self):
-        if not self.__service:
-            self.__service = self._service_object()
+        # if not self.__service:
+        #     self.__service = self._service_object()
         return self.__service
 
     @service.setter
-    def service(self, instance):
-        self.__service = self._service_object(instance)
+    def service(self, args):
+        self.__service = self._service_object(*args)
 
 
 class ProfileView(DomainService, APIView):
@@ -66,8 +66,18 @@ class ProfileView(DomainService, APIView):
         return response.Response(serializer.data)
 
     def patch(self, request, pk):
-        self.service = request.user
-        serializer = ProfileSerializer(instance=self.service.profile, data=request.data, context={'request': request})
+        data = request.data
+        self.service = request.user, data
+
+        if data.get('account'):
+            data['account']['type'] = self.request.user.account.__class__.__name__
+
+        profile = self.service.profile
+
+        serializer = ProfileSerializer(
+            instance=self.service.profile,
+            data=request.data,
+            context={'request': request, 'profile': profile})
         serializer.is_valid(True)
         serializer.save()
         return response.Response(serializer.data)
