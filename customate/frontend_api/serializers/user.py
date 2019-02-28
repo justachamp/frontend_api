@@ -26,7 +26,7 @@ from ..serializers import (
 
 class BaseUserSerializer(HyperlinkedModelSerializer):
     role = EnumField(enum=UserRole, read_only=True)
-    username = CharField(read_only=True)
+    username = CharField(read_only=True, required=False)
     status = EnumField(enum=UserStatus, required=False)
     email = EmailField(required=False)
     title = EnumField(enum=UserTitle, required=False)
