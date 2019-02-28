@@ -56,8 +56,8 @@ class AccountService:
 
     def get_account_country(self):
 
-        has_address = self.__profile.user and self.__profile.user.address
-        current_country = self.__profile.user.address.country.value if has_address else None
+        address = self.__profile.user.address if self.__profile.user else None
+        current_country = address.country.value if address and address.country else None
         return self.__profile.data.get('address', {}).get('country', current_country)
 
     def save_profile(self, data):
