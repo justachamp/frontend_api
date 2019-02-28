@@ -18,7 +18,6 @@ from frontend_api.serializers import (
 )
 
 from frontend_api.permissions import IsOwnerOrReadOnly
-from authentication.cognito.core import helpers
 
 from ..views import PatchRelatedMixin, RelationshipPostMixin
 
@@ -98,13 +97,7 @@ class UserViewSet(PatchRelatedMixin, views.ModelViewSet):
     def patch_status(self, request, *args, **kwargs):
         serializer = UserStatusSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
-        user = self.request.user
-        user.status = serializer.data['status']
-        user.save()
-
-        if user.status == UserStatus.banned or user.status == UserStatus.blocked:
-            helpers.admin_sign_out({'username': user.email})
-
+        serializer.check_status(self.request.user)
         return Response(serializer.data)
 
     def get_serializer_class(self):

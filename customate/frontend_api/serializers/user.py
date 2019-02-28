@@ -13,6 +13,7 @@ from frontend_api.models import (
     UserAccount,
     Address
 )
+from authentication.cognito.core import helpers
 
 from ..serializers import (
     ResourceRelatedField,
@@ -130,6 +131,13 @@ class AdminUserSerializer(BaseUserSerializer):
 
 class UserStatusSerializer(HyperlinkedModelSerializer):
     status = EnumField(enum=UserStatus, required=True)
+
+    def check_status(self, user):
+        user.status = self.data['status']
+        user.save()
+
+        if user.status == UserStatus.banned or user.status == UserStatus.blocked:
+            helpers.admin_sign_out({'username': user.email})
 
     class Meta:
         model = User
