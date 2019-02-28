@@ -17,6 +17,7 @@ from frontend_api.serializers import UserSerializer
 from authentication.cognito.core.mixins import AuthSerializerMixin
 from authentication import settings
 from core.services.user import UserService
+from core.fields import UserStatus
 
 logger = logging.getLogger(__name__)
 
@@ -278,7 +279,6 @@ class CogrnitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
 
         data = mid_helpers.decode_token(tokens.get('IdToken'))
         identity, user_data = self._get_cognito_user(data)
-
         user = self.user_service.get_user_by_external_identity(
             identity=identity,
             user_data=user_data,

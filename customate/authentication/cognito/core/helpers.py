@@ -10,10 +10,13 @@ from authentication.cognito.core.service import Identity
 
 BAD_DATA_EXCEPTION = "The required parameters were not passed through in the data dictionary"
 
+import logging
+logger = logging.getLogger(__name__)
 
 # TODO: Possibly change some of these methods to just accept one parameter where appropriate (i.e. just a username)
 
 identity = Identity()
+
 
 def initiate_auth(data, param_mapping=None):
     if ("username" in data and "password" in data) or ("username" in param_mapping and "password" in param_mapping):
@@ -31,6 +34,16 @@ def sign_out(data, param_mapping=None):
     if ("access_token" in data) or ("access_token" in param_mapping):
         access_token = parse_parameter(data, param_mapping, "access_token")
         return identity.sign_out(access_token=access_token)
+
+    else:
+        raise ValueError("Unsupported auth flow")
+
+
+def admin_sign_out(data, param_mapping=None):
+    if ("username" in data) or ("username" in param_mapping):
+        username = parse_parameter(data, param_mapping, "username")
+
+        return identity.admin_sign_out(username=username)
 
     else:
         raise ValueError("Unsupported auth flow")
@@ -144,6 +157,16 @@ def restore_password(data, param_mapping=None):
         raise ValueError(BAD_DATA_EXCEPTION)
 
     return identity.restore_password(username, code, password)
+
+
+def get_user(data, param_mapping=None):
+    try:
+        access_token = parse_parameter(data, param_mapping, 'access_token')
+
+    except Exception as ex:
+        raise ValueError(BAD_DATA_EXCEPTION)
+
+    return identity.get_user(access_token)
 
 
 def admin_get_user(data, param_mapping=None):

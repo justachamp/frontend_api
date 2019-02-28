@@ -29,6 +29,7 @@ class PatchRelatedMixin(object):
 
         serializer = self.get_serializer(instance, **serializer_kwargs)
         serializer.is_valid(True)
+
         serializer.save()
         return Response(serializer.data)
 

@@ -4,7 +4,7 @@ from rest_framework_json_api.views import RelationshipView
 
 from core import views
 from core.models import User
-from core.fields import UserRole
+from core.fields import UserRole, UserStatus
 
 from frontend_api.serializers import (
     UserAddressSerializer,
@@ -13,7 +13,8 @@ from frontend_api.serializers import (
     SubUserSerializer,
     AdminUserSerializer,
     UserAccountSerializer,
-    UserSerializer
+    UserSerializer,
+    UserStatusSerializer
 )
 
 from frontend_api.permissions import IsOwnerOrReadOnly
@@ -23,6 +24,7 @@ from ..views import PatchRelatedMixin, RelationshipPostMixin
 from rest_framework_json_api import filters
 from rest_framework_json_api import django_filters
 from rest_framework.filters import SearchFilter
+from rest_framework.response import Response
 
 import logging
 logger = logging.getLogger(__name__)
@@ -91,6 +93,12 @@ class UserViewSet(PatchRelatedMixin, views.ModelViewSet):
 
     def perform_update(self, serializer):
         serializer.save()
+
+    def patch_status(self, request, *args, **kwargs):
+        serializer = UserStatusSerializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        serializer.check_status(self.request.user)
+        return Response(serializer.data)
 
     def get_serializer_class(self):
 
