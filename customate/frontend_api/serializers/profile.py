@@ -60,14 +60,6 @@ class DomainService:
         self.__service = self._service_object(instance)
 
 
-class SerializerValidator(object):
-    def __init__(self):
-        self.base = 'test'
-
-    def __call__(self, value):
-        value
-
-
 class SerializerField(serializers.Field):
 
     def __init__(self, resource, *args, **kwargs):
@@ -77,11 +69,11 @@ class SerializerField(serializers.Field):
     def to_representation(self, instance):
         # self._resource.context = self.context
         # return self._resource.to_representation(self, instance)
-        return self._resource(context=self.context, instance=instance).to_representation(instance)
+        return self._resource(context=self.context, instance=instance, partial=True).to_representation(instance)
 
     def to_internal_value(self, data):
         instance = getattr(self.parent.instance, self.field_name)
-        serializer = self._resource(instance=instance, context=self.context, data=data)
+        serializer = self._resource(instance=instance, context=self.context, data=data, partial=True)
         try:
             validated_data = serializer.to_internal_value(data)
             return validated_data
@@ -155,9 +147,9 @@ class ProfileSerializer(DomainService, BaseAuthUserSerializerMixin, Serializer):
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
 
-    def retrieve(self, validated_data):
-        instance = self.service.save_profile(validated_data)
-        return instance
+    # def retrieve(self, validated_data):
+    #     instance = self.service.save_profile(validated_data)
+    #     return instance
 
     @transaction.atomic
     def update(self, instance, validated_data):
@@ -168,7 +160,8 @@ class ProfileSerializer(DomainService, BaseAuthUserSerializerMixin, Serializer):
 
         update_model(instance.user, validated_data.get('user', {}))
         update_model(instance.address, validated_data.get('address', {}))
-        # self.service.verify_profile(instance)
+        update_model(instance.account, validated_data.get('account', {}))
+        self.service.verify_profile(instance)
         # instance = self.service.update_profile(instance)
         return instance
 

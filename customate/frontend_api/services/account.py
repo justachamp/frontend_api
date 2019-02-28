@@ -1,4 +1,4 @@
-from django.db import transaction
+
 from django.utils.functional import cached_property
 
 from rest_framework.exceptions import ValidationError
@@ -7,38 +7,32 @@ from core.fields import Dataset
 from core.models import User, USER_MIN_AGE
 from address.gbg.core.service import ID3Client, ModelParser
 
-import phonenumbers
+
 from phonenumbers.phonenumberutil import region_code_for_country_code
-from phonenumbers.phonenumberutil import region_code_for_number
+
 
 import logging
 
-
-# Get an instance of a logger
-from frontend_api.models import Account
 
 logger = logging.getLogger(__name__)
 
 from collections import namedtuple
 
-ProfileRecord = namedtuple('ProfileRecord', 'pk, id, user, account, address')
+ProfileRecord = namedtuple('ProfileRecord', 'pk, id, user, account, address, data')
 
 
 class AccountService:
 
-    __account = None
+    __profile = None
 
-    def __init__(self, account: Account):
-        if isinstance(account, Account):
-            self.__account = account
+    def __init__(self, profile):
+        self.__profile = profile
+
 
     def verify(self):
         try:
-            account = self.__account
-            if not account:
-                return None
-
-            user = account.user
+            account = self.__profile.account
+            user = self.__profile.user
             """
             a phone number should be verified before a user is allowed to pass KYC.
             """
@@ -61,8 +55,10 @@ class AccountService:
             logger.error(f'GBG verification exception: {e}')
 
     def get_account_country(self):
-        has_address = self.__account and self.__account.user and self.__account.user.address
-        return self.__account.user.address.country if has_address else None
+
+        has_address = self.__profile.user and self.__profile.user.address
+        current_country = self.__profile.user.address.country.value if has_address else None
+        return self.__profile.data.get('address', {}).get('country', current_country)
 
     def save_profile(self, data):
         pass
@@ -71,15 +67,17 @@ class AccountService:
 class ProfileService:
 
     __user = None
+    __data = None
 
-    def __init__(self, user: User):
+    def __init__(self, user: User, data=None):
         self.__user = user
+        self.__data = data
 
 
     @property
     def profile(self):
         user = self.__user
-        return ProfileRecord(pk=user.id, id=user.id, user=user, address=user.address, account=user.account)
+        return ProfileRecord(pk=user.id, id=user.id, user=user, address=user.address, account=user.account, data=self.__data)
 
 
 class ProfileValidationService:
@@ -140,4 +138,37 @@ class ProfileValidationService:
     @property
     def profile(self):
         return self.__profile
+
+
+    def verify_profile(self, instance):
+
+        try:
+            account = instance.account
+            if not account:
+                return None
+
+            user = instance.user
+            """
+            a phone number should be verified before a user is allowed to pass KYC.
+            """
+
+            if user.is_verified and account.need_to_verify:
+                gbg = ID3Client(parser=ModelParser)
+                authentication_id = account.gbg_authentication_identity
+                # TODO in phase we should use IncrementalVerification endpoint if we already have authentication_id
+                # TODO for now we just store it
+
+                verification = gbg.auth_sp(user)
+                band_text = verification.BandText
+                account.gbg_authentication_identity = verification.AuthenticationID
+                account.gbg_authentication_count += 1
+                account.verification_status = band_text
+                account.save()
+                logger.error(f'instance.is_verified: {account.verification_status}, band text: {band_text}')
+
+        except Exception as e:
+            logger.error(f'GBG verification exception: {e}')
+
+
+
 
