@@ -89,7 +89,7 @@ class ID3Client:
         self.user_name = getattr(settings, 'GBG_ACCOUNT')
         self.password = getattr(settings, 'GBG_PASSWORD')
         self.wsdl = getattr(settings, 'GBG_WDSL')
-        self.profile_id = getattr(settings, f'GBG_{country_code}_PROFILE_ID')
+        self.profile_id = getattr(settings, f'GBG_{country_code}_PROFILE_ID', None)
         self.profile_version = getattr(settings, 'GBG_PROFILE_VERSION')
         self._parser = parser
         self.country_code = country_code
@@ -125,6 +125,9 @@ class ID3Client:
         input_data = self._parser(self.country_code).parse(payload)
         profile_id = profile_id or self.profile_id
         profile_version = profile_version or self.profile_version
+
+        if not profile_id:
+            raise ValueError('Unsupported profile')
 
         return self.auth_service.AuthenticateSP(
             ProfileIDVersion={'ID': profile_id,

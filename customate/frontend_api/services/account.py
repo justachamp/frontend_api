@@ -152,7 +152,8 @@ class ProfileValidationService:
             a phone number should be verified before a user is allowed to pass KYC.
             """
             country = instance.address.country.value if instance.address and instance.address.country else None
-            account.gbg_authentication_count = 1
+            # account.gbg_authentication_count = 1
+            # account.verification_status = 'Fail'
             if user.is_verified and account.can_be_verified and country:
                 gbg = ID3Client(parser=ModelParser, country_code=country)
                 # authentication_id = account.gbg_authentication_identity
@@ -169,10 +170,4 @@ class ProfileValidationService:
 
         except Exception as e:
             logger.error(f'GBG verification exception: {e}')
-            """
-            {http://www.id3global.com/ID3gWS/2013/04}GlobalUKData() 
-            got an unexpected keyword argument 'Number'. 
-            Signature: `Passport: {http://www.id3global.com/ID3gWS/2013/04}GlobalUKPassport, 
-            DrivingLicence: {http://www.id3global.com/ID3gWS/2013/04}GlobalUKDrivingLicence, 
-            NationalInsuranceNumber: {http://www.id3global.com/ID3gWS/2013/04}GlobalUKNationalInsuranceNumber`
-            """
+

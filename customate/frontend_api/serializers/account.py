@@ -99,7 +99,16 @@ class SubUserAccountSerializer(AccountFlexFieldsJsonFieldSerializerMixin, Hyperl
     class Meta:
         model = SubUserAccount
         additional_fields = ACCOUNT_ADDITIONAL_FIELDS
-        fields = ('url', 'user', 'owner_account', 'permission')
+        fields = (
+            'url',
+            'user',
+            'owner_account',
+            'permission',
+            'gbg_authentication_count',
+            'is_verified',
+            'can_be_verified',
+            'verification_status',
+        )
 
 
 class UserAccountSerializer(AccountFlexFieldsJsonFieldSerializerMixin, HyperlinkedModelSerializer):
@@ -149,6 +158,7 @@ class UserAccountSerializer(AccountFlexFieldsJsonFieldSerializerMixin, Hyperlink
             'gbg_authentication_count',
             'is_verified',
             'can_be_verified',
+            'verification_status',
             'position',
             'user',
             'company',
