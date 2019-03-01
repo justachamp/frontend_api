@@ -1,40 +1,15 @@
 from django.db import transaction
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from rest_framework_json_api.serializers import (
-    HyperlinkedModelSerializer,
-    Serializer,
-    SerializerMethodField
-)
+from rest_framework_json_api.serializers import Serializer
 from authentication.cognito.core.mixins import AuthSerializerMixin
-from frontend_api.serializers import UserAddressSerializer, AccountSerializer, AddressSerializer
-from frontend_api.services.account import AccountService, ProfileValidationService
-from core.models import User
-
-from frontend_api.models import (
-    Account,
-    Company,
-    SubUserAccount,
-    AdminUserAccount,
-    AdminUserPermission,
-    SubUserPermission,
-    UserAccount
-)
-
-from frontend_api.fields import AccountType
+from frontend_api.serializers import UserAddressSerializer, AccountSerializer
+from frontend_api.services.account import ProfileValidationService
 
 from ..serializers import (
     UUIDField,
-    EnumField,
-    ResourceRelatedField,
-    PolymorphicResourceRelatedField,
-    FlexFieldsJsonFieldSerializerMixin,
-    PolymorphicModelSerializer,
-    CharField,
-    DateField,
     UserSerializer
 )
-from frontend_api.services.account import ProfileService
 
 import logging
 logger = logging.getLogger(__name__)
@@ -51,8 +26,6 @@ class DomainService:
 
     @property
     def service(self):
-        # if not self.__service:
-        #     self.__service = self._service_object()
         return self.__service
 
     @service.setter
@@ -67,8 +40,6 @@ class SerializerField(serializers.Field):
         self._resource = resource
 
     def to_representation(self, instance):
-        # self._resource.context = self.context
-        # return self._resource.to_representation(self, instance)
         return self._resource(context=self.context, instance=instance, partial=True).to_representation(instance)
 
     def to_internal_value(self, data):
@@ -147,10 +118,6 @@ class ProfileSerializer(DomainService, BaseAuthUserSerializerMixin, Serializer):
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
 
-    # def retrieve(self, validated_data):
-    #     instance = self.service.save_profile(validated_data)
-    #     return instance
-
     @transaction.atomic
     def update(self, instance, validated_data):
         def update_model(model, data):
@@ -162,6 +129,5 @@ class ProfileSerializer(DomainService, BaseAuthUserSerializerMixin, Serializer):
         update_model(instance.address, validated_data.get('address', {}))
         update_model(instance.account, validated_data.get('account', {}))
         self.service.verify_profile(instance)
-        # instance = self.service.update_profile(instance)
         return instance
 
