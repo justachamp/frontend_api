@@ -217,6 +217,14 @@ class CognitoAuthChallengeSerializer(serializers.Serializer, UserServiceMixin):
 
             if validated_data['challenge_name'] == NEW_PASSWORD_CHALLENGE:
                 self.user_service.activate_user(user)
+                helpers.admin_update_user_attributes({
+                    'username': user.username,
+                    'user_attributes': [{
+                        'Name': 'email_verified',
+                        'Value': 'true'
+                    }]
+                })
+                self.user_service.verify_attribute(user, 'email')
 
             validated_data['user'] = user
             return Identity(id=user.id, **validated_data)
