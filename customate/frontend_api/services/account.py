@@ -140,7 +140,6 @@ class ProfileValidationService:
     def profile(self):
         return self.__profile
 
-
     def verify_profile(self, instance):
 
         try:
@@ -152,10 +151,11 @@ class ProfileValidationService:
             """
             a phone number should be verified before a user is allowed to pass KYC.
             """
-
-            if user.is_verified and account.need_to_verify:
-                gbg = ID3Client(parser=ModelParser)
-                authentication_id = account.gbg_authentication_identity
+            country = instance.address.country.value if instance.address and instance.address.country else None
+            account.gbg_authentication_count = 1
+            if user.is_verified and account.can_be_verified and country:
+                gbg = ID3Client(parser=ModelParser, country_code=country)
+                # authentication_id = account.gbg_authentication_identity
                 # TODO in phase we should use IncrementalVerification endpoint if we already have authentication_id
                 # TODO for now we just store it
 
@@ -169,7 +169,10 @@ class ProfileValidationService:
 
         except Exception as e:
             logger.error(f'GBG verification exception: {e}')
-
-
-
-
+            """
+            {http://www.id3global.com/ID3gWS/2013/04}GlobalUKData() 
+            got an unexpected keyword argument 'Number'. 
+            Signature: `Passport: {http://www.id3global.com/ID3gWS/2013/04}GlobalUKPassport, 
+            DrivingLicence: {http://www.id3global.com/ID3gWS/2013/04}GlobalUKDrivingLicence, 
+            NationalInsuranceNumber: {http://www.id3global.com/ID3gWS/2013/04}GlobalUKNationalInsuranceNumber`
+            """

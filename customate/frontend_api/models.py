@@ -83,16 +83,17 @@ class Account(PolymorphicModel, Model):
 
     @property
     def gbg_authentication_identity(self):
-        id = None
+        identity = None
         data = self.data
         gbg = data.get('gbg', None)
         if gbg and gbg.get('id'):
-            last_date = gbg.get('date')
+            # last_date = gbg.get('date')
+            last_date = datetime.datetime.strptime(gbg.get('date'), '%Y-%m-%dT%H:%M:%S.%f')
             now_date = datetime.datetime.utcnow()
             delta = now_date - last_date
             if delta.days > GBG_IDENTITY_VALID_DAYS:
-                id = gbg.get('id')
-        return id
+                identity = gbg.get('id')
+        return identity
 
     @gbg_authentication_identity.setter
     def gbg_authentication_identity(self, authentication_id):
@@ -101,7 +102,7 @@ class Account(PolymorphicModel, Model):
         if authentication_id:
             if authentication_id != previous_id:
                 gbg['id'] = authentication_id
-                gbg['date'] = datetime.date
+                gbg['date'] = datetime.datetime.utcnow()
                 gbg['authentication_count'] = gbg.get('authentication_count', 0)
 
     @property

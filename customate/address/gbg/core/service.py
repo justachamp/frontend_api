@@ -1,4 +1,5 @@
-from __future__ import print_function
+from functools import wraps
+import datetime
 
 from requests import Session
 from requests.auth import HTTPBasicAuth
@@ -10,6 +11,7 @@ from functools import lru_cache
 from address import settings
 import logging.config
 
+from address.gbg.core.utils import set_value_at_keypath
 from core.models import User
 
 logging.config.dictConfig({
@@ -83,13 +85,14 @@ class ID3Client:
     _parser = None
     _service = {}
 
-    def __init__(self, parser=None):
+    def __init__(self, parser, country_code):
         self.user_name = getattr(settings, 'GBG_ACCOUNT')
         self.password = getattr(settings, 'GBG_PASSWORD')
         self.wsdl = getattr(settings, 'GBG_WDSL')
-        self.profile_id = getattr(settings, 'GBG_PROFILE_ID')
+        self.profile_id = getattr(settings, f'GBG_{country_code}_PROFILE_ID')
         self.profile_version = getattr(settings, 'GBG_PROFILE_VERSION')
         self._parser = parser
+        self.country_code = country_code
         self.logger = logging.getLogger(__name__)
 
     @property
@@ -119,7 +122,7 @@ class ID3Client:
         return self.cred_service.CheckCredentials(AccountName=self.user_name, Password=self.password)
 
     def auth_sp(self, payload, profile_id=None, profile_version=None):
-        input_data = self._parser().parse(payload)
+        input_data = self._parser(self.country_code).parse(payload)
         profile_id = profile_id or self.profile_id
         profile_version = profile_version or self.profile_version
 
@@ -132,14 +135,31 @@ class ID3Client:
         self.provider.client.wsdl.dump()
 
 
+def format_country_data(identity_key, post_data=None):
+    def wrapper(f):
+        @wraps(f)
+        def wrapped(self, *args, **kwargs):
+            identity = {}
+            kwargs['identity'] = identity
+            f(self, *args, **kwargs)
+            if len(identity):
+                if post_data and len(post_data):
+                    for key, value in post_data.items():
+                        set_value_at_keypath(identity, key, value)
+            return {identity_key: identity} if len(identity) else None
+        return wrapped
+    return wrapper
+
+
 class ModelParser(object):
 
     _data = None
 
-    def __init__(self):
+    def __init__(self, country_code):
         self._personal_details = None
         self._current_address = None
         self._contact_details = None
+        self.country_code = country_code
 
 
     @property
@@ -173,7 +193,8 @@ class ModelParser(object):
             'Country': address.country,
             'ZipPostcode': address.postcode,
             'AddressLine1': address.address_line_1,
-            'AddressLine2': address.address_line_2
+            'AddressLine2': address.address_line_2,
+            'AddressLine3': address.address_line_3,
         }
 
     @property
@@ -190,7 +211,7 @@ class ModelParser(object):
             'Email': user.email
         }
 
-    def parse(self, user:User):
+    def parse(self, user: User):
         self.personal_details = user
         self.contact_details = user
         self.current_address = user.address
@@ -201,5 +222,65 @@ class ModelParser(object):
             'Addresses': {'CurrentAddress': self.current_address}
         }
 
+        self.apply_additional_data(user)
+
         return self._data
+
+    def apply_additional_data(self, user: User):
+        code = self.country_code
+        country_identity_name = f'_{code.lower()}_identity' if code else None
+        country_identity = getattr(self, country_identity_name, None)
+        source = user.account.country_fields
+        country_identity_data = country_identity(source) if callable(country_identity) else None
+
+        if country_identity_data:
+            self._data['IdentityDocuments'] = country_identity_data
+
+    @staticmethod
+    def apply_if_exists(source, identity, params):
+        if not source:
+            return None
+
+        if isinstance(source, dict):
+            for key, param in params.items():
+                param = source.get(param, None)
+                if param:
+                    set_value_at_keypath(identity, key, param)
+        else:
+            for key, param in params.items():
+                if hasattr(source, param):
+                    set_value_at_keypath(identity, key, getattr(source, param))
+
+
+    @format_country_data(identity_key='UK')
+    def _gb_identity(self, source, identity):
+
+        schema = {
+            'DrivingLicence.Number': 'driver_licence_number',
+            'DrivingLicence.Postcode': 'driver_licence_postcode'
+        }
+        date_schema = {
+            'DrivingLicence.IssueDay': 'day',
+            'DrivingLicence.IssueMonth': 'month',
+            'DrivingLicence.IssueYear': 'year'
+        }
+
+        self.apply_if_exists(source, identity, schema)
+        self.apply_if_exists(source.get('driver_licence_issue_date'), identity, date_schema)
+
+    @format_country_data(identity_key='IdentityCard', post_data={'Country': 'Italy'})
+    def _it_identity(self, source, identity):
+        self.apply_if_exists(source, identity, {'Number': 'tax_code'})
+
+    @format_country_data(identity_key='IdentityCard', post_data={'Country': 'Denmark'})
+    def _dk_identity(self, source, identity):
+        self.apply_if_exists(source, identity, {'Number': 'id_card_number'})
+
+    @format_country_data(identity_key='Spain')
+    def _sp_idenity(self, source, identity):
+        self.apply_if_exists(source, identity, {'TaxIDNumber.Number': 'tax_id'})
+
+
+
+
 
