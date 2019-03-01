@@ -7,7 +7,7 @@ from authentication.cognito.core.constants import NEW_PASSWORD_CHALLENGE
 from authentication.cognito.models import Identity, Verification, Challenge, Invitation
 
 from authentication.cognito.core import helpers
-from authentication.cognito.exceptions import Unauthorized, TemporaryCodeHasBeenExpired
+from authentication.cognito.exceptions import Unauthorized
 from authentication.cognito.middleware import helpers as mid_helpers
 
 from authentication.cognito.core.base import generate_password
@@ -225,6 +225,17 @@ class CognitoAuthChallengeSerializer(serializers.Serializer, UserServiceMixin):
             raise Unauthorized(ex)
 
 
+class CogrnitoAuthRetrieveMessageSerializer(serializers.Serializer):
+    message = serializers.CharField(required=True)
+
+    def validate(self, data):
+        message = data.get('message')
+        if 'account has expired' in message:
+            raise serializers.ValidationError({'password': 'Temporary code has been expired.'})
+
+        return data
+
+
 class CogrnitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
     resource_name = 'identities'
     id = serializers.UUIDField(read_only=True)
@@ -253,7 +264,6 @@ class CogrnitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
         return data
 
     def retrieve(self, validated_data):
-        raise TemporaryCodeHasBeenExpired('fsdfsf')
         try:
             validated_data['username'] = validated_data['preferred_username']
             if validated_data.get('refresh_token'):
@@ -268,9 +278,9 @@ class CogrnitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
 
         except Exception as ex:
             logger.error(f'general {ex}')
-            if 'account has expired' in str(ex):
-                raise TemporaryCodeHasBeenExpired(ex)
-
+            s = CogrnitoAuthRetrieveMessageSerializer(data={'message': str(ex)})
+            s.is_valid(True)
+            
             raise Unauthorized(ex)
 
     def _retrieve_auth_result(self, validated_data, result):
