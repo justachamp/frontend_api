@@ -1,58 +1,24 @@
-
+from collections import namedtuple
 from django.utils.functional import cached_property
-
 from rest_framework.exceptions import ValidationError
+from phonenumbers.phonenumberutil import region_code_for_country_code
 
 from core.fields import Dataset
 from core.models import User, USER_MIN_AGE
 from address.gbg.core.service import ID3Client, ModelParser
 
-
-from phonenumbers.phonenumberutil import region_code_for_country_code
-
-
 import logging
 
-
 logger = logging.getLogger(__name__)
-
-from collections import namedtuple
 
 ProfileRecord = namedtuple('ProfileRecord', 'pk, id, user, account, address, data')
 
 
 class AccountService:
-
     __profile = None
 
     def __init__(self, profile):
         self.__profile = profile
-
-
-    def verify(self):
-        try:
-            account = self.__profile.account
-            user = self.__profile.user
-            """
-            a phone number should be verified before a user is allowed to pass KYC.
-            """
-
-            if user.is_verified and account.need_to_verify:
-                gbg = ID3Client(parser=ModelParser)
-                authentication_id = account.gbg_authentication_identity
-                # TODO in phase we should use IncrementalVerification endpoint if we already have authentication_id
-                # TODO for now we just store it
-
-                verification = gbg.auth_sp(user)
-                band_text = verification.BandText
-                account.gbg_authentication_identity = verification.AuthenticationID
-                account.gbg_authentication_count += 1
-                account.verification_status = band_text
-                account.save()
-                logger.error(f'instance.is_verified: {account.verification_status}, band text: {band_text}')
-
-        except Exception as e:
-            logger.error(f'GBG verification exception: {e}')
 
     def get_account_country(self):
         if not self.__profile:
@@ -66,7 +32,6 @@ class AccountService:
 
 
 class ProfileService:
-
     __user = None
     __data = None
 
@@ -74,15 +39,15 @@ class ProfileService:
         self.__user = user
         self.__data = data or {}
 
-
     @property
     def profile(self):
         user = self.__user
-        return ProfileRecord(pk=user.id, id=user.id, user=user, address=user.address, account=user.account, data=self.__data)
+        return ProfileRecord(
+            pk=user.id, id=user.id, user=user, address=user.address, account=user.account, data=self.__data
+        )
 
 
 class ProfileValidationService:
-
     __profile = None
 
     def __init__(self, profile: ProfileRecord):
@@ -170,4 +135,3 @@ class ProfileValidationService:
 
         except Exception as e:
             logger.error(f'GBG verification exception: {e}')
-
