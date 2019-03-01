@@ -73,7 +73,7 @@ class UserViewSet(PatchRelatedMixin, views.ModelViewSet):
     """
     API endpoint that allows users to be viewed or edited.
     """
-    http_method_names = ['head', 'get']
+    http_method_names = ['head', 'get', 'patch']
     queryset = User.objects.all().exclude(email='AnonymousUser').order_by('-date_joined')
     serializer_class = UserSerializer
 
