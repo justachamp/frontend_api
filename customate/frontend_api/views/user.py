@@ -97,7 +97,13 @@ class UserViewSet(PatchRelatedMixin, views.ModelViewSet):
     def patch_status(self, request, *args, **kwargs):
         serializer = UserStatusSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
-        serializer.check_status(self.request.user)
+        user_id = request.data['id']
+        try:
+            user = User.objects.get(id=user_id)
+        except Exception as e:
+            raise NotFound(f'Account not found {user_id}')
+
+        serializer.check_status(user)
         return Response(serializer.data)
 
     def get_serializer_class(self):

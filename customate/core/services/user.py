@@ -61,8 +61,6 @@ class UserService(object):
             raise Exception("User is inactive")
         elif user.status == UserStatus.banned:
             raise Exception('User is banned')
-        elif user.status == UserStatus.blocked:
-            raise Exception('User is blocked')
 
         return user
 
