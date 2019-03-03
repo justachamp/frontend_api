@@ -27,6 +27,12 @@ class AccountService:
         current_country = address.country.value if address and address.country else None
         return self.__profile.data.get('address', {}).get('country', current_country)
 
+    def get_user_role(self):
+        if not self.__profile:
+            return None
+        user = self.__profile.user
+        return user.role.value if user and user.role else None
+
     def save_profile(self, data):
         pass
 

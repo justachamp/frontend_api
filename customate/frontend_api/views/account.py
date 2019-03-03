@@ -235,8 +235,6 @@ class AdminUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.Mo
         serializer.is_valid(raise_exception=True)
         permission = AdminUserPermission(**serializer.validated_data, account=account)
         permission.save()
-        # account.permission = serializer.save()
-        # account.save()
 
         return serializer
 
@@ -283,7 +281,10 @@ class SubUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.Mode
     permission_classes = (IsOwnerOrReadOnly,)
 
     def get_queryset(self, *args, **kwargs):
-        return SubUserAccount.objects.filter(owner_account__user__id=self.request.user.id).all()
+        if self.action == 'list':
+            return self.queryset.filter(owner_account__user__id=self.request.user.id)
+        else:
+            return super().get_queryset(*args, **kwargs)
 
     filter_backends = (filters.QueryParameterValidationFilter, filters.OrderingFilter,
                        django_filters.DjangoFilterBackend, SearchFilter)

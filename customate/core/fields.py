@@ -1,5 +1,26 @@
 from enumfields import Enum
 from customate.settings import COUNTRIES_AVAILABLE
+from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
+
+
+class SerializerField(serializers.Field):
+
+    def __init__(self, resource, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._resource = resource
+
+    def to_representation(self, instance):
+        return self._resource(context=self.context, instance=instance, partial=True).to_representation(instance)
+
+    def to_internal_value(self, data):
+        instance = getattr(self.parent.instance, self.field_name)
+        serializer = self._resource(instance=instance, context=self.context, data=data, partial=True)
+        try:
+            validated_data = serializer.to_internal_value(data)
+            return validated_data
+        except ValidationError as ex:
+            raise ValidationError({self.field_name: ex.detail})
 
 
 class UserStatus(Enum):
