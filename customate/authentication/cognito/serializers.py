@@ -13,11 +13,11 @@ from authentication.cognito.middleware import helpers as mid_helpers
 from authentication.cognito.core.base import generate_password
 import logging
 
-from frontend_api.serializers import UserSerializer
+from frontend_api.serializers import UserSerializer, AccountSerializer
 from authentication.cognito.core.mixins import AuthSerializerMixin
 from authentication import settings
 from core.services.user import UserService
-from core.fields import UserStatus
+from core.fields import SerializerField
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +32,9 @@ class CognitoAttributeFiled(Field):
 
 
 class UserServiceMixin(object):
+
+    def __init__(self, *args, **kwargs):
+        return super().__init__(*args, **kwargs)
 
     _user_service = None
 
@@ -242,10 +245,11 @@ class CogrnitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
     id_token = serializers.CharField(read_only=True)
     access_token = serializers.CharField(read_only=True)
     refresh_token = serializers.CharField(read_only=False, required=False)
-    user = serializers.SerializerMethodField()
+    user = SerializerField(resource=UserSerializer, required=False)
 
-    def get_user(self, data):
-        return UserSerializer(instance=data.user, context=self.context).data
+    account = SerializerField(
+        resource=AccountSerializer, required=False, source='user.account'
+    )
 
     related_serializers = {
         'user': 'frontend_api.serializers.UserSerializer',
