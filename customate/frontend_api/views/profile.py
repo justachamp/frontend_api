@@ -69,17 +69,13 @@ class ProfileView(DomainService, APIView):
     def patch(self, request, pk):
         data = request.data
         self.service = request.user, data
-
-        account = data.get('account', {})
-        account['type'] = self.request.user.account.__class__.__name__
-        data['account'] = account
-
         profile = self.service.profile
 
         serializer = ProfileSerializer(
             instance=self.service.profile,
             data=request.data,
             context={'request': request, 'profile': profile})
+
         serializer.is_valid(True)
         serializer.save()
         return response.Response(serializer.data)

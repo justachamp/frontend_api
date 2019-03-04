@@ -37,7 +37,7 @@ class BaseAuthUserSerializerMixin(AuthSerializerMixin):
     def _validate_attribute_verification(self, attr, verify_attr, value, data, alias=None):
 
         if self.auth.check(attr, value):
-            data[verify_attr] = self.auth.check(verify_attr, True)
+            data[verify_attr] = self.auth.check(verify_attr, 'true')
         else:
             data[verify_attr] = False
             self.auth.update_attribute(attr, value)

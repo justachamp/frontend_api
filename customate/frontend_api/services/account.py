@@ -43,6 +43,11 @@ class ProfileService:
 
     def __init__(self, user: User, data=None):
         self.__user = user
+
+        if data:
+            account = data.get('account', {})
+            account['type'] = user.account.__class__.__name__
+            data['account'] = account
         self.__data = data or {}
 
     @property
