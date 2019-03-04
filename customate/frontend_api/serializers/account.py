@@ -36,13 +36,23 @@ logger = logging.getLogger(__name__)
 
 ACCOUNT_ADDITIONAL_FIELDS = {
     'GB': {
-        'driver_licence_number': CharField(source='country_fields.driver_licence_number', default=None),
-        'driver_licence_postcode': CharField(source='country_fields.driver_licence_postcode', default=None),
-        'driver_licence_issue_date': DateField(source='country_fields.driver_licence_issue_date', default=None)
+        'driver_licence_number': CharField(
+            source='country_fields.driver_licence_number', default=None, allow_blank=True, allow_null=True
+        ),
+        'driver_licence_postcode': CharField(
+            source='country_fields.driver_licence_postcode', default=None, allow_blank=True, allow_null=True
+        ),
+        'driver_licence_issue_date': DateField(
+            source='country_fields.driver_licence_issue_date', default=None, allow_blank=True, allow_null=True
+        )
     },
-    'IT': {'tax_code': CharField(source='country_fields.tax_code', default=None)},
-    'DK': {'id_card_number': CharField(source='country_fields.id_card_number', default=None)},
-    'SP': {'tax_id': CharField(source='country_fields.tax_id', default=None)},
+    'IT': {'tax_code': CharField(
+        source='country_fields.tax_code', default=None, allow_blank=True, allow_null=True
+    )},
+    'DK': {'id_card_number': CharField(
+        source='country_fields.id_card_number', default=None, allow_blank=True, allow_null=True
+    )},
+    'SP': {'tax_id': CharField(source='country_fields.tax_id', default=None, allow_blank=True, allow_null=True)},
     'sub_user': {'permission': SerializerField(resource=SubUserPermissionSerializer, required=False, read_only=True)},
     'admin': {'permission': SerializerField(resource=AdminUserPermissionSerializer, required=False, read_only=True)}
 }
