@@ -51,9 +51,13 @@ class Company(Model):
         return "%s the company" % self.registration_business_name
 
 
+def default_account_data_dict():
+    return {'version': 1, 'gbg': {}}
+
+
 class Account(PolymorphicModel, Model):
     verification_status = models.fields.CharField(max_length=100, blank=True, default='Fail')
-    data = JSONField(encoder=DjangoJSONEncoder, default={'version': 1, 'gbg': {}})
+    data = JSONField(encoder=DjangoJSONEncoder, default=default_account_data_dict)
     user = models.OneToOneField(
         get_user_model(),
         on_delete=models.CASCADE,
