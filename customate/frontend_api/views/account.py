@@ -169,6 +169,25 @@ class AccountViewSet(RelationshipMixin, PatchRelatedMixin, views.ModelViewSet):
             return response.Response(
                 CognitoInviteUserSerializer(instance=invitation, context={'request': request}).data)
 
+    @action(methods=['POST'], detail=True, name='Invite sub user')
+    @transaction.atomic
+    def resend_invite(self, request, pk):
+        username = request.data.get('username').lower()
+        data = {
+            'username': username,
+            'email': username,
+            'role': UserRole.sub_user.value,
+            'action': 'RESEND'
+        }
+
+        serializer = SubUserSerializer(data=data, context={'request': request})
+        if serializer.is_valid(True):
+            invitation = CognitoInviteUserSerializer.invite(data)
+
+            return response.Response(
+                CognitoInviteUserSerializer(instance=invitation, context={'request': request}).data
+            )
+
 
 class UserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.ModelViewSet):
 
