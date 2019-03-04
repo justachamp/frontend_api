@@ -46,7 +46,7 @@ ACCOUNT_ADDITIONAL_FIELDS = {
         },
         'driver_licence_issue_date': {
             'cls': DateField,
-            'kwargs': {'source': 'country_fields.driver_licence_issue_date', 'default': None, 'allow_blank': True}
+            'kwargs': {'source': 'country_fields.driver_licence_issue_date', 'default': None, 'allow_null': True}
         }
     },
     'IT': {'tax_code': {
