@@ -237,6 +237,17 @@ class CognitoAuthChallengeSerializer(serializers.Serializer, UserServiceMixin):
             raise Unauthorized(ex)
 
 
+class CogrnitoAuthRetrieveMessageSerializer(serializers.Serializer):
+    message = serializers.CharField(required=True)
+
+    def validate(self, data):
+        message = data.get('message')
+        if 'account has expired' in message:
+            raise serializers.ValidationError({'password': 'Temporary code has been expired.'})
+
+        return data
+
+
 class CogrnitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
     resource_name = 'identities'
     id = serializers.UUIDField(read_only=True)
@@ -280,6 +291,9 @@ class CogrnitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
 
         except Exception as ex:
             logger.error(f'general {ex}')
+            s = CogrnitoAuthRetrieveMessageSerializer(data={'message': str(ex)})
+            s.is_valid(True)
+            
             raise Unauthorized(ex)
 
     def _retrieve_auth_result(self, validated_data, result):
