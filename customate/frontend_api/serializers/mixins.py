@@ -10,6 +10,10 @@ class FlexFieldsSerializerMixin(object):
     def __attach_fields(self, key):
         if hasattr(self.Meta, 'additional_fields') and key in self.Meta.additional_fields:
             for key, value in self.Meta.additional_fields[key].items():
+                if value.source == key:
+                    # @TODO check where additional fields has source == key assign
+                    # @TODO workaround
+                    value.source = None
                 self.fields[key] = value
 
     def __extract_additional_key(self):
