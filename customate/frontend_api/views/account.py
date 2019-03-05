@@ -159,8 +159,8 @@ class AccountViewSet(RelationshipMixin, PatchRelatedMixin, views.ModelViewSet):
 
         serializer = SubUserSerializer(data=data, context={'request': request})
         if serializer.is_valid(True):
-            user = serializer.save()
             invitation = CognitoInviteUserSerializer.invite(data)
+            user = serializer.save()
             user.cognito_id = invitation.id
             user.email_verified = True
             user.save()
@@ -282,8 +282,8 @@ class AdminUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.Mo
 
         serializer = AdminUserSerializer(data=data, context={'request': request})
         if serializer.is_valid(True):
-            user = serializer.save()
             invitation = CognitoInviteUserSerializer.invite(data)
+            user = serializer.save()
             user.cognito_id = invitation.id
             user.email_verified = True
             user.save()
