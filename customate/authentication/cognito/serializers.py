@@ -5,11 +5,12 @@ from rest_framework.exceptions import NotFound
 
 from authentication.cognito.core.constants import NEW_PASSWORD_CHALLENGE
 from authentication.cognito.models import Identity, Verification, Challenge, Invitation
+from core.fields import UserStatus
 
 from authentication.cognito.core import helpers
 from authentication.cognito.exceptions import Unauthorized
 from authentication.cognito.middleware import helpers as mid_helpers
-
+from django.contrib.auth import get_user_model
 from authentication.cognito.core.base import generate_password
 import logging
 
@@ -273,6 +274,15 @@ class CogrnitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
     def validate(self, data):
         if not data.get('refresh_token') and not data.get('password'):
             raise Unauthorized('Credentials not found')
+
+        user_model = get_user_model()
+        try:
+            user = user_model.objects.get(username=data.get('preferred_username'))
+        except user_model.DoesNotExist:
+            raise Unauthorized('User not exists')
+
+        if user.status == UserStatus.banned:
+            raise Unauthorized('User is banned')
 
         return data
 
