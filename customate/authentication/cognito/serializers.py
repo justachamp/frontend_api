@@ -281,6 +281,13 @@ class CogrnitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
         if user.status == UserStatus.banned:
             raise Unauthorized('User is banned')
 
+        if user.is_subuser:
+            try:
+                if user.account.owner_account.user.status == UserStatus.banned:
+                    raise Unauthorized('Owner account is banned')
+            except user_model.DoesNotExist:
+                raise Unauthorized('Owner account not exists')
+
     def validate(self, data):
         if not data.get('refresh_token') and not data.get('password'):
             raise Unauthorized('Credentials not found')
