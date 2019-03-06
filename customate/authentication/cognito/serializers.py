@@ -5,11 +5,12 @@ from rest_framework.exceptions import NotFound
 
 from authentication.cognito.core.constants import NEW_PASSWORD_CHALLENGE
 from authentication.cognito.models import Identity, Verification, Challenge, Invitation
+from core.fields import UserStatus
 
 from authentication.cognito.core import helpers
 from authentication.cognito.exceptions import Unauthorized
 from authentication.cognito.middleware import helpers as mid_helpers
-
+from django.contrib.auth import get_user_model
 from authentication.cognito.core.base import generate_password
 import logging
 
@@ -270,10 +271,28 @@ class CogrnitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
     def validate_username(email):
         return email.lower()
 
+    def validate_user_status(self, username):
+        user_model = get_user_model()
+        try:
+            user = user_model.objects.get(username=username)
+        except user_model.DoesNotExist:
+            raise Unauthorized('User not exists')
+
+        if user.status == UserStatus.banned:
+            raise Unauthorized('User is banned')
+
+        if user.is_subuser:
+            try:
+                if user.account.owner_account.user.status == UserStatus.banned:
+                    raise Unauthorized('Owner account is banned')
+            except user_model.DoesNotExist:
+                raise Unauthorized('Owner account not exists')
+
     def validate(self, data):
         if not data.get('refresh_token') and not data.get('password'):
             raise Unauthorized('Credentials not found')
 
+        self.validate_user_status(data.get('preferred_username'))
         return data
 
     def retrieve(self, validated_data):
@@ -396,6 +415,9 @@ class CognitoAuthSerializer(BaseAuthValidationMixin, CogrnitoAuthRetrieveSeriali
         except Exception as ex:
             logger.error(f'general {ex}')
             raise Unauthorized(ex)
+
+    def validate_user_status(self, username):
+        pass
 
     @staticmethod
     def update(instance, validated_data):
