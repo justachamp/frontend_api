@@ -13,6 +13,17 @@ logger = logging.getLogger(__name__)
 
 ProfileRecord = namedtuple('ProfileRecord', 'pk, id, user, account, address, data')
 
+IMMUTABLE_USER_FIELDS_IF_VERIFIED = (
+    'first_name',
+    'last_name',
+    'middle_name',
+    'birth_date',
+    'title',
+    'gender',
+    'country_of_birth',
+    'mother_maiden_name',
+)
+
 
 class AccountService:
     __profile = None
@@ -60,9 +71,24 @@ class ProfileService:
 
 class ProfileValidationService:
     __profile = None
+    _errors = None
 
     def __init__(self, profile: ProfileRecord):
         self.__profile = profile
+        self._errors = {}
+
+    @property
+    def errors(self):
+        return self.errors
+
+    @errors.setter
+    def errors(self, item):
+        key = item[0]
+        data = item[1]
+
+        error_item = self._errors.get(key, [])
+        error_item.append(data)
+        self._errors[key] = error_item
 
     @property
     def phone_country(self):
@@ -80,24 +106,24 @@ class ProfileValidationService:
             self.profile.user.birth_date = birth_date
 
             if not self.profile.user.age_verified:
-                raise ValidationError({'age': f'User age should be more than {USER_MIN_AGE}'})
+                self.errors = ('user', {'age': f'User age should be more than {USER_MIN_AGE}'})
 
-    def validate_phone_number(self, profile):
-        phone_number = profile.get('user').get('phone_number')
+    def validate_phone_number(self, data):
+        phone_number = data.get('user').get('phone_number')
         current_number = self.profile.user.phone_number
         country_code = self.profile.user.phone_number.country_code if current_number else None
         account_verified = self.profile.account.is_verified
         if phone_number:
             self.profile.user.phone_number = phone_number
             if country_code and country_code != self.profile.user.phone_number.country_code and account_verified:
-                raise ValidationError({'user/phone_number': 'Phone number should have the same country code'})
+                self.errors = ('user', {'phone_number': 'Phone number should have the same country code'})
 
             if self.phone_country not in self.available_countries:
-                raise ValidationError({'address/phone_number': 'Phone number has unsupported country'})
+                self.errors = ('address', {'phone_number': 'Phone number has unsupported country'})
 
-    def validate_address_country(self, profile):
-        address_country = profile.get('address', {}).get('country')
-        phone_number = profile.get('user').get('phone_number')
+    def validate_address_country(self, data):
+        address_country = data.get('address', {}).get('country')
+        phone_number = data.get('user').get('phone_number')
         if phone_number:
             self.profile.user.phone_number = phone_number
 
@@ -107,10 +133,30 @@ class ProfileValidationService:
         phone_country = self.phone_country
         address_country = self.profile.address.country
         if phone_country and address_country and phone_country != address_country.value:
-            raise ValidationError({'address/country': 'Phone number should have the same country as address'})
+            self.errors = ('address', {'country': 'Phone number should have the same country as address'})
 
         if address_country and address_country.value not in self.available_countries:
-            raise ValidationError({'address/phone_number': 'Address has unsupported country'})
+            self.errors = ('address', {'phone_number': 'Address has unsupported country'})
+
+    def validate_immutable_fields(self, data):
+        account = self.profile.account
+        if account.is_verified:
+            user = self.profile.user
+            user_data = data.get('user')
+            for key in IMMUTABLE_USER_FIELDS_IF_VERIFIED:
+                if key in user_data and getattr(user, key) != user_data[key]:
+                    self.errors = (f'user', {key: f'Impossible to change after verification'})
+
+    def validate_profile(self, attrs, raise_exception=False):
+        self.validate_age(attrs['user'])
+        self.validate_phone_number(attrs)
+        self.validate_address_country(attrs)
+        self.validate_immutable_fields(attrs)
+
+        if self._errors and raise_exception:
+            raise ValidationError(self._errors)
+
+        return not bool(self._errors)
 
     @property
     def profile(self):

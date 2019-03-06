@@ -1,10 +1,9 @@
-from rest_framework.fields import EmailField
+
 from rest_framework_json_api.serializers import (
     HyperlinkedModelSerializer,
 )
 from core.fields import UserRole, UserStatus, UserTitle, Gender, Country
 from core.models import User
-from authentication.cognito.core.mixins import AuthSerializerMixin
 from frontend_api.models import (
     SubUserAccount,
     AdminUserAccount,
@@ -18,10 +17,11 @@ from authentication.cognito.core import helpers
 from ..serializers import (
     ResourceRelatedField,
     PolymorphicResourceRelatedField,
-    ValidationError,
     EnumField,
+    EmailField,
     CharField,
-    UserAccountSerializer
+    UserAccountSerializer,
+    UniqueValidator,
 )
 
 
@@ -29,7 +29,7 @@ class BaseUserSerializer(HyperlinkedModelSerializer):
     role = EnumField(enum=UserRole, read_only=True)
     username = CharField(required=False)
     status = EnumField(enum=UserStatus, required=False, read_only=True)
-    email = EmailField(required=False)
+    email = EmailField(required=False, validators=[UniqueValidator(queryset=User.objects.all())])
     title = EnumField(enum=UserTitle, required=False, allow_null=True, allow_blank=True)
     gender = EnumField(enum=Gender, required=False, allow_null=True, allow_blank=True)
     country_of_birth = EnumField(enum=Country, required=False, allow_null=True, allow_blank=True)

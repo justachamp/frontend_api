@@ -20,7 +20,22 @@ class SerializerField(serializers.Field):
             validated_data = serializer.to_internal_value(data)
             return validated_data
         except ValidationError as ex:
-            raise ValidationError({self.field_name: ex.detail})
+            errors = self._prepare_serializer_errors(ex)
+            raise ValidationError(errors)
+
+    @staticmethod
+    def _prepare_serializer_errors(ex):
+
+        detail = ex.detail
+        if isinstance(detail, dict):
+            errors = []
+            for (key, value) in detail.items():
+                value = value[0] if isinstance(value, list) else value
+                errors.append({key: value})
+
+            return errors
+
+        return detail
 
 
 class UserStatus(Enum):

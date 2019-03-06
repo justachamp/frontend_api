@@ -1,5 +1,6 @@
 from rest_framework.exceptions import ValidationError
-from rest_framework.fields import DateField, DictField, ListField
+from rest_framework.fields import DateField, DictField, ListField, EmailField
+from rest_framework.validators import UniqueValidator
 
 from rest_framework_json_api.serializers import CharField, PolymorphicModelSerializer, UUIDField
 
@@ -17,11 +18,13 @@ from .profile import ProfileSerializer
 
 __all__ = [
     ValidationError,
+    UniqueValidator,
     UUIDField,
     CharField,
     DateField,
     DictField,
     ListField,
+    EmailField,
     PolymorphicModelSerializer,
     FlexFieldsSerializerMixin,
     ChoiceField,

@@ -76,9 +76,7 @@ class ProfileSerializer(DomainService, BaseAuthUserSerializerMixin, Serializer):
     account = SerializerField(resource=AccountSerializer, required=False)
 
     def validate(self, attrs):
-        self.service.validate_age(attrs['user'])
-        self.service.validate_phone_number(attrs)
-        self.service.validate_address_country(attrs)
+        self.service.validate_profile(attrs, True)
         self._validate_user(attrs)
         return attrs
 
