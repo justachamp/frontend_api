@@ -6,6 +6,8 @@ from rest_framework.permissions import AllowAny
 from rest_framework.exceptions import MethodNotAllowed, NotFound
 from rest_framework import response
 from rest_framework.views import APIView
+from authentication.cognito.exceptions import Unauthorized
+
 from rest_framework_json_api.views import RelationshipView
 
 from authentication.cognito.serializers import CognitoInviteUserSerializer
@@ -75,7 +77,10 @@ class ProfileView(DomainService, APIView):
             instance=self.service.profile,
             data=request.data,
             context={'request': request, 'profile': profile})
-
-        serializer.is_valid(True)
-        serializer.save()
-        return response.Response(serializer.data)
+        try:
+            serializer.is_valid(True)
+            serializer.save()
+            return response.Response(serializer.data)
+        except Exception as ex:
+            logger.error(f'general {ex}')
+            raise Unauthorized(ex)
