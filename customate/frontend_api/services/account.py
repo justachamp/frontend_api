@@ -118,8 +118,8 @@ class ProfileValidationService:
             if country_code and country_code != self.profile.user.phone_number.country_code and account_verified:
                 self.errors = ('user', {'phone_number': 'Phone number should have the same country code'})
 
-            if self.phone_country not in self.available_countries:
-                self.errors = ('address', {'phone_number': 'Phone number has unsupported country'})
+            # if self.phone_country not in self.available_countries:
+            #     self.errors = ('address', {'phone_number': 'Phone number has unsupported country'})
 
     def validate_address_country(self, data):
         address_country = data.get('address', {}).get('country')
@@ -135,8 +135,8 @@ class ProfileValidationService:
         if phone_country and address_country and phone_country != address_country.value:
             self.errors = ('address', {'country': 'Phone number should have the same country as address'})
 
-        if address_country and address_country.value not in self.available_countries:
-            self.errors = ('address', {'phone_number': 'Address has unsupported country'})
+        # if address_country and address_country.value not in self.available_countries:
+        #     self.errors = ('address', {'phone_number': 'Address has unsupported country'})
 
     def validate_immutable_fields(self, data):
         account = self.profile.account
@@ -176,7 +176,7 @@ class ProfileValidationService:
             country = instance.address.country.value if instance.address and instance.address.country else None
             # account.gbg_authentication_count = 1
             # account.verification_status = 'Fail'
-            if user.is_verified and account.can_be_verified and country:
+            if user.is_verified and account.can_be_verified and country in self.available_countries:
                 gbg = ID3Client(parser=ModelParser, country_code=country)
                 # authentication_id = account.gbg_authentication_identity
                 # TODO in phase we should use IncrementalVerification endpoint if we already have authentication_id
