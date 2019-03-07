@@ -82,6 +82,8 @@ class SubUserSerializer(BaseUserSerializer):
         user.address = address
         user.save()
         owner_account = self.context.get('request').user.account
+        if isinstance(owner_account, SubUserAccount):
+            owner_account = owner_account.owner_account
         account = SubUserAccount(owner_account=owner_account, user=user)
         account.save()
         permission = SubUserPermission(account=account)
