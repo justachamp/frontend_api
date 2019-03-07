@@ -43,6 +43,14 @@ class BaseUserSerializer(HyperlinkedModelSerializer):
                   'mother_maiden_name', 'passport_number', 'passport_date_expiry', 'passport_country_origin')
 
 
+class BaseUserResendInviteSerializer(HyperlinkedModelSerializer):
+    email = EmailField(required=True)
+
+    class Meta:
+        model = User
+        fields = ('email',)
+
+
 class SubUserSerializer(BaseUserSerializer):
     related_serializers = {
         'address': 'frontend_api.serializers.UserAddressSerializer',

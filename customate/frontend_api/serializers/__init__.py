@@ -8,7 +8,7 @@ from .mixins import FlexFieldsSerializerMixin
 from .fields import ChoiceField, EnumField, ResourceRelatedField, PolymorphicResourceRelatedField
 from .permission import SubUserPermissionSerializer, AdminUserPermissionSerializer
 from .account import AccountSerializer, UserAccountSerializer, SubUserAccountSerializer, AdminUserAccountSerializer
-from .user import UserSerializer, SubUserSerializer, AdminUserSerializer, UserStatusSerializer
+from .user import UserSerializer, SubUserSerializer, AdminUserSerializer, UserStatusSerializer, BaseUserResendInviteSerializer
 from .company import CompanySerializer
 from .address import AddressSerializer, UserAddressSerializer, CompanyAddressSerializer
 
@@ -44,7 +44,7 @@ __all__ = [
     CompanySerializer,
     UserAddressSerializer,
     CompanyAddressSerializer,
-
+    BaseUserResendInviteSerializer,
     AdminUserPermissionSerializer,
     ShareholderSerializer,
     ProfileSerializer

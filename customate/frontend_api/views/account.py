@@ -24,6 +24,7 @@ from frontend_api.serializers import (
     AccountSerializer,
     CompanySerializer,
     SubUserAccountSerializer,
+    BaseUserResendInviteSerializer,
     AdminUserAccountSerializer,
     SubUserSerializer,
     SubUserPermissionSerializer,
@@ -180,7 +181,7 @@ class AccountViewSet(RelationshipMixin, PatchRelatedMixin, views.ModelViewSet):
             'action': 'RESEND'
         }
 
-        serializer = SubUserSerializer(data=data, context={'request': request})
+        serializer = BaseUserResendInviteSerializer(data=data, context={'request': request})
         if serializer.is_valid(True):
             invitation = CognitoInviteUserSerializer.invite(data)
 
