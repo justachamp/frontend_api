@@ -19,7 +19,7 @@ from frontend_api.models import (
 
 from frontend_api.fields import AccountType
 
-from ..serializers import (
+from frontend_api.serializers import (
     EnumField,
     AdminUserPermissionSerializer,
     SubUserPermissionSerializer,

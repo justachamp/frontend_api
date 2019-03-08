@@ -2,6 +2,7 @@ from django.conf import settings
 from authentication.cognito.core.base import CognitoClient
 
 USER_PASSWORD_FLOW = 'USER_PASSWORD_AUTH'
+CUSTOM_FLOW = 'CUSTOM_AUTH'
 REFRESH_TOKEN_FLOW = 'REFRESH_TOKEN'
 REFRESH_TOKEN_AUTH_FLOW = 'REFRESH_TOKEN_AUTH'
 

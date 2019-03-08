@@ -11,7 +11,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-ProfileRecord = namedtuple('ProfileRecord', 'pk, id, user, account, address, data')
+ProfileRecord = namedtuple('ProfileRecord', 'pk, id, user, account, address, credentials, data')
 
 IMMUTABLE_USER_FIELDS_IF_VERIFIED = (
     'first_name',
@@ -65,7 +65,13 @@ class ProfileService:
     def profile(self):
         user = self.__user
         return ProfileRecord(
-            pk=user.id, id=user.id, user=user, address=user.address, account=user.account, data=self.__data
+            pk=user.id,
+            id=user.id,
+            user=user,
+            address=user.address,
+            account=user.account,
+            credentials = self.__data.get('credentials'),
+            data=self.__data
         )
 
 

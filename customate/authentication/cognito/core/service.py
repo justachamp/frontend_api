@@ -119,16 +119,26 @@ class Identity:
             logger.error(f'general {ex}')
             raise Exception(ex)
 
+    def can_pass_mfa(self, username):
+        cognito_user = self.admin_get_user(username)
+        for attr in cognito_user.get('UserAttributes', {}):
+            if attr.get('Name') == 'phone_number_verified':
+                return attr.get('Value') == 'true'
+        return False
+
     def initiate_auth(self, username, auth_flow, password=None, refresh_token=None):
         auth_parameters = {}
         secret_hash = utils.get_cognito_secret_hash(auth_parameters.get('USERNAME'))
         if secret_hash:
             auth_parameters['SECRET_HASH'] = secret_hash
 
-        if auth_flow == constants.USER_PASSWORD_FLOW:
+        if auth_flow in (constants.USER_PASSWORD_FLOW, constants.CUSTOM_FLOW):
+            if auth_flow == constants.USER_PASSWORD_FLOW and not self.can_pass_mfa(username):
+                auth_flow = constants.CUSTOM_FLOW
+
             auth_parameters['USERNAME'] = username
             auth_parameters['PASSWORD'] = password
-        elif auth_flow == constants.REFRESH_TOKEN_AUTH_FLOW or auth_flow == constants.REFRESH_TOKEN_FLOW:
+        elif auth_flow in (constants.REFRESH_TOKEN_AUTH_FLOW, constants.REFRESH_TOKEN_FLOW):
             if refresh_token is None:
                 raise Exception("To use the refresh token flow you must provide a refresh token")
             else:

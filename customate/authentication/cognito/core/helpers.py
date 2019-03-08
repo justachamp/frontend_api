@@ -20,7 +20,7 @@ identity = Identity()
 
 def initiate_auth(data, param_mapping=None):
     if ("username" in data and "password" in data) or ("username" in param_mapping and "password" in param_mapping):
-        auth_flow = constants.USER_PASSWORD_FLOW
+        auth_flow = constants.CUSTOM_FLOW if data.get('custom_flow') else constants.USER_PASSWORD_FLOW
         username = parse_parameter(data, param_mapping, "username")
         password = parse_parameter(data, param_mapping, "password")
 
