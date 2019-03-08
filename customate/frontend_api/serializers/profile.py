@@ -1,21 +1,25 @@
 from django.db import transaction
 from rest_framework_json_api.serializers import Serializer
+
 from authentication.cognito.core.mixins import AuthSerializerMixin
-from frontend_api.serializers import UserAddressSerializer, AccountSerializer
 from frontend_api.services.account import ProfileValidationService
 
 from core.fields import SerializerField
-from ..serializers import (
+from frontend_api.serializers import (
     UUIDField,
-    UserSerializer
+    CharField,
+    UserSerializer,
+    UserAddressSerializer,
+    AccountSerializer,
+    FlexFieldsSerializerMixin
 )
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 
 class DomainService:
-
     _service_object = None
     __service = None
 
@@ -49,7 +53,7 @@ class BaseAuthUserSerializerMixin(AuthSerializerMixin):
         return value
 
     def _validate_phone_number(self, data, value):
-        return self._validate_attribute_verification('phone_number',  'phone_number_verified', value, data)
+        return self._validate_attribute_verification('phone_number', 'phone_number_verified', value, data)
 
     def _validate_email(self, data, value):
         return self._validate_attribute_verification('email', 'email_verified', value, data, 'username')
@@ -67,13 +71,24 @@ class BaseAuthUserSerializerMixin(AuthSerializerMixin):
         return value
 
 
-class ProfileSerializer(DomainService, BaseAuthUserSerializerMixin, Serializer):
+class CognitoCredentialSerializer(Serializer):
+    id_token = CharField(read_only=True)
+    access_token = CharField(read_only=True)
+    refresh_token = CharField(read_only=False, required=False)
 
+
+class ProfileSerializer(DomainService, FlexFieldsSerializerMixin, BaseAuthUserSerializerMixin, Serializer):
     _service_object = ProfileValidationService
     id = UUIDField()
     user = SerializerField(resource=UserSerializer)
     address = SerializerField(resource=UserAddressSerializer, required=False)
     account = SerializerField(resource=AccountSerializer, required=False)
+    # credentials = SerializerField(resource=CognitoCredentialSerializer, read_only=True, required=False)
+
+    @property
+    def additional_key(self):
+        profile = self.context.get('profile')
+        return 'credentials' if profile and profile.credentials else None
 
     def validate(self, attrs):
         self.service.validate_profile(attrs, True)
@@ -109,3 +124,10 @@ class ProfileSerializer(DomainService, BaseAuthUserSerializerMixin, Serializer):
         self.service.verify_profile(instance)
         return instance
 
+    class Meta:
+        additional_fields = {
+            'credentials': {'credentials': {
+                'cls': SerializerField,
+                'kwargs': {'resource': CognitoCredentialSerializer, 'required': False, 'read_only': True}
+            }}
+        }

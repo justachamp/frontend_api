@@ -1,6 +1,74 @@
 from rest_framework import permissions
+from rest_framework.exceptions import ValidationError
+
+from authentication.cognito.serializers import CogrnitoAuthRetrieveSerializer
+
 import logging
 logger = logging.getLogger(__name__)
+
+
+class CheckFieldsCredentials(permissions.BasePermission):
+
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+
+        if request.method == 'PATCH':
+            if self.check_credentials_required_fields_exists(view):
+                return self.check_credentials_required(request, view)
+        request.data.pop("credentials", None)
+        return True
+
+    def has_object_permission(self, request, view, obj):
+        return True
+
+    @staticmethod
+    def check_credentials_required_fields_exists(view):
+        if hasattr(view, 'credentials_required_fields'):
+            return True
+        else:
+            return False
+
+    def check_credentials_required(self, request, view):
+        data = request.data
+        for field in view.credentials_required_fields:
+            if self.check_field_in_request_data(field, data):
+                return self.validate_credentials(request)
+        request.data.pop("credentials", None)
+
+        return True
+
+
+    @staticmethod
+    def validate_credentials(request):
+
+        serializer = CogrnitoAuthRetrieveSerializer(data=request.data.get('credentials'))
+        if serializer.is_valid():
+            valdated_data = serializer.validated_data
+            if request.user.username != valdated_data.get('preferred_username'):
+                raise ValidationError({'/credentials': 'wrong credentials'})
+
+            valdated_data['custom_flow'] = True
+            entity = serializer.retrieve(serializer.validated_data)
+            request.data['credentials'] = {
+                'id_token': entity.id_token,
+                'access_token': entity.access_token,
+                'refresh_token': entity.refresh_token
+            }
+
+            return True
+
+        else:
+            raise ValidationError({'/credentials': 'credentials required'})
+
+    @staticmethod
+    def check_field_in_request_data(field, data):
+        item = data
+        for key in field.split('.'):
+            item = item.get(key)
+            if not item:
+                return False
+        return True
 
 
 class IsOwnerOrReadOnly(permissions.BasePermission):

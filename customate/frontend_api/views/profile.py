@@ -1,37 +1,10 @@
-from django.db import transaction
-from django.contrib.auth.models import AnonymousUser
-
-from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny
-from rest_framework.exceptions import MethodNotAllowed, NotFound
 from rest_framework import response
 from rest_framework.views import APIView
-from rest_framework_json_api.views import RelationshipView
-
-from authentication.cognito.serializers import CognitoInviteUserSerializer
-from core.fields import UserRole
-from core import views
-from core.models import User
-
-from frontend_api.models import (
-    Account,
-    SubUserAccount,
-    AdminUserAccount,
-    SubUserPermission,
-    AdminUserPermission
-)
 
 from frontend_api.serializers import (
     ProfileSerializer
 )
-
-from frontend_api.permissions import IsOwnerOrReadOnly
-
-from ..views import (
-    PatchRelatedMixin,
-    RelationshipMixin,
-    RelationshipPostMixin
-)
+from frontend_api.permissions import CheckFieldsCredentials
 
 import logging
 logger = logging.getLogger(__name__)
@@ -46,8 +19,6 @@ class DomainService:
 
     @property
     def service(self):
-        # if not self.__service:
-        #     self.__service = self._service_object()
         return self.__service
 
     @service.setter
@@ -57,8 +28,10 @@ class DomainService:
 
 class ProfileView(DomainService, APIView):
 
-    # permission_classes = (AllowAny,)
+    permission_classes = (CheckFieldsCredentials,)
     _service_object=ProfileService
+
+    credentials_required_fields = ['user.email', 'user.phone_number']
 
     def get(self, request, pk):
         self.service = request.user, None
