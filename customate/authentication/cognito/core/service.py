@@ -12,7 +12,8 @@ logger = logging.getLogger(__name__)
 
 BUSINESS_ACCOUNT = 'business'
 BAD_DATA_EXCEPTION = "The required parameters were not passed through in the data dictionary"
-
+COGNITO_CONFIRMED_STATUS ='CONFIRMED'
+COGNITO_ENABLED_USER_STATUS ='CONFIRMED'
 COGNITO_EXCEPTIONS = {
     'UserNotFoundException': 'Email address does not exist'
 }
@@ -119,8 +120,19 @@ class Identity:
             logger.error(f'general {ex}')
             raise Exception(ex)
 
-    def can_pass_mfa(self, username):
+    @staticmethod
+    def is_confirmed(user):
+        return user and user.get("UserStatus") == COGNITO_CONFIRMED_STATUS
+
+    @staticmethod
+    def is_enabled(user):
+        return user and user.get('Enabled')
+
+    def _can_pass_mfa(self, username):
         cognito_user = self.admin_get_user(username)
+        if not self.is_enabled(cognito_user) or not self.is_confirmed(cognito_user):
+            return True
+
         for attr in cognito_user.get('UserAttributes', {}):
             if attr.get('Name') == 'phone_number_verified':
                 return attr.get('Value') == 'true'
@@ -133,7 +145,7 @@ class Identity:
             auth_parameters['SECRET_HASH'] = secret_hash
 
         if auth_flow in (constants.USER_PASSWORD_FLOW, constants.CUSTOM_FLOW):
-            if auth_flow == constants.USER_PASSWORD_FLOW and not self.can_pass_mfa(username):
+            if auth_flow == constants.USER_PASSWORD_FLOW and not self._can_pass_mfa(username):
                 auth_flow = constants.CUSTOM_FLOW
 
             auth_parameters['USERNAME'] = username
