@@ -32,7 +32,7 @@ class CheckFieldsCredentials(permissions.BasePermission):
     def check_credentials_required(self, request, view):
         data = request.data
         for field in view.credentials_required_fields:
-            if self.check_field_in_request_data(field, data):
+            if self.check_field_in_request_data(request, field, data):
                 return self.validate_credentials(request)
         request.data.pop("credentials", None)
 
@@ -61,14 +61,28 @@ class CheckFieldsCredentials(permissions.BasePermission):
         else:
             raise ValidationError({'/credentials': 'credentials required'})
 
-    @staticmethod
-    def check_field_in_request_data(field, data):
+    def check_field_in_request_data(self, request, field, data):
         item = data
+        entity = self._get_entity(request)
         for key in field.split('.'):
+            entity = self._get_entity_by_key(entity, key)
             item = item.get(key)
-            if not item:
+            if not item or not entity or entity == item:
                 return False
         return True
+
+    @staticmethod
+    def _get_entity(request):
+        # TODO as we need only email and phone_number we may get data directly from user but
+        #  as future improvement we should add service for getting profile from request
+
+        return request
+
+    @staticmethod
+    def _get_entity_by_key(entity, key):
+        return getattr(entity, key) if hasattr(entity, key) else None
+
+
 
 
 class IsOwnerOrReadOnly(permissions.BasePermission):
