@@ -11,7 +11,7 @@ from authentication.cognito.core import helpers
 from authentication.cognito.exceptions import Unauthorized
 from authentication.cognito.middleware import helpers as mid_helpers
 from django.contrib.auth import get_user_model
-from authentication.cognito.core.base import generate_password
+from authentication.cognito.core.base import generate_password, CognitoException
 import logging
 
 from frontend_api.serializers import UserSerializer, AccountSerializer
@@ -329,9 +329,12 @@ class CogrnitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
             status = result.get('ResponseMetadata').get('HTTPStatusCode')
             return status == status_codes.HTTP_200_OK
 
-        except Exception as ex:
+        except CognitoException as ex:
             logger.error(f'general {ex}')
             raise serializers.ValidationError(ex)
+        except Exception as ex:
+            logger.error(f'general {ex}')
+            raise Unauthorized(ex)
 
     def _retrieve_auth_result(self, validated_data, result):
         tokens = result.get('AuthenticationResult')

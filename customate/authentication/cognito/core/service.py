@@ -17,6 +17,12 @@ COGNITO_EXCEPTIONS = {
     'UserNotFoundException': 'Email address does not exist'
 }
 
+COGNITO_OPERATION_EXCEPTIONS = {
+    'ChangePassword': {
+        'Incorrect username or password.': 'Incorrect password.'
+    }
+}
+
 
 class CognitoException(Exception):
     def __init__(self, message, status):
@@ -27,6 +33,9 @@ class CognitoException(Exception):
     @staticmethod
     def create_from_exception(ex):
         msg = COGNITO_EXCEPTIONS.get(ex.response['Error']['Code'], ex.response['Error']['Message'])
+        if hasattr(ex, 'operation_name'):
+            msg = COGNITO_OPERATION_EXCEPTIONS.get(ex.operation_name, {}).get(msg, msg)
+
         return CognitoException(msg, ex.response['ResponseMetadata']['HTTPStatusCode'])
 
     @staticmethod
