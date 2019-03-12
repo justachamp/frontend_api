@@ -12,8 +12,7 @@ logger = logging.getLogger(__name__)
 
 BUSINESS_ACCOUNT = 'business'
 BAD_DATA_EXCEPTION = "The required parameters were not passed through in the data dictionary"
-COGNITO_CONFIRMED_STATUS ='CONFIRMED'
-COGNITO_ENABLED_USER_STATUS ='CONFIRMED'
+COGNITO_CONFIRMED_STATUS = 'CONFIRMED'
 COGNITO_EXCEPTIONS = {
     'UserNotFoundException': 'Email address does not exist'
 }
@@ -144,10 +143,7 @@ class Identity:
         if secret_hash:
             auth_parameters['SECRET_HASH'] = secret_hash
 
-        if auth_flow in (constants.USER_PASSWORD_FLOW, constants.CUSTOM_FLOW):
-            if auth_flow == constants.USER_PASSWORD_FLOW and not self._can_pass_mfa(username):
-                auth_flow = constants.CUSTOM_FLOW
-
+        if auth_flow == constants.USER_PASSWORD_FLOW:
             auth_parameters['USERNAME'] = username
             auth_parameters['PASSWORD'] = password
         elif auth_flow in (constants.REFRESH_TOKEN_AUTH_FLOW, constants.REFRESH_TOKEN_FLOW):

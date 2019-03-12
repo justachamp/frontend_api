@@ -10,8 +10,7 @@ from frontend_api.serializers import (
     CharField,
     UserSerializer,
     UserAddressSerializer,
-    AccountSerializer,
-    FlexFieldsSerializerMixin
+    AccountSerializer
 )
 
 import logging
@@ -77,13 +76,12 @@ class CognitoCredentialSerializer(Serializer):
     refresh_token = CharField(read_only=False, required=False)
 
 
-class ProfileSerializer(DomainService, FlexFieldsSerializerMixin, BaseAuthUserSerializerMixin, Serializer):
+class ProfileSerializer(DomainService, BaseAuthUserSerializerMixin, Serializer):
     _service_object = ProfileValidationService
     id = UUIDField()
     user = SerializerField(resource=UserSerializer)
     address = SerializerField(resource=UserAddressSerializer, required=False)
     account = SerializerField(resource=AccountSerializer, required=False)
-    # credentials = SerializerField(resource=CognitoCredentialSerializer, read_only=True, required=False)
 
     @property
     def additional_key(self):
@@ -123,11 +121,3 @@ class ProfileSerializer(DomainService, FlexFieldsSerializerMixin, BaseAuthUserSe
         update_model(instance.account, validated_data.get('account', {}))
         self.service.verify_profile(instance)
         return instance
-
-    class Meta:
-        additional_fields = {
-            'credentials': {'credentials': {
-                'cls': SerializerField,
-                'kwargs': {'resource': CognitoCredentialSerializer, 'required': False, 'read_only': True}
-            }}
-        }

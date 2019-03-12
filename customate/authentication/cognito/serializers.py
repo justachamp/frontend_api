@@ -315,6 +315,24 @@ class CogrnitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
             
             raise Unauthorized(ex)
 
+    def check_password(self, validated_data):
+        try:
+            validated_data['username'] = validated_data['preferred_username']
+            password = validated_data['password']
+            data = {
+                "previous": password,
+                "proposed": password,
+                "access_token": self.context.get('request').META.get('HTTP_ACCESSTOKEN')
+            }
+
+            result = helpers.change_password(data)
+            status = result.get('ResponseMetadata').get('HTTPStatusCode')
+            return status == status_codes.HTTP_200_OK
+
+        except Exception as ex:
+            logger.error(f'general {ex}')
+            raise serializers.ValidationError(ex)
+
     def _retrieve_auth_result(self, validated_data, result):
         tokens = result.get('AuthenticationResult')
         validated_data['id_token'] = tokens.get('IdToken')

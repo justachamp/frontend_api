@@ -42,21 +42,13 @@ class CheckFieldsCredentials(permissions.BasePermission):
     @staticmethod
     def validate_credentials(request):
 
-        serializer = CogrnitoAuthRetrieveSerializer(data=request.data.get('credentials'))
+        serializer = CogrnitoAuthRetrieveSerializer(data=request.data.get('credentials'), context={'request': request})
         if serializer.is_valid():
             valdated_data = serializer.validated_data
             if request.user.username != valdated_data.get('preferred_username'):
                 raise ValidationError({'/credentials': 'wrong credentials'})
 
-            valdated_data['custom_flow'] = True
-            entity = serializer.retrieve(serializer.validated_data)
-            request.data['credentials'] = {
-                'id_token': entity.id_token,
-                'access_token': entity.access_token,
-                'refresh_token': entity.refresh_token
-            }
-
-            return True
+            return serializer.check_password(serializer.validated_data)
 
         else:
             raise ValidationError({'/credentials': 'credentials required'})
