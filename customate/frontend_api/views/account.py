@@ -225,6 +225,10 @@ class AdminUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.Mo
     serializer_class = AdminUserAccountSerializer
     permission_classes = (AllowAny,)
 
+    ordering_fields = ('user__email', 'user__username', 'user__status', 'user__first_name',
+                       'user__last_name', 'user_middle_name', 'user__phone_number',
+                       'user__title', 'user__gender',)
+
     filter_backends = (filters.QueryParameterValidationFilter, filters.OrderingFilter,
                       django_filters.DjangoFilterBackend, SearchFilter)
     filterset_fields = {
