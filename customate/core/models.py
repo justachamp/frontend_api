@@ -14,14 +14,14 @@ USER_MIN_AGE = 18
 
 
 class Address(Model):
-    address = models.CharField(max_length=250)
+    address = models.CharField(max_length=250, blank=True)
     country = EnumField(Country, max_length=2, blank=True, null=True)
-    address_line_1 = models.CharField(max_length=200)
+    address_line_1 = models.CharField(max_length=200, blank=True)
     address_line_2 = models.CharField(max_length=200, blank=True)
     address_line_3 = models.CharField(max_length=200, blank=True)
-    city = models.CharField(max_length=50)
-    locality = models.CharField(max_length=50)
-    postcode = models.CharField(max_length=20)
+    city = models.CharField(max_length=50, blank=True)
+    locality = models.CharField(max_length=50, blank=True)
+    postcode = models.CharField(max_length=20, blank=True)
 
     def __str__(self):
         return "%s the address" % self.address
