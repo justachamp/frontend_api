@@ -196,8 +196,13 @@ class UserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.ModelVi
     serializer_class = UserAccountSerializer
     permission_classes = (AllowAny,)
 
+    ordering_fields = ('user__email', 'user__username', 'user__status', 'user__first_name',
+                       'user__last_name', 'user_middle_name', 'user__phone_number',
+                       'user__title', 'user__gender', )
+
     filter_backends = (filters.QueryParameterValidationFilter, filters.OrderingFilter,
                       django_filters.DjangoFilterBackend, SearchFilter)
+
     filterset_fields = {
         'user__status': ('exact', 'in'),
         'user__email': ('icontains', 'contains', 'iexact', 'exact'),
@@ -305,6 +310,10 @@ class SubUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.Mode
             return self.queryset.filter(owner_account__user__id=self.request.user.id)
         else:
             return super().get_queryset(*args, **kwargs)
+
+    ordering_fields = ('user__email', 'user__username', 'user__status', 'user__first_name',
+                       'user__last_name', 'user_middle_name', 'user__phone_number', 'user__title',
+                       'user__gender', )
 
     filter_backends = (filters.QueryParameterValidationFilter, filters.OrderingFilter,
                        django_filters.DjangoFilterBackend, SearchFilter)
