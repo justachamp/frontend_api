@@ -36,7 +36,9 @@ class ProfileView(DomainService, APIView):
     def get(self, request, pk):
         self.service = request.user, None
         profile = self.service.profile
-        serializer = ProfileSerializer(profile, context={'request': request, 'profile': profile})
+        serializer = ProfileSerializer(
+            profile,
+            context={'request': request, 'profile': profile, 'additional_keys': {'account': ['permission']}})
         return response.Response(serializer.data)
 
     def patch(self, request, pk):
@@ -47,7 +49,7 @@ class ProfileView(DomainService, APIView):
         serializer = ProfileSerializer(
             instance=self.service.profile,
             data=request.data,
-            context={'request': request, 'profile': profile})
+            context={'request': request, 'profile': profile, 'additional_keys': {'account': ['permission']}})
 
         serializer.is_valid(True)
         serializer.save()

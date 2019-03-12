@@ -102,8 +102,7 @@ class AccountFlexFieldsSerializerMixin(FlexFieldsSerializerMixin):
     def apply_context_additional_keys(self, keys):
         additional_keys = self.context.get('additional_keys', {}).get('account', [])
         if 'permission' in additional_keys:
-            user = self.instance.user
-            keys.append(user.role.value)
+            keys.append(self.service.get_user_role())
 
 
 class SubUserAccountSerializer(AccountFlexFieldsSerializerMixin, HyperlinkedModelSerializer):
