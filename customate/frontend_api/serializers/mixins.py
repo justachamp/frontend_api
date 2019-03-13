@@ -7,6 +7,9 @@ class FlexFieldsSerializerMixin(object):
         for key in self.__extract_additional_key():
             self.__attach_fields(key)
 
+        # self._writable_fields
+        # del self._writable_fields
+
     def __attach_fields(self, key):
         if hasattr(self.Meta, 'additional_fields') and key in self.Meta.additional_fields:
             for key, value in self.Meta.additional_fields[key].items():

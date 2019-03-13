@@ -68,7 +68,9 @@ class Account(PolymorphicModel, Model):
     @property
     def gbg(self):
         data = self.data
-        gbg = data.get('gbg', {'version': 1})
+        gbg = data.get('gbg', None)
+        if not gbg:
+            gbg = data['gbg'] = {}
         return gbg
 
     @gbg.setter
