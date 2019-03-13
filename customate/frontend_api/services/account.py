@@ -116,13 +116,8 @@ class ProfileValidationService:
 
     def validate_phone_number(self, data):
         phone_number = data.get('user').get('phone_number')
-        current_number = self.profile.user.phone_number
-        country_code = self.profile.user.phone_number.country_code if current_number else None
-        account_verified = self.profile.account.is_verified
         if phone_number:
             self.profile.user.phone_number = phone_number
-            if country_code and country_code != self.profile.user.phone_number.country_code and account_verified:
-                self.errors = ('user', {'phone_number': 'Phone number should have the same country code'})
 
             if self.phone_country not in self.available_countries:
                 self.errors = ('address', {'phone_number': 'Unsupported country code'})
