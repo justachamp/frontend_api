@@ -85,7 +85,6 @@ class User(AbstractUser, Model):
 
     @property
     def is_verified(self):
-        return True
         contact_verified = self.email_verified and self.phone_number_verified
         return contact_verified and self.age_verified
 
