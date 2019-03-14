@@ -174,7 +174,7 @@ class AdminUserAccount(Account):
             ('manage_admin_user', 'Manage admins'),
             ('manage_tax', 'Manage tax'),
             ('manage_fee', 'Manage fee'),
-            ('login_as_user', 'Login as user')
+            ('can_login_as_user', 'Login as user')
         )
 
     def __str__(self):
