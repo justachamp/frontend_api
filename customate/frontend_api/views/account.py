@@ -168,7 +168,8 @@ class AccountViewSet(RelationshipMixin, PatchRelatedMixin, views.ModelViewSet):
             user.save()
             invitation.pk = user.id
 
-            return response.Response(status=status.HTTP_204_NO_CONTENT)
+            return response.Response(
+                CognitoInviteUserSerializer(instance=invitation, context={'request': request}).data)
 
     @action(methods=['POST'], detail=True, name='Invite sub user')
     @transaction.atomic
@@ -183,8 +184,11 @@ class AccountViewSet(RelationshipMixin, PatchRelatedMixin, views.ModelViewSet):
 
         serializer = BaseUserResendInviteSerializer(data=data, context={'request': request})
         if serializer.is_valid(True):
-            CognitoInviteUserSerializer.invite(data)
-            return response.Response(status=status.HTTP_204_NO_CONTENT)
+            invitation = CognitoInviteUserSerializer.invite(data)
+
+            return response.Response(
+                CognitoInviteUserSerializer(instance=invitation, context={'request': request}).data
+            )
 
 
 class UserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.ModelViewSet):
@@ -264,17 +268,12 @@ class AdminUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.Mo
 
         return serializer
 
-
-    @staticmethod
-    def _initiate_admin(data):
-        return User.objects.filter(role=UserRole.admin).count() == 0 and data.get('initiate', False)
-
     @action(methods=['POST'], detail=False, name='Invite admin')
     @transaction.atomic()
     def invite(self, request):
         user = request.user
         request_data = request.data
-        if (type(user) is not AnonymousUser and user.is_admin) or self._initiate_admin(request_data):
+        if type(user) is AnonymousUser or not user.is_admin:
             raise MethodNotAllowed('invite')
 
         username = request_data.get('username').lower()
@@ -296,7 +295,8 @@ class AdminUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.Mo
             user.save()
             invitation.pk = user.id
 
-            return response.Response(status=status.HTTP_204_NO_CONTENT)
+            return response.Response(
+                CognitoInviteUserSerializer(instance=invitation, context={'request': request}).data)
 
 
 class SubUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.ModelViewSet):
