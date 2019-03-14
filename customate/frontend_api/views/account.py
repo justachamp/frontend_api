@@ -168,7 +168,7 @@ class AccountViewSet(RelationshipMixin, PatchRelatedMixin, views.ModelViewSet):
             user.save()
             invitation.pk = user.id
 
-            return response.Response(status=status.HTTP_201_CREATED)
+            return response.Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(methods=['POST'], detail=True, name='Invite sub user')
     @transaction.atomic
@@ -296,7 +296,7 @@ class AdminUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.Mo
             user.save()
             invitation.pk = user.id
 
-            return response.Response(status=status.HTTP_201_CREATED)
+            return response.Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class SubUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.ModelViewSet):
