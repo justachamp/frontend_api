@@ -370,7 +370,7 @@ class CogrnitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
 class CognitoInviteUserSerializer(serializers.Serializer, BaseAuthValidationMixin, UserServiceMixin):
     username = serializers.EmailField(required=True, source='preferred_username', write_only=True)
     user_attributes = ListField(child=CognitoAttributeFiled(required=True), required=True)
-    temporary_password = serializers.CharField(max_length=50, required=False)
+    # temporary_password = serializers.CharField(max_length=50, required=False)
     action = serializers.ChoiceField(choices=('RESEND', 'SUPPRESS'), required=False)
     delivery = ListField(child=serializers.ChoiceField(choices=('SMS', 'EMAIL'), required=True), required=False)
 

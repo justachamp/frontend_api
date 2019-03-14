@@ -15,7 +15,7 @@ class Identity(Entity):
 
 
 class Invitation(Entity):
-    fields = ('id', 'username', 'action', 'delivery', 'user_attributes')
+    fields = ('id', 'username', 'temporary_password', 'action', 'delivery', 'user_attributes')
 
 
 class Challenge(Entity):
