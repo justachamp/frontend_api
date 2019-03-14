@@ -59,7 +59,7 @@ ACCOUNT_ADDITIONAL_FIELDS = {
             'kwargs': {'source': 'country_fields.id_card_number', 'default': None, 'allow_blank': True}
         }
     },
-    'SP': {'tax_id': {
+    'ES': {'tax_id': {
             'cls': CharField,
             'kwargs': {'source': 'country_fields.tax_id', 'default': None, 'allow_blank': True}
         }
