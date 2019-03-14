@@ -3,6 +3,7 @@ from django.contrib.auth.models import AnonymousUser
 
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
+from rest_framework import status
 from rest_framework.exceptions import MethodNotAllowed, NotFound
 from rest_framework import response
 from rest_framework_json_api.views import RelationshipView
@@ -167,8 +168,7 @@ class AccountViewSet(RelationshipMixin, PatchRelatedMixin, views.ModelViewSet):
             user.save()
             invitation.pk = user.id
 
-            return response.Response(
-                CognitoInviteUserSerializer(instance=invitation, context={'request': request}).data)
+            return response.Response(status=status.HTTP_201_CREATED)
 
     @action(methods=['POST'], detail=True, name='Invite sub user')
     @transaction.atomic
@@ -183,11 +183,8 @@ class AccountViewSet(RelationshipMixin, PatchRelatedMixin, views.ModelViewSet):
 
         serializer = BaseUserResendInviteSerializer(data=data, context={'request': request})
         if serializer.is_valid(True):
-            invitation = CognitoInviteUserSerializer.invite(data)
-
-            return response.Response(
-                CognitoInviteUserSerializer(instance=invitation, context={'request': request}).data
-            )
+            CognitoInviteUserSerializer.invite(data)
+            return response.Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class UserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.ModelViewSet):
@@ -299,8 +296,7 @@ class AdminUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.Mo
             user.save()
             invitation.pk = user.id
 
-            return response.Response(
-                CognitoInviteUserSerializer(instance=invitation, context={'request': request}).data)
+            return response.Response(status=status.HTTP_201_CREATED)
 
 
 class SubUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.ModelViewSet):
