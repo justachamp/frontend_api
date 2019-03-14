@@ -171,6 +171,9 @@ class ProfileValidationService:
                 return None
 
             user = instance.user
+
+            if user.is_admin:
+                return None
             """
             a phone number should be verified before a user is allowed to pass KYC.
             """
