@@ -305,9 +305,22 @@ class SubUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.Mode
     serializer_class = SubUserAccountSerializer
     permission_classes = (IsOwnerOrReadOnly,)
 
+    # TODO move to service
+    def get_owner_account(self):
+        user = self.request.user
+        account = None
+        if type(user) is not AnonymousUser:
+            return user.account if not user.is_subuser else user.account.owner_account
+        return account
+
+    # TODO move to service
+    def get_owner_id(self):
+        owner_account = self.get_owner_account()
+        return owner_account.user.id if owner_account else None
+    
     def get_queryset(self, *args, **kwargs):
         if self.action == 'list':
-            return self.queryset.filter(owner_account__user__id=self.request.user.id)
+            return self.queryset.filter(owner_account__user__id=self.get_owner_id())
         else:
             return super().get_queryset(*args, **kwargs)
 
