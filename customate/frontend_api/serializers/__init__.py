@@ -4,16 +4,16 @@ from rest_framework.validators import UniqueValidator
 
 from rest_framework_json_api.serializers import CharField, PolymorphicModelSerializer, UUIDField
 
-from .mixins import FlexFieldsSerializerMixin
-from .fields import ChoiceField, EnumField, ResourceRelatedField, PolymorphicResourceRelatedField
-from .permission import SubUserPermissionSerializer, AdminUserPermissionSerializer
-from .account import AccountSerializer, UserAccountSerializer, SubUserAccountSerializer, AdminUserAccountSerializer
-from .user import UserSerializer, SubUserSerializer, AdminUserSerializer, UserStatusSerializer, BaseUserResendInviteSerializer
-from .company import CompanySerializer
-from .address import AddressSerializer, UserAddressSerializer, CompanyAddressSerializer
+from frontend_api.serializers.mixins import FlexFieldsSerializerMixin
+from frontend_api.serializers.fields import ChoiceField, EnumField, ResourceRelatedField, PolymorphicResourceRelatedField
+from frontend_api.serializers.permission import SubUserPermissionSerializer, AdminUserPermissionSerializer
+from frontend_api.serializers.account import AccountSerializer, UserAccountSerializer, SubUserAccountSerializer, AdminUserAccountSerializer
+from frontend_api.serializers.user import UserSerializer, SubUserSerializer, AdminUserSerializer, UserStatusSerializer, BaseUserResendInviteSerializer
+from frontend_api.serializers.company import CompanySerializer
+from frontend_api.serializers.address import AddressSerializer, UserAddressSerializer, CompanyAddressSerializer
 
-from .shareholder import ShareholderSerializer
-from .profile import ProfileSerializer
+from frontend_api.serializers.shareholder import ShareholderSerializer
+from frontend_api.serializers.profile import ProfileSerializer
 
 
 __all__ = [
