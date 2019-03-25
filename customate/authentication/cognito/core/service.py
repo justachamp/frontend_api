@@ -1,6 +1,7 @@
 from django.conf import settings
 import boto3
 from botocore.exceptions import ParamValidationError
+from rest_framework.exceptions import status
 from authentication.cognito.core import constants
 from authentication.cognito import utils
 from core.services.user import UserService
@@ -40,21 +41,10 @@ class CognitoException(Exception):
 
     @staticmethod
     def create_from_boto_exception(ex):
+        msg = ex.kwargs.get('report') if hasattr(ex, 'kwargs') and type(ex.kwargs) is dict else None
+        if msg:
+            return CognitoException(msg, status.HTTP_400_BAD_REQUEST)
         raise ex
-
-        # for message in response.data:
-        #     errors.append({
-        #         'detail': message,
-        #         'source': {
-        #             'pointer': '/data',
-        #         },
-        #         'status': encoding.force_text(response.status_code),
-        #     })
-
-
-        # return Exception({'password': 'test', 'username': 'some'})
-
-        # return exceptions.APIException(ex)
 
 
 class Identity:
