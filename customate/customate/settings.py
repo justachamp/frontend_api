@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'address.gbg.apps.GbgConfig',
     'address.loqate.apps.LoqateConfig',
     'frontend_api.apps.FrontendApiConfig',
+    'payment_api.apps.PaymentApiConfig',
     'storages',
     'guardian',
     'django_filters'
@@ -237,6 +238,30 @@ REST_FRAMEWORK = {
     ),
     'TEST_REQUEST_DEFAULT_FORMAT': 'vnd.api+json'
 }
+
+
+REST_PROXY = {
+    'HOST': 'https://dev-api.gocustomate.com',
+    'AUTH': {
+        'user': None,
+        'password': None,
+        'token': None,
+    },
+    'TIMEOUT': None,
+    'DEFAULT_HTTP_ACCEPT': 'application/vnd.api+json',
+    'DEFAULT_HTTP_ACCEPT_LANGUAGE': 'en-US,en;q=0.8',
+    'DEFAULT_CONTENT_TYPE': 'application/vnd.api+json',
+
+    # Return response as-is if enabled
+    'RETURN_RAW': False,
+
+    # Used to translate Accept HTTP field
+    'ACCEPT_MAPS': {
+        'text/html': 'application/vnd.api+json',
+    },
+
+}
+
 
 ROOT_URLCONF = 'customate.urls'
 
