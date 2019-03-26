@@ -9,6 +9,7 @@ from rest_framework_json_api.views import viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from rest_framework import response
+from rest_framework.status import HTTP_204_NO_CONTENT
 
 # import the logging library
 import logging
@@ -52,7 +53,7 @@ class AuthView(viewsets.ViewSet):
         serializer = CogrnitoSignOutSerializer(data=request.data, )
         if serializer.is_valid(True):
             serializer.sign_out(serializer.validated_data)
-            return response.Response(serializer.data)
+            return response.Response(status=HTTP_204_NO_CONTENT)
 
     @action(methods=['POST'], detail=False, name='Refresh')
     def refresh(self, request):
