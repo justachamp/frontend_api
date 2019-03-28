@@ -21,7 +21,7 @@ from .permission import (
     AdminUserPermissionRelationshipView
 )
 from .shareholder import ShareholderRelationshipView, ShareholderViewSet
-from .user import AdminUserViewSet, UserViewSet
+from .user import AdminUserViewSet, UserViewSet, UserRelationshipView
 from .profile import ProfileView
 
 __all__ = [
@@ -49,6 +49,7 @@ __all__ = [
     AdminUserViewSet,
     UserViewSet,
     DatasetView,
+    UserRelationshipView,
     CompanyRelationshipView,
     CompanyViewSet,
     ProfileView

@@ -25,6 +25,10 @@ urlpatterns = [
             views.UserViewSet.as_view({'get': 'retrieve_related', 'patch': 'patch_related'}),
             name='user-related'),
 
+    re_path(r'^users/(?P<pk>[^/.]+)/relationships/(?P<related_field>[^/.]+)$',
+        view=views.UserRelationshipView.as_view(),
+        name='user-relationships'
+    ),
     re_path(r'^companies/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
             views.CompanyViewSet.as_view({'get': 'retrieve_related', 'patch': 'patch_related'}),
             name='company-related'),
