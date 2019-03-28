@@ -69,22 +69,6 @@ class CognitoUser(CognitoClient):
         user.save()
         return cognito_user
 
-    def confirm_sign_up(self, username, confirmation_code, force_alias_creation):
-
-        secret_hash = utils.get_cognito_secret_hash(username)
-
-        params = {
-            'ClientId': constants.CLIENT_ID,
-            'Username': username,
-            'ForceAliasCreation': False, # force_alias_creation,
-            'ConfirmationCode': confirmation_code
-        }
-
-        if secret_hash:
-            params['SecretHash'] = secret_hash
-
-        return CognitoClient.client.confirm_sign_up(**params)
-
     def initiate_auth(self, auth_flow, auth_parameters):
         secret_hash = utils.get_cognito_secret_hash(auth_parameters.get('USERNAME'))
         if secret_hash:
