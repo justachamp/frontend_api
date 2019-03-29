@@ -25,10 +25,12 @@ urlpatterns = [
             views.UserViewSet.as_view({'get': 'retrieve_related', 'patch': 'patch_related'}),
             name='user-related'),
 
+    # TODO: need remove
     re_path(r'^users/(?P<pk>[^/.]+)/relationships/(?P<related_field>[^/.]+)$',
         view=views.UserRelationshipView.as_view(),
         name='user-relationships'
     ),
+
     re_path(r'^companies/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
             views.CompanyViewSet.as_view({'get': 'retrieve_related', 'patch': 'patch_related'}),
             name='company-related'),
@@ -37,16 +39,20 @@ urlpatterns = [
             view=views.CompanyRelationshipView.as_view(),
             name='company-relationships'
             ),
+
+    # TODO: need remove
     re_path(r'^accounts/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
             views.AccountViewSet.as_view({'get': 'retrieve_related', 'patch': 'patch_related'}),
             name='account-related'),
 
+    # TODO: need remove
     re_path(r'^accounts/(?P<pk>[^/.]+)/relationships/(?P<related_field>[^/.]+)$',
             view=views.AccountRelationshipView.as_view(),
             name='account-relationships'
             ),
 
-url(r'^accounts/(?P<pk>[^/.]+)/$',
+    # TODO: need remove
+    url(r'^accounts/(?P<pk>[^/.]+)/$',
         views.AccountViewSet.as_view({'get': 'retrieve'}),
         name='useraccount-detail'),
 
