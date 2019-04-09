@@ -38,7 +38,7 @@ from authentication import views as auth_views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path(r'api/v1/', include('frontend_api.urls')),
-    path(r'api/v1/', include('payment_api.urls')),
+    # path(r'api/v1/', include('payment_api.urls')),
     path(r'', include('authentication.urls')),
     # path(r'api/v1/', include(router.urls)),
     # path('snippets/<uuid:pk>/highlight/', views.SnippetHighlight.as_view()),

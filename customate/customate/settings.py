@@ -48,7 +48,7 @@ INSTALLED_APPS = [
     'address.gbg.apps.GbgConfig',
     'address.loqate.apps.LoqateConfig',
     'frontend_api.apps.FrontendApiConfig',
-    'payment_api.apps.PaymentApiConfig',
+    # 'payment_api.apps.PaymentApiConfig',
     'storages',
     'guardian',
     'django_filters'
