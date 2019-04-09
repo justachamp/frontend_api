@@ -86,13 +86,6 @@ def respond_to_auth_challenge(username, challenge_name, responses, session=None)
 #         raise CognitoException.create_from_exception(ex)
 
 
-# def confirm_sign_up(username, confirmation_code, force_alias_creation=False):
-#     try:
-#         return CognitoUser().confirm_sign_up(username, confirmation_code, force_alias_creation)
-#     except constants.AWS_EXCEPTIONS as ex:
-#         raise CognitoException.create_from_exception(ex)
-
-
 # def forgot_password(username):
 #     secret_hash = utils.get_cognito_secret_hash(username)
 #
@@ -130,12 +123,6 @@ def admin_disable_user(username):
 
 def admin_delete_user(username):
     result = CognitoClient.client.admin_delete_user(UserPoolId=constants.POOL_ID, Username=username)
-
-    return result
-
-
-def admin_confirm_sign_up(username):
-    result = CognitoClient.client.admin_confirm_sign_up(UserPoolId=constants.POOL_ID, Username=username)
 
     return result
 

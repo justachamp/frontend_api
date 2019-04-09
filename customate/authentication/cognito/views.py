@@ -1,7 +1,7 @@
 from authentication.cognito.serializers import CognitoAuthSerializer, CogrnitoAuthRetrieveSerializer, \
     CogrnitoSignOutSerializer, CognitoAuthForgotPasswordSerializer, CognitoAuthPasswordRestoreSerializer,\
     CognitoAuthVerificationSerializer, CognitoAuthAttributeVerifySerializer, CognitoAuthChallengeSerializer, \
-    CognitoConfirmSignUpSerializer, CognitoAuthChangePasswordSerializer
+    CognitoAuthChangePasswordSerializer
 
 from authentication.cognito.models import Challenge
 from rest_framework_json_api.views import viewsets
@@ -62,13 +62,6 @@ class AuthView(viewsets.ViewSet):
             entity = serializer.retrieve(serializer.validated_data)
             context = {'request': request, 'additional_keys': {'account': ['permission']}}
             return response.Response(CogrnitoAuthRetrieveSerializer(instance=entity, context=context).data)
-
-    @action(methods=['POST'], detail=False, name='Confirm Email')
-    def confirm_sign_up(self, request):
-        serializer = CognitoConfirmSignUpSerializer(data=request.data)
-        if serializer.is_valid(True):
-            serializer.verify(serializer.validated_data)
-            return response.Response(serializer.data)
 
     @action(methods=['POST'], detail=False, name='Sign up', resource_name='identity')
     def sign_up(self, request):

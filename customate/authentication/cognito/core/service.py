@@ -95,29 +95,6 @@ class Identity:
             logger.error(f'general {ex}')
             raise Exception(ex)
 
-    def confirm_sign_up(self, username, confirmation_code):
-        try:
-            secret_hash = utils.get_cognito_secret_hash(username)
-
-            params = {
-                'ClientId': constants.CLIENT_ID,
-                'Username': username,
-                'ForceAliasCreation': False,
-                'ConfirmationCode': confirmation_code
-            }
-
-            if secret_hash:
-                params['SecretHash'] = secret_hash
-
-            return self.client.confirm_sign_up(**params)
-        except constants.AWS_EXCEPTIONS as ex:
-            logger.error(f'AWS_EXCEPTIONS {ex}')
-            raise CognitoException.create_from_exception(ex)
-
-        except Exception as ex:
-            logger.error(f'general {ex}')
-            raise Exception(ex)
-
     @staticmethod
     def is_confirmed(user):
         return user and user.get("UserStatus") == COGNITO_CONFIRMED_STATUS
@@ -435,9 +412,6 @@ class Identity:
         pass
 
     def admin_delete_user(self):
-        pass
-
-    def admin_confirm_sign_up(self):
         pass
 
     def admin_update_user_attributes(self, username, user_attributes):

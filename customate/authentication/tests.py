@@ -3,7 +3,7 @@ from django.test import TestCase
 # Create your tests here.
 from unittest import TestCase
 
-from authentication.cognito.core.actions import admin_disable_user, admin_delete_user, admin_confirm_sign_up, \
+from authentication.cognito.core.actions import admin_disable_user, admin_delete_user, \
     admin_update_user_attributes
 from authentication.cognito.core.helpers import initiate_auth, sign_up, forgot_password
 
@@ -30,8 +30,6 @@ class LoginTestCase(TestCase):
                                         {"Name": "email", "Value": "testuser@test.com"}]}
 
             result = sign_up(data)
-
-            result = admin_confirm_sign_up("testuser@test.com")
 
             result = admin_update_user_attributes(self.username, [{"Name": "email_verified", "Value": "true"}])
         except Exception as ex:
