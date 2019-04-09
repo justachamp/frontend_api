@@ -33,6 +33,7 @@ class ResourceSerializer(Serializer):
         return self.view.client if view else None
 
     def copy_resource_to_meta(self):
+        # @TODO It copies wrong(parent) resource from view for included/related serializers
         view = self.view
         if view:
             external_resource = view.Meta.external_resource_name if hasattr(view, 'Meta') else None
@@ -78,6 +79,9 @@ class ResourceSerializer(Serializer):
         Object instance -> Dict of primitive datatypes.
         """
         return super().to_representation(instance)
+
+    class Meta(ResourceMeta):
+        pass
 
 
 

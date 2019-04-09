@@ -1,12 +1,10 @@
 from rest_framework_json_api import serializers
 from payment_api.core.resource.fields import ExternalResourceRelatedField
 from payment_api.core.resource.serializers import ResourceMeta, ResourceSerializer
-from payment_api.core.resource.models import DummyResourceModel
-
 
 
 class WalletSerializer(ResourceSerializer):
-    resource_name = 'wallets'
+    # resource_name = 'wallets'
 
     active = serializers.IntegerField(required=True)
 
@@ -42,9 +40,8 @@ class WalletSerializer(ResourceSerializer):
         resource_name = 'wallets'
 
 
-
 class PaymentAccountSerializer(ResourceSerializer):
-    resource_name = 'payment_accounts'
+    # resource_name = 'payment_accounts'
 
     included_serializers = {
         'wallets': 'payment_api.serializers.WalletSerializer'

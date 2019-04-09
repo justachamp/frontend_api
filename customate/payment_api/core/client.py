@@ -61,15 +61,6 @@ class Client(ResourceMappingMixin):
     def request_kwargs(self, request_kwargs):
         self.client._request_kwargs = request_kwargs
 
-
-    @property
-    def resource_mapping(self):
-        return self._resource_mapping
-
-    @resource_mapping.setter
-    def resource_mapping(self, resource_mapping):
-        self._resource_mapping.append(resource_mapping)
-
     def _apply_resource_attributes(self, instance, attributes):
         for key, value in attributes.items():
             setattr(instance, key, value)
