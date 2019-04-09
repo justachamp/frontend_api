@@ -8,15 +8,6 @@ from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from rest_framework import response
 from rest_framework_json_api.views import viewsets
-from payment_api.core.resource.filters import InclusionFiler, IbanGeneralPartFiler
-from payment_api.serializers import PaymentAccountSerializer, WalletSerializer
-
-from rest_framework_json_api import filters
-from rest_framework.filters import SearchFilter
-
-
-from rest_framework_json_api.views import RelationshipView
-from payment_api.core.resource.views import ResourceViewSet
 
 
 class ItemListProxy(ProxyView):
@@ -66,56 +57,3 @@ class SignUpProxy(viewsets.ViewSet):
     def get_queryset(self):
         client = Client()
         return client.get(self.resource)
-
-
-class PaymentAccountViewSet(ResourceViewSet):
-    resource_name = 'payment_accounts'
-    serializer_class = PaymentAccountSerializer
-    permission_classes = (AllowAny,)
-
-    def prepare_request_params(self):
-        param = self.request.query_params.get('ibanGeneralPart')
-        iban = param.strip() if param else None
-        if iban:
-            self.client.request_kwargs = {'params': {'ibanGeneralPart': iban}}
-
-    def perform_create(self, *args, **kwargs):
-        self.prepare_request_params()
-        return super().perform_create(*args, **kwargs)
-
-    class Meta:
-        external_resource_name = 'accounts'
-
-    # ordering_fields = ('email',)
-    #
-    filter_backends = (
-        IbanGeneralPartFiler,
-        # filters.QueryParameterValidationFilter,
-        filters.OrderingFilter,
-        InclusionFiler,
-        # ResourceFilterBackend,
-        SearchFilter
-    )
-    #
-    # filterset_fields = {
-    #     'active': ('exact',),
-    #     'email': ('icontains', 'contains', 'iexact', 'exact')
-    # }
-    # search_fields = ('email',)
-
-
-class PaymentAccountRelationshipView(RelationshipView):
-    # queryset = Address.objects
-    pass
-
-
-class WalletRelationshipView(RelationshipView):
-    # queryset = Address.objects
-    pass
-
-
-class WalletViewSet(ResourceViewSet):
-    resource_name = 'wallets'
-    serializer_class = WalletSerializer
-    permission_classes = (AllowAny,)
-    # ordering_fields = ('iban',)

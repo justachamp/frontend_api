@@ -1,14 +1,15 @@
 from django.utils.functional import cached_property
+from django.conf import settings
 
 from payment_api.core.client import Client
 from rest_framework_json_api.views import ModelViewSet
 from payment_api.core.resource.models import ResourceQueryset
-PAYMENT_API_URL = 'http://local-dev-app.customate.net:8081/'
+
 
 
 class ResourceViewSet(ModelViewSet):
     resource_name = None
-    base_url = PAYMENT_API_URL
+    base_url = settings.PAYMENT_API_URL
 
     @cached_property
     def client(self):

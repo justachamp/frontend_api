@@ -7,11 +7,6 @@ from payment_api.core.resource.mixins import ResourceMappingMixin
 
 logger = logging.getLogger(__name__)
 
-models_as_jsonschema = {
-    'identity': {'properties': {
-    }}
-}
-
 
 class Session(DefaultSession):
     def _get_sync(self, resource_type: str,
@@ -51,7 +46,7 @@ class Client(ResourceMappingMixin):
 
     @cached_property
     def client(self):
-        return Session(self._base_url, schema=models_as_jsonschema)
+        return Session(self._base_url)
 
     @property
     def request_kwargs(self):

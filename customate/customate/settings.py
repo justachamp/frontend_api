@@ -376,6 +376,8 @@ STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
 COUNTRIES_AVAILABLE = os.environ.get('COUNTRIES_AVAILABLE', '').split(',')
 
+PAYMENT_API_URL = os.environ.get('PAYMENT_API_URL', None)
+
 
 
 

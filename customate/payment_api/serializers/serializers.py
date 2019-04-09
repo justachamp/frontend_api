@@ -4,8 +4,6 @@ from payment_api.core.resource.serializers import ResourceMeta, ResourceSerializ
 
 
 class WalletSerializer(ResourceSerializer):
-    # resource_name = 'wallets'
-
     active = serializers.IntegerField(required=True)
 
     # "creationDate": 1550226586533,
@@ -41,7 +39,6 @@ class WalletSerializer(ResourceSerializer):
 
 
 class PaymentAccountSerializer(ResourceSerializer):
-    # resource_name = 'payment_accounts'
 
     included_serializers = {
         'wallets': 'payment_api.serializers.WalletSerializer'
