@@ -77,6 +77,8 @@
     For sync static files need execute:
     python3.7 manage.py collectstatic
 
+
+
 ## Git workflow
 
 ###  Branch    
