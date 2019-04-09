@@ -1,4 +1,6 @@
 from django.utils.functional import cached_property
+from rest_framework.fields import UUIDField, EmailField, IntegerField
+from rest_framework.relations import ManyRelatedField
 from rest_framework_json_api.serializers import Serializer
 from payment_api.core.resource.models import ExternalResourceModel
 from payment_api.core.resource.fields import ExternalResourceRelatedField
@@ -52,9 +54,8 @@ class ResourceSerializer(Serializer):
 
     def create(self, validated_data):
         raise_errors_on_nested_writes('create', self, validated_data)
-        self.client.add_model_schema()
 
-        self.client.add_model_schema(self.external_resource_name, self.resource_properties)
+        self.client.add_model_schema(self.Meta.model.resource, self.resource_properties)
         instance = self.client.create(self.Meta.model.resource, validated_data)
         return self.client.apply_mapping(instance)
 
@@ -62,8 +63,15 @@ class ResourceSerializer(Serializer):
     def resource_properties(self):
         properties = {}
 
-        for field in self.fields:
-            properties[field.source] = 'string'
+        for name, field in self.fields.items():
+            if isinstance(field, ManyRelatedField):
+                properties[field.source] = {'relation': 'to-many', 'resource': [field.source]}
+            elif isinstance(field, UUIDField):
+                properties[field.source] = {'type': ['null', 'string']}
+            elif isinstance(field, IntegerField):
+                properties[field.source] = {'type': 'number'}
+            else:
+                properties[field.source] = {'type': 'string'}
 
         return properties
 

@@ -74,7 +74,6 @@ class Client(ResourceMappingMixin):
         return instance
 
     def create(self, resource_name, attributes):
-        self._generate_resource_schema(resource_name)
         instance = self.client.create_and_commit(resource_name, attributes)
         logger.error(instance)
         return instance
@@ -82,8 +81,4 @@ class Client(ResourceMappingMixin):
     def add_model_schema(self, resource_name, properties):
         self.client.schema.add_model_schema({resource_name: {'properties': properties}})
 
-    # def _generate_resource_schema(self, resource_name):
-    #     self.client.schema.add_model_schema({resource_name: {'properties': {
-    #         'wallets': {'relation': 'to-many', 'resource': ['wallets']},
-    #     }}})
 

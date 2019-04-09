@@ -18,7 +18,8 @@ class ResourceViewSet(ModelViewSet):
 
     @cached_property
     def external_resource_name(self):
-        if hasattr(self, 'Meta') and hasattr(self.Meta, 'external_resource_name'):
+        if hasattr(self, 'Meta') and hasattr(self.Meta, 'external_resource_name') and \
+                self.Meta.external_resource_name:
             external_resource_name = self.Meta.external_resource_name
         else:
             external_resource_name = self.resource_name
