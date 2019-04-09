@@ -11,7 +11,6 @@ class ExternalResourceRelatedField(ResourceMappingMixin, ResourceRelatedField):
         self.apply_mapping(value)
         return super().to_representation(value)
 
-
     def get_attribute(self, instance):
         # Can't have any relationships if not created
         if not hasattr(instance, 'pk') or (hasattr(instance, 'pk') and instance.pk is None):

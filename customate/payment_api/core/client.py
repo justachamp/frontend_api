@@ -1,7 +1,10 @@
+from django.utils.functional import cached_property
 from jsonapi_client import Session as DefaultSession, Filter, ResourceTuple, Modifier
 import logging
 
 # Get an instance of a logger
+from payment_api.core.resource.mixins import ResourceMappingMixin
+
 logger = logging.getLogger(__name__)
 
 models_as_jsonschema = {
@@ -12,7 +15,7 @@ models_as_jsonschema = {
 
 class Session(DefaultSession):
     def _get_sync(self, resource_type: str,
-                  resource_id_or_filter: 'Union[Modifier, str]'=None) -> 'Document':
+                  resource_id_or_filter: 'Union[Modifier, str]' = None) -> 'Document':
         resource_id, filter_ = self._resource_type_and_filter(
                                                                 resource_id_or_filter)
         url = self._url_for_resource(resource_type, resource_id, filter_)
@@ -35,25 +38,21 @@ class Session(DefaultSession):
         return resource_id, resource_filter
 
 
-class Client:
+class Client(ResourceMappingMixin):
 
-    _client = None
     _base_url = None
 
-    def __init__(self, base_url):
+    def __init__(self, base_url, *args, **kwargs):
         self._base_url = base_url
-        self._resource_mapping = []
+        super().__init__(*args, **kwargs)
 
     def __getattr__(self, item):
         return getattr(self.client, item)
 
-
-    @property
+    @cached_property
     def client(self):
-        if not self._client:
-            self._client = Session(self._base_url, schema=models_as_jsonschema)
+        return Session(self._base_url, schema=models_as_jsonschema)
 
-        return self._client
     @property
     def request_kwargs(self):
         return self.client._request_kwargs

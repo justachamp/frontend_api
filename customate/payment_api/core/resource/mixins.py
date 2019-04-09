@@ -33,7 +33,7 @@ class ResourceMappingMixin:
                     setattr(resource, key, data.get('value'))
         return resource
 
-    def unapply_mapping(self, resource):
+    def reverse_mapping(self, resource):
 
         for item in self.resource_mapping:
             key = next(iter(item))

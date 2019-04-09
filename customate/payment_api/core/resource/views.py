@@ -1,6 +1,7 @@
+from django.utils.functional import cached_property
+
 from payment_api.core.client import Client
 from rest_framework_json_api.views import ModelViewSet
-from rest_framework.response import Response
 from payment_api.core.resource.models import ResourceQueryset
 PAYMENT_API_URL = 'http://local-dev-app.customate.net:8081/'
 
@@ -8,55 +9,26 @@ PAYMENT_API_URL = 'http://local-dev-app.customate.net:8081/'
 class ResourceViewSet(ModelViewSet):
     resource_name = None
     base_url = PAYMENT_API_URL
-    _external_resource_name = None
-    _client = None
 
-    # def get_serializer_context(self):
-    #     """
-    #     Extra context provided to the serializer class.
-    #     """
-    #     return {
-    #         'request': self.request,
-    #         'format': self.format_kwarg,
-    #         'view': self
-    #     }
-
-    @property
+    @cached_property
     def client(self):
-        if not self._client:
-            self._client = Client(self.base_url)
-            self._client.resource_mapping = {'id': {'op': 'copy', 'value': 'pk'}}
-        return self._client
+        client = Client(self.base_url)
+        client.resource_mapping = {'id': {'op': 'copy', 'value': 'pk'}}
+        return client
 
-    # def update(self, request, *args, **kwargs):
-    #     partial = kwargs.pop('partial', False)
-    #     instance = self.get_object(apply_filters=False, map_attributes=False)
-    #     serializer = self.get_serializer(instance, data=request.data, partial=partial)
-    #     serializer.is_valid(raise_exception=True)
-    #     self.perform_update(serializer)
-    #
-    #     if getattr(instance, '_prefetched_objects_cache', None):
-    #         # If 'prefetch_related' has been applied to a queryset, we need to
-    #         # forcibly invalidate the prefetch cache on the instance.
-    #         instance._prefetched_objects_cache = {}
-    #
-    #     return Response(serializer.data)
-
-    @property
+    @cached_property
     def external_resource_name(self):
+        if hasattr(self, 'Meta') and hasattr(self.Meta, 'external_resource_name'):
+            external_resource_name = self.Meta.external_resource_name
+        else:
+            external_resource_name = self.resource_name
 
-        if not self._external_resource_name:
-            if hasattr(self, 'Meta') and hasattr(self.Meta, 'external_resource_name'):
-                self._external_resource_name = self.Meta.external_resource_name
-            else:
-                self._external_resource_name = self.resource_name
+        if external_resource_name != self.resource_name:
+            self.client.resource_mapping = {
+                'type': {'op': 'edit', 'value': self.resource_name, 'old_value': external_resource_name}
+            }
 
-            if self._external_resource_name and self._external_resource_name != self.resource_name:
-                self.client.resource_mapping = {
-                    'type': {'op': 'edit', 'value': self.resource_name, 'old_value': self._external_resource_name}
-                }
-
-        return self._external_resource_name
+        return external_resource_name
 
     def get_object(self, map_attributes=True, apply_filters=True):
 

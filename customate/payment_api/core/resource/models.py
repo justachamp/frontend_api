@@ -60,7 +60,7 @@ class ResourceQueryset:
 
     def __init__(self, resource, client, method, modifiers=None, inclusions=None):
         self.resource = resource
-        self.api = client
+        self.client = client
         self.method = method
 
         if modifiers:
@@ -127,7 +127,7 @@ class ResourceQueryset:
 
     @property
     def request(self):
-        return getattr(self.api, self.method)
+        return getattr(self.client, self.method)
 
     @property
     def modifier(self):
@@ -171,29 +171,14 @@ class ResourceQueryset:
 
         return self
 
-    def apply_mapping(self, resource):
-
-        for item in self.api.resource_mapping:
-            key = next(iter(item))
-            data = item.get(key)
-            if hasattr(resource, key):
-                value = getattr(resource, key)
-                op = data.get('op')
-                if op == 'copy':
-                    setattr(resource, data.get('value'), value)
-                if op == 'edit':
-                    setattr(resource, key, data.get('value'))
-
-        return resource
-
     def one(self, pk, map_attributes=True):
         self._pk = pk
         resource = self.response.resource
-        return self.apply_mapping(resource) if map_attributes else resource
+        return self.client.apply_mapping(resource) if map_attributes else resource
 
     def count(self):
         return self.response.meta.page.get('totalRecords')
 
     def iterator(self):
         resources = self.response.resources
-        return (self.apply_mapping(resource) for resource in resources)
+        return (self.client.apply_mapping(resource) for resource in resources)
