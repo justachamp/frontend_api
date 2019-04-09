@@ -11,11 +11,11 @@ https://docs.djangoproject.com/en/2.1/ref/settings/
 """
 
 import os
+from os import environ
 from corsheaders.defaults import default_headers
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.1/howto/deployment/checklist/
@@ -25,9 +25,6 @@ SECRET_KEY = 'c3rq#fr$u-5d1qsq@qfkyr=he@)9r7)wj1yl_14*bir3z_1hj^'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
-
-ALLOWED_HOSTS = []
-
 
 # Application definition
 
@@ -88,21 +85,22 @@ AUTHENTICATION_BACKENDS = [
 #     # 'authentication.cognito.middleware.cognito_django_authentication.AwsDjangoAuthentication'
 # ]
 
-COGNITO_USER_POOL_ID = os.environ.get('COGNITO_USER_POOL_ID')
-COGNITO_APP_CLIENT_ID = os.environ.get('COGNITO_APP_CLIENT_ID')
-COGNITO_APP_SECRET_KEY = os.environ.get('COGNITO_APP_SECRET_KEY')
+COGNITO_USER_POOL_ID = environ['COGNITO_USER_POOL_ID']
+COGNITO_APP_CLIENT_ID = environ['COGNITO_APP_CLIENT_ID']
+COGNITO_APP_SECRET_KEY = environ['COGNITO_APP_SECRET_KEY']
 
-AWS_ACCESS_KEY = os.environ.get('AWS_ACCESS_KEY')
-AWS_SECRET_KEY = os.environ.get('AWS_SECRET_KEY')
+AWS_ACCESS_KEY = environ['AWS_ACCESS_KEY']
+AWS_SECRET_KEY = environ['AWS_SECRET_KEY']
 
-AWS_REGION = os.environ.get('AWS_REGION', '')
+AWS_REGION = environ['AWS_REGION']
+
 COGNITO_ATTR_MAPPING = {
-        'email': 'email',
-        'given_name': 'first_name',
-        'family_name': 'last_name',
-        'custom:api_key': 'api_key',
-        'custom:api_key_id': 'api_key_id'
-    }
+    'email': 'email',
+    'given_name': 'first_name',
+    'family_name': 'last_name',
+    'custom:api_key': 'api_key',
+    'custom:api_key_id': 'api_key_id'
+}
 
 COGNITO_CREATE_UNKNOWN_USERS = True
 
@@ -159,10 +157,7 @@ LOGGING = {
     },
     'loggers': {
         'django': {
-            'handlers': ['console',
-                         # 'mail_admins', 'console_on_not_debug'
-            ]
-            ,
+            'handlers': ['console'],
             'level': 'INFO',
         },
         # 'django.request': {
@@ -171,7 +166,6 @@ LOGGING = {
         #     'propagate': True,
         # },
 
-
         # 'django.server': {
         #     'handlers': ['django.server'],
         #     'level': 'INFO',
@@ -179,8 +173,6 @@ LOGGING = {
         # },
     }
 }
-
-
 
 LOGIN_REDIRECT_URL = '/accounts/profile'
 
@@ -218,7 +210,6 @@ REST_FRAMEWORK = {
         'authentication.cognito.middleware.cognito_rest_authentication.AwsRestAuthentication',
     ),
     'ORDERING_PARAM': 'sort',
-
 
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
@@ -283,35 +274,26 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'customate.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/2.1/ref/settings/#databases
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        # 'NAME': 'customate_frontend',
-        # 'USER': 'customate',
-        # 'PASSWORD': 'customate',
-        # 'HOST': 'postgres',
-        # 'PORT': 5432,
-
-        'NAME': os.environ.get('DB_NAME'),
-        'HOST': os.environ.get('DB_HOST'),
-        'PORT': os.environ.get('DB_PORT'),
-        'USER': os.environ.get('DB_USER'),
-        'PASSWORD': os.environ.get('DB_PASSWORD'),
+        'NAME': environ['DB_NAME'],
+        'HOST': environ['DB_HOST'],
+        'PORT': environ['DB_PORT'],
+        'USER': environ['DB_USER'],
+        'PASSWORD': environ['DB_PASSWORD'],
         'CONN_MAX_AGE': 60 * 10,  # 10 minutes
-        'TEST':  {
+        'TEST': {
             # this is for ci database creation. if multiple developers
             # trigger tests with a commit we don't want them clobbering each
             # other. we set this value at runtime in the CI environment
-            'NAME': os.environ.get('DB_TEST_NAME', 'test_customate_frontend')
+            'NAME': environ.get('DB_TEST_NAME', 'test_customate_frontend')
         }
     }
 }
-
-
 
 # Password validation
 # https://docs.djangoproject.com/en/2.1/ref/settings/#auth-password-validators
@@ -331,7 +313,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/2.1/topics/i18n/
 
@@ -345,7 +326,6 @@ USE_L10N = True
 
 USE_TZ = True
 
-
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.1/howto/static-files/
 CORS_ORIGIN_ALLOW_ALL = True
@@ -356,7 +336,6 @@ CORS_ALLOW_HEADERS = default_headers + (
     'IDTOKEN',
     'REFRESHTOKEN'
 )
-
 
 STATIC_ROOT = os.path.join(BASE_DIR, "static")
 AUTH_USER_MODEL = 'core.User'
@@ -374,10 +353,5 @@ AWS_LOCATION = 'static'
 STATIC_URL = 'https://%s/%s/' % (AWS_S3_CUSTOM_DOMAIN, AWS_LOCATION)
 STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
-COUNTRIES_AVAILABLE = os.environ.get('COUNTRIES_AVAILABLE', '').split(',')
-
-PAYMENT_API_URL = os.environ.get('PAYMENT_API_URL', None)
-
-
-
-
+COUNTRIES_AVAILABLE = environ.get('COUNTRIES_AVAILABLE', '').split(',')
+PAYMENT_API_URL = environ['PAYMENT_API_URL']
