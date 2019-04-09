@@ -14,8 +14,8 @@ from frontend_api.services.account import ProfileService
 
 class DomainService:
 
-    _service_object=None
-    __service=None
+    _service_object = None
+    __service = None
 
     @property
     def service(self):

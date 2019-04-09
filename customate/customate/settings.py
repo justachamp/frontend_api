@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'address.gbg.apps.GbgConfig',
     'address.loqate.apps.LoqateConfig',
     'frontend_api.apps.FrontendApiConfig',
+    'payment_api.apps.PaymentApiConfig',
     'storages',
     'guardian',
     'django_filters'
@@ -187,8 +188,8 @@ REST_FRAMEWORK = {
         # 'rest_framework.parsers.MultiPartParser'
     ),
     'DEFAULT_RENDERER_CLASSES': (
-        'rest_framework_json_api.renderers.JSONRenderer',
-        # 'core.renderers.JSONRenderer',
+        # 'rest_framework_json_api.renderers.JSONRenderer',
+        'core.renderers.JSONRenderer',
         # If you're performance testing, you will want to use the browseable API
         # without forms, as the forms can generate their own queries.
         # If performance testing, enable:
@@ -228,6 +229,30 @@ REST_FRAMEWORK = {
     ),
     'TEST_REQUEST_DEFAULT_FORMAT': 'vnd.api+json'
 }
+
+
+REST_PROXY = {
+    'HOST': 'https://dev-api.gocustomate.com',
+    'AUTH': {
+        'user': None,
+        'password': None,
+        'token': None,
+    },
+    'TIMEOUT': None,
+    'DEFAULT_HTTP_ACCEPT': 'application/vnd.api+json',
+    'DEFAULT_HTTP_ACCEPT_LANGUAGE': 'en-US,en;q=0.8',
+    'DEFAULT_CONTENT_TYPE': 'application/vnd.api+json',
+
+    # Return response as-is if enabled
+    'RETURN_RAW': False,
+
+    # Used to translate Accept HTTP field
+    'ACCEPT_MAPS': {
+        'text/html': 'application/vnd.api+json',
+    },
+
+}
+
 
 ROOT_URLCONF = 'customate.urls'
 
@@ -329,3 +354,4 @@ STATIC_URL = 'https://%s/%s/' % (AWS_S3_CUSTOM_DOMAIN, AWS_LOCATION)
 STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
 COUNTRIES_AVAILABLE = environ.get('COUNTRIES_AVAILABLE', '').split(',')
+PAYMENT_API_URL = environ['PAYMENT_API_URL']

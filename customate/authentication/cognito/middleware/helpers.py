@@ -73,7 +73,7 @@ def validate_token(access_token, id_token, refresh_token=None):
             # variable?
 
             result = identity.initiate_auth(payload['username'], constants.REFRESH_TOKEN_FLOW,
-                                           refresh_token=refresh_token)
+                                            refresh_token=refresh_token)
 
             if result['AuthenticationResult']:
                 # Return the freshly generated access token as an indication auth succeeded but a new token was
@@ -105,20 +105,19 @@ def decode_token(access_token):
 
 
 def process_request(request, propagate_error=False):
+    access_token = request.META.get('HTTP_ACCESSTOKEN')
+    refresh_token = request.META.get('HTTP_REFRESHTOKEN')
+    id_token = request.META.get('HTTP_IDTOKEN')
 
-        access_token = request.META.get('HTTP_ACCESSTOKEN')
-        refresh_token = request.META.get('HTTP_REFRESHTOKEN')
-        id_token = request.META.get('HTTP_IDTOKEN')
-
-        return get_tokens(access_token=access_token, id_token=id_token, refresh_token=refresh_token,
-                          propagate_error=propagate_error)
+    return get_tokens(access_token=access_token, id_token=id_token, refresh_token=refresh_token,
+                      propagate_error=propagate_error)
 
 
 def get_tokens(access_token, id_token=None, refresh_token=None, propagate_error=False):
     logger.error(f'access_token: {access_token} refresh_token: {refresh_token}  id_token: {id_token}')
     try:
-            # logger.error('process_request helpels')
-            # logger.error(f'meta {request.META}')
+        # logger.error('process_request helpels')
+        # logger.error(f'meta {request.META}')
         if not access_token:
             # Need to have this to authenticate, error out
             raise Exception("No valid Access token were found in the request")

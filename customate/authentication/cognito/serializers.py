@@ -276,7 +276,7 @@ class CogrnitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
         try:
             user = user_model.objects.get(username=username)
         except user_model.DoesNotExist:
-            raise Unauthorized('User not exists')
+            raise Unauthorized('User does not exist')
 
         if user.status == UserStatus.banned:
             raise Unauthorized('User is banned')
