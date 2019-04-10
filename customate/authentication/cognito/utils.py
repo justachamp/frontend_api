@@ -38,6 +38,7 @@ class PublicKey(object):
 def get_cognito_secret_hash(username: str) -> str:
     sercret_hash = None
     if constants.CLIENT_SECRET:
+        logger.error(f'client secret {constants.CLIENT_SECRET}, username: {username}, client id: {constants.CLIENT_ID}')
         message = username + constants.CLIENT_ID
         digest = hmac.new(str(constants.CLIENT_SECRET).encode('UTF-8'), msg=str(message).encode('UTF-8'),
                           digestmod=hashlib.sha256).digest()
