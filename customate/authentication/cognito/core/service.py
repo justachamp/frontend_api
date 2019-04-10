@@ -92,7 +92,7 @@ class Identity:
             raise CognitoException.create_from_exception(ex)
 
         except Exception as ex:
-            logger.error(f'general {ex}')
+            logger.error(f'sign_up general {ex}')
             raise Exception(ex)
 
     @staticmethod
@@ -140,7 +140,7 @@ class Identity:
             raise CognitoException.create_from_exception(ex)
 
         except Exception as ex:
-            logger.error(f'general {ex}')
+            logger.error(f'initiate_auth general {ex}')
             raise Exception(ex)
 
     def refresh_session(self, username, auth_flow, refresh_token=None):
@@ -168,7 +168,7 @@ class Identity:
             raise CognitoException.create_from_exception(ex)
 
         except Exception as ex:
-            logger.error(f'general {ex}')
+            logger.error(f'refresh_session general {ex}')
             raise Exception(ex)
 
     def sign_out(self, access_token):
@@ -179,7 +179,7 @@ class Identity:
             raise CognitoException.create_from_exception(ex)
 
         except Exception as ex:
-            logger.error(f'general {ex}')
+            logger.error(f'sign_out general {ex}')
             raise Exception(ex)
 
     def admin_sign_out(self, username):
@@ -193,7 +193,7 @@ class Identity:
             raise CognitoException.create_from_exception(ex)
 
         except Exception as ex:
-            logger.error(f'general {ex}')
+            logger.error(f'admin_sign_out general {ex}')
             raise Exception(ex)
 
     def verification_code(self, attribute_name, access_token):
@@ -212,7 +212,7 @@ class Identity:
             raise CognitoException.create_from_exception(ex)
 
         except Exception as ex:
-            logger.error(f'general {ex}')
+            logger.error(f'verification_code general {ex}')
             raise Exception(ex)
 
     def verify_attribute(self, attribute_name, access_token, code):
@@ -232,7 +232,7 @@ class Identity:
             raise CognitoException.create_from_exception(ex)
 
         except Exception as ex:
-            logger.error(f'general {ex}')
+            logger.error(f'verify_attribute general {ex}')
             raise Exception(ex)
 
     @staticmethod
@@ -281,7 +281,7 @@ class Identity:
             raise CognitoException.create_from_exception(ex)
 
         except Exception as ex:
-            logger.error(f'general {ex}')
+            logger.error(f'respond_to_auth_challenge general {ex}')
             raise Exception(ex)
 
     def forgot_password(self, username):
@@ -392,7 +392,7 @@ class Identity:
             raise CognitoException.create_from_exception(ex)
 
         except Exception as ex:
-            logger.error(f'general {ex}')
+            logger.error(f'admin_create_user general {ex}')
             raise Exception(ex)
 
     def set_user_mfa_preference(self, enable, access_token):

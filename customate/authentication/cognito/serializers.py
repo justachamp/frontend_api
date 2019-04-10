@@ -101,7 +101,7 @@ class CognitoAuthVerificationSerializer(serializers.Serializer):
             validated_data['destination'] = response.get('Destination')
             return Verification(**validated_data)
         except Exception as ex:
-            logger.error(f'general {ex}')
+            logger.error(f'general verification_code {ex}')
             raise Unauthorized(ex)
 
 
@@ -125,7 +125,7 @@ class CognitoAuthAttributeVerifySerializer(serializers.Serializer, AuthSerialize
 
             return status_codes.HTTP_204_NO_CONTENT if status == status_codes.HTTP_200_OK else status
         except Exception as ex:
-            logger.error(f'general {ex}')
+            logger.error(f'verify_attribute general {ex}')
             raise Unauthorized(ex)
 
 
@@ -145,7 +145,7 @@ class CognitoAuthForgotPasswordSerializer(serializers.Serializer):
             }
             return Verification(**attributes)
         except Exception as ex:
-            logger.error(f'general {ex}')
+            logger.error(f'forgot_password general {ex}')
             raise Unauthorized(ex)
 
 
@@ -162,7 +162,7 @@ class CognitoAuthPasswordRestoreSerializer(serializers.Serializer):
             status = data.get('ResponseMetadata').get('HTTPStatusCode')
             return status_codes.HTTP_204_NO_CONTENT if status == status_codes.HTTP_200_OK else status
         except Exception as ex:
-            logger.error(f'general {ex}')
+            logger.error(f'restore_password general {ex}')
             raise Unauthorized(ex)
 
 
@@ -179,7 +179,7 @@ class CognitoAuthChangePasswordSerializer(serializers.Serializer):
             status = data.get('ResponseMetadata').get('HTTPStatusCode')
             return status_codes.HTTP_204_NO_CONTENT if status == status_codes.HTTP_200_OK else status
         except Exception as ex:
-            logger.error(f'general {ex}')
+            logger.error(f'change_password general {ex}')
             raise Unauthorized(ex)
 
 
@@ -192,7 +192,7 @@ class CogrnitoSignOutSerializer(serializers.Serializer):
         try:
             return helpers.sign_out(validated_data)
         except Exception as ex:
-            logger.error(f'general {ex}')
+            logger.error(f'sign_out general {ex}')
             raise Unauthorized(ex)
 
 
@@ -234,7 +234,7 @@ class CognitoAuthChallengeSerializer(serializers.Serializer, UserServiceMixin):
             return Identity(id=user.id, **validated_data)
 
         except Exception as ex:
-            logger.error(f'general {ex}')
+            logger.error(f'auth_challenge general {ex}')
             raise Unauthorized(ex)
 
 
@@ -309,7 +309,7 @@ class CogrnitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
                 return self._retrieve_auth_challenge(validated_data, result)
 
         except Exception as ex:
-            logger.error(f'general {ex}')
+            logger.error(f'retrieve general {ex}')
             s = CogrnitoAuthRetrieveMessageSerializer(data={'message': str(ex)})
             s.is_valid(True)
             
@@ -330,10 +330,10 @@ class CogrnitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
             return status == status_codes.HTTP_200_OK
 
         except CognitoException as ex:
-            logger.error(f'general {ex}')
+            logger.error(f'check_password CognitoException general {ex}')
             raise serializers.ValidationError(ex)
         except Exception as ex:
-            logger.error(f'general {ex}')
+            logger.error(f'check_password general {ex}')
             raise Unauthorized(ex)
 
     def _retrieve_auth_result(self, validated_data, result):
@@ -389,7 +389,7 @@ class CognitoInviteUserSerializer(serializers.Serializer, BaseAuthValidationMixi
 
             return Invitation(id=user.get('Username'), **validated_data)
         except Exception as ex:
-            logger.error(f'general {ex}')
+            logger.error(f'invite general {ex}')
             raise Unauthorized(ex)
 
 
@@ -415,7 +415,7 @@ class CognitoAuthSerializer(BaseAuthValidationMixin, CogrnitoAuthRetrieveSeriali
             serializer = CogrnitoAuthRetrieveSerializer()
             return serializer.retrieve(validated_data)
         except Exception as ex:
-            logger.error(f'general {ex}')
+            logger.error(f'create general {ex}')
             raise Unauthorized(ex)
 
     def validate_user_status(self, username):
