@@ -86,8 +86,8 @@ AUTHENTICATION_BACKENDS = [
 #     # 'authentication.cognito.middleware.cognito_django_authentication.AwsDjangoAuthentication'
 # ]
 
-COGNITO_USER_POOL_ID = environ.get('COGNITO_USER_POOL_ID')
-COGNITO_APP_CLIENT_ID = environ.get('COGNITO_APP_CLIENT_ID')
+COGNITO_USER_POOL_ID = 'eu-west-2_SagZRiOpE' #environ.get('COGNITO_USER_POOL_ID')
+COGNITO_APP_CLIENT_ID = '7ln0rqjl07oh71lnhg7ioortq9' #environ.get('COGNITO_APP_CLIENT_ID')
 COGNITO_APP_SECRET_KEY = environ.get('COGNITO_APP_SECRET_KEY')
 
 AWS_ACCESS_KEY = environ.get('AWS_ACCESS_KEY')
@@ -281,11 +281,18 @@ WSGI_APPLICATION = 'customate.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': environ.get('DB_NAME'),
-        'HOST': environ.get('DB_HOST'),
-        'PORT': environ.get('DB_PORT'),
-        'USER': environ.get('DB_USER'),
-        'PASSWORD': environ.get('DB_PASSWORD'),
+        'NAME': 'customate_frontend',
+        'USER': 'customate_frontend',
+        'PASSWORD': 'U48fcn73woe',
+        'HOST': 'dev-psql.customate.net',
+        'PORT': 5432,
+
+
+        # 'NAME': environ.get('DB_NAME'),
+        # 'HOST': environ.get('DB_HOST'),
+        # 'PORT': environ.get('DB_PORT'),
+        # 'USER': environ.get('DB_USER'),
+        # 'PASSWORD': environ.get('DB_PASSWORD'),
         'CONN_MAX_AGE': 60 * 10,  # 10 minutes
         'TEST': {
             # this is for ci database creation. if multiple developers

@@ -302,7 +302,7 @@ class CogrnitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
                 result = helpers.refresh_session(validated_data)
             else:
                 result = helpers.initiate_auth(validated_data)
-
+            logger.error(f'retrieve result general {result}')
             if result.get('AuthenticationResult'):
                 return self._retrieve_auth_result(validated_data, result)
             elif result.get('ChallengeName'):
@@ -338,13 +338,17 @@ class CogrnitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
             raise Unauthorized(ex)
 
     def _retrieve_auth_result(self, validated_data, result):
+        logger.error(f'_retrieve_auth_result validated_data {validated_data}')
+        logger.error(f'_retrieve_auth_result result {result}')
         tokens = result.get('AuthenticationResult')
         validated_data['id_token'] = tokens.get('IdToken')
         validated_data['access_token'] = tokens.get('AccessToken')
         if not validated_data.get('refresh_token'):
             validated_data['refresh_token'] = tokens.get('RefreshToken')
 
+        logger.error(f'_retrieve_auth_result validated_data {validated_data}')
         data = mid_helpers.decode_token(tokens.get('IdToken'))
+        logger.error(f'_retrieve_auth_result data {data}')
         identity, user_data = self._get_cognito_user(data)
         user = self.user_service.get_user_by_external_identity(
             identity=identity,
