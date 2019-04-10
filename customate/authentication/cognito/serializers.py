@@ -297,10 +297,13 @@ class CogrnitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
 
     def retrieve(self, validated_data):
         try:
+            logger.error(f'retrieve before all general {validated_data}')
             validated_data['username'] = validated_data['preferred_username']
             if validated_data.get('refresh_token'):
+                logger.error(f'retrieve before refresh_session general {validated_data}')
                 result = helpers.refresh_session(validated_data)
             else:
+                logger.error(f'retrieve before initiate_auth general {validated_data}')
                 result = helpers.initiate_auth(validated_data)
             logger.error(f'retrieve result general {result}')
             if result.get('AuthenticationResult'):
