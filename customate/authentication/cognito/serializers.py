@@ -314,6 +314,12 @@ class CogrnitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
         except Exception as ex:
             logger.error(f'retrieve general {validated_data}')
             logger.error(f'retrieve general {ex}')
+            import traceback
+            import sys
+
+            logger.error(f'traceback.format_exc() {traceback.format_exc()}')
+            logger.error(f'sys.exc_info()[0] {sys.exc_info()[0]}')
+
             s = CogrnitoAuthRetrieveMessageSerializer(data={'message': str(ex)})
             s.is_valid(True)
             
