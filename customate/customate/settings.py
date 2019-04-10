@@ -14,7 +14,7 @@ from os import environ, path
 from corsheaders.defaults import default_headers
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-BASE_DIR = path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = path.dirname(path.dirname(path.abspath(__file__)))
 
 
 # Quick-start development settings - unsuitable for production
@@ -334,7 +334,7 @@ CORS_ALLOW_HEADERS = default_headers + (
     'REFRESHTOKEN'
 )
 
-STATIC_ROOT = os.path.join(BASE_DIR, "static")
+STATIC_ROOT = path.join(BASE_DIR, "static")
 AUTH_USER_MODEL = 'core.User'
 ALLOWED_HOSTS = ['*']
 
