@@ -146,7 +146,7 @@ class Identity:
 
     def refresh_session(self, username, auth_flow, refresh_token=None):
         auth_parameters = {}
-        secret_hash = utils.get_cognito_secret_hash(auth_parameters.get('USERNAME'))
+        secret_hash = utils.get_cognito_secret_hash(username)
         if secret_hash:
             auth_parameters['USERNAME'] = username
             auth_parameters['SECRET_HASH'] = secret_hash
