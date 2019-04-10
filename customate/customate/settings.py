@@ -10,11 +10,11 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/2.1/ref/settings/
 """
 
-import os
+from os import environ, path
 from corsheaders.defaults import default_headers
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 # Quick-start development settings - unsuitable for production
@@ -48,7 +48,7 @@ INSTALLED_APPS = [
     'address.gbg.apps.GbgConfig',
     'address.loqate.apps.LoqateConfig',
     'frontend_api.apps.FrontendApiConfig',
-    # 'payment_api.apps.PaymentApiConfig',
+    'payment_api.apps.PaymentApiConfig',
     'storages',
     'guardian',
     'django_filters'
@@ -86,21 +86,22 @@ AUTHENTICATION_BACKENDS = [
 #     # 'authentication.cognito.middleware.cognito_django_authentication.AwsDjangoAuthentication'
 # ]
 
-COGNITO_USER_POOL_ID = os.environ.get('COGNITO_USER_POOL_ID')
-COGNITO_APP_CLIENT_ID = os.environ.get('COGNITO_APP_CLIENT_ID')
-COGNITO_APP_SECRET_KEY = os.environ.get('COGNITO_APP_SECRET_KEY')
+COGNITO_USER_POOL_ID = environ.get('COGNITO_USER_POOL_ID')
+COGNITO_APP_CLIENT_ID = environ.get('COGNITO_APP_CLIENT_ID')
+COGNITO_APP_SECRET_KEY = environ.get('COGNITO_APP_SECRET_KEY')
 
-AWS_ACCESS_KEY = os.environ.get('AWS_ACCESS_KEY')
-AWS_SECRET_KEY = os.environ.get('AWS_SECRET_KEY')
+AWS_ACCESS_KEY = environ.get('AWS_ACCESS_KEY')
+AWS_SECRET_KEY = environ.get('AWS_SECRET_KEY')
 
-AWS_REGION = os.environ.get('AWS_REGION', '')
+AWS_REGION = environ.get('AWS_REGION')
+
 COGNITO_ATTR_MAPPING = {
-        'email': 'email',
-        'given_name': 'first_name',
-        'family_name': 'last_name',
-        'custom:api_key': 'api_key',
-        'custom:api_key_id': 'api_key_id'
-    }
+    'email': 'email',
+    'given_name': 'first_name',
+    'family_name': 'last_name',
+    'custom:api_key': 'api_key',
+    'custom:api_key_id': 'api_key_id'
+}
 
 COGNITO_CREATE_UNKNOWN_USERS = True
 
@@ -157,10 +158,7 @@ LOGGING = {
     },
     'loggers': {
         'django': {
-            'handlers': ['console',
-                         # 'mail_admins', 'console_on_not_debug'
-            ]
-            ,
+            'handlers': ['console'],
             'level': 'INFO',
         },
         # 'django.request': {
@@ -169,7 +167,6 @@ LOGGING = {
         #     'propagate': True,
         # },
 
-
         # 'django.server': {
         #     'handlers': ['django.server'],
         #     'level': 'INFO',
@@ -177,8 +174,6 @@ LOGGING = {
         # },
     }
 }
-
-
 
 LOGIN_REDIRECT_URL = '/accounts/profile'
 
@@ -217,7 +212,6 @@ REST_FRAMEWORK = {
     ),
     'ORDERING_PARAM': 'sort',
 
-
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
@@ -238,27 +232,27 @@ REST_FRAMEWORK = {
 }
 
 
-# REST_PROXY = {
-#     'HOST': 'https://dev-api.gocustomate.com',
-#     'AUTH': {
-#         'user': None,
-#         'password': None,
-#         'token': None,
-#     },
-#     'TIMEOUT': None,
-#     'DEFAULT_HTTP_ACCEPT': 'application/vnd.api+json',
-#     'DEFAULT_HTTP_ACCEPT_LANGUAGE': 'en-US,en;q=0.8',
-#     'DEFAULT_CONTENT_TYPE': 'application/vnd.api+json',
-#
-#     # Return response as-is if enabled
-#     'RETURN_RAW': False,
-#
-#     # Used to translate Accept HTTP field
-#     'ACCEPT_MAPS': {
-#         'text/html': 'application/vnd.api+json',
-#     },
-#
-# }
+REST_PROXY = {
+    'HOST': 'https://dev-api.gocustomate.com',
+    'AUTH': {
+        'user': None,
+        'password': None,
+        'token': None,
+    },
+    'TIMEOUT': None,
+    'DEFAULT_HTTP_ACCEPT': 'application/vnd.api+json',
+    'DEFAULT_HTTP_ACCEPT_LANGUAGE': 'en-US,en;q=0.8',
+    'DEFAULT_CONTENT_TYPE': 'application/vnd.api+json',
+
+    # Return response as-is if enabled
+    'RETURN_RAW': False,
+
+    # Used to translate Accept HTTP field
+    'ACCEPT_MAPS': {
+        'text/html': 'application/vnd.api+json',
+    },
+
+}
 
 
 ROOT_URLCONF = 'customate.urls'
@@ -281,35 +275,26 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'customate.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/2.1/ref/settings/#databases
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        # 'NAME': 'customate_frontend',
-        # 'USER': 'customate',
-        # 'PASSWORD': 'customate',
-        # 'HOST': 'postgres',
-        # 'PORT': 5432,
-
-        'NAME': os.environ.get('DB_NAME'),
-        'HOST': os.environ.get('DB_HOST'),
-        'PORT': os.environ.get('DB_PORT'),
-        'USER': os.environ.get('DB_USER'),
-        'PASSWORD': os.environ.get('DB_PASSWORD'),
+        'NAME': environ.get('DB_NAME'),
+        'HOST': environ.get('DB_HOST'),
+        'PORT': environ.get('DB_PORT'),
+        'USER': environ.get('DB_USER'),
+        'PASSWORD': environ.get('DB_PASSWORD'),
         'CONN_MAX_AGE': 60 * 10,  # 10 minutes
-        'TEST':  {
+        'TEST': {
             # this is for ci database creation. if multiple developers
             # trigger tests with a commit we don't want them clobbering each
             # other. we set this value at runtime in the CI environment
-            'NAME': os.environ.get('DB_TEST_NAME', 'test_customate_frontend')
+            'NAME': environ.get('DB_TEST_NAME', 'test_customate_frontend')
         }
     }
 }
-
-
 
 # Password validation
 # https://docs.djangoproject.com/en/2.1/ref/settings/#auth-password-validators
@@ -329,20 +314,14 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/2.1/topics/i18n/
 
 LANGUAGE_CODE = 'en-us'
-
 TIME_ZONE = 'UTC'
-
 USE_I18N = True
-
 USE_L10N = True
-
 USE_TZ = True
-
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.1/howto/static-files/
@@ -355,7 +334,6 @@ CORS_ALLOW_HEADERS = default_headers + (
     'REFRESHTOKEN'
 )
 
-
 STATIC_ROOT = os.path.join(BASE_DIR, "static")
 AUTH_USER_MODEL = 'core.User'
 ALLOWED_HOSTS = ['*']
@@ -363,8 +341,8 @@ ALLOWED_HOSTS = ['*']
 AWS_ACCESS_KEY_ID = AWS_ACCESS_KEY
 AWS_SECRET_ACCESS_KEY = AWS_SECRET_KEY
 AWS_DEFAULT_ACL = 'public-read'
-AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_S3_STORAGE_BUCKET_NAME')
-AWS_S3_CUSTOM_DOMAIN = os.getenv('AWS_CDN_HOST')
+AWS_STORAGE_BUCKET_NAME = environ.get('AWS_S3_STORAGE_BUCKET_NAME')
+AWS_S3_CUSTOM_DOMAIN = environ.get('AWS_CDN_HOST')
 AWS_S3_OBJECT_PARAMETERS = {
     'CacheControl': 'max-age=86400',
 }
@@ -372,10 +350,5 @@ AWS_LOCATION = 'static'
 STATIC_URL = 'https://%s/%s/' % (AWS_S3_CUSTOM_DOMAIN, AWS_LOCATION)
 STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
-COUNTRIES_AVAILABLE = os.environ.get('COUNTRIES_AVAILABLE', '').split(',')
-
-PAYMENT_API_URL = os.environ.get('PAYMENT_API_URL', None)
-
-
-
-
+COUNTRIES_AVAILABLE = environ.get('COUNTRIES_AVAILABLE', '').split(',')
+PAYMENT_API_URL = environ.get('PAYMENT_API_URL', None)
