@@ -312,7 +312,7 @@ class CogrnitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
                 return self._retrieve_auth_challenge(validated_data, result)
 
         except Exception as ex:
-            logger.error(f'retrieve general {validated_data}')
+            logger.error(f'retrieve general {validated_data} client id: {settings.COGNITO_APP_CLIENT_ID}')
             logger.error(f'retrieve general {ex}')
             import traceback
             import sys
