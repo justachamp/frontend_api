@@ -19,7 +19,7 @@ identity = Identity()
 
 
 def initiate_auth(data, param_mapping=None):
-    logger.error(f'initiate_auth helperts general {data}')
+    logger.error(f'initiate_auth helpers general {data}, {param_mapping}')
     if ("username" in data and "password" in data) or ("username" in param_mapping and "password" in param_mapping):
         auth_flow = constants.USER_PASSWORD_FLOW
         username = parse_parameter(data, param_mapping, "username")

@@ -114,6 +114,7 @@ class Identity:
         return False
 
     def initiate_auth(self, username, auth_flow, password=None, refresh_token=None):
+        logger.error(f'Identity initiate_auth, {username}, {auth_flow}, {password}, {refresh_token}')
         auth_parameters = {}
         secret_hash = utils.get_cognito_secret_hash(auth_parameters.get('USERNAME'))
         if secret_hash:
