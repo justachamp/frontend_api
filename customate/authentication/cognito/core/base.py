@@ -70,7 +70,6 @@ class CognitoUser(CognitoClient):
         return cognito_user
 
     def initiate_auth(self, auth_flow, auth_parameters):
-        logger.error(f'initiate_auth {auth_flow}, {auth_parameters}')
         secret_hash = utils.get_cognito_secret_hash(auth_parameters.get('USERNAME'))
         if secret_hash:
             auth_parameters['SECRET_HASH'] = secret_hash
