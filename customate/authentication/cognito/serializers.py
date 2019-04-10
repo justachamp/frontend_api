@@ -296,6 +296,9 @@ class CogrnitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
         return data
 
     def retrieve(self, validated_data):
+        from django.conf import settings as gsettings
+        logger.error(
+            f'retrieve general {validated_data} client id: {getattr(gsettings, "COGNITO_APP_CLIENT_ID", "Not found")}')
         try:
             logger.error(f'retrieve before all general {validated_data}')
             validated_data['username'] = validated_data['preferred_username']
@@ -312,7 +315,7 @@ class CogrnitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
                 return self._retrieve_auth_challenge(validated_data, result)
 
         except Exception as ex:
-            logger.error(f'retrieve general {validated_data} client id: {getattr(settings, "COGNITO_APP_CLIENT_ID", "Not found")}')
+            logger.error(f'retrieve general {validated_data} client id: {getattr(gsettings, "COGNITO_APP_CLIENT_ID", "Not found")}')
             logger.error(f'retrieve general {ex}')
             import traceback
             import sys
