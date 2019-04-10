@@ -11,6 +11,9 @@ from django.conf import settings
 
 from authentication.cognito.core import constants
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 class PublicKey(object):
     def __init__(self, pubkey):
