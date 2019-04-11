@@ -36,13 +36,19 @@ class Session(DefaultSession):
 class Client(ResourceMappingMixin):
 
     _base_url = None
+    _embeded_attributes = None
 
-    def __init__(self, base_url, *args, **kwargs):
+    def __init__(self, base_url, embeded_attributes=None, *args, **kwargs):
         self._base_url = base_url
+        self._embeded_attributes = ['fees']
         super().__init__(*args, **kwargs)
 
     def __getattr__(self, item):
         return getattr(self.client, item)
+
+    @property
+    def embeded_attributes(self):
+        return self._embeded_attributes if isinstance(self._embeded_attributes, list) else []
 
     @cached_property
     def client(self):
@@ -57,8 +63,15 @@ class Client(ResourceMappingMixin):
         self.client._request_kwargs = request_kwargs
 
     def _apply_resource_attributes(self, instance, attributes):
+        relationships = instance._relationships.keys()
+        embeded_attributes = self.embeded_attributes
+
         for key, value in attributes.items():
-            setattr(instance, key, value)
+            if key in relationships and key in embeded_attributes:
+                instance._attributes[key] = value
+                instance.dirty_fields.add(key)
+            else:
+                setattr(instance, key, value)
         return instance
 
     def update(self, instance, attributes):

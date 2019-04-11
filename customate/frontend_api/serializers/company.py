@@ -10,7 +10,7 @@ from frontend_api.models import (
 
 from frontend_api.fields import CompanyType
 
-from ..serializers import (
+from frontend_api.serializers import (
     EnumField,
     CharField,
     ResourceRelatedField

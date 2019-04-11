@@ -3,6 +3,36 @@ from customate.settings import COUNTRIES_AVAILABLE
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
+from rest_framework_json_api.serializers import ChoiceField
+from rest_framework_json_api.relations import ResourceRelatedField
+
+
+class ResourceRelatedField(ResourceRelatedField):
+
+    def use_pk_only_optimization(self):
+        # TODO workaround
+        #  Original exception text was: 'PKOnlyObject' object has no attribute 'address'.
+        return False
+
+
+class EnumField(ChoiceField):
+    def __init__(self, enum, value_field='value', primitive_value=False, **kwargs):
+        self.enum = enum
+        self.value_field = value_field
+        self.primitive_value = primitive_value
+
+        kwargs['choices'] = [(e.name, getattr(e, value_field)) for e in enum]
+        super(EnumField, self).__init__(**kwargs)
+
+    def to_representation(self, obj):
+        return obj if isinstance(obj, str) else getattr(obj, self.value_field)
+
+    def to_internal_value(self, data):
+        try:
+            return self.enum[data] if not self.primitive_value else getattr(self.enum[data], self.value_field)
+        except KeyError:
+            self.fail('invalid_choice', input=data)
+
 
 class SerializerField(serializers.Field):
 
@@ -11,11 +41,11 @@ class SerializerField(serializers.Field):
         self._resource = resource
 
     def to_representation(self, instance):
-        return self._resource(context=self.context, instance=instance, partial=True).to_representation(instance)
+        return self._resource(context=self.context, instance=instance, partial=True, many=True).to_representation(instance)
 
     def to_internal_value(self, data):
         instance = getattr(self.parent.instance, self.field_name)
-        serializer = self._resource(instance=instance, context=self.context, data=data, partial=True)
+        serializer = self._resource(instance=instance, context=self.context, data=data, partial=True, many=True)
         try:
             validated_data = serializer.to_internal_value(data)
             return validated_data
@@ -36,6 +66,38 @@ class SerializerField(serializers.Field):
             return errors
 
         return detail
+
+
+class FeeType(Enum):
+    STATIC = 'STATIC'
+    PERCENTAGE = 'PERCENTAGE'
+
+    class Labels:
+        STATIC = 'Static'
+        PERCENTAGE = 'Percentage'
+
+    def __repr__(self):
+        return self.value
+
+
+class OperationType(Enum):
+    DEFAULT = 'DEFAULT'
+    MONEY_IN_DD = 'MONEY_IN_DD'
+    MONEY_IN_CC = 'MONEY_IN_CC'
+    MONEY_IN_BT = 'MONEY_IN_BT'
+    MONEY_OUT_BT = 'MONEY_OUT_BT'
+    INTERNAL = 'INTERNAL'
+
+    class Labels:
+        DEFAULT = 'Default'
+        MONEY_IN_DD = 'Income direct debit'
+        MONEY_IN_CC = 'Income credit card'
+        MONEY_IN_BT = 'Income bank transfer'
+        MONEY_OUT_BT = 'Outcome bank transfer'
+        INTERNAL = 'Internal'
+
+    def __repr__(self):
+        return self.value
 
 
 class UserStatus(Enum):

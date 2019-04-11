@@ -38,7 +38,7 @@ class ResourceSerializer(Serializer):
         # @TODO It copies wrong(parent) resource from view for included/related serializers
         view = self.view
         if view:
-            external_resource = view.Meta.external_resource_name if hasattr(view, 'Meta') else None
+            external_resource = getattr(view.Meta, 'external_resource_name', None) if hasattr(view, 'Meta') else None
             resource = view.resource_name
             self.Meta.model.resource_name = resource
             self.Meta.model.external_resource_name = external_resource if external_resource else resource
@@ -77,6 +77,7 @@ class ResourceSerializer(Serializer):
 
     def update(self, instance, validated_data):
         raise_errors_on_nested_writes('update', self, validated_data)
+        # TODO check type mapping and remove
         instance.type = self.Meta.model.resource
         self.client.reverse_mapping(instance)
         instance = self.client.update(instance, validated_data)

@@ -184,6 +184,9 @@ class InclusionFiler(BaseFilterBackend):
         """
         params = request.query_params.get(self.inclusion_param)
         including = [param.strip() for param in params.split(',')] if params else None
+        meta_including = getattr(view.Meta, 'include_resources', None) if hasattr(view, 'Meta') else None
+        if meta_including:
+            including = including + meta_including if including else meta_including
         return including
 
     def get_schema_fields(self, view):

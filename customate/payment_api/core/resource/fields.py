@@ -1,5 +1,5 @@
-from rest_framework_json_api.relations import ResourceRelatedField
 from payment_api.core.resource.mixins import ResourceMappingMixin
+from core.fields import ResourceRelatedField
 
 
 class ExternalResourceRelatedField(ResourceMappingMixin, ResourceRelatedField):
