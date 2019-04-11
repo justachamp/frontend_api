@@ -15,14 +15,23 @@ class ResourceRelatedField(ResourceRelatedField):
         return False
 
 
-class EnumField(ChoiceField):
-    def __init__(self, enum, value_field='value', primitive_value=False, **kwargs):
+class ResultResourceFieldMixin:
+
+    def __init__(self, result_source=None, *args, **kwargs):
+        if result_source:
+            self.result_source = result_source
+
+        return super().__init__(*args, **kwargs)
+
+
+class EnumField(ResultResourceFieldMixin, ChoiceField):
+    def __init__(self, enum, value_field='value', primitive_value=False, *args, **kwargs):
         self.enum = enum
         self.value_field = value_field
         self.primitive_value = primitive_value
 
         kwargs['choices'] = [(e.name, getattr(e, value_field)) for e in enum]
-        super(EnumField, self).__init__(**kwargs)
+        super().__init__(*args, **kwargs)
 
     def to_representation(self, obj):
         return obj if isinstance(obj, str) else getattr(obj, self.value_field)

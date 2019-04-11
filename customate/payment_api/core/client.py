@@ -3,6 +3,8 @@ from jsonapi_client import Session as DefaultSession, Filter, ResourceTuple, Mod
 import logging
 
 # Get an instance of a logger
+from jsonapi_client.exceptions import DocumentError
+
 from payment_api.core.resource.mixins import ResourceMappingMixin
 
 logger = logging.getLogger(__name__)
@@ -40,7 +42,7 @@ class Client(ResourceMappingMixin):
 
     def __init__(self, base_url, embeded_attributes=None, *args, **kwargs):
         self._base_url = base_url
-        self._embeded_attributes = ['fees']
+        self._embeded_attributes = embeded_attributes
         super().__init__(*args, **kwargs)
 
     def __getattr__(self, item):
@@ -76,10 +78,13 @@ class Client(ResourceMappingMixin):
 
     def update(self, instance, attributes):
 
-        self._apply_resource_attributes(instance, attributes)
-        instance.commit()
+        try:
+            self._apply_resource_attributes(instance, attributes)
+            instance.commit()
 
-        return instance
+            return instance
+        except DocumentError as ex:
+            raise ex
 
     def create(self, resource_name, attributes):
         instance = self.client.create_and_commit(resource_name, attributes)

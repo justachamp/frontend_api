@@ -11,6 +11,7 @@ from rest_framework_json_api.serializers import (
     DjangoValidationError,
 )
 
+
 class BulkExtensionMixin(object):
     def get_serializer(self, *args, **kwargs):
         is_bulk = isinstance(self.request.data, list)
@@ -50,7 +51,8 @@ class Serializer(Serializer):
             except SkipField:
                 pass
             else:
-                source = field.result_source if hasattr(field, 'resuld_source') else field.source_attrs
+                source = field.result_source.split('.') if hasattr(field, 'result_source') else field.source_attrs
+
                 set_value(ret, source, validated_value)
 
         if errors:
