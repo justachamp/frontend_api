@@ -13,7 +13,8 @@ class ResourceViewSet(ModelViewSet):
 
     @cached_property
     def client(self):
-        client = Client(self.base_url)
+        embedded_resources = getattr(self.Meta, 'embedded_resources', None) if hasattr(self, 'Meta') else None
+        client = Client(self.base_url, embedded_resources=embedded_resources)
         client.resource_mapping = {'id': {'op': 'copy', 'value': 'pk'}}
         return client
 

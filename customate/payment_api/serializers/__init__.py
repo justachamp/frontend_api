@@ -1,11 +1,12 @@
 from rest_framework_json_api.serializers import (
-    UUIDField,
     EmailField,
     IntegerField,
+    FloatField,
     CharField
 )
+
 from core.serializers import Serializer
-from core.fields import EnumField, OperationType, FeeType
+from core.fields import EnumField, OperationType, FeeType, UUIDField
 from payment_api.core.resource.fields import ExternalResourceRelatedField
 from payment_api.core.resource.serializers import ResourceMeta, ResourceSerializer
 from payment_api.serializers.wallet import WalletSerializer
@@ -16,6 +17,7 @@ __all__ = [
     UUIDField,
     EmailField,
     IntegerField,
+    FloatField,
     CharField,
     ExternalResourceRelatedField,
     EnumField,

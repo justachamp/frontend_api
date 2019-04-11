@@ -3,7 +3,7 @@ from customate.settings import COUNTRIES_AVAILABLE
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from rest_framework_json_api.serializers import ChoiceField
+from rest_framework_json_api.serializers import ChoiceField, UUIDField as DefaultUUIDField
 from rest_framework_json_api.relations import ResourceRelatedField
 
 
@@ -15,6 +15,17 @@ class ResourceRelatedField(ResourceRelatedField):
         return False
 
 
+class PrimitiveValueFieldMixin:
+
+    def __init__(self, primitive_value=False, *args, **kwargs):
+        self.primitive_value = primitive_value
+        super().__init__(*args, **kwargs)
+
+    def _prepare_internal_value(self, data):
+        primitive_value = getattr(self, 'primitive_value', None)
+        return data if not primitive_value else str(data)
+
+
 class ResultResourceFieldMixin:
 
     def __init__(self, result_source=None, *args, **kwargs):
@@ -24,12 +35,16 @@ class ResultResourceFieldMixin:
         return super().__init__(*args, **kwargs)
 
 
-class EnumField(ResultResourceFieldMixin, ChoiceField):
-    def __init__(self, enum, value_field='value', primitive_value=False, *args, **kwargs):
+class UUIDField(PrimitiveValueFieldMixin, DefaultUUIDField):
+
+    def to_internal_value(self, data):
+        return self._prepare_internal_value(super().to_internal_value(data))
+
+
+class EnumField(ResultResourceFieldMixin, PrimitiveValueFieldMixin, ChoiceField):
+    def __init__(self, enum, value_field='value', *args, **kwargs):
         self.enum = enum
         self.value_field = value_field
-        self.primitive_value = primitive_value
-
         kwargs['choices'] = [(e.name, getattr(e, value_field)) for e in enum]
         super().__init__(*args, **kwargs)
 
@@ -38,7 +53,7 @@ class EnumField(ResultResourceFieldMixin, ChoiceField):
 
     def to_internal_value(self, data):
         try:
-            return self.enum[data] if not self.primitive_value else getattr(self.enum[data], self.value_field)
+            return self._prepare_internal_value(self.enum[data])
         except KeyError:
             self.fail('invalid_choice', input=data)
 

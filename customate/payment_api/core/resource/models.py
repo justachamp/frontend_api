@@ -7,6 +7,8 @@ import logging
 from jsonapi_client.exceptions import DocumentError
 from rest_framework.exceptions import ValidationError
 
+from payment_api.core.resource.mixins import JsonApiErrorParser
+
 logger = logging.getLogger(__name__)
 
 
@@ -51,7 +53,7 @@ class ExternalResourceModel:
         self._resources = resources
 
 
-class ResourceQueryset:
+class ResourceQueryset(JsonApiErrorParser):
 
     _response = None
     _modifiers = None
@@ -71,22 +73,6 @@ class ResourceQueryset:
 
     def __getitem__(self, item):
         return list(self.iterator())
-
-    def _parse_document_error(self, ex):
-        try:
-            resp = ex.response.json()
-            errors = resp.get('errors')
-            # return {'credentials': ['wrong credentials']}
-            data = {}
-            for error in errors:
-                pointer = error.get('source', {}).get('pointer', '').split('/')[-1]
-                if not data.get(pointer):
-                    data[pointer] = []
-                data[pointer].append(error.get('detail', ''))
-
-            return data if len(data) else None
-        except Exception:
-            return None
 
 
     @property

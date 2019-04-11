@@ -47,3 +47,21 @@ class ResourceMappingMixin:
                     setattr(resource, key, data.get('old_value'))
 
         return resource
+
+
+class JsonApiErrorParser:
+
+    def _parse_document_error(self, ex):
+        try:
+            resp = ex.response.json()
+            errors = resp.get('errors')
+            data = {}
+            for error in errors:
+                pointer = error.get('source', {}).get('pointer', '').split('/')[-1]
+                if not data.get(pointer):
+                    data[pointer] = []
+                data[pointer].append(error.get('detail', ''))
+
+            return data if len(data) else None
+        except Exception:
+            return None

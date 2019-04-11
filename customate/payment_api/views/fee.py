@@ -25,6 +25,7 @@ class FeeGroupViewSet(ResourceViewSet):
 
     class Meta:
         include_resources = ['fees']
+        embedded_resources = ['fees']
 
 
 class FeeGroupRelationshipView(RelationshipView):

@@ -1,11 +1,12 @@
 from django.utils.functional import cached_property
+from rest_framework.exceptions import ValidationError
 from jsonapi_client import Session as DefaultSession, Filter, ResourceTuple, Modifier
 import logging
 
 # Get an instance of a logger
 from jsonapi_client.exceptions import DocumentError
 
-from payment_api.core.resource.mixins import ResourceMappingMixin
+from payment_api.core.resource.mixins import ResourceMappingMixin, JsonApiErrorParser
 
 logger = logging.getLogger(__name__)
 
@@ -35,22 +36,22 @@ class Session(DefaultSession):
         return resource_id, resource_filter
 
 
-class Client(ResourceMappingMixin):
+class Client(ResourceMappingMixin, JsonApiErrorParser):
 
     _base_url = None
-    _embeded_attributes = None
+    _embedded_resources = None
 
-    def __init__(self, base_url, embeded_attributes=None, *args, **kwargs):
+    def __init__(self, base_url, embedded_resources=None, *args, **kwargs):
         self._base_url = base_url
-        self._embeded_attributes = embeded_attributes
+        self._embedded_resources = embedded_resources
         super().__init__(*args, **kwargs)
 
     def __getattr__(self, item):
         return getattr(self.client, item)
 
     @property
-    def embeded_attributes(self):
-        return self._embeded_attributes if isinstance(self._embeded_attributes, list) else []
+    def embedded_resources(self):
+        return self._embedded_resources if isinstance(self._embedded_resources, list) else []
 
     @cached_property
     def client(self):
@@ -66,10 +67,10 @@ class Client(ResourceMappingMixin):
 
     def _apply_resource_attributes(self, instance, attributes):
         relationships = instance._relationships.keys()
-        embeded_attributes = self.embeded_attributes
+        embedded_resources = self.embedded_resources
 
         for key, value in attributes.items():
-            if key in relationships and key in embeded_attributes:
+            if key in relationships and key in embedded_resources:
                 instance._attributes[key] = value
                 instance.dirty_fields.add(key)
             else:
@@ -77,19 +78,30 @@ class Client(ResourceMappingMixin):
         return instance
 
     def update(self, instance, attributes):
-
         try:
             self._apply_resource_attributes(instance, attributes)
             instance.commit()
 
             return instance
+
         except DocumentError as ex:
-            raise ex
+            data = self._parse_document_error(ex)
+            if data:
+                raise ValidationError(data)
+            else:
+                raise ex
 
     def create(self, resource_name, attributes):
-        instance = self.client.create_and_commit(resource_name, attributes)
-        logger.error(instance)
-        return instance
+        try:
+            instance = self.client.create_and_commit(resource_name, attributes)
+            logger.error(instance)
+            return instance
+        except DocumentError as ex:
+            data = self._parse_document_error(ex)
+            if data:
+                raise ValidationError(data)
+            else:
+                raise ex
 
     def add_model_schema(self, resource_name, properties):
         self.client.schema.add_model_schema({resource_name: {'properties': properties}})
