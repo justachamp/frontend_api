@@ -140,7 +140,7 @@ def get_tokens(access_token, id_token=None, refresh_token=None, propagate_error=
                 else:
                     user = get_user_model().objects.get(cognito_id=payload.get('username'))
             except Exception as ex:
-                logger.error(f'process_request {ex} {payload["cognito:username"]}')
+                logger.error(f'process_request {ex!r} {payload["cognito:username"]}')
                 if propagate_error:
                     raise ex
                 return AnonymousUser, None, None, None
@@ -154,11 +154,11 @@ def get_tokens(access_token, id_token=None, refresh_token=None, propagate_error=
 
             return user, new_access_token, new_id_token, new_refresh_token
     except AuthenticationFailed as ex:
-        logger.error(f'process_request Exception: {ex}')
+        logger.error(f'process_request Exception: {ex!r}')
         raise ex
 
     except Exception as ex:
-        logger.error(f'process_request Exception: {ex}')
+        logger.error(f'process_request Exception: {ex!r}')
         if propagate_error:
             raise ex
         return AnonymousUser(), None, None, None

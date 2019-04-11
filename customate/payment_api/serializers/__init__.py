@@ -12,6 +12,7 @@ from payment_api.core.resource.serializers import ResourceMeta, ResourceSerializ
 from payment_api.serializers.wallet import WalletSerializer
 from payment_api.serializers.payment_account import PaymentAccountSerializer
 from payment_api.serializers.fee import FeeGroupSerializer, FeeSerializer, EmbededFeeSerializer
+from payment_api.serializers.tax import TaxSerializer
 
 __all__ = [
     UUIDField,
@@ -28,7 +29,10 @@ __all__ = [
     ResourceSerializer,
     WalletSerializer,
     PaymentAccountSerializer,
+
     FeeGroupSerializer,
     FeeSerializer,
-    EmbededFeeSerializer
+    EmbededFeeSerializer,
+
+    TaxSerializer
 ]

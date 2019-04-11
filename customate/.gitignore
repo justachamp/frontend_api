@@ -1,2 +1,3 @@
 logs/*
 .python-version
+env.sh

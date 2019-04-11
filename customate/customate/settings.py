@@ -24,7 +24,7 @@ BASE_DIR = path.dirname(path.dirname(path.abspath(__file__)))
 SECRET_KEY = 'c3rq#fr$u-5d1qsq@qfkyr=he@)9r7)wj1yl_14*bir3z_1hj^'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = bool(environ["DEBUG"])
 
 
 # Application definition
@@ -86,12 +86,12 @@ AUTHENTICATION_BACKENDS = [
 #     # 'authentication.cognito.middleware.cognito_django_authentication.AwsDjangoAuthentication'
 # ]
 
-COGNITO_USER_POOL_ID = environ.get('COGNITO_USER_POOL_ID')
-COGNITO_APP_CLIENT_ID = environ.get('COGNITO_APP_CLIENT_ID')
-COGNITO_APP_SECRET_KEY = environ.get('COGNITO_APP_SECRET_KEY')
+COGNITO_USER_POOL_ID = environ['COGNITO_USER_POOL_ID']
+COGNITO_APP_CLIENT_ID = environ['COGNITO_APP_CLIENT_ID']
+COGNITO_APP_SECRET_KEY = environ.get('COGNITO_APP_SECRET_KEY', '')
 
-AWS_ACCESS_KEY = environ.get('AWS_ACCESS_KEY')
-AWS_SECRET_KEY = environ.get('AWS_SECRET_KEY')
+AWS_ACCESS_KEY = environ['AWS_ACCESS_KEY']
+AWS_SECRET_KEY = environ['AWS_SECRET_KEY']
 
 AWS_REGION = environ.get('AWS_REGION')
 
@@ -117,18 +117,20 @@ LOGGING = {
     #     },
     # },
     'formatters': {
-        # 'django.server': {
-        #     '()': 'django.utils.log.ServerFormatter',
-        #     'format': '[%(server_time)s] %(message)s',
-        # },
+
         'console': {
             # exact format is not important, this is the minimum information
             'format': '%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
         },
+
+        'django.server': {
+            '()': 'django.utils.log.ServerFormatter',
+            'format': '[%(server_time)s] %(message)s',
+        },
     },
     'handlers': {
         'console': {
-            'level': 'INFO',
+            'level': 'DEBUG',
             'class': 'logging.StreamHandler',
             'formatter': 'console',
         },
@@ -145,11 +147,11 @@ LOGGING = {
         #     'filters': ['require_debug_false'],
         #     'class': 'logging.StreamHandler',
         # },
-        # 'django.server': {
-        #     'level': 'INFO',
-        #     'class': 'logging.StreamHandler',
-        #     'formatter': 'django.server',
-        # },
+        'django.server': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'django.server',
+        },
         # 'mail_admins': {
         #     'level': 'ERROR',
         #     'filters': ['require_debug_false'],
@@ -159,21 +161,22 @@ LOGGING = {
     'loggers': {
         'django': {
             'handlers': ['console'],
-            'level': 'INFO',
+            'level': 'DEBUG',
         },
-        # 'django.request': {
-        #     'handlers': ['console'],
-        #     'level': 'INFO',
-        #     'propagate': True,
-        # },
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
 
-        # 'django.server': {
-        #     'handlers': ['django.server'],
-        #     'level': 'INFO',
-        #     'propagate': False,
-        # },
+        'django.server': {
+            'handlers': ['django.server'],
+            'level': 'INFO',
+            'propagate': False,
+        },
     }
 }
+
 
 LOGIN_REDIRECT_URL = '/accounts/profile'
 
@@ -281,11 +284,11 @@ WSGI_APPLICATION = 'customate.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': environ.get('DB_NAME'),
-        'HOST': environ.get('DB_HOST'),
-        'PORT': environ.get('DB_PORT'),
-        'USER': environ.get('DB_USER'),
-        'PASSWORD': environ.get('DB_PASSWORD'),
+        'NAME': environ['DB_NAME'],
+        'HOST': environ['DB_HOST'],
+        'PORT': environ['DB_PORT'],
+        'USER': environ['DB_USER'],
+        'PASSWORD': environ['DB_PASSWORD'],
         'CONN_MAX_AGE': 60 * 10,  # 10 minutes
         'TEST': {
             # this is for ci database creation. if multiple developers
@@ -341,8 +344,8 @@ ALLOWED_HOSTS = ['*']
 AWS_ACCESS_KEY_ID = AWS_ACCESS_KEY
 AWS_SECRET_ACCESS_KEY = AWS_SECRET_KEY
 AWS_DEFAULT_ACL = 'public-read'
-AWS_STORAGE_BUCKET_NAME = environ.get('AWS_S3_STORAGE_BUCKET_NAME')
-AWS_S3_CUSTOM_DOMAIN = environ.get('AWS_CDN_HOST')
+AWS_STORAGE_BUCKET_NAME = environ['AWS_S3_STORAGE_BUCKET_NAME']
+AWS_S3_CUSTOM_DOMAIN = environ['AWS_CDN_HOST']
 AWS_S3_OBJECT_PARAMETERS = {
     'CacheControl': 'max-age=86400',
 }
@@ -351,4 +354,4 @@ STATIC_URL = 'https://%s/%s/' % (AWS_S3_CUSTOM_DOMAIN, AWS_LOCATION)
 STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
 COUNTRIES_AVAILABLE = environ.get('COUNTRIES_AVAILABLE', '').split(',')
-PAYMENT_API_URL = environ.get('PAYMENT_API_URL', None)
+PAYMENT_API_URL = environ['PAYMENT_API_URL']
