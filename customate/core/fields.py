@@ -45,16 +45,17 @@ class EnumField(ResultResourceFieldMixin, ChoiceField):
 
 class SerializerField(serializers.Field):
 
-    def __init__(self, resource, *args, **kwargs):
+    def __init__(self, resource, many=False, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._resource = resource
+        self._many = many
 
     def to_representation(self, instance):
-        return self._resource(context=self.context, instance=instance, partial=True, many=True).to_representation(instance)
+        return self._resource(context=self.context, instance=instance, partial=True, many=self._many).to_representation(instance)
 
     def to_internal_value(self, data):
         instance = getattr(self.parent.instance, self.field_name)
-        serializer = self._resource(instance=instance, context=self.context, data=data, partial=True, many=True)
+        serializer = self._resource(instance=instance, context=self.context, data=data, partial=True, many=self._many)
         try:
             validated_data = serializer.to_internal_value(data)
             return validated_data
