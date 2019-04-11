@@ -8,15 +8,11 @@
 from django.urls import include, path, re_path
 from rest_framework.urlpatterns import format_suffix_patterns
 from frontend_api import views
-from frontend_api.router import urlpatterns as model_url
+from frontend_api.router import urlpatterns as frontend_api
 from django.conf.urls import url
 
-
-
-
-
 urlpatterns = [
-    url(r'^', include(model_url)),
+    url(r'^', include(frontend_api)),
     re_path(r'^users/(?P<pk>[^/.]+)/status/$',
             views.UserViewSet.as_view({'patch': 'patch_status'}),
             name='user-status'),

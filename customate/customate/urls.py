@@ -28,17 +28,17 @@ from rest_framework import routers
 from frontend_api import views
 from authentication import views as auth_views
 
+from frontend_api.urls import urlpatterns as frontend_api_urls
+from payment_api.urls import urlpatterns as payment_api_urls
 
-
-
+api_urls = payment_api_urls + frontend_api_urls
 
 
 # Wire up our API using automatic URL routing.
 # Additionally, we include login URLs for the browsable API.
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path(r'api/v1/', include('frontend_api.urls')),
-    path(r'api/v1/', include('payment_api.urls')),
+    path(r'api/v1/', include(api_urls)),
     path(r'', include('authentication.urls')),
     # path(r'api/v1/', include(router.urls)),
     # path('snippets/<uuid:pk>/highlight/', views.SnippetHighlight.as_view()),
