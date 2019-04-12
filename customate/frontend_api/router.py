@@ -1,6 +1,10 @@
 from frontend_api import views
 from customate.routers import router
 
+# from rest_framework import routers
+
+# router = routers.DefaultRouter()
+
 router.register('users', views.UserViewSet)
 router.register('admins', views.AdminUserViewSet, basename='admins')
 router.register('user_accounts', views.UserAccountViewSet)

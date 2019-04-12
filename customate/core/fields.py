@@ -23,7 +23,8 @@ class PrimitiveValueFieldMixin:
 
     def _prepare_internal_value(self, data):
         primitive_value = getattr(self, 'primitive_value', None)
-        return data if not primitive_value else str(data)
+        return data if not primitive_value else \
+            self.get_primitive_value(data) if callable(getattr(self, 'get_primitive_value', None)) else str(data)
 
 
 class ResultResourceFieldMixin:
@@ -56,6 +57,9 @@ class EnumField(ResultResourceFieldMixin, PrimitiveValueFieldMixin, ChoiceField)
             return self._prepare_internal_value(self.enum[data])
         except KeyError:
             self.fail('invalid_choice', input=data)
+
+    def get_primitive_value(self, data):
+        return self.to_representation(data)
 
 
 class SerializerField(serializers.Field):

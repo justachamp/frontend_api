@@ -33,7 +33,6 @@ from payment_api.urls import urlpatterns as payment_api_urls
 
 api_urls = payment_api_urls + frontend_api_urls
 
-
 # Wire up our API using automatic URL routing.
 # Additionally, we include login URLs for the browsable API.
 urlpatterns = [

@@ -2,6 +2,10 @@ from rest_framework import routers
 from payment_api.views import SignUpProxy, PaymentAccountViewSet, WalletViewSet, FeeGroupViewSet
 from customate.routers import router
 
+# from rest_framework import routers
+
+# router = routers.DefaultRouter()
+
 router.register(r'test', SignUpProxy, basename='test')
 router.register('payment_accounts', PaymentAccountViewSet, basename='payment_accounts')
 router.register('fee_groups', FeeGroupViewSet, basename='fee_groups')
