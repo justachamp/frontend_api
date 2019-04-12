@@ -35,6 +35,10 @@ class Session(DefaultSession):
             resource_filter = None
         return resource_id, resource_filter
 
+    def read(self, json_data: dict, url='', no_cache=False):
+        doc = super().read(json_data, url, no_cache=False)
+        return doc
+
 
 class Client(ResourceMappingMixin, JsonApiErrorParser):
 
@@ -93,7 +97,11 @@ class Client(ResourceMappingMixin, JsonApiErrorParser):
 
     def create(self, resource_name, attributes):
         try:
-            instance = self.client.create_and_commit(resource_name, attributes)
+
+            instance = self.client.create(resource_name)
+            self._apply_resource_attributes(instance, attributes)
+            instance.commit()
+
             logger.error(instance)
             return instance
         except DocumentError as ex:
@@ -101,7 +109,12 @@ class Client(ResourceMappingMixin, JsonApiErrorParser):
             if data:
                 raise ValidationError(data)
             else:
-                raise ex
+                try:
+                    error = ex.response.json()
+                except Exception as ex:
+                    error = ex.response.content
+
+                raise ValidationError([error, ex.json_data])
 
     def add_model_schema(self, resource_name, properties):
         self.client.schema.add_model_schema({resource_name: {'properties': properties}})

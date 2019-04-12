@@ -69,7 +69,8 @@ class ResourceSerializer(Serializer):
             if isinstance(field, ManyRelatedField):
                 properties[field.source] = {'relation': 'to-many', 'resource': [field.source]}
             if isinstance(field, SerializerField):
-                properties[field.source] = {'type': 'array' if field.many else 'object'}
+                properties[field.source] = {'type': ['null', 'array' if field.many else 'object']}
+                properties[field.source] = {'relation': 'to-many' if field.many else 'to-one', 'resource': [field.source]}
             elif isinstance(field, UUIDField):
                 properties[field.source] = {'type': ['null', 'string']}
             elif isinstance(field, IntegerField):
@@ -85,6 +86,8 @@ class ResourceSerializer(Serializer):
         instance.type = self.Meta.model.resource
         self.client.reverse_mapping(instance)
         instance = self.client.update(instance, validated_data)
+        # refresh cached property
+        del instance.relationships
         return self.client.apply_mapping(instance)
 
     def to_representation(self, instance):

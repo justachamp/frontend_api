@@ -5,6 +5,7 @@ from collections import Iterable
 import logging
 
 from jsonapi_client.exceptions import DocumentError
+from jsonapi_client.resourceobject import AttributeDict, RelationshipDict, ResourceObject
 from rest_framework.exceptions import ValidationError
 
 from payment_api.core.resource.mixins import JsonApiErrorParser
