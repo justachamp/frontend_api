@@ -6,7 +6,6 @@ from rest_framework_json_api.views import ModelViewSet
 from payment_api.core.resource.models import ResourceQueryset
 
 
-
 class ResourceViewSet(ModelViewSet):
     resource_name = None
     base_url = settings.PAYMENT_API_URL

@@ -67,20 +67,28 @@ class SerializerField(serializers.Field):
     def __init__(self, resource, many=False, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._resource = resource
-        self._many = many
+        self.many = many
 
     def to_representation(self, instance):
-        return self._resource(context=self.context, instance=instance, partial=True, many=self._many).to_representation(instance)
+        return self._resource(context=self.context, instance=instance, partial=True, many=self.many).to_representation(instance)
 
     def to_internal_value(self, data):
-        instance = getattr(self.parent.instance, self.field_name)
-        serializer = self._resource(instance=instance, context=self.context, data=data, partial=True, many=self._many)
+        instance = self._get_instance()
+        if instance:
+            serializer = self._resource(instance=instance, context=self.context, data=data, partial=True,
+                                        many=self.many)
+        else:
+            serializer = self._resource(context=self.context, data=data, partial=True, many=self.many)
         try:
             validated_data = serializer.to_internal_value(data)
             return validated_data
         except ValidationError as ex:
             errors = self._prepare_serializer_errors(ex)
             raise ValidationError(errors)
+
+    def _get_instance(self):
+        parent = getattr(self.parent, 'instance', None)
+        return getattr(parent, self.field_name, None)
 
     @staticmethod
     def _prepare_serializer_errors(ex):

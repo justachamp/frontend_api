@@ -55,7 +55,7 @@ class Client(ResourceMappingMixin, JsonApiErrorParser):
 
     @cached_property
     def client(self):
-        return Session(self._base_url)
+        return Session(self._base_url, schema={})
 
     @property
     def request_kwargs(self):
