@@ -15,10 +15,12 @@ logger = logging.getLogger(__name__)
 
 class SubUserPermissionRelationshipView(RelationshipView):
     queryset = SubUserPermission.objects
+    serializer_class = SubUserPermissionSerializer
 
 
 class AdminUserPermissionRelationshipView(RelationshipView):
     queryset = AdminUserPermission.objects
+    serializer_class = AdminUserPermissionSerializer
 
 
 class SubUserPermissionViewSet(PatchRelatedMixin, views.ModelViewSet):

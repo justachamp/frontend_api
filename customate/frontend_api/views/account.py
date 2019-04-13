@@ -81,14 +81,17 @@ class AccountRelationshipView(RelationshipPostMixin, RelationshipView):
 
 class UserAccountRelationshipView(RelationshipView):
     queryset = UserAccount.objects
+    serializer_class = UserAccountSerializer
 
 
 class AdminUserAccountRelationshipView(RelationshipView):
     queryset = AdminUserAccount.objects
+    serializer_class = AdminUserAccountSerializer
 
 
 class SubUserAccountRelationshipView(RelationshipView):
     queryset = SubUserAccount.objects
+    serializer_class = SubUserAccountSerializer
 
 
 class AccountViewSet(RelationshipMixin, PatchRelatedMixin, views.ModelViewSet):

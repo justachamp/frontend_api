@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class CompanyRelationshipView(RelationshipPostMixin, RelationshipView):
+    serializer_class = CompanySerializer
     queryset = Company.objects
     permission_classes = (AllowAny,)
     _related_serializers = {
