@@ -52,6 +52,7 @@ class FeeGroupSerializer(ResourceSerializer):
     id = UUIDField(read_only=True)
     is_default = IntegerField(required=True, source='isDefault')
     title = CharField(required=True)
+    active = IntegerField(read_only=True)
     # fees = ExternalResourceRelatedField(
     #     many=True,
     #     # read_only=True,

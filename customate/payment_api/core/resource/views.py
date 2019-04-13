@@ -71,6 +71,7 @@ class ResourceViewSet(ModelViewSet):
     # def perform_update(self, serializer):
     #     serializer.save()
     #
-    # def perform_destroy(self, instance):
-    #     pass
+    def perform_destroy(self, instance):
+        instance.delete()
+        instance.commit()
 
