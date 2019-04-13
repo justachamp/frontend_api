@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 class AddressRelationshipView(RelationshipView):
     queryset = Address.objects
+    serializer_class = AddressSerializer
 
 
 class UserAddressViewSet(PatchRelatedMixin, views.ModelViewSet):

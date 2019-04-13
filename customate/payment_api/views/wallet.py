@@ -13,6 +13,7 @@ class WalletViewSet(ResourceViewSet):
     permission_classes = (AllowAny,)
     # ordering_fields = ('iban',)
 
+
 class WalletRelationshipView(RelationshipView):
-    # queryset = Address.objects
-    pass
+    serializer_class = WalletSerializer
+    resource_name = 'wallets'

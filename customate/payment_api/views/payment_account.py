@@ -50,4 +50,8 @@ class PaymentAccountViewSet(ResourceViewSet):
 
 
 class PaymentAccountRelationshipView(RelationshipView):
-    pass
+    serializer_class = PaymentAccountSerializer
+    resource_name = 'payment_accounts'
+
+    class Meta:
+        external_resource_name = 'accounts'

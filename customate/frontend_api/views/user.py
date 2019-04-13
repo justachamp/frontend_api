@@ -109,7 +109,7 @@ class UserViewSet(PatchRelatedMixin, views.ModelViewSet):
     def get_serializer_class(self):
 
         field = self.kwargs.get('related_field')
-        user = self.request.user
+        # user = self.request.user
         id = self.kwargs.get('pk')
         if id:
             try:
