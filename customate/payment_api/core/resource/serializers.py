@@ -66,9 +66,11 @@ class ResourceSerializer(Serializer):
         properties = {}
 
         for name, field in self.fields.items():
-            if isinstance(field, ManyRelatedField):
+            if getattr(field, 'read_only', None):
+                continue
+            elif isinstance(field, ManyRelatedField):
                 properties[field.source] = {'relation': 'to-many', 'resource': [field.source]}
-            if isinstance(field, SerializerField):
+            elif isinstance(field, SerializerField):
                 properties[field.source] = {'type': ['null', 'array' if field.many else 'object']}
                 properties[field.source] = {'relation': 'to-many' if field.many else 'to-one', 'resource': [field.source]}
             elif isinstance(field, UUIDField):
