@@ -89,7 +89,10 @@ class ResourceSerializer(Serializer):
         self.client.reverse_mapping(instance)
         instance = self.client.update(instance, validated_data)
         # refresh cached property
-        del instance.relationships
+        try:
+            del instance.relationships
+        except Exception as ex:
+            pass
         return self.client.apply_mapping(instance)
 
     def to_representation(self, instance):
