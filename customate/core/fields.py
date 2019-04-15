@@ -3,7 +3,7 @@ from customate.settings import COUNTRIES_AVAILABLE
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from rest_framework_json_api.serializers import ChoiceField, UUIDField as DefaultUUIDField
+from rest_framework_json_api.serializers import ChoiceField, UUIDField as DefaultUUIDField, CharField
 from rest_framework_json_api.relations import ResourceRelatedField
 
 
@@ -40,6 +40,10 @@ class UUIDField(PrimitiveValueFieldMixin, DefaultUUIDField):
 
     def to_internal_value(self, data):
         return self._prepare_internal_value(super().to_internal_value(data))
+
+
+class IbanField(CharField):
+    pass
 
 
 class EnumField(ResultResourceFieldMixin, PrimitiveValueFieldMixin, ChoiceField):

@@ -1,5 +1,5 @@
 from django.utils.functional import cached_property
-from rest_framework.fields import UUIDField, EmailField, IntegerField
+from rest_framework.fields import UUIDField, IntegerField, FloatField
 from rest_framework.relations import ManyRelatedField
 from rest_framework_json_api.serializers import Serializer
 
@@ -72,10 +72,12 @@ class ResourceSerializer(Serializer):
                 properties[field.source] = {'relation': 'to-many', 'resource': [field.source]}
             elif isinstance(field, SerializerField):
                 properties[field.source] = {'type': ['null', 'array' if field.many else 'object']}
-                properties[field.source] = {'relation': 'to-many' if field.many else 'to-one', 'resource': [field.source]}
+                properties[field.source] = {
+                    'relation': 'to-many' if field.many else 'to-one', 'resource': [field.source]
+                }
             elif isinstance(field, UUIDField):
                 properties[field.source] = {'type': ['null', 'string']}
-            elif isinstance(field, IntegerField):
+            elif isinstance(field, (IntegerField, FloatField)):
                 properties[field.source] = {'type': 'number'}
             else:
                 properties[field.source] = {'type': 'string'}

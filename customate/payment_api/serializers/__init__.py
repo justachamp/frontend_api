@@ -6,7 +6,7 @@ from rest_framework_json_api.serializers import (
 )
 
 from core.serializers import Serializer
-from core.fields import EnumField, OperationType, FeeType, UUIDField
+from core.fields import EnumField, OperationType, FeeType, UUIDField, IbanField, Country
 from payment_api.core.resource.fields import ExternalResourceRelatedField
 from payment_api.core.resource.serializers import ResourceMeta, ResourceSerializer
 from payment_api.serializers.wallet import WalletSerializer
@@ -22,6 +22,8 @@ __all__ = [
     CharField,
     ExternalResourceRelatedField,
     EnumField,
+    IbanField,
+    Country,
     OperationType,
     FeeType,
     ResourceMeta,

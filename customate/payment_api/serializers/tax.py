@@ -1,41 +1,26 @@
 from payment_api.serializers import (
     UUIDField,
-    EmailField,
+    EnumField,
+    FloatField,
     IntegerField,
-    ExternalResourceRelatedField,
+    IbanField,
+    Country,
     ResourceMeta,
     ResourceSerializer
 )
 
 
 class TaxSerializer(ResourceSerializer):
-
-    # included_serializers = {
-    #     'wallets': 'payment_api.serializers.WalletSerializer'
-    # }
-
-    # wallets = ExternalResourceRelatedField(
-    #     many=True,
-    #     # read_only=True,
-    #     required=False,
-    #     related_link_view_name='payment-account-related',
-    #     self_link_view_name='payment-account-relationships',
-    #     resource_mapping={'id': {'op': 'copy', 'value': 'pk'}}
-    # )
-
-    # "id": "f73f0eb6-33c0-457e-b41c-6c970287ada6",
-    # "attributes": {
-    #     "active": 1,
-    #     "creationDate": 1545388418695,
-    #     "email": null,
-    #     "updateDate": null
-    # }
     id = UUIDField(read_only=True)
-    email = EmailField(required=False)
-    active = IntegerField(required=True)
+    is_default = IntegerField(required=True, source='isDefault')
+    country = EnumField(enum=Country, required=True, primitive_value=True)
+    active = IntegerField(read_only=True)
+    fee_iban = IbanField(required=True, source='feeIban')
+    tax_iban = IbanField(required=True, source='taxIban')
+    percent = FloatField(min_value=0, max_value=100)
 
     class Meta(ResourceMeta):
-        resource_name = 'tax'
+        resource_name = 'taxes'
 
 
 
