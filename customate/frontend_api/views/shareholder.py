@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 class ShareholderRelationshipView(RelationshipView):
     queryset = Shareholder.objects
+    serializer_class = ShareholderSerializer
 
 
 class ShareholderViewSet(BulkExtensionMixin, PatchRelatedMixin, views.ModelViewSet):

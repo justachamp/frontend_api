@@ -2,6 +2,8 @@ from django.utils.functional import cached_property
 from rest_framework.fields import UUIDField, EmailField, IntegerField
 from rest_framework.relations import ManyRelatedField
 from rest_framework_json_api.serializers import Serializer
+
+from core.fields import SerializerField
 from payment_api.core.resource.models import ExternalResourceModel
 from payment_api.core.resource.fields import ExternalResourceRelatedField
 from rest_framework.serializers import raise_errors_on_nested_writes
@@ -64,8 +66,13 @@ class ResourceSerializer(Serializer):
         properties = {}
 
         for name, field in self.fields.items():
-            if isinstance(field, ManyRelatedField):
+            if getattr(field, 'read_only', None):
+                continue
+            elif isinstance(field, ManyRelatedField):
                 properties[field.source] = {'relation': 'to-many', 'resource': [field.source]}
+            elif isinstance(field, SerializerField):
+                properties[field.source] = {'type': ['null', 'array' if field.many else 'object']}
+                properties[field.source] = {'relation': 'to-many' if field.many else 'to-one', 'resource': [field.source]}
             elif isinstance(field, UUIDField):
                 properties[field.source] = {'type': ['null', 'string']}
             elif isinstance(field, IntegerField):
@@ -81,6 +88,8 @@ class ResourceSerializer(Serializer):
         instance.type = self.Meta.model.resource
         self.client.reverse_mapping(instance)
         instance = self.client.update(instance, validated_data)
+        # refresh cached property
+        del instance.relationships
         return self.client.apply_mapping(instance)
 
     def to_representation(self, instance):

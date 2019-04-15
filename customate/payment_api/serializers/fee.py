@@ -25,7 +25,7 @@ class EmbededFeeSerializer(Serializer):
     operation = EnumField(enum=OperationType, required=True, primitive_value=True)
     percent = FloatField(min_value=0, max_value=100)
     type = EnumField(enum=FeeType, required=True, primitive_value=True, source='attributes.type', result_source='type')
-    user_default = IntegerField(read_only=True, source='userDefault')
+    use_default = IntegerField(source='useDefault')
 
 
 class FeeSerializer(ResourceSerializer):
@@ -37,7 +37,7 @@ class FeeSerializer(ResourceSerializer):
     operation = EnumField(enum=OperationType, required=True)
     percent = FloatField(min_value=0, max_value=100)
     fee_type = EnumField(enum=FeeType, required=True, source='type')
-    user_default = IntegerField(read_only=True, source='userDefault')
+    use_default = IntegerField(source='useDefault')
 
     class Meta(ResourceMeta):
         resource_name = 'fees'
@@ -52,6 +52,7 @@ class FeeGroupSerializer(ResourceSerializer):
     id = UUIDField(read_only=True)
     is_default = IntegerField(required=True, source='isDefault')
     title = CharField(required=True)
+    active = IntegerField(read_only=True)
     # fees = ExternalResourceRelatedField(
     #     many=True,
     #     # read_only=True,

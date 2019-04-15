@@ -29,4 +29,8 @@ class FeeGroupViewSet(ResourceViewSet):
 
 
 class FeeGroupRelationshipView(RelationshipView):
-    pass
+    serializer_class = FeeGroupSerializer
+    resource_name = 'fee_groups'
+
+    def get_queryset(self):
+        pass
