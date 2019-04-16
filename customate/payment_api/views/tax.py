@@ -24,4 +24,8 @@ class TaxViewSet(ResourceViewSet):
 
 
 class TaxRelationshipView(RelationshipView):
-    pass
+    resource_name = 'taxes'
+    serializer_class = TaxSerializer
+
+    def get_queryset(self):
+        pass

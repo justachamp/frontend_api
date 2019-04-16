@@ -13,6 +13,7 @@ from payment_api.views.payment_account import PaymentAccountViewSet, PaymentAcco
 from payment_api.views.fee import FeeGroupViewSet, FeeGroupRelationshipView
 from payment_api.views.tax import TaxViewSet, TaxRelationshipView
 from payment_api.views.transaction import TransactionViewSet, TransactionRelationshipView
+from payment_api.views.payment import PaymentViewSet, PaymentRelationshipView
 
 from payment_api.views._raw_proxy_views import ItemListProxy, SignUpProxy
 
@@ -35,6 +36,8 @@ __all__ = [
     TaxRelationshipView,
     TransactionViewSet,
     TransactionRelationshipView,
+    PaymentViewSet,
+    PaymentRelationshipView,
     ItemListProxy,
     SignUpProxy
 ]

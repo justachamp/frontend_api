@@ -1,5 +1,5 @@
 from rest_framework.permissions import AllowAny
-from payment_api.serializers import TransactionSerializer
+from payment_api.serializers import PaymentSerializer
 
 from payment_api.views import (
     InclusionFiler,
@@ -10,10 +10,10 @@ from payment_api.views import (
 )
 
 
-class TransactionViewSet(ResourceViewSet):
-    resource_name = 'transactions'
+class PaymentViewSet(ResourceViewSet):
+    resource_name = 'payments'
     allowed_methods = ['head', 'get']
-    serializer_class = TransactionSerializer
+    serializer_class = PaymentSerializer
     permission_classes = (AllowAny,)
 
     filter_backends = (
@@ -24,9 +24,9 @@ class TransactionViewSet(ResourceViewSet):
     )
 
 
-class TransactionRelationshipView(RelationshipView):
-    serializer_class = TransactionSerializer
-    resource_name = 'transactions'
+class PaymentRelationshipView(RelationshipView):
+    serializer_class = PaymentSerializer
+    resource_name = 'payments'
 
     def get_queryset(self):
         pass

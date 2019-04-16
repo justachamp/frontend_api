@@ -9,7 +9,13 @@ from payment_api.views import (
     PaymentAccountViewSet,
     PaymentAccountRelationshipView,
     FeeGroupViewSet,
-    FeeGroupRelationshipView
+    FeeGroupRelationshipView,
+    TaxViewSet,
+    TaxRelationshipView,
+    TransactionViewSet,
+    TransactionRelationshipView,
+    PaymentViewSet,
+    PaymentRelationshipView
 )
 
 from django.conf.urls import url
@@ -42,19 +48,28 @@ urlpatterns = [
     # /api/v1/tax
     re_path(r'^taxes/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
             TaxViewSet.as_view({'get': 'retrieve_related'}),  # {'get': 'retrieve_related'}
-            name='payment-account-related'),
+            name='tax-related'),
 
     re_path(r'^taxes/(?P<pk>[^/.]+)/relationships/(?P<related_field>[^/.]+)$',
             view=TaxRelationshipView.as_view(),
-            name='payment-account-relationships'
+            name='tax-relationships'
             ),
 
     re_path(r'^transactions/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
-            TaxViewSet.as_view({'get': 'retrieve_related'}),  # {'get': 'retrieve_related'}
-            name='payment-account-related'),
+            TransactionViewSet.as_view({'get': 'retrieve_related'}),  # {'get': 'retrieve_related'}
+            name='transaction-related'),
 
     re_path(r'^transactions/(?P<pk>[^/.]+)/relationships/(?P<related_field>[^/.]+)$',
-            view=TaxRelationshipView.as_view(),
-            name='payment-account-relationships'
+            view=TransactionRelationshipView.as_view(),
+            name='transaction-relationships'
+            ),
+
+    re_path(r'^payments/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
+            PaymentViewSet.as_view({'get': 'retrieve_related'}),  # {'get': 'retrieve_related'}
+            name='payment-related'),
+
+    re_path(r'^payments/(?P<pk>[^/.]+)/relationships/(?P<related_field>[^/.]+)$',
+            view=PaymentRelationshipView.as_view(),
+            name='payment-relationships'
             ),
 ]
