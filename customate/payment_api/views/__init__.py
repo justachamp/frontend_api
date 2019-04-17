@@ -6,7 +6,7 @@ from rest_framework_json_api.filters import (
     OrderingFilter,
 )
 
-from payment_api.core.resource.filters import InclusionFiler, IbanGeneralPartFiler
+from payment_api.core.resource.filters import InclusionFiler, IbanGeneralPartFiler, ResourceFilterBackend
 from payment_api.core.resource.views import ResourceViewSet
 from payment_api.views.wallet import WalletViewSet, WalletRelationshipView
 from payment_api.views.payment_account import PaymentAccountViewSet, PaymentAccountRelationshipView
@@ -24,6 +24,7 @@ __all__ = [
     QueryParameterValidationFilter,
     OrderingFilter,
     SearchFilter,
+    ResourceFilterBackend,
     RelationshipView,
     ResourceViewSet,
     WalletViewSet,

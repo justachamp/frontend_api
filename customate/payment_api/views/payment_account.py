@@ -5,6 +5,7 @@ from payment_api.serializers import PaymentAccountSerializer
 from payment_api.views import (
     InclusionFiler,
     IbanGeneralPartFiler,
+    ResourceFilterBackend,
     QueryParameterValidationFilter,
     OrderingFilter,
     SearchFilter,
@@ -12,6 +13,7 @@ from payment_api.views import (
     ResourceViewSet
 )
 
+from payment_api.core.filters.django_to_rql.backend import RQLFilterBackend
 
 class PaymentAccountViewSet(ResourceViewSet):
     resource_name = 'payment_accounts'
@@ -39,13 +41,14 @@ class PaymentAccountViewSet(ResourceViewSet):
         OrderingFilter,
         InclusionFiler,
         # ResourceFilterBackend,
+        RQLFilterBackend,
         SearchFilter
     )
-    #
-    # filterset_fields = {
-    #     'active': ('exact',),
-    #     'email': ('icontains', 'contains', 'iexact', 'exact')
-    # }
+
+    filterset_fields = {
+        'active': ('exact',),
+        'email': ('icontains', 'contains', 'iexact', 'exact')
+    }
     # search_fields = ('email',)
 
 

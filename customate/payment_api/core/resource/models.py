@@ -75,6 +75,27 @@ class ResourceQueryset(JsonApiErrorParser):
     def __getitem__(self, item):
         return list(self.iterator())
 
+    @property
+    def model(self):
+        return self
+
+    @property
+    def _meta(self):
+        return self
+
+    def get_field(self, name):
+        return self
+
+    @property
+    def _default_manager(self):
+        return self
+
+    def all(self):
+        return self
+
+    @property
+    def query(self):
+        return self
 
     @property
     def response(self):

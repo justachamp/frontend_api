@@ -1,46 +1,48 @@
 # Payment API
 
 ## What
-This is a REST API service built on top of [Django REST Framework](https://django-rest-framework.readthedocs.io) and
-[JSON API](https://jsonapi.org) spec for communication with client.
+        This is a REST API service built on top of [Django REST Framework](https://django-rest-framework.readthedocs.io) and
+        [JSON API](https://jsonapi.org) spec for communication with client.
+
+### Prerequisites
+    install docker https://www.docker.com/products/overview
+
+### Installation steps
+    checkout the source code
+    > git clone repo
+    > cd customate_app/docker
+    > docker-compose build
+    > docker-compose up
 
 
-## Install python3.7
-Use [pyenv](https://github.com/pyenv/pyenv) to avoid versioning hell or your preferred tool to setup isolated python environment.
+## Working on the project
 
-## Install dependencies
-```
-cd customate
-pip install -r requirements.txt
-```
+### project location
+    The code accessed by all the docker servers/instances is in the folder
+    /path/to/your/install/customate_app
 
-## Install PostgreSQL10 database `customate`
-Use schema and sample data from `sql/`
-```
-psql -U myuser --host=127.0.0.1 customate < sql/schema.sql
-psql -U myuser --host=127.0.0.1 customate < sql/data.sql
+### bring up the docker work environment
+    start docker and set docker-machine environment variables
+    > cd /path/to/your/install/customate_app/docker/
+    > docker-compose up
 
-```
+## Adding project requirements
 
-## Setup env file
-Use `env.sh.sample` as example:
-```
-cd customate
-cp env.sh.sample env.sh
-```
+### add new packages to container
+    when adding new requirements to the requirements.txt a new image must be
+    built in order to persist the changes across container restarts
 
-## Run django devserver
-```
-source env.sh
-./manage.py runserver
+    go inside the container
+    > docker exec -i -t customate_app_customate_1 bash
 
-# check that service is running
-curl "http://localhost:8000/"
-```
+    to update requirements.txt
+    > pip install --upgrade --force-reinstall -r requirements.txt
 
+    to insall a new package
+    > pip install some-packege-name
 
-
-
+    to freeze changes
+    > pip freeze > requirements.txt
 
 ### other useful commands
 
@@ -63,7 +65,6 @@ curl "http://localhost:8000/"
     For example
     psql -U customate -h 127.0.0.1 -p 5442
     ssh -p 2222 root@localhost
-
 
 ### S3 static 
     add to environemnt next variables:
