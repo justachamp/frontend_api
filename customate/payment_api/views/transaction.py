@@ -11,9 +11,9 @@ from payment_api.views import (
 )
 
 SYSTEM_TRANSACTIONS = (
-    # 'IncomingContributionTransactionWorker',
+    'IncomingContributionTransactionWorker',
     'LockTransactionWorker',
-    # 'ReleaseTransactionWorker',
+    'ReleaseTransactionWorker',
     'LockTransactionWorker',
     'InternalFeeAndTaxTransactionWorker',
     'MoneyInBtFeeAndTaxTransactionWorker',
