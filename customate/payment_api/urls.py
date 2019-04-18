@@ -15,7 +15,9 @@ from payment_api.views import (
     TransactionViewSet,
     TransactionRelationshipView,
     PaymentViewSet,
-    PaymentRelationshipView
+    PaymentRelationshipView,
+    FundingSourceViewSet,
+    FundingSourceRelationshipView
 )
 
 from django.conf.urls import url
@@ -71,5 +73,13 @@ urlpatterns = [
     re_path(r'^payments/(?P<pk>[^/.]+)/relationships/(?P<related_field>[^/.]+)$',
             view=PaymentRelationshipView.as_view(),
             name='payment-relationships'
+            ),
+    re_path(r'^funding_sources/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
+            FundingSourceViewSet.as_view({'get': 'retrieve_related'}),  # {'get': 'retrieve_related'}
+            name='funding-source-related'),
+
+    re_path(r'^funding_sources/(?P<pk>[^/.]+)/relationships/(?P<related_field>[^/.]+)$',
+            view=FundingSourceRelationshipView.as_view(),
+            name='funding-source-relationships'
             ),
 ]

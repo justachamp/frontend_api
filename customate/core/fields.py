@@ -149,6 +149,20 @@ class FeeType(Enum):
         return self.value
 
 
+class FundingSourceType(Enum):
+    WALLET = 'WALLET'
+    DIRECT_DEBIT = 'DIRECT_DEBIT'
+    CREDIT_CARD = 'CREDIT_CARD'
+
+    class Labels:
+        WALLET = 'Wallet'
+        DIRECT_DEBIT = 'Direct debit'
+        CREDIT_CARD = 'Credit card'
+
+    def __repr__(self):
+        return self.value
+
+
 class OperationType(Enum):
     DEFAULT = 'DEFAULT'
     MONEY_IN_DD = 'MONEY_IN_DD'
