@@ -10,6 +10,8 @@ from payment_api.views import (
     ResourceViewSet
 )
 
+SYSTEM_TRANSACTIONS = ('IncomingContributionTransactionWorker', 'LockTransactionWorker', 'ReleaseTransactionWorker')
+
 
 class TransactionViewSet(ResourceViewSet):
     resource_name = 'transactions'
@@ -26,10 +28,14 @@ class TransactionViewSet(ResourceViewSet):
 
     filterset_fields = {
         'status': ('exact',),
-        'name': ('exact',),
+        'name': ('exact', 'not_in'),
         'payment__currency': ('exact',),
         'execution_date': ('exact', 'eq', 'ne', 'gt', 'lt', 'gte', 'lte')
     }
+
+    class Meta:
+        filters = [{'name__not_in': ','.join(SYSTEM_TRANSACTIONS)}]
+
 
 class TransactionRelationshipView(RelationshipView):
     serializer_class = TransactionSerializer
