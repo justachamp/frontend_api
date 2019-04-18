@@ -7,6 +7,7 @@ from rest_framework.exceptions import ValidationError
 from django.utils.encoding import force_text
 from django.utils.translation import ugettext_lazy as _
 from rest_framework_json_api.django_filters import DjangoFilterBackend
+from rest_framework_json_api.utils import format_field_names
 
 
 class RQLFilterSet:
@@ -58,10 +59,13 @@ class RQLFilterSet:
     @property
     def qs(self):
         queryset = self._queryset
-        queryset.filter = self.filters
+        filters = self.filters
+        if filters:
+            queryset.filter = filters
+
         return queryset
 
-    @property
+    @cached_property
     def filters(self):
         filters = {}
         data = self.filter_data
@@ -90,10 +94,10 @@ class RQLFilterSet:
             value = f'=={value}'
 
         if len(parts) > 1:
-            value = f'{parts[-1]}{value}'
-            parts = parts[:-1]
+            field_parts = [next(iter(format_field_names({part: part}, format_type='camelize'))) for part in parts[1:]]
+            value = f'{".".join(field_parts)}{value}'
 
-        key = f'[{".".join(parts)}]='
+        key = f'[{parts[0]}]='
 
         return {key: value}
 

@@ -6,6 +6,7 @@ from payment_api.views import (
     OrderingFilter,
     SearchFilter,
     RelationshipView,
+    ResourceFilterBackend,
     ResourceViewSet
 )
 
@@ -19,10 +20,16 @@ class TransactionViewSet(ResourceViewSet):
     filter_backends = (
         OrderingFilter,
         InclusionFiler,
-        # ResourceFilterBackend,
+        ResourceFilterBackend,
         SearchFilter
     )
 
+    filterset_fields = {
+        'status': ('exact',),
+        'name': ('exact',),
+        'payment__currency': ('exact',),
+        'execution_date': ('exact', 'eq', 'ne', 'gt', 'lt', 'gte', 'lte')
+    }
 
 class TransactionRelationshipView(RelationshipView):
     serializer_class = TransactionSerializer

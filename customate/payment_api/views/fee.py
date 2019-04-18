@@ -26,7 +26,8 @@ class FeeGroupViewSet(ResourceViewSet):
     )
 
     filterset_fields = {
-        'active': ('exact',)
+        'active': ('exact',),
+        'title': ('exact', 'contains', 'startswith', 'endswith'),
     }
 
     class Meta:
