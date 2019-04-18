@@ -5,6 +5,7 @@ from payment_api.views import (
     InclusionFiler,
     OrderingFilter,
     SearchFilter,
+    ResourceFilterBackend,
     RelationshipView,
     ResourceViewSet
 )
@@ -18,9 +19,16 @@ class TaxViewSet(ResourceViewSet):
     filter_backends = (
         OrderingFilter,
         InclusionFiler,
-        # ResourceFilterBackend,
+        ResourceFilterBackend,
         SearchFilter
     )
+
+    filterset_fields = {
+        'active': ('exact',)
+    }
+
+    class Meta:
+        filters = [{'active__exact': 1}]
 
 
 class TaxRelationshipView(RelationshipView):

@@ -7,6 +7,7 @@ from payment_api.views import (
     QueryParameterValidationFilter,
     OrderingFilter,
     SearchFilter,
+    ResourceFilterBackend,
     RelationshipView,
     ResourceViewSet
 )
@@ -20,12 +21,18 @@ class FeeGroupViewSet(ResourceViewSet):
         QueryParameterValidationFilter,
         OrderingFilter,
         InclusionFiler,
+        ResourceFilterBackend,
         SearchFilter
     )
+
+    filterset_fields = {
+        'active': ('exact',)
+    }
 
     class Meta:
         include_resources = ['fees']
         embedded_resources = ['fees']
+        filters = [{'active__exact': 1}]
 
 
 class FeeGroupRelationshipView(RelationshipView):
