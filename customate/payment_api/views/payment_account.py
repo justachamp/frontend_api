@@ -13,7 +13,6 @@ from payment_api.views import (
     ResourceViewSet
 )
 
-from payment_api.core.filters.django_to_rql.backend import RQLFilterBackend
 
 class PaymentAccountViewSet(ResourceViewSet):
     resource_name = 'payment_accounts'
@@ -32,6 +31,7 @@ class PaymentAccountViewSet(ResourceViewSet):
 
     class Meta:
         external_resource_name = 'accounts'
+        filters = [{'active__exact': 1}]
 
     # ordering_fields = ('email',)
     #
@@ -40,8 +40,7 @@ class PaymentAccountViewSet(ResourceViewSet):
         # QueryParameterValidationFilter,
         OrderingFilter,
         InclusionFiler,
-        # ResourceFilterBackend,
-        RQLFilterBackend,
+        ResourceFilterBackend,
         SearchFilter
     )
 
@@ -58,3 +57,4 @@ class PaymentAccountRelationshipView(RelationshipView):
 
     class Meta:
         external_resource_name = 'accounts'
+

@@ -59,9 +59,10 @@ class ResourceQueryset(JsonApiErrorParser):
     _response = None
     _modifiers = None
     _inclusions = None
+    _filters = None
     _pk = None
 
-    def __init__(self, resource, client, method, modifiers=None, inclusions=None):
+    def __init__(self, resource, client, method, modifiers=None, inclusions=None, filters=None):
         self.resource = resource
         self.client = client
         self.method = method
@@ -72,30 +73,11 @@ class ResourceQueryset(JsonApiErrorParser):
         if inclusions:
             self.inclusion = inclusions
 
+        if filters:
+            self.filter = filters
+
     def __getitem__(self, item):
         return list(self.iterator())
-
-    @property
-    def model(self):
-        return self
-
-    @property
-    def _meta(self):
-        return self
-
-    def get_field(self, name):
-        return self
-
-    @property
-    def _default_manager(self):
-        return self
-
-    def all(self):
-        return self
-
-    @property
-    def query(self):
-        return self
 
     @property
     def response(self):
@@ -130,6 +112,7 @@ class ResourceQueryset(JsonApiErrorParser):
 
         collect_modifiers(self.modifier)
         collect_modifiers(self.inclusion)
+        collect_modifiers(self.filter)
 
         return data
 
@@ -149,6 +132,29 @@ class ResourceQueryset(JsonApiErrorParser):
             modifiers = Modifier(modifier)
 
         self._modifiers = self._modifiers + modifiers if self._modifiers else modifiers
+
+    @property
+    def filter(self):
+        return self._filters
+
+    @filter.setter
+    def filter(self, filters):
+
+        def get_modifier(filter_data):
+            if isinstance(filter_data, tuple):
+                key, value = filter_data
+                return Modifier(f'filter{key}{";".join(value) if isinstance(value, list) else value}')
+            else:
+                return Modifier(filter_data)
+
+        if isinstance(filters, dict):
+            filters = reduce(add, (get_modifier(current_filter) for current_filter in filters.items()))
+        elif isinstance(filters, Iterable) and not isinstance(filters, (str, bytes)):
+            filters = reduce(add, (get_modifier(current_filter) for current_filter in filters))
+        else:
+            filters = Modifier(filters)
+
+        self._filters = self._filters + filters if self._filters else filters
 
     @property
     def inclusion(self):
