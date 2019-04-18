@@ -10,7 +10,17 @@ from payment_api.views import (
     ResourceViewSet
 )
 
-SYSTEM_TRANSACTIONS = ('IncomingContributionTransactionWorker', 'LockTransactionWorker', 'ReleaseTransactionWorker')
+SYSTEM_TRANSACTIONS = (
+    # 'IncomingContributionTransactionWorker',
+    'LockTransactionWorker',
+    # 'ReleaseTransactionWorker',
+    'LockTransactionWorker',
+    'InternalFeeAndTaxTransactionWorker',
+    'MoneyInBtFeeAndTaxTransactionWorker',
+    'MoneyInCcFeeAndTaxTransactionWorker',
+    'MoneyInDdFeeAndTaxTransactionWorker',
+    'MoneyOutBtFeeAndTaxTransactionWorker',
+)
 
 
 class TransactionViewSet(ResourceViewSet):
@@ -28,13 +38,17 @@ class TransactionViewSet(ResourceViewSet):
 
     filterset_fields = {
         'status': ('exact',),
+        'active': ('exact',),
         'name': ('exact', 'not_in'),
         'payment__currency': ('exact',),
         'execution_date': ('exact', 'eq', 'ne', 'gt', 'lt', 'gte', 'lte')
     }
 
     class Meta:
-        filters = [{'name__not_in': ','.join(SYSTEM_TRANSACTIONS)}]
+        filters = [
+            {'name__not_in': ','.join(SYSTEM_TRANSACTIONS)},
+            {'active__exact': 1}
+        ]
 
 
 class TransactionRelationshipView(RelationshipView):

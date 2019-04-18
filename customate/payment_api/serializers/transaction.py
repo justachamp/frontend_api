@@ -16,6 +16,7 @@ class TransactionSerializer(ResourceSerializer):
     }
 
     id = UUIDField(read_only=True)
+    active = IntegerField(read_only=True)
     amount = IntegerField(read_only=True)
     balance = IntegerField(read_only=True)
     execution_date = TimestampField(read_only=True, source='executionDate')
