@@ -75,7 +75,7 @@ class RQLFilterSet:
                 key = next(iter(filter_data))
                 if filters.get(key, None):
                     if isinstance(filters[key], list):
-                        filters[key].appent(filter_data[key])
+                        filters[key].append(filter_data[key])
                     else:
                         filters[key] = [filters[key], filter_data[key]]
                 else:
