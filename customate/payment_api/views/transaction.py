@@ -20,6 +20,7 @@ SYSTEM_TRANSACTIONS = (
     'MoneyInCcFeeAndTaxTransactionWorker',
     'MoneyInDdFeeAndTaxTransactionWorker',
     'MoneyOutBtFeeAndTaxTransactionWorker',
+    'CustomateToIbanTransactionWorker'
 )
 
 
