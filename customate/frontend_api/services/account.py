@@ -173,24 +173,27 @@ class ProfileValidationService:
 
     def verify_profile(self, instance):
 
-        try:
-            account = instance.account
-            if not account:
-                return None
+        account = getattr(instance, 'account', None)
+        if not account:
+            return None
 
-            user = instance.user
+        user = getattr(instance, 'user', None)
 
-            if user.is_admin:
-                return None
-            """
-            a phone number should be verified before a user is allowed to pass KYC.
-            """
-            country = instance.address.country.value if instance.address and instance.address.country else None
-            # account.gbg_authentication_count = 1
-            # account.verification_status = 'Fail'
-            if user.is_verified:
-                if user.is_owner and not account.payment_account_id:
-                    account.payment_account_id = self.payment_client.assign_payment_account()
+        if not user or user.is_admin:
+            return None
+
+        """
+        a phone number should be verified before a user is allowed to pass KYC.
+        """
+        address = getattr(instance, 'address', None)
+        country = address.country.value if address and address.country else None
+        # account.gbg_authentication_count = 1
+        # account.verification_status = 'Fail'
+        if user.is_verified:
+            if user.is_owner and not account.payment_account_id:
+                account.payment_account_id = self.payment_client.assign_payment_account()
+                account.save()
+            try:
                 if account.can_be_verified and country:
                     gbg = ID3Client(parser=ModelParser, country_code=country)
                     # authentication_id = account.gbg_authentication_identity
@@ -204,7 +207,7 @@ class ProfileValidationService:
                     account.verification_status = band_text
                     logger.error(f'instance.is_verified: {account.verification_status}, band text: {band_text}')
 
-                account.save()
+                    account.save()
 
-        except Exception as e:
-            logger.error(f'GBG verification exception: {e}')
+            except Exception as e:
+                logger.error(f'GBG verification exception: {e}')

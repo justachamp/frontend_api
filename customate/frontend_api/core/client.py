@@ -1,8 +1,7 @@
-from django.utils.functional import cached_property
 
-from payment_api.core.client import Client
+
+
 from payment_api.serializers import PaymentAccountSerializer
-
 
 class PaymentApiClient:
 
@@ -14,8 +13,10 @@ class PaymentApiClient:
         user = self._user
         payment_account_id = None
         if user and user.is_owner:
-            serializer = PaymentAccountSerializer({'email': self._user.email})
+            from payment_api.views import PaymentAccountViewSet
+            view = PaymentAccountViewSet()
+            serializer = PaymentAccountSerializer(data={'email': self._user.email}, context={'view': view})
             serializer.is_valid(True)
             data = serializer.save()
-            payment_account_id = data.get('id')
+            payment_account_id = data.id
         return payment_account_id

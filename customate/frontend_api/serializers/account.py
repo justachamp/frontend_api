@@ -205,6 +205,7 @@ class UserAccountSerializer(AccountFlexFieldsSerializerMixin, HyperlinkedModelSe
         fields = (
             'url',
             'account_type',
+            'payment_account_id',
             'gbg_authentication_count',
             'is_verified',
             'can_be_verified',

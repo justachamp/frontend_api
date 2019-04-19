@@ -32,7 +32,7 @@ class PaymentAccountSerializer(ResourceSerializer):
     # }
     id = UUIDField(read_only=True)
     email = EmailField(required=False)
-    active = IntegerField(required=True)
+    active = IntegerField(read_only=True)
 
     class Meta(ResourceMeta):
         resource_name = 'payment_accounts'

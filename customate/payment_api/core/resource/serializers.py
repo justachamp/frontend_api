@@ -28,7 +28,7 @@ class ResourceSerializer(Serializer):
         return self.context.get('view')
 
     @property
-    def rquest(self):
+    def request(self):
         return self.context.get('request')
 
     @property
