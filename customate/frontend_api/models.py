@@ -135,6 +135,7 @@ class Account(PolymorphicModel, Model):
 class UserAccount(Account):
     account_type = EnumField(AccountType, max_length=10, default=AccountType.personal)
     position = models.CharField(max_length=50, blank=True, null=True)
+    payment_account_id = models.UUIDField(null=True, unique=True)
 
     company = models.OneToOneField(
         Company,
