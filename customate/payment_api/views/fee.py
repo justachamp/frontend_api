@@ -1,5 +1,5 @@
 from rest_framework.permissions import AllowAny
-from payment_api.serializers import FeeGroupSerializer
+from payment_api.serializers import FeeGroupSerializer, FeeGroupAccountSerializer
 
 
 from payment_api.views import (
@@ -39,6 +39,39 @@ class FeeGroupViewSet(ResourceViewSet):
 class FeeGroupRelationshipView(RelationshipView):
     serializer_class = FeeGroupSerializer
     resource_name = 'fee_groups'
+
+    def get_queryset(self):
+        pass
+
+
+class FeeGroupAccountViewSet(ResourceViewSet):
+    resource_name = 'fee_group_accounts'
+    serializer_class = FeeGroupAccountSerializer
+    permission_classes = (AllowAny,)
+    # filter_backends = (
+    #     QueryParameterValidationFilter,
+    #     OrderingFilter,
+    #     InclusionFiler,
+    #     ResourceFilterBackend,
+    #     SearchFilter
+    # )
+    #
+    # filterset_fields = {
+    #     'active': ('exact',),
+    #     'title': ('exact', 'contains', 'startswith', 'endswith'),
+    # }
+    # payment account id dab09dfe-080d-482a-ab17-6837c80ad66f
+    # data_key_mapping = {'fee_groups': 'feeGroup', 'accounts': 'account'}
+    class Meta:
+        resource_mapping = [
+            {'fee_groups': {'op': 'map', 'value': 'feeGroup'}},
+            {'accounts': {'op': 'map', 'value': 'account'}}
+        ]
+
+
+class FeeGroupAccountRelationshipView(RelationshipView):
+    resource_name = 'fee_group_accounts'
+    serializer_class = FeeGroupAccountSerializer
 
     def get_queryset(self):
         pass

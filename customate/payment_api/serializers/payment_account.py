@@ -20,7 +20,6 @@ class PaymentAccountSerializer(ResourceSerializer):
         required=False,
         related_link_view_name='payment-account-related',
         self_link_view_name='payment-account-relationships',
-        resource_mapping={'id': {'op': 'copy', 'value': 'pk'}}
     )
 
     # "id": "f73f0eb6-33c0-457e-b41c-6c970287ada6",

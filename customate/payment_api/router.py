@@ -4,6 +4,7 @@ from payment_api.views import (
     PaymentAccountViewSet,
     WalletViewSet,
     FeeGroupViewSet,
+    FeeGroupAccountViewSet,
     TaxViewSet,
     TransactionViewSet,
     PaymentViewSet,
@@ -21,6 +22,7 @@ router.register('payments', PaymentViewSet, basename='payments')
 router.register('funding_sources', FundingSourceViewSet, basename='payments')
 router.register('taxes', TaxViewSet, basename='taxes')
 router.register('fee_groups', FeeGroupViewSet, basename='fee_groups')
+router.register('fee_group_accounts', FeeGroupAccountViewSet, basename='fee_group_accounts')
 router.register('transactions', TransactionViewSet, basename='transactions')
 router.register('wallets', WalletViewSet, basename='wallets')
 urlpatterns = router.urls

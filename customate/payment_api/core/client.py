@@ -36,6 +36,10 @@ class Session(DefaultSession):
         return resource_id, resource_filter
 
     def read(self, json_data: dict, url='', no_cache=False):
+        if isinstance(json_data, dict) and json_data.get('data', None):
+            if not json_data.get('data').get('attributes'):
+                json_data['data']['attributes'] = {}
+
         doc = super().read(json_data, url, no_cache=False)
         return doc
 
@@ -77,6 +81,8 @@ class Client(ResourceMappingMixin, JsonApiErrorParser):
             if key in relationships and key in embedded_resources:
                 instance._attributes[key] = value
                 instance.dirty_fields.add(key)
+            elif key in instance._relationships:
+                instance._relationships[key].set(value)
             else:
                 setattr(instance, key, value)
         return instance

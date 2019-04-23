@@ -20,7 +20,7 @@ class PaymentSerializer(ResourceSerializer):
     currency = CharField(read_only=True)
     scenario = CharField(read_only=True),
     status = CharField(read_only=True),
-    updateDate = TimestampField(read_only=True, source='updateDate'),
+    update_date = TimestampField(read_only=True, source='updateDate'),
     userId = UUIDField(read_only=True)
     data = JSONField(read_only=True)
     transactions = ExternalResourceRelatedField(
@@ -28,7 +28,6 @@ class PaymentSerializer(ResourceSerializer):
         required=False,
         related_link_view_name='payment-related',
         self_link_view_name='payment-relationships',
-        resource_mapping={'id': {'op': 'copy', 'value': 'pk'}}
     )
 
     class Meta(ResourceMeta):

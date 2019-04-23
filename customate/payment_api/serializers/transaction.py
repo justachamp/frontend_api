@@ -30,7 +30,6 @@ class TransactionSerializer(ResourceSerializer):
         required=False,
         related_link_view_name='transaction-related',
         self_link_view_name='transaction-relationships',
-        resource_mapping={'id': {'op': 'copy', 'value': 'pk'}}
     )
 
     class Meta(ResourceMeta):

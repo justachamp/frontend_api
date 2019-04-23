@@ -10,6 +10,8 @@ from payment_api.views import (
     PaymentAccountRelationshipView,
     FeeGroupViewSet,
     FeeGroupRelationshipView,
+    FeeGroupAccountViewSet,
+    FeeGroupAccountRelationshipView,
     TaxViewSet,
     TaxRelationshipView,
     TransactionViewSet,
@@ -45,6 +47,15 @@ urlpatterns = [
     re_path(r'^fee_groups/(?P<pk>[^/.]+)/relationships/(?P<related_field>[^/.]+)$',
             view=FeeGroupRelationshipView.as_view(),
             name='fee-group-relationships'
+            ),
+
+    re_path(r'^fee_group_accounts/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
+            FeeGroupAccountViewSet.as_view({'get': 'retrieve_related'}),
+            name='fee-group-account-related'),
+
+    re_path(r'^fee_group_accounts/(?P<pk>[^/.]+)/relationships/(?P<related_field>[^/.]+)$',
+            view=FeeGroupAccountRelationshipView.as_view(),
+            name='fee-group-account-relationships'
             ),
 
     # /api/v1/tax

@@ -14,7 +14,7 @@ from payment_api.core.resource.fields import ExternalResourceRelatedField
 from payment_api.core.resource.serializers import ResourceMeta, ResourceSerializer
 from payment_api.serializers.wallet import WalletSerializer
 from payment_api.serializers.payment_account import PaymentAccountSerializer
-from payment_api.serializers.fee import FeeGroupSerializer, FeeSerializer, EmbededFeeSerializer
+from payment_api.serializers.fee import FeeGroupSerializer, FeeSerializer, EmbededFeeSerializer, FeeGroupAccountSerializer
 from payment_api.serializers.tax import TaxSerializer
 from payment_api.serializers.transaction import TransactionSerializer
 from payment_api.serializers.payment import PaymentSerializer
@@ -42,6 +42,7 @@ __all__ = [
     PaymentAccountSerializer,
     FeeGroupSerializer,
     FeeSerializer,
+    FeeGroupAccountSerializer,
     EmbededFeeSerializer,
     TaxSerializer,
     TransactionSerializer,

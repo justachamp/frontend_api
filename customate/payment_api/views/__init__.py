@@ -10,7 +10,7 @@ from payment_api.core.resource.filters import InclusionFiler, IbanGeneralPartFil
 from payment_api.core.resource.views import ResourceViewSet
 from payment_api.views.wallet import WalletViewSet, WalletRelationshipView
 from payment_api.views.payment_account import PaymentAccountViewSet, PaymentAccountRelationshipView
-from payment_api.views.fee import FeeGroupViewSet, FeeGroupRelationshipView
+from payment_api.views.fee import FeeGroupViewSet, FeeGroupRelationshipView, FeeGroupAccountViewSet, FeeGroupAccountRelationshipView
 from payment_api.views.tax import TaxViewSet, TaxRelationshipView
 from payment_api.views.transaction import TransactionViewSet, TransactionRelationshipView
 from payment_api.views.payment import PaymentViewSet, PaymentRelationshipView
@@ -34,6 +34,8 @@ __all__ = [
     PaymentAccountRelationshipView,
     FeeGroupViewSet,
     FeeGroupRelationshipView,
+    FeeGroupAccountViewSet,
+    FeeGroupAccountRelationshipView,
     TaxViewSet,
     TaxRelationshipView,
     TransactionViewSet,

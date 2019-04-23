@@ -43,7 +43,6 @@ class FeeSerializer(ResourceSerializer):
         resource_name = 'fees'
 
 
-# address = SerializerField(resource=UserAddressSerializer, required=False)
 class FeeGroupSerializer(ResourceSerializer):
     included_serializers = {
         'fees': 'payment_api.serializers.FeeSerializer'
@@ -65,3 +64,31 @@ class FeeGroupSerializer(ResourceSerializer):
 
     class Meta(ResourceMeta):
         resource_name = 'fee_groups'
+
+
+class FeeGroupAccountSerializer(ResourceSerializer):
+    id = UUIDField(read_only=True)
+    included_serializers = {
+        'fee_group': 'payment_api.serializers.FeeGroupSerializer',
+        'payment_account': 'payment_api.serializers.PaymentAccountSerializer'
+    }
+
+    fee_group = ExternalResourceRelatedField(
+        required=False,
+        related_link_view_name='fee-group-account-related',
+        self_link_view_name='fee-group-account-relationships',
+        source='fee_groups',
+        result_source='feeGroup'
+    )
+
+    payment_account = ExternalResourceRelatedField(
+        required=False,
+        related_link_view_name='fee-group-account-related',
+        self_link_view_name='fee-group-account-relationships',
+        source='accounts',
+        result_source='account'
+    )
+
+    class Meta(ResourceMeta):
+        resource_name = 'fee_group_accounts'
+        # data_key_mapping = {'fee_groups': 'feeGroup', 'accounts': 'account'}

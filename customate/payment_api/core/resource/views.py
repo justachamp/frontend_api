@@ -15,12 +15,21 @@ class ResourceViewSet(ModelViewSet):
         embedded_resources = getattr(self.Meta, 'embedded_resources', None) if hasattr(self, 'Meta') else None
         client = Client(self.base_url, embedded_resources=embedded_resources)
         client.resource_mapping = {'id': {'op': 'copy', 'value': 'pk'}}
+        self._check_resource_mapping(client)
         return client
+
+    def _check_resource_mapping(self, client):
+        if self._meta and hasattr(self._meta, 'resource_mapping'):
+            client.resource_mapping = self._meta.resource_mapping
+
+    @cached_property
+    def _meta(self):
+        return getattr(self, 'Meta', None)
 
     @cached_property
     def external_resource_name(self):
-        if hasattr(self, 'Meta') and hasattr(self.Meta, 'external_resource_name') and \
-                self.Meta.external_resource_name:
+        if self._meta and hasattr(self._meta, 'external_resource_name') and \
+                self._meta.external_resource_name:
             external_resource_name = self.Meta.external_resource_name
         else:
             external_resource_name = self.resource_name
