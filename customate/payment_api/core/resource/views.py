@@ -2,7 +2,7 @@ from django.utils.functional import cached_property
 from django.conf import settings
 
 from payment_api.core.client import Client
-from rest_framework_json_api.views import ModelViewSet
+from rest_framework_json_api.views import ModelViewSet, RelationshipView
 from payment_api.core.resource.models import ResourceQueryset
 
 
@@ -83,4 +83,10 @@ class ResourceViewSet(ModelViewSet):
     def perform_destroy(self, instance):
         instance.delete()
         instance.commit()
+
+
+class ResourceRelationshipView(RelationshipView):
+
+    def get_queryset(self):
+        pass
 

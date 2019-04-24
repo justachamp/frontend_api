@@ -1,7 +1,3 @@
-from payment_api.views import ItemListProxy, WalletViewSet, WalletRelationshipView
-from payment_api.views import PaymentAccountViewSet, PaymentAccountRelationshipView
-from payment_api.views import TaxViewSet, TaxRelationshipView
-
 from payment_api.views import (
     ItemListProxy,
     WalletViewSet,
@@ -14,6 +10,8 @@ from payment_api.views import (
     FeeGroupAccountRelationshipView,
     TaxViewSet,
     TaxRelationshipView,
+    TaxGroupViewSet,
+    TaxGroupRelationshipView,
     TransactionViewSet,
     TransactionRelationshipView,
     PaymentViewSet,
@@ -66,6 +64,15 @@ urlpatterns = [
     re_path(r'^taxes/(?P<pk>[^/.]+)/relationships/(?P<related_field>[^/.]+)$',
             view=TaxRelationshipView.as_view(),
             name='tax-relationships'
+            ),
+
+    re_path(r'^tax_groups/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
+            TaxGroupViewSet.as_view({'get': 'retrieve_related'}),
+            name='tax-group-related'),
+
+    re_path(r'^tax_groups/(?P<pk>[^/.]+)/relationships/(?P<related_field>[^/.]+)$',
+            view=TaxGroupRelationshipView.as_view(),
+            name='tax-group-relationships'
             ),
 
     re_path(r'^transactions/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',

@@ -1,12 +1,12 @@
 from rest_framework.permissions import AllowAny
-from payment_api.serializers import TaxSerializer
+from payment_api.serializers import TaxSerializer, TaxGroupSerializer
 
 from payment_api.views import (
     InclusionFiler,
     OrderingFilter,
     SearchFilter,
     ResourceFilterBackend,
-    RelationshipView,
+    ResourceRelationshipView,
     ResourceViewSet
 )
 
@@ -31,9 +31,25 @@ class TaxViewSet(ResourceViewSet):
         filters = [{'active__exact': 1}]
 
 
-class TaxRelationshipView(RelationshipView):
+class TaxRelationshipView(ResourceRelationshipView):
     resource_name = 'taxes'
     serializer_class = TaxSerializer
 
-    def get_queryset(self):
-        pass
+
+class TaxGroupViewSet(ResourceViewSet):
+    resource_name = 'tax_groups'
+    serializer_class = TaxGroupSerializer
+    permission_classes = (AllowAny,)
+    filter_backends = (
+        OrderingFilter,
+        InclusionFiler
+    )
+
+    class Meta:
+        include_resources = ['taxes']
+        embedded_resources = ['taxes']
+
+
+class TaxGroupRelationshipView(ResourceRelationshipView):
+    serializer_class = TaxGroupSerializer
+    resource_name = 'tax_groups'

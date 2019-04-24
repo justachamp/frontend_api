@@ -8,14 +8,14 @@ from rest_framework_json_api.serializers import (
 
 from core.serializers import Serializer
 from core.fields import (
-    EnumField, OperationType, FeeType, UUIDField, IbanField, Country, TimestampField, FundingSourceType
+    EnumField, OperationType, FeeType, UUIDField, IbanField, Country, Currency, TimestampField, FundingSourceType
 )
 from payment_api.core.resource.fields import ExternalResourceRelatedField
 from payment_api.core.resource.serializers import ResourceMeta, ResourceSerializer
 from payment_api.serializers.wallet import WalletSerializer
 from payment_api.serializers.payment_account import PaymentAccountSerializer
 from payment_api.serializers.fee import FeeGroupSerializer, FeeSerializer, EmbededFeeSerializer, FeeGroupAccountSerializer
-from payment_api.serializers.tax import TaxSerializer
+from payment_api.serializers.tax import TaxSerializer, TaxGroupSerializer
 from payment_api.serializers.transaction import TransactionSerializer
 from payment_api.serializers.payment import PaymentSerializer
 from payment_api.serializers.funding_source import FundingSourceSerializer
@@ -32,6 +32,7 @@ __all__ = [
     JSONField,
     TimestampField,
     Country,
+    Currency,
     OperationType,
     FeeType,
     FundingSourceType,
@@ -45,6 +46,7 @@ __all__ = [
     FeeGroupAccountSerializer,
     EmbededFeeSerializer,
     TaxSerializer,
+    TaxGroupSerializer,
     TransactionSerializer,
     PaymentSerializer,
     FundingSourceSerializer

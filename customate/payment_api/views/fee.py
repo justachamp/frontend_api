@@ -8,7 +8,7 @@ from payment_api.views import (
     OrderingFilter,
     SearchFilter,
     ResourceFilterBackend,
-    RelationshipView,
+    ResourceRelationshipView,
     ResourceViewSet
 )
 
@@ -36,12 +36,9 @@ class FeeGroupViewSet(ResourceViewSet):
         filters = [{'active__exact': 1}]
 
 
-class FeeGroupRelationshipView(RelationshipView):
+class FeeGroupRelationshipView(ResourceRelationshipView):
     serializer_class = FeeGroupSerializer
     resource_name = 'fee_groups'
-
-    def get_queryset(self):
-        pass
 
 
 class FeeGroupAccountViewSet(ResourceViewSet):
@@ -69,9 +66,6 @@ class FeeGroupAccountViewSet(ResourceViewSet):
         ]
 
 
-class FeeGroupAccountRelationshipView(RelationshipView):
+class FeeGroupAccountRelationshipView(ResourceRelationshipView):
     resource_name = 'fee_group_accounts'
     serializer_class = FeeGroupAccountSerializer
-
-    def get_queryset(self):
-        pass

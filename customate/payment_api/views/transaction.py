@@ -5,7 +5,7 @@ from payment_api.views import (
     InclusionFiler,
     OrderingFilter,
     SearchFilter,
-    RelationshipView,
+    ResourceRelationshipView,
     ResourceFilterBackend,
     ResourceViewSet
 )
@@ -52,7 +52,7 @@ class TransactionViewSet(ResourceViewSet):
         ]
 
 
-class TransactionRelationshipView(RelationshipView):
+class TransactionRelationshipView(ResourceRelationshipView):
     serializer_class = TransactionSerializer
     resource_name = 'transactions'
 

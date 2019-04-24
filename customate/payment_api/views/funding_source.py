@@ -5,7 +5,7 @@ from payment_api.views import (
     InclusionFiler,
     OrderingFilter,
     SearchFilter,
-    RelationshipView,
+    ResourceRelationshipView,
     ResourceViewSet
 )
 
@@ -24,9 +24,7 @@ class FundingSourceViewSet(ResourceViewSet):
     )
 
 
-class FundingSourceRelationshipView(RelationshipView):
+class FundingSourceRelationshipView(ResourceRelationshipView):
     serializer_class = FundingSourceSerializer
     resource_name = 'funding_sources'
 
-    def get_queryset(self):
-        pass

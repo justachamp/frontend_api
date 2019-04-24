@@ -1,5 +1,4 @@
 from rest_framework.filters import SearchFilter
-from rest_framework_json_api.views import RelationshipView
 
 from rest_framework_json_api.filters import (
     QueryParameterValidationFilter,
@@ -7,11 +6,11 @@ from rest_framework_json_api.filters import (
 )
 
 from payment_api.core.resource.filters import InclusionFiler, IbanGeneralPartFiler, ResourceFilterBackend
-from payment_api.core.resource.views import ResourceViewSet
+from payment_api.core.resource.views import ResourceViewSet, ResourceRelationshipView
 from payment_api.views.wallet import WalletViewSet, WalletRelationshipView
 from payment_api.views.payment_account import PaymentAccountViewSet, PaymentAccountRelationshipView
 from payment_api.views.fee import FeeGroupViewSet, FeeGroupRelationshipView, FeeGroupAccountViewSet, FeeGroupAccountRelationshipView
-from payment_api.views.tax import TaxViewSet, TaxRelationshipView
+from payment_api.views.tax import TaxViewSet, TaxRelationshipView, TaxGroupViewSet, TaxGroupRelationshipView
 from payment_api.views.transaction import TransactionViewSet, TransactionRelationshipView
 from payment_api.views.payment import PaymentViewSet, PaymentRelationshipView
 from payment_api.views.funding_source import FundingSourceViewSet, FundingSourceRelationshipView
@@ -26,7 +25,7 @@ __all__ = [
     OrderingFilter,
     SearchFilter,
     ResourceFilterBackend,
-    RelationshipView,
+    ResourceRelationshipView,
     ResourceViewSet,
     WalletViewSet,
     WalletRelationshipView,
@@ -38,6 +37,8 @@ __all__ = [
     FeeGroupAccountRelationshipView,
     TaxViewSet,
     TaxRelationshipView,
+    TaxGroupViewSet,
+    TaxGroupRelationshipView,
     TransactionViewSet,
     TransactionRelationshipView,
     PaymentViewSet,

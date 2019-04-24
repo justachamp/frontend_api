@@ -9,7 +9,7 @@ from payment_api.views import (
     QueryParameterValidationFilter,
     OrderingFilter,
     SearchFilter,
-    RelationshipView,
+    ResourceRelationshipView,
     ResourceViewSet
 )
 
@@ -51,7 +51,7 @@ class PaymentAccountViewSet(ResourceViewSet):
     # search_fields = ('email',)
 
 
-class PaymentAccountRelationshipView(RelationshipView):
+class PaymentAccountRelationshipView(ResourceRelationshipView):
     serializer_class = PaymentAccountSerializer
     resource_name = 'payment_accounts'
 
