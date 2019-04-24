@@ -1,12 +1,14 @@
 from django.utils.functional import cached_property
 from rest_framework.fields import UUIDField, IntegerField, FloatField
 from rest_framework.relations import ManyRelatedField
+from rest_framework.serializers import raise_errors_on_nested_writes
 from rest_framework_json_api.serializers import Serializer, IncludedResourcesValidationMixin
+from rest_framework_json_api.utils import format_field_names
 
 from core.fields import SerializerField
 from payment_api.core.resource.models import ExternalResourceModel
 from payment_api.core.resource.fields import ExternalResourceRelatedField
-from rest_framework.serializers import raise_errors_on_nested_writes
+
 
 
 class ResourceMeta:
@@ -35,6 +37,11 @@ class ResourceSerializer(IncludedResourcesValidationMixin, Serializer):
     def client(self):
         view = self.view
         return self.view.client if view else None
+
+    def get_field_name(self, field):
+        if isinstance(field, ExternalResourceRelatedField):
+            return next(iter(format_field_names({field.field_name: field.field_name}, format_type='camelize')))
+        return field.field_name
 
     def copy_resource_to_meta(self):
         # @TODO It copies wrong(parent) resource from view for included/related serializers

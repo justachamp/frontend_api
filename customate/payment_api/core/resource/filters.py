@@ -124,6 +124,9 @@ class ResourceFilterBackend(DjangoFilterBackend):
             if not filterset_class or k not in filterset_class.base_filters:
                 raise ValidationError("invalid filter[{}]".format(k))
 
+    def get_filterset(self, *args, **kwargs):
+        return None
+
 
 class InclusionFiler(BaseFilterBackend):
     """

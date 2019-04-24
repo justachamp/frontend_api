@@ -29,7 +29,8 @@ class ExternalResourceRelatedField(ResultResourceFieldMixin, ResourceMappingMixi
         return None
 
     def to_representation(self, value):
-        if hasattr(value, 'resource') and value.resource is not None:
+        if hasattr(value, 'id') or (hasattr(value, '_resource_identifier') and\
+                value._resource_identifier is not None):
             self.apply_mapping(value)
             return super().to_representation(value)
         else:

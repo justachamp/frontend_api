@@ -80,6 +80,11 @@ class JSONRenderer(JSONRenderer):
             resource_data.append(('links', {'self': resource[api_settings.URL_FIELD_NAME]}))
         return OrderedDict(resource_data)
 
+    @classmethod
+    def extract_relation_instance(cls, field_name, field, resource_instance, serializer):
+        field_name = serializer.get_field_name(field) if hasattr(serializer, 'get_field_name') else field_name
+        return super().extract_relation_instance(field_name, field, resource_instance, serializer)
+
     # @classmethod
     # def extract_relationships(cls, fields, resource, resource_instance):
     #     from collections import namedtuple

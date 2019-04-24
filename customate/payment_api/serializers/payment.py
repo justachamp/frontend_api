@@ -15,7 +15,7 @@ class PaymentSerializer(ResourceSerializer):
     }
 
     id = UUIDField(read_only=True)
-    contract_id = UUIDField(read_only=True)
+    contract_id = UUIDField(read_only=True, source='contractId')
     creation_date = TimestampField(read_only=True, source='creationDate')
     currency = CharField(read_only=True)
     scenario = CharField(read_only=True),
