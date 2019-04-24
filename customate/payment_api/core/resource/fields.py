@@ -1,10 +1,11 @@
 from payment_api.core.resource.mixins import ResourceMappingMixin
 from core.fields import ResourceRelatedField, ResultResourceFieldMixin
 
+
 def get_pk_from_identifier(resource):
     if not hasattr(resource, 'id') and hasattr(resource, '_resource_identifier'):
-        resource.pk = resource._resource_identifier.id
-
+        if resource._resource_identifier is not None:
+            resource.pk = resource._resource_identifier.id
 
 
 class ExternalResourceRelatedField(ResultResourceFieldMixin, ResourceMappingMixin, ResourceRelatedField):
@@ -28,8 +29,11 @@ class ExternalResourceRelatedField(ResultResourceFieldMixin, ResourceMappingMixi
         return None
 
     def to_representation(self, value):
-        self.apply_mapping(value)
-        return super().to_representation(value)
+        if hasattr(value, 'resource') and value.resource is not None:
+            self.apply_mapping(value)
+            return super().to_representation(value)
+        else:
+            return None
 
     def get_attribute(self, instance):
         # Can't have any relationships if not created
