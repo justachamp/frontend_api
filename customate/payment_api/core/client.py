@@ -36,9 +36,10 @@ class Session(DefaultSession):
         return resource_id, resource_filter
 
     def read(self, json_data: dict, url='', no_cache=False):
-        if isinstance(json_data, dict) and json_data.get('data', None):
-            if not json_data.get('data').get('attributes'):
-                json_data['data']['attributes'] = {}
+        if isinstance(json_data, dict) and json_data.get('data'):
+            data = json_data.get('data')
+            if isinstance(data, dict) and not data.get('attributes'):
+                data['attributes'] = {}
 
         doc = super().read(json_data, url, no_cache=False)
         return doc
