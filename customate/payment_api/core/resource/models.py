@@ -7,6 +7,7 @@ import logging
 from jsonapi_client.exceptions import DocumentError
 from jsonapi_client.resourceobject import AttributeDict, RelationshipDict, ResourceObject
 from rest_framework.exceptions import ValidationError
+from rest_framework_json_api.utils import format_field_names
 
 from payment_api.core.resource.mixins import JsonApiErrorParser
 
@@ -171,8 +172,9 @@ class ResourceQueryset(JsonApiErrorParser):
 
     def including(self, *args, **kwargs):
 
-        including = ','.join(args)
+        including = ','.join([next(iter(format_field_names({part: part}, format_type='camelize'))) for part in args])
         if len(including):
+
             self.inclusion = including
 
         return self

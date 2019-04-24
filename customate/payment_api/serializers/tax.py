@@ -28,7 +28,7 @@ class TaxSerializer(ResourceSerializer):
 
 
 class EmbededTaxSerializer(Serializer):
-    id = UUIDField(read_only=True)
+    id = UUIDField(primitive_value=True)
     currency = EnumField(enum=Currency, required=True, primitive_value=True)
     active = IntegerField(read_only=True)
     fee_iban = IbanField(read_only=True, source='feeIban')

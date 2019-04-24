@@ -110,6 +110,7 @@ class ResourceSerializer(IncludedResourcesValidationMixin, Serializer):
         """
         Object instance -> Dict of primitive datatypes.
         """
+        self.client.apply_mapping(instance)
         return super().to_representation(instance)
 
     class Meta(ResourceMeta):

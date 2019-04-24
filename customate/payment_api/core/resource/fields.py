@@ -35,5 +35,8 @@ class ExternalResourceRelatedField(ResultResourceFieldMixin, ResourceMappingMixi
         # Can't have any relationships if not created
         if not hasattr(instance, 'pk') or (hasattr(instance, 'pk') and instance.pk is None):
             return []
+        elif isinstance(self.source_attrs, list) and\
+                len(self.source_attrs) == 1 and self._hasattr(instance, self.source_attrs[0]):
+            return self._getattr(instance, self.source_attrs[0])
 
         return super().get_attribute(instance)

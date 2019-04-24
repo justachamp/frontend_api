@@ -52,6 +52,10 @@ class Session(DefaultSession):
         doc = super().read(json_data, url, no_cache=False)
         return doc
 
+    def _ext_fetch_by_url(self, url: str) -> 'Document':
+        logger.error(f'fetch_by_url: {url}')
+        return super()._ext_fetch_by_url(url)
+
 
 class Client(ResourceMappingMixin, JsonApiErrorParser):
 
