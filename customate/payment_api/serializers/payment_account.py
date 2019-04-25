@@ -55,7 +55,7 @@ class PaymentAccountSerializer(ResourceSerializer):
     )
 
     id = UUIDField(read_only=True)
-    original_account_id = UUIDField(source='originalAccountId')
+    original_account_id = UUIDField(source='originalAccountId', primitive_value=True)
     email = EmailField(required=False)
     full_name = CharField(required=True, source='fullName')
     active = IntegerField(read_only=True)
