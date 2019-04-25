@@ -19,6 +19,7 @@ from payment_api.serializers.tax import TaxSerializer, TaxGroupSerializer
 from payment_api.serializers.transaction import TransactionSerializer
 from payment_api.serializers.payment import PaymentSerializer
 from payment_api.serializers.funding_source import FundingSourceSerializer
+from payment_api.serializers.external_service_account import ExternalServiceAccountSerializer
 
 __all__ = [
     UUIDField,
@@ -49,5 +50,6 @@ __all__ = [
     TaxGroupSerializer,
     TransactionSerializer,
     PaymentSerializer,
-    FundingSourceSerializer
+    FundingSourceSerializer,
+    ExternalServiceAccountSerializer
 ]

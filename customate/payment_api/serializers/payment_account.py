@@ -3,6 +3,8 @@ from payment_api.serializers import (
     EmailField,
     IntegerField,
     ExternalResourceRelatedField,
+    TimestampField,
+    CharField,
     ResourceMeta,
     ResourceSerializer
 )
@@ -11,27 +13,54 @@ from payment_api.serializers import (
 class PaymentAccountSerializer(ResourceSerializer):
 
     included_serializers = {
+        # 'external_service_accounts': 'payment_api.serializers.ExternalServiceAccountSerializer',
+        'fee_group': 'payment_api.serializers.FeeGroupSerializer',
+        'funding_sources': 'payment_api.serializers.FundingSourceSerializer',
+        'tax': 'payment_api.serializers.TaxSerializer',
         'wallets': 'payment_api.serializers.WalletSerializer'
     }
+    #
+    # external_service_accounts = ExternalResourceRelatedField(
+    #
+    #     read_only=True,
+    #     required=False,
+    #     related_link_view_name='payment-account-related',
+    #     self_link_view_name='payment-account-relationships',
+    #     source='externalServiceAccounts'
+    # )
+
+    fee_group = ExternalResourceRelatedField(
+        read_only=True,
+        required=False,
+        related_link_view_name='payment-account-related',
+        self_link_view_name='payment-account-relationships',
+        source='feeGroup'
+    )
+
+    funding_sources = ExternalResourceRelatedField(
+        many=True,
+        read_only=True,
+        required=False,
+        related_link_view_name='payment-account-related',
+        self_link_view_name='payment-account-relationships',
+        source='fundingSources'
+    )
 
     wallets = ExternalResourceRelatedField(
         many=True,
-        # read_only=True,
+        read_only=True,
         required=False,
         related_link_view_name='payment-account-related',
         self_link_view_name='payment-account-relationships',
     )
 
-    # "id": "f73f0eb6-33c0-457e-b41c-6c970287ada6",
-    # "attributes": {
-    #     "active": 1,
-    #     "creationDate": 1545388418695,
-    #     "email": null,
-    #     "updateDate": null
-    # }
     id = UUIDField(read_only=True)
+    original_account_id = UUIDField(source='originalAccountId')
     email = EmailField(required=False)
+    full_name = CharField(required=True)
     active = IntegerField(read_only=True)
+    update_date = TimestampField(read_only=True, source='updateDate')
+    creation_date = TimestampField(read_only=True, source='creationDate')
 
     class Meta(ResourceMeta):
         resource_name = 'payment_accounts'

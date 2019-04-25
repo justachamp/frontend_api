@@ -22,6 +22,9 @@ from frontend_api.serializers.shareholder import ShareholderSerializer
 from frontend_api.serializers.profile import ProfileSerializer
 
 
+# from payment_api.core.resource.fields import ExternalResourceRelatedField
+
+
 __all__ = [
     ValidationError,
     UniqueValidator,
@@ -53,5 +56,6 @@ __all__ = [
     BaseUserResendInviteSerializer,
     AdminUserPermissionSerializer,
     ShareholderSerializer,
-    ProfileSerializer
+    ProfileSerializer,
+    # ExternalResourceRelatedField
 ]

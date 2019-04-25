@@ -27,11 +27,16 @@ from frontend_api.serializers import (
     PolymorphicResourceRelatedField,
     FlexFieldsSerializerMixin,
     PolymorphicModelSerializer,
+    # ExternalResourceRelatedField,
     CharField,
     DateField
 )
+from frontend_api.core.resource.fields import ExternalResourceRelatedField
 
 import logging
+
+from payment_api.serializers import PaymentAccountSerializer
+
 logger = logging.getLogger(__name__)
 
 ACCOUNT_ADDITIONAL_FIELDS = {
@@ -166,7 +171,8 @@ class UserAccountSerializer(AccountFlexFieldsSerializerMixin, HyperlinkedModelSe
     included_serializers = {
         'user': 'frontend_api.serializers.UserSerializer',
         'company': 'frontend_api.serializers.CompanySerializer',
-        'sub_user_accounts': 'frontend_api.serializers.SubUserAccountSerializer'
+        'sub_user_accounts': 'frontend_api.serializers.SubUserAccountSerializer',
+        'payment_account': 'payment_api.serializers.PaymentAccountSerializer'
     }
 
     sub_user_accounts = PolymorphicResourceRelatedField(
@@ -197,6 +203,20 @@ class UserAccountSerializer(AccountFlexFieldsSerializerMixin, HyperlinkedModelSe
         required=False
     )
 
+    # payment_account = ExternalResourceSerializerField(
+    #     resource=PaymentAccountSerializer,
+    #     read_only=True,
+    #     source='accounts'
+    # )
+
+    payment_account = ExternalResourceRelatedField(
+        required=False,
+        read_only=True,
+        related_link_view_name='account-related',
+        self_link_view_name='account-relationships',
+        source='accounts'
+    )
+
     account_type = EnumField(enum=AccountType, required=False)
 
     class Meta:
@@ -213,7 +233,8 @@ class UserAccountSerializer(AccountFlexFieldsSerializerMixin, HyperlinkedModelSe
             'position',
             'user',
             'company',
-            'sub_user_accounts'
+            'sub_user_accounts',
+            'payment_account'
         )
 
 

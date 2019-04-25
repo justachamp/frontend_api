@@ -10,7 +10,6 @@ from payment_api.core.resource.models import ExternalResourceModel
 from payment_api.core.resource.fields import ExternalResourceRelatedField
 
 
-
 class ResourceMeta:
     model = ExternalResourceModel()
 
@@ -36,7 +35,7 @@ class ResourceSerializer(IncludedResourcesValidationMixin, Serializer):
     @property
     def client(self):
         view = self.view
-        return self.view.client if view else None
+        return getattr(self.view, 'client', None) if view else None
 
     def get_field_name(self, field):
         if isinstance(field, ExternalResourceRelatedField):
@@ -48,18 +47,18 @@ class ResourceSerializer(IncludedResourcesValidationMixin, Serializer):
         view = self.view
         if view:
             external_resource = getattr(view.Meta, 'external_resource_name', None) if hasattr(view, 'Meta') else None
-            resource = view.resource_name
+            resource = getattr(view, 'resource_name', None)
             self.Meta.model.resource_name = resource
             self.Meta.model.external_resource_name = external_resource if external_resource else resource
 
     def copy_fields_to_meta(self):
-        resouurses = []
+        resourses = []
         for field in self.fields:
             if isinstance(field, ExternalResourceRelatedField):
-                resouurses.append(field.source)
+                resourses.append(field.source)
 
-        if len(resouurses):
-            self.Meta.model.resources = resouurses
+        if len(resourses):
+            self.Meta.model.resources = resourses
 
     def create(self, validated_data):
         raise_errors_on_nested_writes('create', self, validated_data)
@@ -117,7 +116,8 @@ class ResourceSerializer(IncludedResourcesValidationMixin, Serializer):
         """
         Object instance -> Dict of primitive datatypes.
         """
-        self.client.apply_mapping(instance)
+        if self.client:
+            self.client.apply_mapping(instance)
         return super().to_representation(instance)
 
     class Meta(ResourceMeta):

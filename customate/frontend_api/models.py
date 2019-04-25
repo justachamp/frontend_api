@@ -146,6 +146,18 @@ class UserAccount(Account):
         related_name='account'
     )
 
+    def __init__(self, *args, **kwargs):
+        self._payment_account = None
+        return super().__init__(*args, **kwargs)
+
+    @property
+    def payment_account(self):
+        return self._payment_account
+
+    @payment_account.setter
+    def payment_account(self, payment_account):
+        self._payment_account = payment_account
+
     class JSONAPIMeta:
         resource_name = "UserAccount"
 
