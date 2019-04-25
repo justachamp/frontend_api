@@ -57,7 +57,7 @@ class PaymentAccountSerializer(ResourceSerializer):
     id = UUIDField(read_only=True)
     original_account_id = UUIDField(source='originalAccountId')
     email = EmailField(required=False)
-    full_name = CharField(required=True)
+    full_name = CharField(required=True, source='fullName')
     active = IntegerField(read_only=True)
     update_date = TimestampField(read_only=True, source='updateDate')
     creation_date = TimestampField(read_only=True, source='creationDate')
