@@ -1,59 +1,46 @@
 """
 Renderers
 """
-import copy
-from collections import Iterable, OrderedDict, defaultdict
 
-import inflection
-from django.db.models import Manager
-from django.utils import encoding, six
-from rest_framework import relations, renderers
-from rest_framework.relations import ManyRelatedField
-from rest_framework.serializers import BaseSerializer, ListSerializer, Serializer
+from collections import OrderedDict
+
+from django.utils import encoding
+from jsonapi_client.resourceobject import ResourceObject
+from rest_framework import relations
+
 from rest_framework.settings import api_settings
 
-import rest_framework_json_api
 from rest_framework_json_api import utils
 from rest_framework_json_api.renderers import JSONRenderer
-from rest_framework_json_api.relations import HyperlinkedMixin, ResourceRelatedField, SkipDataMixin
+
+
+
+class ExternalResourceWrapper:
+    def __init__(self, resource):
+        self._resource = resource
+
+    def __getattr__(self, item):
+        if self._hasattr(item):
+            return self._getattr(item)
+        else:
+            return getattr(self._resource, item)
+
+    def _hasattr(self, key):
+        return key in self._resource._attributes or key in self._resource._relationships
+
+    def _getattr(self, key, def_val=None):
+
+        if key in self._resource._attributes:
+            return self._resource._attributes[key]
+
+        elif key in self._resource._relationships:
+            return self._resource._relationships[key]
+
+        else:
+            return def_val
 
 
 class JSONRenderer(JSONRenderer):
-
-    # @classmethod
-    # def extract_attributes(cls, fields, resource):
-    #     """
-    #     Builds the `attributes` object of the JSON API resource object.
-    #     """
-    #     data = OrderedDict()
-    #     for field_name, field in six.iteritems(fields):
-    #         # ID is always provided in the root of JSON API so remove it from attributes
-    #         if field_name == 'id':
-    #             continue
-    #         # don't output a key for write only fields
-    #         if fields[field_name].write_only:
-    #             continue
-    #         # Skip fields with relations
-    #         if isinstance(
-    #                 field, (relations.RelatedField, relations.ManyRelatedField, BaseSerializer)
-    #         ):
-    #             continue
-    #
-    #         # Skip read_only attribute fields when `resource` is an empty
-    #         # serializer. Prevents the "Raw Data" form of the browsable API
-    #         # from rendering `"foo": null` for read only fields
-    #         try:
-    #             resource[field_name]
-    #         except KeyError:
-    #             if fields[field_name].read_only:
-    #                 continue
-    #
-    #         data.update({
-    #             field_name: resource.get(field_name)
-    #         })
-    #
-    #     return utils._format_object(data)
-
 
     @classmethod
     def build_json_resource_obj(cls, fields, resource, resource_instance, resource_name,
@@ -85,12 +72,8 @@ class JSONRenderer(JSONRenderer):
         field_name = serializer.get_field_name(field) if hasattr(serializer, 'get_field_name') else field_name
         return super().extract_relation_instance(field_name, field, resource_instance, serializer)
 
-    # @classmethod
-    # def extract_relationships(cls, fields, resource, resource_instance):
-    #     from collections import namedtuple
-    #     JSONAPIMeta = namedtuple('JSONAPIMeta', 'resource_name')
-    #
-    #     for key in fields:
-    #         if isinstance(fields[key], ManyRelatedField):
-    #             fields[key].JSONAPIMeta = JSONAPIMeta(resource_name='wallets')
-    #     return super().extract_relationships(fields, resource, resource_instance)
+    @classmethod
+    def extract_relationships(cls, fields, resource, resource_instance):
+        resource_instance = ExternalResourceWrapper(resource_instance) \
+            if isinstance(resource_instance, (ResourceObject,)) else resource_instance
+        return super().extract_relationships(fields, resource, resource_instance)

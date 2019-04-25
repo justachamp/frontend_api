@@ -1,5 +1,6 @@
 from django.utils.functional import cached_property
 from django.conf import settings
+from rest_framework_json_api import utils
 
 from payment_api.core.resource.fields import ExternalResourceRelatedField
 from payment_api.core.client import Client
@@ -24,43 +25,19 @@ class ExternalResourceRelatedField(ExternalResourceRelatedField):
         #     }
 
         return client
-    #
-    # def get_object(self, map_attributes=True, apply_filters=True):
-    #
-    #     # Perform the lookup filtering.
-    #     lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
-    #     # TODO implement get_object_or_404(queryset, **filter_kwargs)
-    #     queryset = ResourceQueryset(self.source, self.client, 'get')
-    #
-    #     # if apply_filters:
-    #     #     for backend in list(self.filter_backends):
-    #     #         queryset = backend().filter_queryset(self.request, queryset, self)
-    #
-    #     # resource = queryset.one(self.kwargs[lookup_url_kwarg], map_attributes=map_attributes)
-    #     resource = queryset.one(instance.payment_account_id, map_attributes=map_attributes)
-    #     # self.check_object_permissions(self.request, resource)
-    #     return resource
-
 
     def get_attribute(self, instance):
-        # Perform the lookup filtering.
-        # lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
-        # TODO implement get_object_or_404(queryset, **filter_kwargs)
         queryset = ResourceQueryset(self.source, self.client, 'get')
-
-        # if apply_filters:
-        #     for backend in list(self.filter_backends):
-        #         queryset = backend().filter_queryset(self.request, queryset, self)
-
-        # resource = queryset.one(self.kwargs[lookup_url_kwarg], map_attributes=map_attributes)
+        included = self.get_included_resources()
+        if len(included):
+            queryset.including(*included)
         attr = queryset.one(instance.payment_account_id, map_attributes=True) if instance.payment_account_id else None
         setattr(instance, self.field_name, attr)
+        self.context['client'] = self.client
+
         return attr
-        # self.check_object_permissions(self.request, resource)
-        # return resource
-        # queryset = ResourceQueryset(self.external_resource_name, self.client, 'get')
-        #
-        #
-        #
-        #
-        # return  self.client.super().get_attribute(instance)
+
+    def get_included_resources(self):
+        included_resources = utils.get_included_resources(self.context.get('request'))
+        root_source = f'{self.field_name}.'
+        return [source.lstrip(root_source) for source in included_resources if source.startswith(root_source)]
