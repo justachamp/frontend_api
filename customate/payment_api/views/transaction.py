@@ -11,16 +11,15 @@ from payment_api.views import (
 )
 
 SYSTEM_TRANSACTIONS = (
-    # 'IncomingContributionTransactionWorker',
-    'LockTransactionWorker',
-    'ReleaseTransactionWorker',
-    'LockTransactionWorker',
-    'InternalFeeAndTaxTransactionWorker',
-    'MoneyInBtFeeAndTaxTransactionWorker',
-    'MoneyInCcFeeAndTaxTransactionWorker',
-    'MoneyInDdFeeAndTaxTransactionWorker',
-    'MoneyOutBtFeeAndTaxTransactionWorker',
-    # 'CustomateToIbanTransactionWorker'
+    # 'IncomingContribution',
+    'Lock',
+    'Release',
+    'InternalFeeAndTax',
+    'MoneyInBtFeeAndTax',
+    'MoneyInCcFeeAndTax',
+    'MoneyInDdFeeAndTax',
+    'MoneyOutBtFeeAndTax',
+    # 'CustomateToIban'
 )
 
 
