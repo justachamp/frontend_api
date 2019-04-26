@@ -64,6 +64,7 @@ class PaymentAccountSerializer(ResourceSerializer):
 
     class Meta(ResourceMeta):
         resource_name = 'payment_accounts'
+        external_resource_name = 'accounts'
 
 
 

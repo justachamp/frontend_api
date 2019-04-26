@@ -3,7 +3,7 @@ from rest_framework.fields import UUIDField, IntegerField, FloatField
 from rest_framework.relations import ManyRelatedField
 from rest_framework.serializers import raise_errors_on_nested_writes
 from rest_framework_json_api.serializers import Serializer, IncludedResourcesValidationMixin
-from rest_framework_json_api.utils import format_field_names
+from inflection import camelize
 
 from core.fields import SerializerField
 from payment_api.core.resource.models import ExternalResourceModel
@@ -42,7 +42,7 @@ class ResourceSerializer(IncludedResourcesValidationMixin, Serializer):
 
     def get_field_name(self, field):
         if isinstance(field, (ExternalResourceRelatedField, ManyRelatedField)):
-            return next(iter(format_field_names({field.field_name: field.field_name}, format_type='camelize')))
+            return camelize(field.field_name, False)
         return field.field_name
 
     def copy_resource_to_meta(self):

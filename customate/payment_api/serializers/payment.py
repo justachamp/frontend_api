@@ -11,7 +11,10 @@ from payment_api.serializers import (
 
 class PaymentSerializer(ResourceSerializer):
     included_serializers = {
-        'transactions': 'payment_api.serializers.TransactionSerializer'
+        'transactions': 'payment_api.serializers.TransactionSerializer',
+        'payment_account': 'payment_api.serializers.PaymentAccountSerializer',
+        'origin_funding_source': 'payment_api.serializers.FundingSourceSerializer',
+        'recipient_funding_source': 'payment_api.serializers.FundingSourceSerializer',
     }
 
     id = UUIDField(read_only=True)
@@ -28,6 +31,27 @@ class PaymentSerializer(ResourceSerializer):
         required=False,
         related_link_view_name='payment-related',
         self_link_view_name='payment-relationships',
+    )
+
+    payment_account = ExternalResourceRelatedField(
+        required=False,
+        related_link_view_name='payment-related',
+        self_link_view_name='payment-relationships',
+        source='account'
+    )
+
+    origin_funding_source = ExternalResourceRelatedField(
+        required=False,
+        related_link_view_name='transaction-related',
+        self_link_view_name='payment-relationships',
+        source='originFundingSource'
+    )
+
+    recipient_funding_source = ExternalResourceRelatedField(
+        required=False,
+        related_link_view_name='transaction-related',
+        self_link_view_name='payment-relationships',
+        source='recipientFundingSource'
     )
 
     class Meta(ResourceMeta):

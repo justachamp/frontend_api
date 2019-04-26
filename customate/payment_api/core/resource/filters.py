@@ -3,14 +3,18 @@ from rest_framework.compat import (
 )
 from django.utils.functional import cached_property
 from rest_framework.filters import BaseFilterBackend
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError, ParseError
 from django.utils.encoding import force_text
 from django.utils.translation import ugettext_lazy as _
 from rest_framework_json_api.django_filters import DjangoFilterBackend
-from rest_framework_json_api.utils import format_field_names
+from rest_framework_json_api.utils import (
+    get_included_serializers,
+    get_default_included_resources_from_serializer,
+)
+from inflection import camelize, underscore, singularize
 
 
-class RQLFilterSet:
+class RQLFilterMixin:
     OPERATORS = {
         'contains': '==*{value}*',
         'startswith': '==*{value}',
@@ -27,6 +31,27 @@ class RQLFilterSet:
         'gte': '>={value}',
         'gt': '>{value}'
     }
+
+    def parse_filter(self, key, value):
+        parts = key.split('__')
+        parts.insert(0, self.resource)
+
+        if parts[-1] in self.OPERATORS.keys():
+            value = self.OPERATORS[parts[-1]].format(value=value)
+            parts = parts[:-1]
+        else:
+            value = f'=={value}'
+
+        if len(parts) > 1:
+            field_parts = [camelize(part, False) for part in parts[1:]]
+            value = f'{".".join(field_parts)}{value}'
+
+        key = f'[{parts[0]}]='
+
+        return {key: value}
+
+
+class RQLFilterSet(RQLFilterMixin):
 
     def __init__(self, filter_data, view, queryset, request, base_filters):
         self._filter_data = filter_data
@@ -83,29 +108,12 @@ class RQLFilterSet:
 
         return filters
 
-    def parse_filter(self, key, value):
-        parts = key.split('__')
-        parts.insert(0, self.resource)
-
-        if parts[-1] in self.OPERATORS.keys():
-            value = self.OPERATORS[parts[-1]].format(value=value)
-            parts = parts[:-1]
-        else:
-            value = f'=={value}'
-
-        if len(parts) > 1:
-            field_parts = [next(iter(format_field_names({part: part}, format_type='camelize'))) for part in parts[1:]]
-            value = f'{".".join(field_parts)}{value}'
-
-        key = f'[{parts[0]}]='
-
-        return {key: value}
-
 
 class ResourceFilterBackend(DjangoFilterBackend):
 
     def filter_queryset(self, request, queryset, view):
         data = self.get_filterset_kwargs(request, queryset, view)
+        #TODO add filtermapping
         filter_set = RQLFilterSet(data, view, queryset, request, base_filters=getattr(view, 'filterset_fields', None))
 
         self._validate_filter(data.pop('filter_keys'), filter_set)
@@ -140,23 +148,78 @@ class InclusionFiler(BaseFilterBackend):
     inclusion_description = _('Inclusion')
 
     def filter_queryset(self, request, queryset, view):
-        inclusion = self.get_inclusion(request, queryset, view)
+        # inclusion = self.get_inclusion(request, queryset, view)
+        serializer = view.get_serializer_class()
+        included_resources = self.get_included_resources(request, serializer)
+
+        inclusion = self.prepare_inclusion(serializer, included_resources)
 
         if inclusion:
             return queryset.including(*inclusion)
 
         return queryset
 
-    def get_inclusion(self, request, queryset, view):
+    def get_inclusion(self, request, serializer):
         """
         Including is set by a comma delimited ?included=... query parameter.
         """
         params = request.query_params.get(self.inclusion_param)
         including = [param.strip() for param in params.split(',')] if params else None
-        meta_including = getattr(view.Meta, 'include_resources', None) if hasattr(view, 'Meta') else None
+        meta_including = getattr(serializer.Meta, 'include_resources', None) if (serializer and
+                                                                                 hasattr(serializer, 'Meta')) else None
         if meta_including:
             including = including + meta_including if including else meta_including
         return including
+
+    def get_included_resources(self, request, serializer=None):
+        """ Build a list of included resources. """
+        include_resources_param = self.get_inclusion(request, serializer)
+
+        if include_resources_param:
+            return include_resources_param
+        else:
+            return get_default_included_resources_from_serializer(serializer)
+
+    def prepare_inclusion(self, serializer_class, included_resources):
+        prepared_resources = []
+
+        def get_serializer_resource(serializer, inclusion):
+            meta = getattr(serializer, 'Meta')
+            if meta:
+                external_resource_name = getattr(meta, 'external_resource_name', None)
+                resource_name = getattr(meta, 'resource_name', None)
+                if external_resource_name and resource_name:
+                    return inclusion.replace(singularize(resource_name), singularize(external_resource_name))
+
+            return inclusion
+
+        def inclusion_mapping(serializer_cls, field_path, path):
+            mapped_fields = []
+            serializers = get_included_serializers(serializer_cls)
+            if serializers is None:
+                raise ParseError('This endpoint does not support the include parameter')
+            this_field_name = underscore(field_path[0])
+            this_included_serializer = serializers.get(this_field_name)
+            if this_included_serializer is None:
+                raise ParseError(
+                    'This endpoint does not support the include parameter for path {}'.format(
+                        path
+                    )
+                )
+            if len(field_path) > 1:
+                new_included_field_path = field_path[1:]
+                # We go down one level in the path
+                mapped_fields.extend(inclusion_mapping(this_included_serializer, new_included_field_path, path))
+
+            mapped_fields.insert(0, get_serializer_resource(this_included_serializer, field_path[0]))
+            return mapped_fields
+
+        for included_field_name in included_resources:
+            included_field_path = included_field_name.split('.')
+            inclu = inclusion_mapping(serializer_class, included_field_path, included_field_name)
+            prepared_resources.append('.'.join(inclu))
+
+        return prepared_resources
 
     def get_schema_fields(self, view):
         assert coreapi is not None, 'coreapi must be installed to use `get_schema_fields()`'

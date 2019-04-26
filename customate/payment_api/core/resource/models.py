@@ -5,13 +5,25 @@ from collections import Iterable
 import logging
 
 from jsonapi_client.exceptions import DocumentError
-from jsonapi_client.resourceobject import AttributeDict, RelationshipDict, ResourceObject
 from rest_framework.exceptions import ValidationError
-from rest_framework_json_api.utils import format_field_names
+from inflection import camelize
 
+from payment_api.core.resource.filters import RQLFilterMixin
 from payment_api.core.resource.mixins import JsonApiErrorParser
 
 logger = logging.getLogger(__name__)
+
+
+class EmptyResponseMeta:
+
+    def __init__(self):
+        self.page = {'totalRecords': 0}
+
+class EmptyResponse:
+
+    def __init__(self):
+        self.resources = []
+        self.meta = EmptyResponseMeta()
 
 
 class DummyResourceModel:
@@ -55,7 +67,7 @@ class ExternalResourceModel:
         self._resources = resources
 
 
-class ResourceQueryset(JsonApiErrorParser):
+class ResourceQueryset(JsonApiErrorParser, RQLFilterMixin):
 
     _response = None
     _modifiers = None
@@ -157,6 +169,10 @@ class ResourceQueryset(JsonApiErrorParser):
 
         self._filters = self._filters + filters if self._filters else filters
 
+    def apply_filter(self, filter_data):
+        key = next(iter(filter_data))
+        self.filter = self.parse_filter(key, filter_data[key])
+
     @property
     def inclusion(self):
         return self._inclusions
@@ -172,7 +188,7 @@ class ResourceQueryset(JsonApiErrorParser):
 
     def including(self, *args, **kwargs):
 
-        including = ','.join([next(iter(format_field_names({part: part}, format_type='camelize'))) for part in args])
+        including = ','.join([camelize(part, False) for part in args])
         if len(including):
 
             self.inclusion = including
@@ -198,3 +214,6 @@ class ResourceQueryset(JsonApiErrorParser):
     def iterator(self):
         resources = self.response.resources
         return (self.client.apply_mapping(resource) for resource in resources)
+
+    def set_empty_response(self):
+        self._response = EmptyResponse()
