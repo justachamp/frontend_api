@@ -1,11 +1,12 @@
 from rest_framework.filters import SearchFilter
 
-from rest_framework_json_api.filters import (
-    QueryParameterValidationFilter,
-    OrderingFilter,
-)
+from rest_framework_json_api.filters import QueryParameterValidationFilter
 
-from payment_api.core.resource.filters import InclusionFiler, IbanGeneralPartFiler, ResourceFilterBackend
+from payment_api.core.resource.filters import (
+    InclusionFiler, IbanGeneralPartFiler,
+    ResourceFilterBackend,
+    OrderingFilter
+)
 from payment_api.core.resource.views import ResourceViewSet, ResourceRelationshipView
 from payment_api.views.wallet import WalletViewSet, WalletRelationshipView
 from payment_api.views.payment_account import PaymentAccountViewSet, PaymentAccountRelationshipView

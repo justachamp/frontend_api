@@ -2,7 +2,7 @@ from rest_framework.compat import (
     coreapi, coreschema
 )
 from django.utils.functional import cached_property
-from rest_framework.filters import BaseFilterBackend
+from rest_framework.filters import BaseFilterBackend, OrderingFilter as BaseOrderingFilter
 from rest_framework.exceptions import ValidationError, ParseError
 from django.utils.encoding import force_text
 from django.utils.translation import ugettext_lazy as _
@@ -235,6 +235,61 @@ class InclusionFiler(BaseFilterBackend):
                 )
             )
         ]
+
+
+class OrderingFilter(BaseOrderingFilter):
+
+    def get_ordering(self, request, queryset, view):
+        """
+        Ordering is set by a comma delimited ?ordering=... query parameter.
+
+        The `ordering` query parameter can be overridden by setting
+        the `ordering_param` value on the OrderingFilter or by
+        specifying an `ORDERING_PARAM` value in the API settings.
+        """
+        params = request.query_params.get(self.ordering_param)
+        if params:
+            fields = [camelize(param.strip(), False) for param in params.split(',')]
+            ordering = self.remove_invalid_fields(queryset, fields, view, request)
+            if ordering:
+                return ordering
+
+        # No ordering was included, or all the ordering fields were invalid
+        return self.get_default_ordering(view)
+
+    def remove_invalid_fields(self, queryset, fields, view, request):
+        """
+        Extend :py:meth:`rest_framework.filters.OrderingFilter.remove_invalid_fields` to
+        validate that all provided sort fields exist (as contrasted with the super's behavior
+        which is to silently remove invalid fields).
+
+        :raises ValidationError: if a sort field is invalid.
+        """
+        valid_fields = [
+            item[0] for item in self.get_valid_fields(queryset, view,
+                                                      {'request': request})
+        ]
+        bad_terms = [
+            term for term in fields if term.lstrip('-') not in valid_fields
+        ]
+
+        if bad_terms:
+            raise ValidationError('invalid sort parameter{}: {}'.format(
+                ('s' if len(bad_terms) > 1 else ''), ','.join(bad_terms)))
+        # this looks like it duplicates code above, but we want the ValidationError to report
+        # the actual parameter supplied while we want the fields passed to the super() to
+        # be correctly rewritten.
+        # The leading `-` has to be stripped to prevent format_value from turning it into `_`.
+        camelize_fields = []
+        for item in fields:
+            item_rewritten = item.replace(".", "__")
+            if item_rewritten.startswith('-'):
+                camelize_fields.append('-' + camelize(item_rewritten.lstrip('-'), False))
+            else:
+                camelize_fields.append(camelize(item_rewritten, False))
+
+        return super(OrderingFilter, self).remove_invalid_fields(
+            queryset, camelize_fields, view, request)
 
 
 class IbanGeneralPartFiler(BaseFilterBackend):
