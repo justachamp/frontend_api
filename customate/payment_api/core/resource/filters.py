@@ -50,6 +50,15 @@ class RQLFilterMixin:
 
         return {key: value}
 
+    def parse_value(self, filters, key, value):
+        if isinstance(value, dict) and value.get('method'):
+            fn = getattr(self._view, value.get('method'))
+            value = fn(filters, key, value)
+            if value is not None:
+                return {key: value}
+        else:
+            return {key: value}
+
 
 class RQLFilterSet(RQLFilterMixin):
 
@@ -96,15 +105,19 @@ class RQLFilterSet(RQLFilterMixin):
         data = self.filter_data
         for filter_name in self.base_filters:
             if filter_name in data.keys():
-                filter_data = self.parse_filter(filter_name, data.get(filter_name))
-                key = next(iter(filter_data))
-                if filters.get(key, None):
-                    if isinstance(filters[key], list):
-                        filters[key].append(filter_data[key])
+                value = self.parse_value(filters, filter_name, data.get(filter_name))
+
+                if isinstance(value, dict) and filter_name in value:
+                    filter_data = self.parse_filter(filter_name, value.get(filter_name))
+                    key = next(iter(filter_data))
+
+                    if filters.get(key, None):
+                        if isinstance(filters[key], list):
+                            filters[key].append(filter_data[key])
+                        else:
+                            filters[key] = [filters[key], filter_data[key]]
                     else:
-                        filters[key] = [filters[key], filter_data[key]]
-                else:
-                    filters.update(filter_data)
+                        filters.update(filter_data)
 
         return filters
 
