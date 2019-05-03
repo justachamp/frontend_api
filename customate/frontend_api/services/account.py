@@ -90,7 +90,6 @@ class ProfileValidationService:
     def payment_client(self):
         return PaymentApiClient(self.profile.user)
 
-
     @property
     def errors(self):
         return self.errors
@@ -190,9 +189,7 @@ class ProfileValidationService:
         # account.gbg_authentication_count = 1
         # account.verification_status = 'Fail'
         if user.is_verified:
-            if user.is_owner and not account.payment_account_id:
-                account.payment_account_id = self.payment_client.assign_payment_account()
-                account.save()
+            self.payment_client.assign_payment_account()
             try:
                 if account.can_be_verified and country:
                     gbg = ID3Client(parser=ModelParser, country_code=country)

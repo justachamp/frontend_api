@@ -7,6 +7,7 @@ from core.fields import UserRole, UserStatus
 from frontend_api.utils import assign_permissions
 from frontend_api.fields import AccountType
 from frontend_api.models import Account, Company, AdminUserAccount, SubUserAccount, UserAccount
+from frontend_api.core.client import PaymentApiClient
 from authentication.cognito.middleware import helpers
 
 
@@ -81,6 +82,8 @@ class UserService(object):
                 user.email_verified = True
             elif attribute == 'phone_number':
                 user.phone_number_verified = True
+
+            PaymentApiClient(user).assign_payment_account()
             user.save()
 
     def user_exists(self, email):
