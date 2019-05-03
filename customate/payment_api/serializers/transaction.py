@@ -15,12 +15,12 @@ class TransactionSerializer(ResourceSerializer):
         'payment': 'payment_api.serializers.PaymentSerializer',
         'origin_funding_source': 'payment_api.serializers.FundingSourceSerializer',
         'recipient_funding_source': 'payment_api.serializers.FundingSourceSerializer',
-
     }
 
     id = UUIDField(read_only=True)
     active = IntegerField(read_only=True)
     amount = IntegerField(read_only=True)
+    actual_balance = IntegerField(read_only=True, source='actualBalance')
     balance = IntegerField(read_only=True)
     execution_date = TimestampField(read_only=True, source='executionDate')
     name = CharField(read_only=True)
