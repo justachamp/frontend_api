@@ -188,8 +188,8 @@ class ProfileValidationService:
         country = address.country.value if address and address.country else None
         # account.gbg_authentication_count = 1
         # account.verification_status = 'Fail'
+        self.payment_client.assign_payment_account()
         if user.is_verified:
-            self.payment_client.assign_payment_account()
             try:
                 if account.can_be_verified and country:
                     gbg = ID3Client(parser=ModelParser, country_code=country)

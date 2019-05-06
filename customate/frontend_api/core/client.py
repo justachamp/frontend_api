@@ -10,7 +10,7 @@ class PaymentApiClient:
     def assign_payment_account(self):
         user = self._user
         payment_account_id = None
-        if user and user.is_owner and user.is_verified and not user.account.payment_account_id:
+        if user and user.is_owner and user.contact_verified and not user.account.payment_account_id:
             from payment_api.views import PaymentAccountViewSet
             view = PaymentAccountViewSet()
             serializer = PaymentAccountSerializer(
