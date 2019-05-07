@@ -38,6 +38,15 @@ urlpatterns = [
             name='payment-account-relationships'
             ),
 
+    re_path(r'^wallets/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
+            PaymentAccountViewSet.as_view({'get': 'retrieve_related'}),  # {'get': 'retrieve_related'}
+            name='wallet-related'),
+
+    re_path(r'^wallets/(?P<pk>[^/.]+)/relationships/(?P<related_field>[^/.]+)$',
+            view=PaymentAccountRelationshipView.as_view(),
+            name='wallet-relationships'
+            ),
+
     re_path(r'^fee_groups/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
             FeeGroupViewSet.as_view({'get': 'retrieve_related'}),
             name='fee-group-related'),

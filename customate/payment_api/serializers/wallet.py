@@ -4,11 +4,25 @@ from payment_api.serializers import (
     ResourceMeta,
     ResourceSerializer,
     TimestampField,
+    ExternalResourceRelatedField,
     JSONField
 )
 
 
 class WalletSerializer(ResourceSerializer):
+    included_serializers = {
+        # 'external_service_accounts': 'payment_api.serializers.ExternalServiceAccountSerializer',
+        'payment_account': 'payment_api.serializers.PaymentAccountSerializer'
+    }
+
+    payment_account = ExternalResourceRelatedField(
+        read_only=True,
+        required=False,
+        related_link_view_name='wallet-related',
+        self_link_view_name='wallet-relationships',
+        source='account'
+    )
+
     active = IntegerField(read_only=True)
     balance = IntegerField(read_only=True)
     currency = CharField(required=True)

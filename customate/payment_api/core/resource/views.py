@@ -7,6 +7,7 @@ from payment_api.core.resource.models import ResourceQueryset
 
 
 class ResourceViewSet(ModelViewSet):
+    _queryset = None
     resource_name = None
     base_url = settings.PAYMENT_API_URL
 
@@ -70,9 +71,11 @@ class ResourceViewSet(ModelViewSet):
         return queryset
 
     def get_queryset(self):
-        page_number = self.request.query_params.get(self.paginator.page_query_param, 1)
-        pagination = f'page%5Bnumber%5D={page_number}&page%5Bsize%5D={self.paginator.page_size}&page%5Btotals%5D'
-        return ResourceQueryset(self.external_resource_name, self.client, 'get', modifiers=[pagination])
+        if not self._queryset:
+            page_number = self.request.query_params.get(self.paginator.page_query_param, 1)
+            pagination = f'page%5Bnumber%5D={page_number}&page%5Bsize%5D={self.paginator.page_size}&page%5Btotals%5D'
+            self._queryset = ResourceQueryset(self.external_resource_name, self.client, 'get', modifiers=[pagination])
+        return self._queryset
 
     # def perform_create(self, serializer):
     #     pass
