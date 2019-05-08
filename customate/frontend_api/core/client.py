@@ -15,8 +15,8 @@ class PaymentApiClient:
             view = PaymentAccountViewSet()
             serializer = PaymentAccountSerializer(
                 data={
-                    'email': self._user.email,
-                    'full_name': self._user.get_full_name(),
+                    'email': user.email,
+                    'full_name': user.get_full_name() or user.email,
                     'original_account_id': user.account.id
                 },
                 context={'view': view}
