@@ -39,7 +39,7 @@ SET default_with_oids = false;
 
 CREATE TABLE public.auth_group (
     id integer NOT NULL,
-    name character varying(80) NOT NULL
+    name character varying(150) NOT NULL
 );
 
 
@@ -475,7 +475,8 @@ CREATE TABLE public.frontend_api_useraccount (
     account_ptr_id uuid NOT NULL,
     account_type character varying(10) NOT NULL,
     "position" character varying(50),
-    company_id uuid
+    company_id uuid,
+    payment_account_id uuid
 );
 
 
@@ -893,6 +894,14 @@ ALTER TABLE ONLY public.frontend_api_subuserpermission
 
 ALTER TABLE ONLY public.frontend_api_useraccount
     ADD CONSTRAINT frontend_api_useraccount_company_id_key UNIQUE (company_id);
+
+
+--
+-- Name: frontend_api_useraccount frontend_api_useraccount_payment_account_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.frontend_api_useraccount
+    ADD CONSTRAINT frontend_api_useraccount_payment_account_id_key UNIQUE (payment_account_id);
 
 
 --
