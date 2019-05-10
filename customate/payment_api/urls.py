@@ -1,5 +1,5 @@
 from payment_api.views import (
-    ItemListProxy,
+    #ItemListProxy,
     WalletViewSet,
     WalletRelationshipView,
     PaymentAccountViewSet,
@@ -26,7 +26,7 @@ from payment_api.router import urlpatterns as proxy_url
 
 urlpatterns = [
     url(r'^', include(proxy_url)),
-    url(r'^item/$', ItemListProxy.as_view(), name='item-list'),
+    #url(r'^item/$', ItemListProxy.as_view(), name='item-list'),
 
     # /api/v1/payment_account
     re_path(r'^payment_accounts/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',

@@ -178,6 +178,7 @@ LOGGING = {
 }
 
 
+
 LOGIN_REDIRECT_URL = '/accounts/profile'
 
 REST_FRAMEWORK = {
@@ -235,27 +236,28 @@ REST_FRAMEWORK = {
 }
 
 
-REST_PROXY = {
-    'HOST': 'https://dev-api.gocustomate.com',
-    'AUTH': {
-        'user': None,
-        'password': None,
-        'token': None,
-    },
-    'TIMEOUT': None,
-    'DEFAULT_HTTP_ACCEPT': 'application/vnd.api+json',
-    'DEFAULT_HTTP_ACCEPT_LANGUAGE': 'en-US,en;q=0.8',
-    'DEFAULT_CONTENT_TYPE': 'application/vnd.api+json',
-
-    # Return response as-is if enabled
-    'RETURN_RAW': False,
-
-    # Used to translate Accept HTTP field
-    'ACCEPT_MAPS': {
-        'text/html': 'application/vnd.api+json',
-    },
-
-}
+#
+# REST_PROXY = {
+#     'HOST': 'https://dev-api.gocustomate.com',
+#     'AUTH': {
+#         'user': None,
+#         'password': None,
+#         'token': None,
+#     },
+#     'TIMEOUT': None,
+#     'DEFAULT_HTTP_ACCEPT': 'application/vnd.api+json',
+#     'DEFAULT_HTTP_ACCEPT_LANGUAGE': 'en-US,en;q=0.8',
+#     'DEFAULT_CONTENT_TYPE': 'application/vnd.api+json',
+#
+#     # Return response as-is if enabled
+#     'RETURN_RAW': False,
+#
+#     # Used to translate Accept HTTP field
+#     'ACCEPT_MAPS': {
+#         'text/html': 'application/vnd.api+json',
+#     },
+#
+# }
 
 
 ROOT_URLCONF = 'customate.urls'
@@ -284,11 +286,11 @@ WSGI_APPLICATION = 'customate.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': environ.get('DB_NAME'),
-        'HOST': environ.get('DB_HOST'),
-        'PORT': environ.get('DB_PORT'),
-        'USER': environ.get('DB_USER'),
-        'PASSWORD': environ.get('DB_PASSWORD'),
+        'NAME': environ['DB_NAME'],
+        'HOST': environ['DB_HOST'],
+        'PORT': environ['DB_PORT'],
+        'USER': environ['DB_USER'],
+        'PASSWORD': environ['DB_PASSWORD'],
         'CONN_MAX_AGE': 60 * 10,  # 10 minutes
         'TEST': {
             # this is for ci database creation. if multiple developers
