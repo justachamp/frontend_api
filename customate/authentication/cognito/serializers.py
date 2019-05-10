@@ -53,7 +53,7 @@ class UserServiceMixin(object):
             cognito_user = data[1]
             identity = cognito_user.get('cognito:username')
             email = cognito_user.get('email')
-            logger.error(f'process_request user_attributes: {cognito_user}')
+            logger.info(f'process_request user_attributes: {cognito_user}')
             user_data = {
                 'username': email,
                 'email': email,
@@ -76,14 +76,14 @@ class BaseAuthValidationMixin(object):
                 email = item['Value'].lower()
                 item['Value'] = email
             if self.user_service.user_exists(email):
-                raise serializers.ValidationError("Email already exists you cannot register the same email twice")
+                raise serializers.ValidationError("Email already exists, you cannot register the same email twice")
 
         return data
 
     def validate_username(self, email):
         email = email.lower()
         if self.user_service.user_exists(email):
-            raise serializers.ValidationError("Email already exists you cannot register the same email twice")
+            raise serializers.ValidationError("Email already exists, you cannot register the same email twice")
         return email
 
 
@@ -183,7 +183,7 @@ class CognitoAuthChangePasswordSerializer(serializers.Serializer):
             raise Unauthorized(ex)
 
 
-class CogrnitoSignOutSerializer(serializers.Serializer):
+class CognitoSignOutSerializer(serializers.Serializer):
     resource_name = 'identities'
     access_token = serializers.CharField(write_only=True, required=True)
 

@@ -2,25 +2,23 @@ from django.conf import settings
 from authentication.cognito.middleware import helpers
 # import the logging library
 import logging
+
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+
 
 # This is utilised from normal Django views. Currently used for anything that requires authentication but isn't
 # already utilising rest framework
 class AwsDjangoMiddleware:
 
-
-
     def __call__(self, request):
-        logger.error('call AwsDjangoMiddleware')
-
+        logger.info('call AwsDjangoMiddleware')
 
         # Get the user and a new token if required
         user, token, id_token, refresh_token = helpers.process_request(request)
 
         request.user = user
-        logger.error(f'AwsDjangoMiddleware {user}')
+        logger.info(f'AwsDjangoMiddleware {user}')
         response = self.get_response(request)
 
         if token:

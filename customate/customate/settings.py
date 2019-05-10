@@ -11,11 +11,13 @@ https://docs.djangoproject.com/en/2.1/ref/settings/
 """
 
 from os import environ, path
+import logging.config
 from corsheaders.defaults import default_headers
+from django.utils.log import DEFAULT_LOGGING
+from django.core.management.color import supports_color
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = path.dirname(path.dirname(path.abspath(__file__)))
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.1/howto/deployment/checklist/
@@ -25,7 +27,6 @@ SECRET_KEY = 'c3rq#fr$u-5d1qsq@qfkyr=he@)9r7)wj1yl_14*bir3z_1hj^'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = bool(environ.get("DEBUG"))
-
 
 # Application definition
 
@@ -66,34 +67,19 @@ MIDDLEWARE = [
     # 'authentication.cognito.middleware.cognito_django_middleware.AwsDjangoMiddleware'
 ]
 
-# REST_FRAMEWORK = {
-#     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-#     'PAGE_SIZE': 10
-# }
-
-# CACHES = {
-#     'default': {
-#         'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
-#     }
-# }
-
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
     'guardian.backends.ObjectPermissionBackend'
 ]
-# AUTHENTICATION_BACKENDS = [
-#     # 'django.contrib.auth.backends.ModelBackend',
-#     # 'authentication.cognito.middleware.cognito_django_authentication.AwsDjangoAuthentication'
-# ]
 
-COGNITO_USER_POOL_ID = environ.get('COGNITO_USER_POOL_ID')
-COGNITO_APP_CLIENT_ID = environ.get('COGNITO_APP_CLIENT_ID')
-COGNITO_APP_SECRET_KEY = environ.get('COGNITO_APP_SECRET_KEY')
+COGNITO_USER_POOL_ID = environ['COGNITO_USER_POOL_ID']
+COGNITO_APP_CLIENT_ID = environ['COGNITO_APP_CLIENT_ID']
+COGNITO_APP_SECRET_KEY = environ['COGNITO_APP_SECRET_KEY']
 
-AWS_ACCESS_KEY = environ.get('AWS_ACCESS_KEY')
-AWS_SECRET_KEY = environ.get('AWS_SECRET_KEY')
+AWS_ACCESS_KEY = environ['AWS_ACCESS_KEY']
+AWS_SECRET_KEY = environ['AWS_SECRET_KEY']
 
-AWS_REGION = environ.get('AWS_REGION')
+AWS_REGION = environ['AWS_REGION']
 
 COGNITO_ATTR_MAPPING = {
     'email': 'email',
@@ -105,85 +91,87 @@ COGNITO_ATTR_MAPPING = {
 
 COGNITO_CREATE_UNKNOWN_USERS = True
 
-LOGGING = {
+# see more at https://lincolnloop.com/blog/django-logging-right-way/
+LOGGING_CONFIG = None
+LOGLEVEL = environ.get('LOGLEVEL', 'debug' if DEBUG else 'info').upper()
+
+logging.config.dictConfig({
     'version': 1,
     'disable_existing_loggers': False,
-    # 'filters': {
-    #     'require_debug_false': {
-    #         '()': 'django.utils.log.RequireDebugFalse',
-    #     },
-    #     'require_debug_true': {
-    #         '()': 'django.utils.log.RequireDebugTrue',
-    #     },
-    # },
     'formatters': {
-
         'console': {
-            # exact format is not important, this is the minimum information
-            'format': '%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+            # see more parameters at https://docs.python.org/3/library/logging.html#logging.LogRecord
+            'format': '[%(asctime)s %(levelname)s %(pathname)s:%(lineno)s] %(message)s',
+            'datefmt': "%y%m%d %H:%M:%S",
+        },
+
+        'colorlog': {
+            'class': 'colorlog.ColoredFormatter',
+            'format': '%(log_color)s[%(asctime)s %(levelname)s %(pathname)s:%(lineno)s|%(name)s] %(message)s',
+            'datefmt': "%y%m%d %H:%M:%S",
         },
 
         'django.server': {
             '()': 'django.utils.log.ServerFormatter',
-            'format': '[%(server_time)s] %(message)s',
-        },
+            'format': '[{asctime}] {message}',
+            'datefmt': "%y%m%d %H:%M:%S",
+            'style': '{'
+        }
     },
     'handlers': {
         'console': {
-            'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
-            'formatter': 'console',
+            'class': 'colorlog.StreamHandler' if supports_color() else 'logging.StreamHandler',
+            'formatter': 'colorlog' if supports_color() else 'console',
         },
 
-        # 'console': {
-        #     'level': 'INFO',
-        #     'filters': ['require_debug_true'],
-        #     'class': 'logging.StreamHandler',
-        # },
-        # Custom handler which we will use with logger 'django'.
-        # We want errors/warnings to be logged when DEBUG=False
-        # 'console_on_not_debug': {
-        #     'level': 'WARNING',
-        #     'filters': ['require_debug_false'],
-        #     'class': 'logging.StreamHandler',
-        # },
-        'django.server': {
-            'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
-            'formatter': 'django.server',
-        },
-        # 'mail_admins': {
-        #     'level': 'ERROR',
-        #     'filters': ['require_debug_false'],
-        #     'class': 'django.utils.log.AdminEmailHandler'
-        # }
+        'django.server': DEFAULT_LOGGING['handlers']['django.server'],
+
     },
     'loggers': {
+        # "root" logger which serves as a catch-all for any logs that are sent from any Python module
+        '': {
+            'level': LOGLEVEL,
+            'handlers': ['console'],
+        },
+
         'django': {
             'handlers': ['console'],
-            'level': 'DEBUG',
+            'level': 'INFO',
         },
+
         'django.request': {
             'handlers': ['console'],
-            'level': 'DEBUG',
+            'level': LOGLEVEL,
             'propagate': False,
         },
 
-        'django.server': {
-            'handlers': ['django.server'],
-            'level': 'INFO',
+        # Logging From Your Application
+        'customate': {
+            'level': LOGLEVEL,
+            'handlers': ['console'],
+            # required to avoid double logging with root logger
             'propagate': False,
         },
-    }
-}
 
+        # Django-internals logging
+        'django.server': DEFAULT_LOGGING['loggers']['django.server'],
 
+        # Don't log this module at all
+        'botocore': {
+            'level': 'NOTSET',
+            'propagate': False,
+        },
+    },
+})
 
 LOGIN_REDIRECT_URL = '/accounts/profile'
 
 REST_FRAMEWORK = {
     'PAGE_SIZE': 10,
+    # need custom handler
     'EXCEPTION_HANDLER': 'rest_framework_json_api.exceptions.exception_handler',
+    # "EXCEPTION_HANDLER": 'customate.utils.custom_exception_handler',
+
     'DEFAULT_PAGINATION_CLASS':
         'rest_framework_json_api.pagination.JsonApiPageNumberPagination',
     'DEFAULT_PARSER_CLASSES': (
@@ -234,7 +222,6 @@ REST_FRAMEWORK = {
     ),
     'TEST_REQUEST_DEFAULT_FORMAT': 'vnd.api+json'
 }
-
 
 #
 # REST_PROXY = {
@@ -356,4 +343,4 @@ STATIC_URL = 'https://%s/%s/' % (AWS_S3_CUSTOM_DOMAIN, AWS_LOCATION)
 STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
 COUNTRIES_AVAILABLE = environ.get('COUNTRIES_AVAILABLE', '').split(',')
-PAYMENT_API_URL = environ.get('PAYMENT_API_URL')
+PAYMENT_API_URL = environ['PAYMENT_API_URL']

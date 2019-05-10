@@ -1,5 +1,5 @@
 from authentication.cognito.serializers import CognitoAuthSerializer, CogrnitoAuthRetrieveSerializer, \
-    CogrnitoSignOutSerializer, CognitoAuthForgotPasswordSerializer, CognitoAuthPasswordRestoreSerializer,\
+    CognitoSignOutSerializer, CognitoAuthForgotPasswordSerializer, CognitoAuthPasswordRestoreSerializer, \
     CognitoAuthVerificationSerializer, CognitoAuthAttributeVerifySerializer, CognitoAuthChallengeSerializer, \
     CognitoAuthChangePasswordSerializer
 
@@ -13,11 +13,9 @@ from rest_framework.status import HTTP_204_NO_CONTENT
 
 # import the logging library
 import logging
-import uuid
 
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 class AuthView(viewsets.ViewSet):
@@ -46,11 +44,11 @@ class AuthView(viewsets.ViewSet):
             entity = serializer.auth_challenge(serializer.validated_data)
             context = {'request': request, 'additional_keys': {'account': ['permission']}}
             return response.Response(
-                    CogrnitoAuthRetrieveSerializer(instance=entity, context=context).data)
+                CogrnitoAuthRetrieveSerializer(instance=entity, context=context).data)
 
     @action(methods=['POST'], detail=False, name='Logout')
     def sign_out(self, request):
-        serializer = CogrnitoSignOutSerializer(data=request.data, )
+        serializer = CognitoSignOutSerializer(data=request.data, )
         if serializer.is_valid(True):
             serializer.sign_out(serializer.validated_data)
             return response.Response(status=HTTP_204_NO_CONTENT)
@@ -107,5 +105,3 @@ class AuthView(viewsets.ViewSet):
         serializer = CognitoAuthChangePasswordSerializer(data=request.data)
         if serializer.is_valid(True):
             return response.Response(status=serializer.change_password(serializer.validated_data))
-
-

@@ -49,11 +49,14 @@ class Session(DefaultSession):
             else:
                 check_data_format(data)
 
+        if isinstance(json_data, dict) and json_data.get('errors'):
+            logger.error("Payment API errors: %r" % json_data.get('errors'))
+
         doc = super().read(json_data, url, no_cache=False)
         return doc
 
     def _ext_fetch_by_url(self, url: str) -> 'Document':
-        logger.error(f'fetch_by_url: {url}')
+        logger.info(f'fetch_by_url: {url}')
         return super()._ext_fetch_by_url(url)
 
 

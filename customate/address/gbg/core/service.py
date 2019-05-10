@@ -14,32 +14,8 @@ import logging.config
 from address.gbg.core.utils import set_value_at_keypath
 from core.models import User
 
-logging.config.dictConfig({
-    'version': 1,
-    'formatters': {
-        'verbose': {
-            'format': '%(name)s: %(message)s'
-        }
-    },
-    'handlers': {
-        'console': {
-            'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
-            'formatter': 'verbose',
-        },
-    },
-    'loggers': {
-        'zeep.transports': {
-            'level': 'DEBUG',
-            'propagate': True,
-            'handlers': ['console'],
-        },
-    }
-})
-
 
 class ZeepProvider:
-
     _client = None
     _transport = None
     _session = None
@@ -98,7 +74,6 @@ class ID3Client:
     @property
     def provider(self):
         if not self._provider:
-
             self._provider = ZeepProvider(self.user_name, self.password, self.wsdl)
 
         return self._provider
@@ -150,12 +125,13 @@ def format_country_data(identity_key, post_data=None):
                     for key, value in post_data.items():
                         set_value_at_keypath(identity, key, value)
             return {identity_key: identity} if len(identity) else None
+
         return wrapped
+
     return wrapper
 
 
 class ModelParser(object):
-
     _data = None
 
     def __init__(self, country_code):
@@ -163,7 +139,6 @@ class ModelParser(object):
         self._current_address = None
         self._contact_details = None
         self.country_code = country_code
-
 
     @property
     def personal_details(self):
@@ -254,7 +229,6 @@ class ModelParser(object):
                 if hasattr(source, param):
                     set_value_at_keypath(identity, key, getattr(source, param))
 
-
     @format_country_data(identity_key='UK')
     def _gb_identity(self, source, identity):
 
@@ -282,8 +256,3 @@ class ModelParser(object):
     @format_country_data(identity_key='Spain')
     def _sp_idenity(self, source, identity):
         self.apply_if_exists(source, identity, {'TaxIDNumber.Number': 'tax_id'})
-
-
-
-
-
