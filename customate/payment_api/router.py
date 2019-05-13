@@ -9,7 +9,8 @@ from payment_api.views import (
     TaxGroupViewSet,
     TransactionViewSet,
     PaymentViewSet,
-    FundingSourceViewSet
+    FundingSourceViewSet,
+    PayeeViewSet,
 )
 from customate.routers import router
 
@@ -20,7 +21,8 @@ from customate.routers import router
 #router.register(r'test', SignUpProxy, basename='test')
 router.register('payment_accounts', PaymentAccountViewSet, basename='payment_accounts')
 router.register('payments', PaymentViewSet, basename='payments')
-router.register('funding_sources', FundingSourceViewSet, basename='payments')
+router.register('funding_sources', FundingSourceViewSet, basename='funding_sources')
+router.register('payees', PayeeViewSet, basename='payees')
 router.register('taxes', TaxViewSet, basename='taxes')
 router.register('tax_groups', TaxGroupViewSet, basename='tax_groups')
 router.register('fee_groups', FeeGroupViewSet, basename='fee_groups')

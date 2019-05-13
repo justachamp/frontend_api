@@ -164,6 +164,18 @@ class FundingSourceType(Enum):
         return self.value
 
 
+class PayeeType(Enum):
+    WALLET = 'WALLET'
+    BANK_ACCOUNT = 'BANK_ACCOUNT'
+
+    class Labels:
+        WALLET = 'Wallet'
+        BANK_ACCOUNT = 'Bank account'
+
+    def __repr__(self):
+        return self.value
+
+
 class OperationType(Enum):
     DEFAULT = 'DEFAULT'
     MONEY_IN_DD = 'MONEY_IN_DD'

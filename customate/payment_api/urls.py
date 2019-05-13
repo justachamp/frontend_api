@@ -17,7 +17,9 @@ from payment_api.views import (
     PaymentViewSet,
     PaymentRelationshipView,
     FundingSourceViewSet,
-    FundingSourceRelationshipView
+    FundingSourceRelationshipView,
+    PayeeViewSet,
+    PayeeRelationshipView,
 )
 
 from django.conf.urls import url
@@ -39,11 +41,11 @@ urlpatterns = [
             ),
 
     re_path(r'^wallets/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
-            PaymentAccountViewSet.as_view({'get': 'retrieve_related'}),  # {'get': 'retrieve_related'}
+            WalletViewSet.as_view({'get': 'retrieve_related'}),  # {'get': 'retrieve_related'}
             name='wallet-related'),
 
     re_path(r'^wallets/(?P<pk>[^/.]+)/relationships/(?P<related_field>[^/.]+)$',
-            view=PaymentAccountRelationshipView.as_view(),
+            view=WalletRelationshipView.as_view(),
             name='wallet-relationships'
             ),
 
@@ -108,5 +110,14 @@ urlpatterns = [
     re_path(r'^funding_sources/(?P<pk>[^/.]+)/relationships/(?P<related_field>[^/.]+)$',
             view=FundingSourceRelationshipView.as_view(),
             name='funding-source-relationships'
+            ),
+
+    re_path(r'^payees/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
+            PayeeViewSet.as_view({'get': 'retrieve_related'}),  # {'get': 'retrieve_related'}
+            name='payee-related'),
+
+    re_path(r'^payees/(?P<pk>[^/.]+)/relationships/(?P<related_field>[^/.]+)$',
+            view=PayeeRelationshipView.as_view(),
+            name='payee-relationships'
             ),
 ]
