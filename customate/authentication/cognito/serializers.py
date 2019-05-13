@@ -238,7 +238,7 @@ class CognitoAuthChallengeSerializer(serializers.Serializer, UserServiceMixin):
             raise Unauthorized(ex)
 
 
-class CogrnitoAuthRetrieveMessageSerializer(serializers.Serializer):
+class CognitoAuthRetrieveMessageSerializer(serializers.Serializer):
     message = serializers.CharField(required=True)
 
     def validate(self, data):
@@ -249,7 +249,7 @@ class CogrnitoAuthRetrieveMessageSerializer(serializers.Serializer):
         return data
 
 
-class CogrnitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
+class CognitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
     resource_name = 'identities'
     id = serializers.UUIDField(read_only=True)
     username = serializers.EmailField(required=True, source='preferred_username', write_only=True)
@@ -309,7 +309,7 @@ class CogrnitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
 
         except Exception as ex:
             logger.error(f'retrieve general {ex}')
-            s = CogrnitoAuthRetrieveMessageSerializer(data={'message': str(ex)})
+            s = CognitoAuthRetrieveMessageSerializer(data={'message': str(ex)})
             s.is_valid(True)
             
             raise Unauthorized(ex)
@@ -392,7 +392,7 @@ class CognitoInviteUserSerializer(serializers.Serializer, BaseAuthValidationMixi
             raise Unauthorized(ex)
 
 
-class CognitoAuthSerializer(BaseAuthValidationMixin, CogrnitoAuthRetrieveSerializer, UserServiceMixin):
+class CognitoAuthSerializer(BaseAuthValidationMixin, CognitoAuthRetrieveSerializer, UserServiceMixin):
 
     user_attributes = ListField(child=CognitoAttributeFiled(required=True), required=True)
     username = serializers.EmailField(required=True, source='preferred_username', write_only=True)
@@ -411,7 +411,7 @@ class CognitoAuthSerializer(BaseAuthValidationMixin, CogrnitoAuthRetrieveSeriali
                 {'Name': 'custom:account_type', 'Value': str(self.user_service.user_role)}
             ]
             helpers.sign_up(validated_data)
-            serializer = CogrnitoAuthRetrieveSerializer()
+            serializer = CognitoAuthRetrieveSerializer()
             return serializer.retrieve(validated_data)
         except Exception as ex:
             logger.error(f'create general {ex}')

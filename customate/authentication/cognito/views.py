@@ -1,4 +1,4 @@
-from authentication.cognito.serializers import CognitoAuthSerializer, CogrnitoAuthRetrieveSerializer, \
+from authentication.cognito.serializers import CognitoAuthSerializer, CognitoAuthRetrieveSerializer, \
     CognitoSignOutSerializer, CognitoAuthForgotPasswordSerializer, CognitoAuthPasswordRestoreSerializer, \
     CognitoAuthVerificationSerializer, CognitoAuthAttributeVerifySerializer, CognitoAuthChallengeSerializer, \
     CognitoAuthChangePasswordSerializer
@@ -26,7 +26,7 @@ class AuthView(viewsets.ViewSet):
 
     @action(methods=['POST'], detail=False, name='Login')
     def sign_in(self, request):
-        serializer = CogrnitoAuthRetrieveSerializer(data=request.data)
+        serializer = CognitoAuthRetrieveSerializer(data=request.data)
         if serializer.is_valid(True):
             entity = serializer.retrieve(serializer.validated_data)
             if type(entity) == Challenge:
@@ -35,7 +35,7 @@ class AuthView(viewsets.ViewSet):
             else:
                 context = {'request': request, 'additional_keys': {'account': ['permission']}}
                 return response.Response(
-                    CogrnitoAuthRetrieveSerializer(instance=entity, context=context).data)
+                    CognitoAuthRetrieveSerializer(instance=entity, context=context).data)
 
     @action(methods=['POST'], detail=False, name='Challenge')
     def challenge(self, request):
@@ -44,7 +44,7 @@ class AuthView(viewsets.ViewSet):
             entity = serializer.auth_challenge(serializer.validated_data)
             context = {'request': request, 'additional_keys': {'account': ['permission']}}
             return response.Response(
-                CogrnitoAuthRetrieveSerializer(instance=entity, context=context).data)
+                CognitoAuthRetrieveSerializer(instance=entity, context=context).data)
 
     @action(methods=['POST'], detail=False, name='Logout')
     def sign_out(self, request):
@@ -55,11 +55,11 @@ class AuthView(viewsets.ViewSet):
 
     @action(methods=['POST'], detail=False, name='Refresh')
     def refresh(self, request):
-        serializer = CogrnitoAuthRetrieveSerializer(data=request.data)
+        serializer = CognitoAuthRetrieveSerializer(data=request.data)
         if serializer.is_valid(True):
             entity = serializer.retrieve(serializer.validated_data)
             context = {'request': request, 'additional_keys': {'account': ['permission']}}
-            return response.Response(CogrnitoAuthRetrieveSerializer(instance=entity, context=context).data)
+            return response.Response(CognitoAuthRetrieveSerializer(instance=entity, context=context).data)
 
     @action(methods=['POST'], detail=False, name='Sign up', resource_name='identity')
     def sign_up(self, request):

@@ -1,7 +1,7 @@
 from rest_framework import permissions
 from rest_framework.exceptions import ValidationError
 
-from authentication.cognito.serializers import CogrnitoAuthRetrieveSerializer
+from authentication.cognito.serializers import CognitoAuthRetrieveSerializer
 
 import logging
 logger = logging.getLogger(__name__)
@@ -41,7 +41,7 @@ class CheckFieldsCredentials(permissions.BasePermission):
 
     @staticmethod
     def validate_credentials(request):
-        serializer = CogrnitoAuthRetrieveSerializer(data=request.data.get('credentials'), context={'request': request})
+        serializer = CognitoAuthRetrieveSerializer(data=request.data.get('credentials'), context={'request': request})
         if serializer.is_valid():
             valdated_data = serializer.validated_data
             if request.user.username != valdated_data.get('preferred_username'):
