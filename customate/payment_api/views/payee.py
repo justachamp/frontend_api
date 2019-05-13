@@ -25,10 +25,6 @@ class PayeeViewSet(ResourceViewSet):
         SearchFilter
     )
 
-    filterset_fields = {
-        'account__id': ('exact',),
-    }
-
     def check_payment_account_id(self, filters, key, value):
         user = self.request.user
         if not user.is_anonymous and user.is_owner and user.account.payment_account_id:
@@ -36,8 +32,16 @@ class PayeeViewSet(ResourceViewSet):
         else:
             self.get_queryset().set_empty_response()
 
+    filterset_fields = {
+        'type': ('exact',),
+        'currency': ('exact',),
+        'active': ('exact',),
+        'account__id': ('exact',),
+    }
+
     class Meta:
         filters = [
+            {'active__exact': 1},
             {'account__id__exact': {'method': 'check_payment_account_id'}}
         ]
 
