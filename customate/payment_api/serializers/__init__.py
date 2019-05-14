@@ -9,6 +9,7 @@ from rest_framework_json_api.serializers import (
 from core.serializers import Serializer
 from core.fields import (
     EnumField,
+    TypeEnumField,
     OperationType,
     FeeType,
     UUIDField,
@@ -39,6 +40,7 @@ __all__ = [
     CharField,
     ExternalResourceRelatedField,
     EnumField,
+    TypeEnumField,
     IbanField,
     JSONField,
     TimestampField,

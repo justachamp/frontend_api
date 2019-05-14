@@ -94,7 +94,7 @@ class Client(ResourceMappingMixin, JsonApiErrorParser):
         embedded_resources = self.embedded_resources
 
         for key, value in attributes.items():
-            if key in relationships and key in embedded_resources:
+            if key in relationships and key in embedded_resources or key in instance._attributes:
                 instance._attributes[key] = value
                 instance.dirty_fields.add(key)
             elif key in instance._relationships:

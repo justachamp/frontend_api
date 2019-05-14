@@ -37,16 +37,20 @@ class ResourceMappingMixin:
         return getattr(self, f'_{action}_{"data" if isinstance(resource, dict) else "instance"}_mapping')
 
     def _hasattr(self, resource, key):
-        return key in resource._attributes or key in resource._relationships
+        return (hasattr(resource, '_attributes') and key in resource._attributes) or\
+               (hasattr(resource, '_relationships') and key in resource._relationships) or\
+               (hasattr(resource.fields, key))
 
     def _getattr(self, resource, key, def_val=None):
 
         if key in resource._attributes:
             return resource._attributes[key]
 
+        elif hasattr(resource.fields, key):
+            return getattr(resource, key)
+
         elif key in resource._relationships:
             return resource._relationships[key]
-
         else:
             return def_val
 
@@ -84,11 +88,11 @@ class ResourceMappingMixin:
                 resource[key] = data.get('value')
 
     def reverse_mapping(self, resource):
-        mapping_stratagy = self._get_mapping_strategy('reverse', resource)
+        mapping_strategy = self._get_mapping_strategy('reverse', resource)
         for item in self.resource_mapping:
             key = next(iter(item))
             data = item.get(key)
-            mapping_stratagy(key, data, resource)
+            mapping_strategy(key, data, resource)
         return resource
 
     def _reverse_instance_mapping(self, key, data, resource):

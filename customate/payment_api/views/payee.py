@@ -44,6 +44,9 @@ class PayeeViewSet(ResourceViewSet):
             {'active__exact': 1},
             {'account__id__exact': {'method': 'check_payment_account_id'}}
         ]
+        resource_mapping = [
+            {'accounts': {'op': 'map', 'value': 'account'}}
+        ]
 
 
 class PayeeRelationshipView(ResourceRelationshipView):

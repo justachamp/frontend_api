@@ -1,5 +1,7 @@
 from payment_api.serializers import (
     IbanField,
+    CharField,
+    TypeEnumField,
     IntegerField,
     EnumField,
     ResourceMeta,
@@ -17,23 +19,19 @@ class PayeeSerializer(ResourceSerializer):
     }
 
     payment_account = ExternalResourceRelatedField(
-        read_only=True,
         required=False,
-        related_link_view_name='wallet-related',
-        self_link_view_name='wallet-relationships',
-        source='account'
+        related_link_view_name='payee-related',
+        self_link_view_name='payee-relationships',
+        source='accounts',
+        result_source='account'
     )
-
+    title = CharField(required=True)
     active = IntegerField(read_only=True)
-    type = EnumField(enum=PayeeType, required=True, primitive_value=True, source='attributes.type',
-                     result_source='type')
+    type = TypeEnumField(enum=PayeeType, required=True, primitive_value=True)
     currency = EnumField(enum=Currency, required=True, primitive_value=True)
-    iban = IbanField(read_only=True)
-    data = JSONField(read_only=True)
+    # iban = IbanField(read_only=True)
+    data = JSONField(required=True)
 
     class Meta(ResourceMeta):
         resource_name = 'payees'
-
-
-
 

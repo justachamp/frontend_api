@@ -94,6 +94,31 @@ class EnumField(ResultResourceFieldMixin, PrimitiveValueFieldMixin, ChoiceField)
         return self.to_representation(data)
 
 
+class TypeEnumField(EnumField):
+    def __init__(self, *args, source='attributes.type', result_source='type', **kwargs):
+        super().__init__(*args, source=source, result_source=result_source, **kwargs)
+
+    def to_internal_value(self, data):
+        self.source_attrs = [self.result_source]
+        value = super().to_internal_value(data)
+        return value
+
+    def to_representation(self, obj):
+        value = super().to_representation(obj)
+        return value
+
+    def get_attribute(self, instance):
+        self._apply_source_attrs()
+        attr = super().get_attribute(instance)
+        return attr
+
+    def _apply_source_attrs(self):
+        if self.source == '*':
+            self.source_attrs = []
+        else:
+            self.source_attrs = self.source.split('.')
+
+
 class SerializerField(serializers.Field):
 
     def __init__(self, resource, many=False, *args, **kwargs):
