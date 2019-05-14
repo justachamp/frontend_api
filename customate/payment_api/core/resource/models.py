@@ -19,6 +19,7 @@ class EmptyResponseMeta:
     def __init__(self):
         self.page = {'totalRecords': 0}
 
+
 class EmptyResponse:
 
     def __init__(self):
@@ -68,7 +69,6 @@ class ExternalResourceModel:
 
 
 class ResourceQueryset(JsonApiErrorParser, RQLFilterMixin):
-
     _response = None
     _modifiers = None
     _inclusions = None
@@ -190,7 +190,6 @@ class ResourceQueryset(JsonApiErrorParser, RQLFilterMixin):
 
         including = ','.join([camelize(part, False) for part in args])
         if len(including):
-
             self.inclusion = including
 
         return self

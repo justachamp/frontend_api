@@ -172,8 +172,7 @@ REST_FRAMEWORK = {
     'EXCEPTION_HANDLER': 'rest_framework_json_api.exceptions.exception_handler',
     # "EXCEPTION_HANDLER": 'customate.utils.custom_exception_handler',
 
-    'DEFAULT_PAGINATION_CLASS':
-        'rest_framework_json_api.pagination.JsonApiPageNumberPagination',
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework_json_api.pagination.JsonApiPageNumberPagination',
     'DEFAULT_PARSER_CLASSES': (
         # 'rest_framework_json_api.parsers.JSONParser',
         'core.parsers.JSONAPIBulkParser',

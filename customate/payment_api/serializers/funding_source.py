@@ -4,7 +4,7 @@ from payment_api.serializers import (
     ResourceMeta,
     JSONField,
     IntegerField,
-    EnumField,
+    TypeEnumField,
     TimestampField,
     FundingSourceType,
     ResourceSerializer,
@@ -21,9 +21,8 @@ class FundingSourceSerializer(ResourceSerializer):
     active = IntegerField(read_only=True)
     creation_date = TimestampField(read_only=True, source='creationDate')
     data = JSONField(read_only=True)
-    type = EnumField(enum=FundingSourceType, required=True, primitive_value=True, source='attributes.type',
-                     result_source='type')
     title = CharField(read_only=True)
+    type = TypeEnumField(enum=FundingSourceType, required=True, primitive_value=True)
 
     payment_account = ExternalResourceRelatedField(
         required=False,

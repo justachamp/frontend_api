@@ -2,7 +2,7 @@ from rest_framework.permissions import AllowAny
 from payment_api.serializers import TaxSerializer, TaxGroupSerializer
 
 from payment_api.views import (
-    InclusionFiler,
+    InclusionFilter,
     OrderingFilter,
     SearchFilter,
     ResourceFilterBackend,
@@ -18,7 +18,7 @@ class TaxViewSet(ResourceViewSet):
 
     filter_backends = (
         OrderingFilter,
-        InclusionFiler,
+        InclusionFilter,
         ResourceFilterBackend,
         SearchFilter
     )
@@ -42,7 +42,7 @@ class TaxGroupViewSet(ResourceViewSet):
     permission_classes = (AllowAny,)
     filter_backends = (
         OrderingFilter,
-        InclusionFiler
+        InclusionFilter
     )
 
     class Meta:

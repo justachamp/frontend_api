@@ -1,9 +1,12 @@
+import logging
 from django.utils.functional import cached_property
 from django.conf import settings
 
 from payment_api.core.client import Client
 from rest_framework_json_api.views import ModelViewSet, RelationshipView
 from payment_api.core.resource.models import ResourceQueryset
+
+logger = logging.getLogger(__name__)
 
 
 class ResourceViewSet(ModelViewSet):
@@ -73,7 +76,8 @@ class ResourceViewSet(ModelViewSet):
     def get_queryset(self):
         if not self._queryset:
             page_number = self.request.query_params.get(self.paginator.page_query_param, 1)
-            pagination = f'page%5Bnumber%5D={page_number}&page%5Bsize%5D={self.paginator.page_size}&page%5Btotals%5D'
+            pagination = f'page[number]={page_number}&page[size]={self.paginator.page_size}&page[totals]'
+            logger.debug("pagination: %r " % pagination)
             self._queryset = ResourceQueryset(self.external_resource_name, self.client, 'get', modifiers=[pagination])
         return self._queryset
 
@@ -92,4 +96,3 @@ class ResourceRelationshipView(RelationshipView):
 
     def get_queryset(self):
         pass
-

@@ -4,7 +4,7 @@ from payment_api.serializers import WalletSerializer
 
 
 from payment_api.views import (
-    InclusionFiler,
+    InclusionFilter,
     OrderingFilter,
     SearchFilter,
     ResourceFilterBackend,
@@ -20,7 +20,7 @@ class WalletViewSet(ResourceViewSet):
 
     filter_backends = (
         OrderingFilter,
-        InclusionFiler,
+        InclusionFilter,
         ResourceFilterBackend,
         SearchFilter
     )

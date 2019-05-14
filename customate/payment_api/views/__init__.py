@@ -3,7 +3,7 @@ from rest_framework.filters import SearchFilter
 from rest_framework_json_api.filters import QueryParameterValidationFilter
 
 from payment_api.core.resource.filters import (
-    InclusionFiler, IbanGeneralPartFiler,
+    InclusionFilter, IbanGeneralPartFiler,
     ResourceFilterBackend,
     OrderingFilter
 )
@@ -21,7 +21,7 @@ from payment_api.views.payee import PayeeViewSet, PayeeRelationshipView
 
 
 __all__ = [
-    InclusionFiler,
+    InclusionFilter,
     IbanGeneralPartFiler,
     QueryParameterValidationFilter,
     OrderingFilter,
