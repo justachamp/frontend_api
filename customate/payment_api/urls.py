@@ -30,7 +30,6 @@ urlpatterns = [
     url(r'^', include(proxy_url)),
     #url(r'^item/$', ItemListProxy.as_view(), name='item-list'),
 
-    # /api/v1/payment_account
     re_path(r'^payment_accounts/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
             PaymentAccountViewSet.as_view({'get': 'retrieve_related'}),  # {'get': 'retrieve_related'}
             name='payment-account-related'),
@@ -67,7 +66,6 @@ urlpatterns = [
             name='fee-group-account-relationships'
             ),
 
-    # /api/v1/tax
     re_path(r'^taxes/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
             TaxViewSet.as_view({'get': 'retrieve_related'}),  # {'get': 'retrieve_related'}
             name='tax-related'),
@@ -103,6 +101,7 @@ urlpatterns = [
             view=PaymentRelationshipView.as_view(),
             name='payment-relationships'
             ),
+
     re_path(r'^funding_sources/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
             FundingSourceViewSet.as_view({'get': 'retrieve_related'}),  # {'get': 'retrieve_related'}
             name='funding-source-related'),

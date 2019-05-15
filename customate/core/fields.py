@@ -61,7 +61,7 @@ class ResultResourceFieldMixin:
         if result_source:
             self.result_source = result_source
 
-        return super().__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
 
 class UUIDField(PrimitiveValueFieldMixin, DefaultUUIDField):

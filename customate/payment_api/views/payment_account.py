@@ -3,7 +3,7 @@ from payment_api.serializers import PaymentAccountSerializer
 
 
 from payment_api.views import (
-    InclusionFiler,
+    InclusionFilter,
     IbanGeneralPartFiler,
     ResourceFilterBackend,
     QueryParameterValidationFilter,
@@ -39,7 +39,7 @@ class PaymentAccountViewSet(ResourceViewSet):
         IbanGeneralPartFiler,
         # QueryParameterValidationFilter,
         OrderingFilter,
-        InclusionFiler,
+        InclusionFilter,
         ResourceFilterBackend,
         SearchFilter
     )

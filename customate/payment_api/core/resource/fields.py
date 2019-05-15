@@ -35,7 +35,7 @@ class ExternalResourceRelatedField(ResultResourceFieldMixin, ResourceMappingMixi
     def __init__(self, *args, **kwargs):
         self.resource_mapping = {'id': {'op': 'copy', 'value': 'pk'}}
         self.resource_mapping = {'id': {'op': 'custom', 'value': get_pk_from_identifier}}
-        return super().__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def get_queryset(self):
         return self
@@ -62,7 +62,7 @@ class ExternalResourceRelatedField(ResultResourceFieldMixin, ResourceMappingMixi
         # Can't have any relationships if not created
         if not hasattr(instance, 'pk') or (hasattr(instance, 'pk') and instance.pk is None):
             return []
-        elif isinstance(self.source_attrs, list) and\
+        elif isinstance(self.source_attrs, list) and \
                 len(self.source_attrs) == 1 and self._hasattr(instance, self.source_attrs[0]):
             return self._getattr(instance, self.source_attrs[0])
 

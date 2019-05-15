@@ -2,7 +2,7 @@ from rest_framework.permissions import AllowAny
 from payment_api.serializers import PaymentSerializer
 
 from payment_api.views import (
-    InclusionFiler,
+    InclusionFilter,
     OrderingFilter,
     SearchFilter,
     ResourceRelationshipView,
@@ -18,7 +18,7 @@ class PaymentViewSet(ResourceViewSet):
 
     filter_backends = (
         OrderingFilter,
-        InclusionFiler,
+        InclusionFilter,
         # ResourceFilterBackend,
         SearchFilter
     )

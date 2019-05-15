@@ -126,7 +126,7 @@ class ResourceFilterBackend(DjangoFilterBackend):
 
     def filter_queryset(self, request, queryset, view):
         data = self.get_filterset_kwargs(request, queryset, view)
-        #TODO add filtermapping
+        # TODO add filtermapping
         filter_set = RQLFilterSet(data, view, queryset, request, base_filters=getattr(view, 'filterset_fields', None))
 
         self._validate_filter(data.pop('filter_keys'), filter_set)
@@ -149,12 +149,12 @@ class ResourceFilterBackend(DjangoFilterBackend):
         return None
 
 
-class InclusionFiler(BaseFilterBackend):
+class InclusionFilter(BaseFilterBackend):
     """
     A backend filter that implements https://jsonapi.org/format/#fetching-includes and
     raises a 400 error if any related field is invalid.
     """
-    #: override :py:attr:`payment_api.core.resource.filers.IncludingFilter.including_param`
+    #: override :py:attr:`payment_api.core.resource.filters.IncludingFilter.including_param`
     #: with JSON:API-compliant query parameter name.
     inclusion_param = 'include'
     inclusion_title = _('Inclusion')
@@ -306,7 +306,6 @@ class OrderingFilter(BaseOrderingFilter):
 
 
 class IbanGeneralPartFiler(BaseFilterBackend):
-
     iban_param = 'ibanGeneralPart'
     iban_title = _('IBAN general part')
     iban_description = _('IBAN general part')

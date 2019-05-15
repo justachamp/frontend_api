@@ -3,7 +3,7 @@ from payment_api.serializers import FeeGroupSerializer, FeeGroupAccountSerialize
 
 
 from payment_api.views import (
-    InclusionFiler,
+    InclusionFilter,
     QueryParameterValidationFilter,
     OrderingFilter,
     SearchFilter,
@@ -20,7 +20,7 @@ class FeeGroupViewSet(ResourceViewSet):
     filter_backends = (
         QueryParameterValidationFilter,
         OrderingFilter,
-        InclusionFiler,
+        InclusionFilter,
         ResourceFilterBackend,
         SearchFilter
     )
@@ -48,7 +48,7 @@ class FeeGroupAccountViewSet(ResourceViewSet):
     # filter_backends = (
     #     QueryParameterValidationFilter,
     #     OrderingFilter,
-    #     InclusionFiler,
+    #     InclusionFilter,
     #     ResourceFilterBackend,
     #     SearchFilter
     # )
