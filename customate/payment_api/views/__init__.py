@@ -16,6 +16,7 @@ from payment_api.views.transaction import TransactionViewSet, TransactionRelatio
 from payment_api.views.payment import PaymentViewSet, PaymentRelationshipView
 from payment_api.views.funding_source import FundingSourceViewSet, FundingSourceRelationshipView
 from payment_api.views.payee import PayeeViewSet, PayeeRelationshipView
+from payment_api.views.iban import IbanValidationViewSet
 
 #from payment_api.views._raw_proxy_views import ItemListProxy, SignUpProxy
 
@@ -49,6 +50,7 @@ __all__ = [
     FundingSourceRelationshipView,
     PayeeViewSet,
     PayeeRelationshipView,
+    IbanValidationViewSet,
     #ItemListProxy,
     #SignUpProxy
 ]

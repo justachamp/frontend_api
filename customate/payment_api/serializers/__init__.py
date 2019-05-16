@@ -31,6 +31,9 @@ from payment_api.serializers.payment import PaymentSerializer
 from payment_api.serializers.funding_source import FundingSourceSerializer
 from payment_api.serializers.external_service_account import ExternalServiceAccountSerializer
 from payment_api.serializers.payee import PayeeSerializer
+from payment_api.serializers.iban import (
+    IbanValidationSerializer, SortCodeAccountNumberValidationSerializer, CheckGBSerializer
+)
 
 __all__ = [
     UUIDField,
@@ -65,5 +68,8 @@ __all__ = [
     PaymentSerializer,
     FundingSourceSerializer,
     ExternalServiceAccountSerializer,
-    PayeeSerializer
+    PayeeSerializer,
+    IbanValidationSerializer,
+    SortCodeAccountNumberValidationSerializer,
+    CheckGBSerializer
 ]

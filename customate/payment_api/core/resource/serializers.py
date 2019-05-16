@@ -97,7 +97,7 @@ class ResourceSerializer(IncludedResourcesValidationMixin, Serializer):
             elif isinstance(field, JSONField):
                 properties[field_source] = {'type': 'object', 'properties': {}}
             else:
-                properties[field_source] = {'type': 'string'}
+                properties[field_source] = {'type': ['null', 'string']}
 
         # for name, field in getattr(self, 'included_serializers', {}).items():
         #     properties[name] = {'relation': 'to-one', 'resource': [name]}

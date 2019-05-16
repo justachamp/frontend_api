@@ -64,18 +64,28 @@ class Client(ResourceMappingMixin, JsonApiErrorParser):
 
     _base_url = None
     _embedded_resources = None
+    _url_suffix = None
 
-    def __init__(self, base_url, embedded_resources=None, *args, **kwargs):
+    def __init__(self, base_url, embedded_resources=None, url_suffix=None, *args, **kwargs):
         self._base_url = base_url
         self._embedded_resources = embedded_resources
+        self._url_suffix = url_suffix
         super().__init__(*args, **kwargs)
 
     def __getattr__(self, item):
         return getattr(self.client, item)
 
+    def get_post_url(self, instance):
+        url = instance.post_url
+        return f'{url}/{self.url_suffix}' if self.url_suffix else url
+
     @property
     def embedded_resources(self):
         return self._embedded_resources if isinstance(self._embedded_resources, list) else []
+
+    @property
+    def url_suffix(self):
+        return self._url_suffix
 
     @cached_property
     def client(self):
@@ -106,7 +116,7 @@ class Client(ResourceMappingMixin, JsonApiErrorParser):
     def update(self, instance, attributes):
         try:
             self._apply_resource_attributes(instance, attributes)
-            instance.commit()
+            instance.commit(custom_url=self.get_post_url(instance))
 
             return instance
 
@@ -122,7 +132,7 @@ class Client(ResourceMappingMixin, JsonApiErrorParser):
 
             instance = self.client.create(resource_name)
             self._apply_resource_attributes(instance, attributes)
-            instance.commit()
+            instance.commit(custom_url=self.get_post_url(instance))
 
             logger.error(instance)
             return instance

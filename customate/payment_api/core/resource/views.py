@@ -17,7 +17,8 @@ class ResourceViewSet(ModelViewSet):
     @cached_property
     def client(self):
         embedded_resources = getattr(self.Meta, 'embedded_resources', None) if hasattr(self, 'Meta') else None
-        client = Client(self.base_url, embedded_resources=embedded_resources)
+        resource_suffix_name = getattr(self.Meta, 'resource_suffix_name', None) if hasattr(self, 'Meta') else None
+        client = Client(self.base_url, embedded_resources=embedded_resources, url_suffix=resource_suffix_name)
         client.resource_mapping = {'id': {'op': 'copy', 'value': 'pk'}}
         self._check_resource_mapping(client)
         return client
