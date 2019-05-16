@@ -11,6 +11,7 @@ from payment_api.views import (
     PaymentViewSet,
     FundingSourceViewSet,
     PayeeViewSet,
+    IbanValidationViewSet,
 )
 from customate.routers import router
 
@@ -29,4 +30,5 @@ router.register('fee_groups', FeeGroupViewSet, basename='fee_groups')
 router.register('fee_group_accounts', FeeGroupAccountViewSet, basename='fee_group_accounts')
 router.register('transactions', TransactionViewSet, basename='transactions')
 router.register('wallets', WalletViewSet, basename='wallets')
+router.register('ibans/validation', IbanValidationViewSet, basename='ibans')
 urlpatterns = router.urls
