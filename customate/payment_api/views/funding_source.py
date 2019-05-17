@@ -31,14 +31,16 @@ class FundingSourceViewSet(ResourceViewSet):
         'status': ('exact',),
         'active': ('exact',),
         'account__id': ('exact',),
-        'type': ('exact', )
+        'type': ('exact', ),
+        'currency': ('exact', 'not_in')
     }
 
     class Meta:
         filters = [
             {'active__exact': 1},
             #{'type__exact': "CREDIT_CARD"},
-            {'account__id__exact': {'method': 'check_payment_account_id'}}
+            {'account__id__exact': {'method': 'check_payment_account_id'}},
+            {'currency__not_in': 'DK'}
         ]
 
     def check_payment_account_id(self, filters, key, value):

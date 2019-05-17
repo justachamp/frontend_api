@@ -38,15 +38,16 @@ class PayeeViewSet(ResourceViewSet):
 
     filterset_fields = {
         'type': ('exact',),
-        'currency': ('exact',),
         'active': ('exact',),
         'account__id': ('exact',),
+        'currency': ('exact', 'not_in')
     }
 
     class Meta:
         filters = [
             {'active__exact': 1},
-            {'account__id__exact': {'method': 'check_payment_account_id'}}
+            {'account__id__exact': {'method': 'check_payment_account_id'}},
+            {'currency__not_in': 'DK'}
         ]
         resource_mapping = [
             {'accounts': {'op': 'map', 'value': 'account'}}
