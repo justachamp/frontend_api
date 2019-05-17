@@ -27,6 +27,7 @@ class WalletViewSet(ResourceViewSet):
 
     filterset_fields = {
         'account__id': ('exact',),
+        'currency': ('exact', 'not_in'),
     }
 
     def check_payment_account_id(self, filters, key, value):
@@ -38,7 +39,8 @@ class WalletViewSet(ResourceViewSet):
 
     class Meta:
         filters = [
-            {'account__id__exact': {'method': 'check_payment_account_id'}}
+            {'account__id__exact': {'method': 'check_payment_account_id'}},
+            {'currency__not_in': 'DK'},
         ]
 
 
