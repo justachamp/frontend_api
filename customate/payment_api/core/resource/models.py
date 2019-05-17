@@ -205,7 +205,9 @@ class ResourceQueryset(JsonApiErrorParser, RQLFilterMixin):
     def one(self, pk, map_attributes=True):
         self._pk = pk
         resource = self.response.resource
-        return self.client.apply_mapping(resource) if map_attributes else resource
+        resource = self.client.apply_mapping(resource) if map_attributes else resource
+        # resource.mark_clean()
+        return resource
 
     def count(self):
         return self.response.meta.page.get('totalRecords')

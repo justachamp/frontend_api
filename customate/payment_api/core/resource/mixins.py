@@ -46,8 +46,8 @@ class ResourceMappingMixin:
         if key in resource._attributes:
             return resource._attributes[key]
 
-        elif hasattr(resource.fields, key):
-            return getattr(resource, key)
+        # elif hasattr(resource.fields, key):
+        #     return getattr(resource, key)
 
         elif key in resource._relationships:
             return resource._relationships[key]
@@ -65,6 +65,9 @@ class ResourceMappingMixin:
                 resource._attributes._dirty_attributes.remove(attribute_key)
 
             setattr(resource, key, value)
+            if key in resource._attributes._dirty_attributes:
+                resource._attributes._dirty_attributes.remove(key)
+
         elif op == 'custom' and callable(data.get('value')):
             data.get('value')(resource)
 
@@ -103,8 +106,13 @@ class ResourceMappingMixin:
                 resource._attributes._dirty_attributes.remove(data.get('value'))
             if op == 'map':
                 value = resource._attributes.pop(key, None)
-                resource._attributes._dirty_attributes.remove(key)
                 setattr(resource, data.get('value'), value)
+                if key in resource._attributes._dirty_attributes:
+                    resource._attributes._dirty_attributes.remove(key)
+                else:
+                    if data.get('value') in resource._attributes._dirty_attributes:
+                        resource._attributes._dirty_attributes.remove(data.get('value'))
+
             if op == 'edit':
                 setattr(resource, key, data.get('old_value'))
 
