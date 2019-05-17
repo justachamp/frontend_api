@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 class ResourceViewSet(ModelViewSet):
     _queryset = None
     resource_name = None
+    paginate_response = True
     base_url = settings.PAYMENT_API_URL
 
     @cached_property
@@ -76,10 +77,13 @@ class ResourceViewSet(ModelViewSet):
 
     def get_queryset(self):
         if not self._queryset:
-            page_number = self.request.query_params.get(self.paginator.page_query_param, 1)
-            pagination = f'page[number]={page_number}&page[size]={self.paginator.page_size}&page[totals]'
-            logger.debug("pagination: %r " % pagination)
-            self._queryset = ResourceQueryset(self.external_resource_name, self.client, 'get', modifiers=[pagination])
+            modifiers = []
+            if self.paginate_response:
+                page_number = self.request.query_params.get(self.paginator.page_query_param, 1)
+                pagination = f'page[number]={page_number}&page[size]={self.paginator.page_size}&page[totals]'
+                modifiers.append(pagination)
+                logger.debug("pagination: %r " % pagination)
+            self._queryset = ResourceQueryset(self.external_resource_name, self.client, 'get', modifiers=modifiers)
         return self._queryset
 
     # def perform_create(self, serializer):
