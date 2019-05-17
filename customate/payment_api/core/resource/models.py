@@ -210,7 +210,9 @@ class ResourceQueryset(JsonApiErrorParser, RQLFilterMixin):
         return resource
 
     def count(self):
-        return self.response.meta.page.get('totalRecords')
+        response = self.response
+        page = getattr(self.response.meta, 'page', None)
+        return page.get('totalRecords') if page else len(response.resources)
 
     def iterator(self):
         resources = self.response.resources

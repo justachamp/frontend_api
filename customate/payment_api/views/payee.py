@@ -16,6 +16,7 @@ from payment_api.views import (
 
 class PayeeViewSet(ResourceViewSet):
     resource_name = 'payees'
+    paginate_response = False
     serializer_class = PayeeSerializer
     permission_classes = (AllowAny,)
 
