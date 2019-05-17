@@ -1,7 +1,8 @@
 from rest_framework.permissions import AllowAny
 
-from payment_api.serializers import PayeeSerializer
+from payment_api.serializers import PayeeSerializer, UpdatePayeeSerializer
 
+UPDATE_METHOD = 'PATCH'
 
 from payment_api.views import (
     InclusionFilter,
@@ -24,6 +25,9 @@ class PayeeViewSet(ResourceViewSet):
         ResourceFilterBackend,
         SearchFilter
     )
+
+    def get_serializer_class(self):
+        return UpdatePayeeSerializer if self.request.method == UPDATE_METHOD else PayeeSerializer
 
     def check_payment_account_id(self, filters, key, value):
         user = self.request.user
