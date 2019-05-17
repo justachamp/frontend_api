@@ -20,6 +20,7 @@ class FundingSourceSerializer(ResourceSerializer):
     id = UUIDField(read_only=True)
     active = IntegerField(read_only=True)
     creation_date = TimestampField(read_only=True, source='creationDate')
+    currency = CharField(read_only=True)
     data = JSONField(read_only=True)
     title = CharField(read_only=True)
     type = TypeEnumField(enum=FundingSourceType, required=True, primitive_value=True)
