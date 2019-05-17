@@ -37,7 +37,7 @@ class PayeeViewSet(ResourceViewSet):
             self.get_queryset().set_empty_response()
 
     filterset_fields = {
-        'type': ('exact',),
+        'type': ('exact', 'not_in'),
         'active': ('exact',),
         'account__id': ('exact',),
         'currency': ('exact', 'not_in')
@@ -47,7 +47,8 @@ class PayeeViewSet(ResourceViewSet):
         filters = [
             {'active__exact': 1},
             {'account__id__exact': {'method': 'check_payment_account_id'}},
-            {'currency__not_in': 'DK'}
+            {'currency__not_in': 'DK'},
+            {'type__not_in': 'WALLET'}
         ]
         resource_mapping = [
             {'accounts': {'op': 'map', 'value': 'account'}}
