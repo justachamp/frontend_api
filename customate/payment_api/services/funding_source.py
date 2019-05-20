@@ -17,17 +17,17 @@ class FundingSourceService:
         funding_source = self.funding_source
         if self.country != Country.GB.value:
             return funding_source
-        else:
-            gbg = self.gbg_client
-            verification = gbg.auth_sp(funding_source)
-            band_text = verification.BandText
-            funding_source.data['bank_account_verification'] = {}
-            bank_account_verification = funding_source.data['bank_account_verification']
-            bank_account_verification['gbg_authentication_identity'] = verification.AuthenticationID
-            bank_account_verification['gbg_verification_status'] = band_text
-            logger.error(f'instance.is_verified: {band_text}')
 
-            return band_text == GBG_SUCCESS_STATUS
+        gbg = self.gbg_client
+        verification = gbg.auth_sp(funding_source)
+        band_text = verification.BandText
+        funding_source.data['bank_account_verification'] = {}
+        bank_account_verification = funding_source.data['bank_account_verification']
+        bank_account_verification['gbg_authentication_identity'] = verification.AuthenticationID
+        bank_account_verification['gbg_verification_status'] = band_text
+        logger.info(f'instance.is_verified: {band_text}')
+
+        return band_text == GBG_SUCCESS_STATUS
 
     @property
     def country(self):

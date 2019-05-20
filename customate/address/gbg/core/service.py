@@ -27,7 +27,9 @@ def format_country_data(identity_key, post_data=None):
                     for key, value in post_data.items():
                         set_value_at_keypath(identity, key, value)
             return {identity_key: identity} if len(identity) else None
+
         return wrapped
+
     return wrapper
 
 
@@ -147,6 +149,7 @@ class ID3Client(BaseID3Client):
 
 
 class ID3BankAccountClient(BaseID3Client):
+    # TODO: what is this for?  Looks like copy-pase of the above
 
     def _apply_profile(self, country_code):
         self.profile_id = getattr(settings, f'GBG_{country_code}_BANK_VALIDATION_PROFILE_ID', None)
@@ -322,7 +325,6 @@ class BankAccountParser:
 
     @current_address.setter
     def current_address(self, address):
-
         self._current_address = {
             'Country': address.get('country'),
             'City': address.get('city'),
