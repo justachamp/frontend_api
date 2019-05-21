@@ -1,6 +1,5 @@
 from payment_api.serializers import (
     UUIDField,
-    EmailField,
     IntegerField,
     FloatField,
     CharField,
@@ -91,4 +90,8 @@ class FeeGroupAccountSerializer(ResourceSerializer):
 
     class Meta(ResourceMeta):
         resource_name = 'fee_group_accounts'
-        # data_key_mapping = {'fee_groups': 'feeGroup', 'accounts': 'account'}
+        resource_mapping = [
+            {'fee_groups': {'op': 'map', 'value': 'feeGroup'}},
+            {'accounts': {'op': 'map', 'value': 'account'}}
+        ]
+

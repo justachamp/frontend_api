@@ -23,6 +23,11 @@ class ResourceSerializer(IncludedResourcesValidationMixin, Serializer):
         super().__init__(*args, **kwargs)
         self.copy_resource_to_meta()
         self.copy_fields_to_meta()
+        self._check_resource_mapping()
+
+    def _check_resource_mapping(self):
+        if hasattr(self, 'Meta') and hasattr(self.Meta, 'resource_mapping') and self.client:
+            self.client.resource_mapping = self.Meta.resource_mapping
 
     @property
     def view(self):
@@ -42,6 +47,8 @@ class ResourceSerializer(IncludedResourcesValidationMixin, Serializer):
 
     def get_field_name(self, field):
         if isinstance(field, (ExternalResourceRelatedField, ManyRelatedField)):
+            if hasattr(field, 'result_source'):
+                return field.source
             return camelize(field.field_name, False)
         return field.field_name
 
@@ -67,7 +74,6 @@ class ResourceSerializer(IncludedResourcesValidationMixin, Serializer):
         raise_errors_on_nested_writes('create', self, validated_data)
 
         self.client.reverse_mapping(validated_data)
-        # self.client.key_mapping(validated_data, getattr(self.Meta, 'data_key_mapping', {}))
 
         self.client.add_model_schema(self.Meta.model.resource, self.resource_properties)
         instance = self.client.create(self.Meta.model.resource, validated_data)

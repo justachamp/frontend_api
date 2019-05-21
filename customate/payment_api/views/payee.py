@@ -1,9 +1,6 @@
 from rest_framework.permissions import AllowAny
 
 from payment_api.serializers import PayeeSerializer, UpdatePayeeSerializer
-
-UPDATE_METHOD = 'PATCH'
-
 from payment_api.views import (
     InclusionFilter,
     OrderingFilter,
@@ -12,6 +9,8 @@ from payment_api.views import (
     ResourceRelationshipView,
     ResourceViewSet
 )
+
+UPDATE_METHOD = 'PATCH'
 
 
 class PayeeViewSet(ResourceViewSet):
@@ -50,9 +49,6 @@ class PayeeViewSet(ResourceViewSet):
             {'account__id__exact': {'method': 'check_payment_account_id'}},
             {'currency__not_in': 'DK'},
             {'type__not_in': 'WALLET'}
-        ]
-        resource_mapping = [
-            {'accounts': {'op': 'map', 'value': 'account'}}
         ]
 
 

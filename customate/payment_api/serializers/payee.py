@@ -19,6 +19,9 @@ class BasePayeeSerializer(ResourceSerializer):
 
     class Meta(ResourceMeta):
         resource_name = 'payees'
+        resource_mapping = [
+            {'accounts': {'op': 'map', 'value': 'account'}}
+        ]
 
 
 class PayeeSerializer(BasePayeeSerializer):
@@ -37,9 +40,6 @@ class PayeeSerializer(BasePayeeSerializer):
     type = TypeEnumField(enum=PayeeType, required=True, primitive_value=True)
     currency = EnumField(enum=Currency, required=True, primitive_value=True)
     data = JSONField(required=True)
-
-    class Meta(ResourceMeta):
-        resource_name = 'payees'
 
 
 class UpdatePayeeSerializer(BasePayeeSerializer):

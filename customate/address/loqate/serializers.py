@@ -1,10 +1,10 @@
 from rest_framework_json_api import serializers
 from address.loqate.models import RetrieveAddress
 from address.loqate.core.service import Address as SearchAddressService
-
+from customate.settings import COUNTRIES_AVAILABLE as AVAILABLE_COUNTRIES
 import logging
 logger = logging.getLogger(__name__)
-AVAILABLE_COUNTRIES = ('GB', 'IE', 'DE', 'IT', 'NL', 'FR', 'ES', 'PT')
+# AVAILABLE_COUNTRIES = ('GB', 'IE', 'DE', 'IT', 'NL', 'FR', 'ES', 'PT')
 
 class SearchAddressSerializer(serializers.Serializer):
     id = serializers.CharField(max_length=250, required=False, source='Id', allow_blank=True, allow_null=True)

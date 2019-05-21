@@ -38,16 +38,12 @@ class ResourceMappingMixin:
 
     def _hasattr(self, resource, key):
         return (hasattr(resource, '_attributes') and key in resource._attributes) or\
-               (hasattr(resource, '_relationships') and key in resource._relationships) or\
-               (hasattr(resource.fields, key))
+               (hasattr(resource, '_relationships') and key in resource._relationships)
 
     def _getattr(self, resource, key, def_val=None):
 
         if key in resource._attributes:
             return resource._attributes[key]
-
-        # elif hasattr(resource.fields, key):
-        #     return getattr(resource, key)
 
         elif key in resource._relationships:
             return resource._relationships[key]
@@ -59,12 +55,17 @@ class ResourceMappingMixin:
         if op == 'map' and self._hasattr(resource, data.get('value')):
             attribute_key = data.get('value')
             value = self._getattr(resource, attribute_key, None)
-            resource._attributes.pop(attribute_key, None)
-            resource._relationships.pop(attribute_key, None)
+
+            if attribute_key in resource._attributes:
+                resource._attributes.pop(attribute_key, None)
+                self._attributes[key] = value
+            elif attribute_key in resource._relationships:
+                resource._relationships.pop(attribute_key, None)
+                resource._relationships[key] = value
+
             if attribute_key in resource._attributes._dirty_attributes:
                 resource._attributes._dirty_attributes.remove(attribute_key)
 
-            setattr(resource, key, value)
             if key in resource._attributes._dirty_attributes:
                 resource._attributes._dirty_attributes.remove(key)
 
