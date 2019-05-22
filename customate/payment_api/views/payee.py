@@ -10,8 +10,6 @@ from payment_api.views import (
     ResourceViewSet
 )
 
-UPDATE_METHOD = 'PATCH'
-
 
 class PayeeViewSet(ResourceViewSet):
     resource_name = 'payees'
@@ -27,7 +25,7 @@ class PayeeViewSet(ResourceViewSet):
     )
 
     def get_serializer_class(self):
-        return UpdatePayeeSerializer if self.request.method == UPDATE_METHOD else PayeeSerializer
+        return UpdatePayeeSerializer if self.request.method == 'PATCH' else PayeeSerializer
 
     def check_payment_account_id(self, filters, key, value):
         user = self.request.user
@@ -53,4 +51,4 @@ class PayeeViewSet(ResourceViewSet):
 
 class PayeeRelationshipView(ResourceRelationshipView):
     serializer_class = PayeeSerializer
-    resource_name = 'peyees'
+    resource_name = 'payees'

@@ -14,8 +14,7 @@ logger = logging.getLogger(__name__)
 class Session(DefaultSession):
     def _get_sync(self, resource_type: str,
                   resource_id_or_filter: 'Union[Modifier, str]' = None) -> 'Document':
-        resource_id, filter_ = self._resource_type_and_filter(
-                                                                resource_id_or_filter)
+        resource_id, filter_ = self._resource_type_and_filter(resource_id_or_filter)
         url = self._url_for_resource(resource_type, resource_id, filter_)
         return self.fetch_document_by_url(url)
 
@@ -45,7 +44,7 @@ class Session(DefaultSession):
 
             if isinstance(data, list):
                 for item in data:
-                        check_data_format(item)
+                    check_data_format(item)
             else:
                 check_data_format(data)
 
@@ -61,7 +60,6 @@ class Session(DefaultSession):
 
 
 class Client(ResourceMappingMixin, JsonApiErrorParser):
-
     _base_url = None
     _embedded_resources = None
     _url_suffix = None
@@ -133,8 +131,7 @@ class Client(ResourceMappingMixin, JsonApiErrorParser):
             instance = self.client.create(resource_name)
             self._apply_resource_attributes(instance, attributes)
             instance.commit(custom_url=self.get_post_url(instance))
-
-            logger.error(instance)
+            logger.debug(instance)
             return instance
         except DocumentError as ex:
             data = self._parse_document_error(ex)
@@ -150,5 +147,3 @@ class Client(ResourceMappingMixin, JsonApiErrorParser):
 
     def add_model_schema(self, resource_name, properties):
         self.client.schema.add_model_schema({resource_name: {'properties': properties}})
-
-

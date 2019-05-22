@@ -1,3 +1,4 @@
+import logging
 from django.utils.functional import cached_property
 from django.utils.module_loading import import_string as import_class_from_dotted_path
 from rest_framework.fields import UUIDField, IntegerField, FloatField, JSONField
@@ -9,6 +10,9 @@ from inflection import camelize
 from core.fields import SerializerField
 from payment_api.core.resource.models import ExternalResourceModel
 from payment_api.core.resource.fields import ExternalResourceRelatedField, ManyRelatedField
+
+
+logger = logging.getLogger(__name__)
 
 
 class ResourceMeta:
@@ -43,7 +47,9 @@ class ResourceSerializer(IncludedResourcesValidationMixin, Serializer):
 
     @property
     def request(self):
-        return self.context.get('request')
+        req = self.context.get('request')
+
+        return req
 
     @property
     def client(self):
@@ -81,13 +87,13 @@ class ResourceSerializer(IncludedResourcesValidationMixin, Serializer):
             }
 
     def copy_fields_to_meta(self):
-        resourses = []
+        resources = []
         for field in self.fields:
             if isinstance(field, ExternalResourceRelatedField):
-                resourses.append(field.source)
+                resources.append(field.source)
 
-        if len(resourses):
-            self.Meta.model.resources = resourses
+        if len(resources):
+            self.Meta.model.resources = resources
 
     def create(self, validated_data):
         raise_errors_on_nested_writes('create', self, validated_data)
@@ -147,9 +153,7 @@ class ResourceSerializer(IncludedResourcesValidationMixin, Serializer):
             else:
                 properties[field_source] = {'type': ['null', 'string']}
 
-        # for name, field in getattr(self, 'included_serializers', {}).items():
-        #     properties[name] = {'relation': 'to-one', 'resource': [name]}
-
+        logger.info("RES_PROPS: %r" % properties)
         return properties
 
     def update(self, instance, validated_data):
