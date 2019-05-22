@@ -26,6 +26,7 @@ class TransactionSerializer(ResourceSerializer):
     name = CharField(read_only=True)
     reserved = IntegerField(read_only=True)
     reservedAmount = IntegerField(read_only=True)
+    fee_amount = IntegerField(read_only=True, source='feeAmount')
     status = CharField(read_only=True)
     update_date = TimestampField(read_only=True, source='updateDate')
     data = JSONField(read_only=True)
