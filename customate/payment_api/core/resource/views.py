@@ -46,12 +46,6 @@ class ResourceViewSet(ModelViewSet):
         else:
             external_resource_name = getattr(self.serializer_class.Meta, 'resource_name',
                                              getattr(self, 'resource_name', None))
-
-        # if external_resource_name is not None and external_resource_name != self.resource_name:
-        #     self.client.resource_mapping = {
-        #         'type': {'op': 'edit', 'value': self.resource_name, 'old_value': external_resource_name}
-        #     }
-
         return external_resource_name
 
     def get_object(self, map_attributes=True, apply_filters=True):
