@@ -19,9 +19,6 @@ class BasePayeeSerializer(ResourceSerializer):
 
     class Meta(ResourceMeta):
         resource_name = 'payees'
-        resource_mapping = [
-            {'accounts': {'op': 'map', 'value': 'account'}}
-        ]
 
 
 class PayeeSerializer(BasePayeeSerializer):
@@ -33,8 +30,7 @@ class PayeeSerializer(BasePayeeSerializer):
         required=True,
         related_link_view_name='payee-related',
         self_link_view_name='payee-relationships',
-        source='accounts',
-        result_source='account'
+        source='account'
     )
 
     type = TypeEnumField(enum=PayeeType, required=True, primitive_value=True)

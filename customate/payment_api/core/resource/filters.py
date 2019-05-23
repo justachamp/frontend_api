@@ -95,7 +95,7 @@ class RQLFilterSet(RQLFilterMixin):
         queryset = self._queryset
         filters = self.filters
         if filters:
-            queryset.filter = filters
+            queryset.filters = filters
 
         return queryset
 

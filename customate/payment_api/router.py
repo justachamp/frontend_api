@@ -12,6 +12,7 @@ from payment_api.views import (
     FundingSourceViewSet,
     PayeeViewSet,
     IbanValidationViewSet,
+    LoadFundsViewSet
 )
 from customate.routers import router
 
@@ -22,6 +23,7 @@ from customate.routers import router
 #router.register(r'test', SignUpProxy, basename='test')
 router.register('payment_accounts', PaymentAccountViewSet, basename='payment_accounts')
 router.register('payments', PaymentViewSet, basename='payments')
+router.register('funds', LoadFundsViewSet, basename='payments')
 router.register('funding_sources', FundingSourceViewSet, basename='funding_sources')
 router.register('payees', PayeeViewSet, basename='payees')
 router.register('taxes', TaxViewSet, basename='taxes')

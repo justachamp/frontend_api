@@ -87,7 +87,7 @@ class ResourceQueryset(JsonApiErrorParser, RQLFilterMixin):
             self.inclusion = inclusions
 
         if filters:
-            self.filter = filters
+            self.filters = filters
 
     def __getitem__(self, item):
         return list(self.iterator())
@@ -125,7 +125,7 @@ class ResourceQueryset(JsonApiErrorParser, RQLFilterMixin):
 
         collect_modifiers(self.modifier)
         collect_modifiers(self.inclusion)
-        collect_modifiers(self.filter)
+        collect_modifiers(self.filters)
 
         return data
 
@@ -147,11 +147,11 @@ class ResourceQueryset(JsonApiErrorParser, RQLFilterMixin):
         self._modifiers = self._modifiers + modifiers if self._modifiers else modifiers
 
     @property
-    def filter(self):
+    def filters(self):
         return self._filters
 
-    @filter.setter
-    def filter(self, filters):
+    @filters.setter
+    def filters(self, filters):
 
         def get_modifier(filter_data):
             if isinstance(filter_data, tuple):
@@ -171,7 +171,27 @@ class ResourceQueryset(JsonApiErrorParser, RQLFilterMixin):
 
     def apply_filter(self, filter_data):
         key = next(iter(filter_data))
-        self.filter = self.parse_filter(key, filter_data[key])
+        self.filters = self.parse_filter(key, filter_data[key])
+        return self
+
+    def apply_filters(self, filter_data):
+        filters = {}
+
+        for key, data in filter_data.items():
+            current_filter = self.parse_filter(key, data)
+            filter_key = next(iter(current_filter))
+
+            if filters.get(filter_key, None):
+                if isinstance(filters[filter_key], list):
+                    filters[filter_key].append(current_filter[filter_key])
+                else:
+                    filters[filter_key] = [filters[filter_key], current_filter[filter_key]]
+            else:
+                filters.update(current_filter)
+
+        if len(filters):
+            self.filters = filters
+        return self
 
     @property
     def inclusion(self):
@@ -194,20 +214,23 @@ class ResourceQueryset(JsonApiErrorParser, RQLFilterMixin):
 
         return self
 
-    def order_by(self, *args, **kwargs):
+    def filter(self, **kwargs):
+        return self.apply_filters(kwargs)
 
+    def order_by(self, *args, **kwargs):
         sort = ','.join(args)
         if len(sort):
             self.modifier = f'sort={sort}'
 
         return self
 
+    def first(self, map_attributes=True):
+        resource = self.response.resource
+        return self.client.apply_mapping(resource) if map_attributes else resource
+
     def one(self, pk, map_attributes=True):
         self._pk = pk
-        resource = self.response.resource
-        resource = self.client.apply_mapping(resource) if map_attributes else resource
-        # resource.mark_clean()
-        return resource
+        return self.first(map_attributes=map_attributes)
 
     def count(self):
         response = self.response

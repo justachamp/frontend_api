@@ -1,6 +1,5 @@
 from enumfields import Enum
 from customate.settings import COUNTRIES_AVAILABLE
-from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from rest_framework_json_api.serializers import ChoiceField, UUIDField as DefaultUUIDField, CharField
@@ -161,6 +160,60 @@ class SerializerField(serializers.Field):
             return errors
 
         return detail
+
+
+class LoadFundsPaymentType(Enum):
+    CreditCardToCustomate = 'CreditCardToCustomate'
+    DirectDebitToCustomate = 'DirectDebitToCustomate'
+
+    class Labels:
+        CreditCardToCustomate = 'Credit card to Customate'
+        DirectDebitToCustomate = 'Direct Debit to Customate'
+
+    def __repr__(self):
+        return self.value
+
+
+class PaymentType(Enum):
+    CreditCardToIban = 'CreditCardToIban'
+    IncomingContribution = 'IncomingContribution'
+    CustomateToCustomate = 'CustomateToCustomate'
+    CustomateToIban = 'CustomateToIban'
+    DirectDebitToIban = 'DirectDebitToIban'
+    CreditCardWithOutgoingInternal = 'CreditCardWithOutgoingInternal'
+    DirectDebitWithOutgoingInternal = 'DirectDebitWithOutgoingInternal'
+
+    class Labels:
+        CreditCardToIban = 'CreditCardToIban'
+        IncomingContribution = 'IncomingContribution'
+        CustomateToCustomate = 'CustomateToCustomate'
+        CustomateToIban = 'CustomateToIban'
+        DirectDebitToIban = 'DirectDebitToIban'
+        CreditCardWithOutgoingInternal = 'CreditCardWithOutgoingInternal'
+        DirectDebitWithOutgoingInternal = 'DirectDebitWithOutgoingInternal'
+
+    def __repr__(self):
+        return self.value
+
+
+class PaymentStatusType(Enum):
+    PENDING = 'PENDING'
+    PROCESSING = 'PROCESSING'
+    SUCCESS = 'SUCCESS'
+    FAILED = 'FAILED'
+    REFUND = 'REFUND'
+    CANCELED = 'CANCELED'
+
+    class Labels:
+        PENDING = 'Pending'
+        PROCESSING = 'Processing'
+        SUCCESS = 'Success'
+        FAILED = 'Failed'
+        REFUND = 'Refund'
+        CANCELED = 'Canceled'
+
+    def __repr__(self):
+        return self.value
 
 
 class FeeType(Enum):

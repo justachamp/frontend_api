@@ -13,7 +13,7 @@ from payment_api.views.payment_account import PaymentAccountViewSet, PaymentAcco
 from payment_api.views.fee import FeeGroupViewSet, FeeGroupRelationshipView, FeeGroupAccountViewSet, FeeGroupAccountRelationshipView
 from payment_api.views.tax import TaxViewSet, TaxRelationshipView, TaxGroupViewSet, TaxGroupRelationshipView
 from payment_api.views.transaction import TransactionViewSet, TransactionRelationshipView
-from payment_api.views.payment import PaymentViewSet, PaymentRelationshipView
+from payment_api.views.payment import PaymentViewSet, PaymentRelationshipView, LoadFundsViewSet
 from payment_api.views.funding_source import FundingSourceViewSet, FundingSourceRelationshipView
 from payment_api.views.payee import PayeeViewSet, PayeeRelationshipView
 from payment_api.views.iban import IbanValidationViewSet
@@ -45,6 +45,7 @@ __all__ = [
     TransactionViewSet,
     TransactionRelationshipView,
     PaymentViewSet,
+    LoadFundsViewSet,
     PaymentRelationshipView,
     FundingSourceViewSet,
     FundingSourceRelationshipView,
