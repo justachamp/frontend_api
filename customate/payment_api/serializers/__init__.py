@@ -18,7 +18,10 @@ from core.fields import (
     Currency,
     TimestampField,
     FundingSourceType,
-    PayeeType
+    PayeeType,
+    LoadFundsPaymentType,
+    PaymentType,
+    PaymentStatusType
 )
 from payment_api.core.resource.fields import ExternalResourceRelatedField
 from payment_api.core.resource.serializers import ResourceMeta, ResourceSerializer
@@ -27,7 +30,7 @@ from payment_api.serializers.payment_account import PaymentAccountSerializer
 from payment_api.serializers.fee import FeeGroupSerializer, FeeSerializer, EmbededFeeSerializer, FeeGroupAccountSerializer
 from payment_api.serializers.tax import TaxSerializer, TaxGroupSerializer
 from payment_api.serializers.transaction import TransactionSerializer
-from payment_api.serializers.payment import PaymentSerializer
+from payment_api.serializers.payment import PaymentSerializer, LoadFundsSerializer
 from payment_api.serializers.funding_source import FundingSourceSerializer
 from payment_api.serializers.external_service_account import ExternalServiceAccountSerializer
 from payment_api.serializers.payee import PayeeSerializer, UpdatePayeeSerializer
@@ -47,12 +50,15 @@ __all__ = [
     IbanField,
     JSONField,
     TimestampField,
+    LoadFundsPaymentType,
+    PaymentType,
     Country,
     Currency,
     OperationType,
     FeeType,
     FundingSourceType,
     PayeeType,
+    PaymentStatusType,
     ResourceMeta,
     Serializer,
     ResourceSerializer,
@@ -66,6 +72,7 @@ __all__ = [
     TaxGroupSerializer,
     TransactionSerializer,
     PaymentSerializer,
+    LoadFundsSerializer,
     FundingSourceSerializer,
     ExternalServiceAccountSerializer,
     PayeeSerializer,

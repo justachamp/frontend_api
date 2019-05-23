@@ -34,17 +34,18 @@ class ResourceViewSet(ModelViewSet):
 
     @cached_property
     def external_resource_name(self):
-        if self._meta and hasattr(self._meta, 'external_resource_name') and \
+
+        if hasattr(self.serializer_class.Meta, 'external_resource_name') and \
+                self.serializer_class.Meta.external_resource_name:
+            external_resource_name = self.serializer_class.Meta.external_resource_name
+
+        elif self._meta and hasattr(self._meta, 'external_resource_name') and \
                 self._meta.external_resource_name:
             external_resource_name = self.Meta.external_resource_name
+
         else:
-            external_resource_name = self.resource_name
-
-        if external_resource_name != self.resource_name:
-            self.client.resource_mapping = {
-                'type': {'op': 'edit', 'value': self.resource_name, 'old_value': external_resource_name}
-            }
-
+            external_resource_name = getattr(self.serializer_class.Meta, 'resource_name',
+                                             getattr(self, 'resource_name', None))
         return external_resource_name
 
     def get_object(self, map_attributes=True, apply_filters=True):

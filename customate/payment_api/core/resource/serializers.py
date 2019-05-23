@@ -1,4 +1,5 @@
 from django.utils.functional import cached_property
+from django.utils.module_loading import import_string as import_class_from_dotted_path
 from rest_framework.fields import UUIDField, IntegerField, FloatField, JSONField
 from rest_framework.relations import ManyRelatedField
 from rest_framework.serializers import raise_errors_on_nested_writes
@@ -29,6 +30,13 @@ class ResourceSerializer(IncludedResourcesValidationMixin, Serializer):
         if hasattr(self, 'Meta') and hasattr(self.Meta, 'resource_mapping') and self.client:
             self.client.resource_mapping = self.Meta.resource_mapping
 
+    @cached_property
+    def service(self):
+        if hasattr(self.Meta, 'service'):
+            service = import_class_from_dotted_path(self.Meta.service)
+            return service(resource=self, context=self.context)
+        return None
+
     @property
     def view(self):
         return self.context.get('view')
@@ -55,11 +63,22 @@ class ResourceSerializer(IncludedResourcesValidationMixin, Serializer):
     def copy_resource_to_meta(self):
         # @TODO It copies wrong(parent) resource from view for included/related serializers
         view = self.view
+        external_resource = None
+        resource = None
         if view:
             external_resource = getattr(view.Meta, 'external_resource_name', None) if hasattr(view, 'Meta') else None
             resource = getattr(view, 'resource_name', None)
-            self.Meta.model.resource_name = resource
-            self.Meta.model.external_resource_name = external_resource if external_resource else resource
+
+        external_resource = getattr(self.Meta, 'external_resource_name', external_resource)
+        resource = getattr(self.Meta, 'resource_name', resource)
+
+        self.Meta.model.resource_name = resource
+        self.Meta.model.external_resource_name = external_resource if external_resource else resource
+
+        if external_resource is not None and external_resource != resource:
+            self.client.resource_mapping = {
+                'type': {'op': 'edit', 'value': resource, 'old_value': external_resource}
+            }
 
     def copy_fields_to_meta(self):
         resourses = []
@@ -80,26 +99,49 @@ class ResourceSerializer(IncludedResourcesValidationMixin, Serializer):
         return self.client.apply_mapping(instance)
 
     @cached_property
+    def related_resources(self):
+        related_resources = getattr(self, 'related_serializers', dict())
+        included_resources = getattr(self, 'included_serializers', dict())
+        resources = {**related_resources, **included_resources}
+        serializers = {}
+        for name, value in resources.items():
+            if not isinstance(value, type):
+                if value == 'self':
+                    serializers[name] = self
+                else:
+                    serializers[name] = import_class_from_dotted_path(value)
+
+        return serializers
+
+    def _related_resource(self, name, field):
+        related_resource = field.source
+        if name in self.related_resources:
+            serializer_class = self.related_resources[name]
+            meta = serializer_class.Meta
+            related_resource = getattr(meta, 'external_resource_name', getattr(meta, 'resource_name', related_resource))
+        return related_resource
+
+    @cached_property
     def resource_properties(self):
         properties = {}
 
         for name, field in self.fields.items():
             field_source = getattr(field, 'result_source', getattr(field, 'source'))
-            if getattr(field, 'read_only', None):
+            if getattr(field, 'read_only', None) and not isinstance(field, (ManyRelatedField, ExternalResourceRelatedField)):
                 continue
             elif isinstance(field, ManyRelatedField):
-                properties[field_source] = {'relation': 'to-many', 'resource': [field.source]}
+                properties[field_source] = {'relation': 'to-many', 'resource': [self._related_resource(name, field)]}
             elif isinstance(field, ExternalResourceRelatedField):
-                properties[field_source] = {'relation': 'to-one', 'resource': [field.source]}
+                properties[field_source] = {'relation': 'to-one', 'resource': [self._related_resource(name, field)]}
             elif isinstance(field, SerializerField):
                 properties[field_source] = {'type': ['null', 'array' if field.many else 'object']}
                 properties[field_source] = {
-                    'relation': 'to-many' if field.many else 'to-one', 'resource': [field.source]
+                    'relation': 'to-many' if field.many else 'to-one', 'resource': [self._related_resource(name, field)]
                 }
             elif isinstance(field, UUIDField):
                 properties[field_source] = {'type': ['null', 'string']}
             elif isinstance(field, (IntegerField, FloatField)):
-                properties[field_source] = {'type': 'number'}
+                properties[field_source] = {'type': ['null', 'number']}
             elif isinstance(field, JSONField):
                 properties[field_source] = {'type': 'object', 'properties': {}}
             else:

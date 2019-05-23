@@ -1,5 +1,5 @@
 from rest_framework.permissions import AllowAny
-from payment_api.serializers import PaymentSerializer
+from payment_api.serializers import PaymentSerializer, LoadFundsSerializer
 
 from payment_api.views import (
     InclusionFilter,
@@ -8,6 +8,19 @@ from payment_api.views import (
     ResourceRelationshipView,
     ResourceViewSet
 )
+
+
+class LoadFundsViewSet(ResourceViewSet):
+    resource_name = 'funds'
+    allowed_methods = ['post']
+    serializer_class = LoadFundsSerializer
+    permission_classes = (AllowAny,)
+
+    filter_backends = (
+        OrderingFilter,
+        InclusionFilter,
+        SearchFilter
+    )
 
 
 class PaymentViewSet(ResourceViewSet):
@@ -19,7 +32,6 @@ class PaymentViewSet(ResourceViewSet):
     filter_backends = (
         OrderingFilter,
         InclusionFilter,
-        # ResourceFilterBackend,
         SearchFilter
     )
 
