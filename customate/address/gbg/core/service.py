@@ -110,7 +110,7 @@ class BaseID3Client:
         return self._service['cred']
 
     def check_credential(self):
-        print(f'AccountName={self.user_name} Password={self.password}')
+        self.logger.info(f'AccountName={self.user_name} Password={self.password}')
         return self.cred_service.CheckCredentials(AccountName=self.user_name, Password=self.password)
 
     def auth_sp(self, payload, profile_id=None, profile_version=None):

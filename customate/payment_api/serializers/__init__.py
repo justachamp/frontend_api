@@ -31,7 +31,8 @@ from payment_api.serializers.fee import FeeGroupSerializer, FeeSerializer, Embed
 from payment_api.serializers.tax import TaxSerializer, TaxGroupSerializer
 from payment_api.serializers.transaction import TransactionSerializer
 from payment_api.serializers.payment import PaymentSerializer, LoadFundsSerializer
-from payment_api.serializers.funding_source import FundingSourceSerializer
+from payment_api.serializers.payment import PaymentSerializer
+from payment_api.serializers.funding_source import FundingSourceSerializer, UpdateFundingSourceSerializer
 from payment_api.serializers.external_service_account import ExternalServiceAccountSerializer
 from payment_api.serializers.payee import PayeeSerializer, UpdatePayeeSerializer
 from payment_api.serializers.iban import (

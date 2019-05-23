@@ -111,8 +111,8 @@ class ResourceQueryset(JsonApiErrorParser, RQLFilterMixin):
         modifiers = self.collected_modifiers
         if self._pk and modifiers:
             return self._pk, modifiers
-        else:
-            return self._pk if self._pk else modifiers
+        
+        return self._pk if self._pk else modifiers
 
     @property
     def collected_modifiers(self):

@@ -54,7 +54,6 @@ class ResourceViewSet(ModelViewSet):
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
         # TODO implement get_object_or_404(queryset, **filter_kwargs)
         queryset = ResourceQueryset(self.external_resource_name, self.client, 'get')
-
         if apply_filters:
             for backend in list(self.filter_backends):
                 queryset = backend().filter_queryset(self.request, queryset, self)
@@ -85,6 +84,7 @@ class ResourceViewSet(ModelViewSet):
                 modifiers.append(pagination)
                 logger.debug("pagination: %r " % pagination)
             self._queryset = ResourceQueryset(self.external_resource_name, self.client, 'get', modifiers=modifiers)
+
         return self._queryset
 
     # def perform_create(self, serializer):

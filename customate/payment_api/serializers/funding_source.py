@@ -1,3 +1,4 @@
+import logging
 from payment_api.serializers import (
     UUIDField,
     CharField,
@@ -13,26 +14,39 @@ from payment_api.serializers import (
     ExternalResourceRelatedField
 )
 
+logger = logging.getLogger(__name__)
 
-class FundingSourceSerializer(ResourceSerializer):
+
+class BaseFundingSourceSerializer(ResourceSerializer):
+    title = CharField(required=True)
+
+    class Meta(ResourceMeta):
+        resource_name = 'funding_sources'
+
+
+class FundingSourceSerializer(BaseFundingSourceSerializer):
     included_serializers = {
         'payment_account': 'payment_api.serializers.PaymentAccountSerializer'
     }
 
-    id = UUIDField(read_only=True)
-    active = IntegerField(read_only=True)
-    creation_date = TimestampField(read_only=True, source='creationDate')
-    currency = EnumField(enum=Currency, required=True, primitive_value=True)
-    data = JSONField(read_only=True)
-    title = CharField(read_only=True)
+    def validate(self, data):
+        # Apply custom validation either here, or in the view.
+        logger.info("VALIDATE, data=%r" % data)
+        return data
+
     type = TypeEnumField(enum=FundingSourceType, required=True, primitive_value=True)
+    currency = EnumField(enum=Currency, required=True, primitive_value=True)
+    data = JSONField(required=True)
 
     payment_account = ExternalResourceRelatedField(
-        required=False,
+        required=True,
         related_link_view_name='funding-source-related',
         self_link_view_name='funding-source-relationships',
         source='account'
     )
 
-    class Meta(ResourceMeta):
-        resource_name = 'funding_sources'
+
+class UpdateFundingSourceSerializer(BaseFundingSourceSerializer):
+    type = TypeEnumField(enum=FundingSourceType, primitive_value=True, read_only=True)
+    currency = EnumField(enum=Currency, primitive_value=True, read_only=True)
+    data = JSONField(read_only=True)

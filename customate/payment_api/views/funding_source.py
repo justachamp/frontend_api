@@ -1,6 +1,6 @@
 import logging
 from rest_framework.permissions import AllowAny
-from payment_api.serializers import FundingSourceSerializer
+from payment_api.serializers import FundingSourceSerializer, UpdateFundingSourceSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +16,6 @@ from payment_api.views import (
 
 class FundingSourceViewSet(ResourceViewSet):
     resource_name = 'funding_sources'
-    allowed_methods = ['head', 'get']
     serializer_class = FundingSourceSerializer
     permission_classes = (AllowAny,)
 
@@ -43,6 +42,9 @@ class FundingSourceViewSet(ResourceViewSet):
             {'currency__not_in': 'DK'}
         ]
 
+    def get_serializer_class(self):
+        return UpdateFundingSourceSerializer if self.request.method == 'PATCH' else FundingSourceSerializer
+
     def check_payment_account_id(self, filters, key, value):
         logger.debug("filters=%r, key=%r, value=%r" % (filters, key, value))
         user = self.request.user
@@ -50,6 +52,14 @@ class FundingSourceViewSet(ResourceViewSet):
             return user.account.payment_account_id
         else:
             self.get_queryset().set_empty_response()
+
+    def perform_create(self, *args, **kwargs):
+        logger.debug("Calling perform_create")
+        #param = self.request.query_params.get('ibanGeneralPart')
+        #iban = param.strip() if param else None
+        #if iban:
+        #self.client.request_kwargs = {'params': {'ibanGeneralPart': "BLLLAAAA"}}
+        return super().perform_create(*args, **kwargs)
 
 
 class FundingSourceRelationshipView(ResourceRelationshipView):
