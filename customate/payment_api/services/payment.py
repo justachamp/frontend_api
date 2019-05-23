@@ -27,7 +27,8 @@ class FundsRequestResourceService(BasePaymentRequestResourceService):
         return payee.id
 
     def prepare_funds(self, attrs):
-        attrs['userId'] = self.user_id
+
+        attrs['userId'] = self.get_attr('user_id', True)
         attrs['recipient'] = self.payee_wallet_id_by_currency
-        attrs['account'] = self.payment_account_id
+        attrs['account'] = self.get_attr('payment_account_id', True)
         return attrs

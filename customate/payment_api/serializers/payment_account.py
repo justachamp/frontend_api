@@ -13,13 +13,14 @@ from payment_api.serializers import (
 class PaymentAccountSerializer(ResourceSerializer):
 
     included_serializers = {
+        # Private relation
         # 'external_service_accounts': 'payment_api.serializers.ExternalServiceAccountSerializer',
         'fee_group': 'payment_api.serializers.FeeGroupSerializer',
         'funding_sources': 'payment_api.serializers.FundingSourceSerializer',
         'tax': 'payment_api.serializers.TaxSerializer',
         'wallets': 'payment_api.serializers.WalletSerializer'
     }
-    #
+    # Private relation
     # external_service_accounts = ExternalResourceRelatedField(
     #
     #     read_only=True,

@@ -5,7 +5,7 @@ from collections import Iterable
 import logging
 
 from jsonapi_client.exceptions import DocumentError
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import status, ValidationError
 from inflection import camelize
 
 from payment_api.core.resource.filters import RQLFilterMixin
@@ -225,8 +225,11 @@ class ResourceQueryset(JsonApiErrorParser, RQLFilterMixin):
         return self
 
     def first(self, map_attributes=True):
-        resource = self.response.resource
-        return self.client.apply_mapping(resource) if map_attributes else resource
+        try:
+            resource = self.response.resource
+            return self.client.apply_mapping(resource) if map_attributes else resource
+        except IndexError:
+            raise ValidationError({self.resource: 'Not found'}, code=status.HTTP_404_NOT_FOUND)
 
     def one(self, pk, map_attributes=True):
         self._pk = pk
