@@ -1,10 +1,10 @@
 from rest_framework_json_api import serializers
-from address.loqate.models import RetrieveAddress
 from address.loqate.core.service import Address as SearchAddressService
-from customate.settings import COUNTRIES_AVAILABLE as AVAILABLE_COUNTRIES
+from customate.settings import COUNTRIES_AVAILABLE
 import logging
+
 logger = logging.getLogger(__name__)
-# AVAILABLE_COUNTRIES = ('GB', 'IE', 'DE', 'IT', 'NL', 'FR', 'ES', 'PT')
+
 
 class SearchAddressSerializer(serializers.Serializer):
     id = serializers.CharField(max_length=250, required=False, source='Id', allow_blank=True, allow_null=True)
@@ -20,17 +20,13 @@ class SearchAddressSerializer(serializers.Serializer):
     @staticmethod
     def _prepare_countries(data):
         countries = data.get('Countries', '')
-        countries = [country.strip() for country in countries.split(',') if country.strip() in AVAILABLE_COUNTRIES]
-
-        if not len(countries):
-            countries = AVAILABLE_COUNTRIES
-        else:
-            countries = ','.join(countries)
+        countries = [country.strip() for country in countries.split(',') if country.strip() in COUNTRIES_AVAILABLE]
+        countries = COUNTRIES_AVAILABLE if not len(countries) else ','.join(countries)
         return countries
 
     def find(self, data):
         service = SearchAddressService()
-        if data.get('Origin', None) not in AVAILABLE_COUNTRIES:
+        if data.get('Origin', None) not in COUNTRIES_AVAILABLE:
             data.pop('Origin', None)
 
         container = data.pop('id', None)
@@ -40,7 +36,7 @@ class SearchAddressSerializer(serializers.Serializer):
             data['Container'] = container
 
         data = service.find(data)
-        logger.error(f'retrieve validated_data {data}')
+        logger.debug(f'retrieve validated_data {data}')
 
         serializer = SearchAddressSerializer(instance=data, many=True)
         return [dict(**rec) for rec in serializer.data]
@@ -50,7 +46,8 @@ class RetrieveAddressSerializer(serializers.Serializer):
     Id = serializers.CharField(max_length=200, required=True, source='id')
     DomesticId = serializers.CharField(max_length=200, source='domestic_id', required=False, allow_blank=True)
     Language = serializers.CharField(max_length=100, required=False, source='language', allow_blank=True)
-    LanguageAlternatives = serializers.CharField(max_length=100, source='language_alternatives', required=False, allow_blank=True)
+    LanguageAlternatives = serializers.CharField(max_length=100, source='language_alternatives', required=False,
+                                                 allow_blank=True)
     Department = serializers.CharField(max_length=200, source='department', required=False, allow_blank=True)
     Company = serializers.CharField(max_length=200, source='company', required=False, allow_blank=True)
     SubBuilding = serializers.CharField(max_length=100, source='sub_building', required=False, allow_blank=True)
@@ -98,12 +95,11 @@ class RetrieveAddressSerializer(serializers.Serializer):
     Field15 = serializers.CharField(max_length=250, source='field15', required=False, allow_blank=True)
 
     def retrieve(self, id):
-
         service = SearchAddressService()
 
         data = service.retrieve({'id': id})
-        logger.error(f'retrieve validated_data {data}')
+        logger.debug(f'retrieve validated_data {data}')
 
-        serializer = RetrieveAddressSerializer(data=data,  many=True)
+        serializer = RetrieveAddressSerializer(data=data, many=True)
         if serializer.is_valid(True):
             return serializer.validated_data

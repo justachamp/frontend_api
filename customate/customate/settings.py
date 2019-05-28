@@ -145,6 +145,12 @@ logging.config.dictConfig({
             'propagate': False,
         },
 
+        'django.db.backends': {
+            'handlers': ['console'],
+            'level': LOGLEVEL,
+            'propagate': False,
+        },
+
         # Logging From Your Application
         'customate': {
             'level': LOGLEVEL,
@@ -221,7 +227,6 @@ REST_FRAMEWORK = {
     ),
     'TEST_REQUEST_DEFAULT_FORMAT': 'vnd.api+json'
 }
-
 
 ROOT_URLCONF = 'customate.urls'
 

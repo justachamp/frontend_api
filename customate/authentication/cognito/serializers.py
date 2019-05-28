@@ -1,7 +1,7 @@
+import traceback
 from rest_framework_json_api import serializers
 from rest_framework.fields import Field, ListField
 from rest_framework import status as status_codes
-from rest_framework.exceptions import NotFound
 
 from authentication.cognito.core.constants import NEW_PASSWORD_CHALLENGE
 from authentication.cognito.models import Identity, Verification, Challenge, Invitation
@@ -35,7 +35,7 @@ class CognitoAttributeFiled(Field):
 class UserServiceMixin(object):
 
     def __init__(self, *args, **kwargs):
-        return super().__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     _user_service = None
 
@@ -101,7 +101,7 @@ class CognitoAuthVerificationSerializer(serializers.Serializer):
             validated_data['destination'] = response.get('Destination')
             return Verification(**validated_data)
         except Exception as ex:
-            logger.error(f'general verification_code {ex}')
+            logger.error("Something went wrong %s" % traceback.format_exc())
             raise Unauthorized(ex)
 
 
@@ -125,7 +125,7 @@ class CognitoAuthAttributeVerifySerializer(serializers.Serializer, AuthSerialize
 
             return status_codes.HTTP_204_NO_CONTENT if status == status_codes.HTTP_200_OK else status
         except Exception as ex:
-            logger.error(f'verify_attribute general {ex}')
+            logger.error("Something went wrong %s" % traceback.format_exc())
             raise Unauthorized(ex)
 
 
@@ -145,7 +145,7 @@ class CognitoAuthForgotPasswordSerializer(serializers.Serializer):
             }
             return Verification(**attributes)
         except Exception as ex:
-            logger.error(f'forgot_password general {ex}')
+            logger.error("Something went wrong %s" % traceback.format_exc())
             raise Unauthorized(ex)
 
 
@@ -162,7 +162,7 @@ class CognitoAuthPasswordRestoreSerializer(serializers.Serializer):
             status = data.get('ResponseMetadata').get('HTTPStatusCode')
             return status_codes.HTTP_204_NO_CONTENT if status == status_codes.HTTP_200_OK else status
         except Exception as ex:
-            logger.error(f'restore_password general {ex}')
+            logger.error("Something went wrong %s" % traceback.format_exc())
             raise Unauthorized(ex)
 
 
@@ -179,7 +179,7 @@ class CognitoAuthChangePasswordSerializer(serializers.Serializer):
             status = data.get('ResponseMetadata').get('HTTPStatusCode')
             return status_codes.HTTP_204_NO_CONTENT if status == status_codes.HTTP_200_OK else status
         except Exception as ex:
-            logger.error(f'change_password general {ex}')
+            logger.error("Something went wrong %s" % traceback.format_exc())
             raise Unauthorized(ex)
 
 
@@ -192,7 +192,7 @@ class CognitoSignOutSerializer(serializers.Serializer):
         try:
             return helpers.sign_out(validated_data)
         except Exception as ex:
-            logger.error(f'sign_out general {ex}')
+            logger.error("Something went wrong %s" % traceback.format_exc())
             raise Unauthorized(ex)
 
 
@@ -234,7 +234,7 @@ class CognitoAuthChallengeSerializer(serializers.Serializer, UserServiceMixin):
             return Identity(id=user.id, **validated_data)
 
         except Exception as ex:
-            logger.error(f'auth_challenge general {ex}')
+            logger.error("Something went wrong %s" % traceback.format_exc())
             raise Unauthorized(ex)
 
 
@@ -308,7 +308,7 @@ class CognitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
                 return self._retrieve_auth_challenge(validated_data, result)
 
         except Exception as ex:
-            logger.error(f'retrieve general {ex}')
+            logger.error("retrieve general: %s" % traceback.format_exc())
             s = CognitoAuthRetrieveMessageSerializer(data={'message': str(ex)})
             s.is_valid(True)
             
@@ -329,10 +329,10 @@ class CognitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
             return status == status_codes.HTTP_200_OK
 
         except CognitoException as ex:
-            logger.error(f'check_password CognitoException general {ex}')
+            logger.error("Cognito exception occured: %s" % traceback.format_exc())
             raise serializers.ValidationError(ex)
         except Exception as ex:
-            logger.error(f'check_password general {ex}')
+            logger.error("Something went wrong %s" % traceback.format_exc())
             raise Unauthorized(ex)
 
     def _retrieve_auth_result(self, validated_data, result):
@@ -369,7 +369,6 @@ class CognitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
 class CognitoInviteUserSerializer(serializers.Serializer, BaseAuthValidationMixin, UserServiceMixin):
     username = serializers.EmailField(required=True, source='preferred_username', write_only=True)
     user_attributes = ListField(child=CognitoAttributeFiled(required=True), required=True)
-    # temporary_password = serializers.CharField(max_length=50, required=False)
     action = serializers.ChoiceField(choices=('RESEND', 'SUPPRESS'), required=False)
     delivery = ListField(child=serializers.ChoiceField(choices=('SMS', 'EMAIL'), required=True), required=False)
 
@@ -388,7 +387,7 @@ class CognitoInviteUserSerializer(serializers.Serializer, BaseAuthValidationMixi
 
             return Invitation(id=user.get('Username'), **validated_data)
         except Exception as ex:
-            logger.error(f'invite general {ex}')
+            logger.error("Something went wrong %s" % traceback.format_exc())
             raise Unauthorized(ex)
 
 
@@ -414,7 +413,7 @@ class CognitoAuthSerializer(BaseAuthValidationMixin, CognitoAuthRetrieveSerializ
             serializer = CognitoAuthRetrieveSerializer()
             return serializer.retrieve(validated_data)
         except Exception as ex:
-            logger.error(f'create general {ex}')
+            logger.error("Something went wrong %s" % traceback.format_exc())
             raise Unauthorized(ex)
 
     def validate_user_status(self, username):
