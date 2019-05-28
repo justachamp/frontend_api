@@ -17,12 +17,12 @@ from core.fields import SerializerField
 
 class EmbededFeeSerializer(Serializer):
     id = UUIDField(primitive_value=True)
-    fixed_value = IntegerField(min_value=0, source='fixedValue')
+    fixed_value = IntegerField(min_value=0, source='fixedValue', allow_null=True)
     index_number = IntegerField(min_value=0, read_only=True, source='indexNumber')
-    max = IntegerField(min_value=0)
-    min = IntegerField(min_value=0)
+    max = IntegerField(min_value=0, allow_null=True)
+    min = IntegerField(min_value=0, allow_null=True)
     operation = EnumField(enum=OperationType, required=True, primitive_value=True)
-    percent = FloatField(min_value=0, max_value=100)
+    percent = FloatField(min_value=0, max_value=100, allow_null=True)
     type = EnumField(enum=FeeType, required=True, primitive_value=True, source='attributes.type', result_source='type')
     use_default = IntegerField(source='useDefault')
 
