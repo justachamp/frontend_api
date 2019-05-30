@@ -79,10 +79,15 @@ class ResourceViewSet(ModelViewSet):
         if not self._queryset:
             modifiers = []
             if self.paginate_response:
+                page_size = self.paginator.page_size
                 page_number = self.request.query_params.get(self.paginator.page_query_param, 1)
-                pagination = f'page[number]={page_number}&page[size]={self.paginator.page_size}&page[totals]'
-                modifiers.append(pagination)
-                logger.debug("pagination: %r " % pagination)
+            else:
+                page_size = settings.FULL_RESOURCE_LIST_PAGE_SIZE
+                page_number = 1
+
+            pagination = f'page[number]={page_number}&page[size]={page_size}&page[totals]'
+            modifiers.append(pagination)
+            logger.debug("pagination: %r " % pagination)
             self._queryset = ResourceQueryset(self.external_resource_name, self.client, 'get', modifiers=modifiers)
 
         return self._queryset
