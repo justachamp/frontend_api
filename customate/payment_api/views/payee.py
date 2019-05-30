@@ -45,7 +45,8 @@ class PayeeViewSet(ResourceViewSet):
         filters = [
             {'active__exact': 1},
             {'account__id__exact': {'method': 'check_payment_account_id'}},
-            {'currency__not_in': 'DK'}
+            {'currency__not_in': 'DK'},
+            {'type__not_in': 'WALLET'}
         ]
 
 
