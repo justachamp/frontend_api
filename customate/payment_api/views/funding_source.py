@@ -16,6 +16,7 @@ from payment_api.views import (
 
 class FundingSourceViewSet(ResourceViewSet):
     resource_name = 'funding_sources'
+    paginate_response = False
     serializer_class = FundingSourceSerializer
     permission_classes = (AllowAny,)
 
