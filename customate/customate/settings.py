@@ -45,8 +45,8 @@ INSTALLED_APPS = [
     'phonenumber_field',
     'authentication.apps.AuthenticationConfig',
     'authentication.cognito.apps.CognitoConfig',
+    'external_apis.apps.ExternalApisConfig',
     'address.apps.AddressConfig',
-    'address.gbg.apps.GbgConfig',
     'address.loqate.apps.LoqateConfig',
     'frontend_api.apps.FrontendApiConfig',
     'payment_api.apps.PaymentApiConfig',
@@ -162,16 +162,34 @@ logging.config.dictConfig({
         # Django-internals logging
         'django.server': DEFAULT_LOGGING['loggers']['django.server'],
 
+        # GBG WSDL client
+        'zeep.transports': {
+            'level': LOGLEVEL,
+            'propagate': False,
+            'handlers': ['console'],
+        },
+
         # Don't log this module at all
         'botocore': {
             'level': 'NOTSET',
             'propagate': False,
         },
+
         # parso.cache, parso.python.diff
         'parso': {
             'level': 'NOTSET',
             'propagate': False,
-        }
+        },
+
+        'zeep.xsd': {
+            'level': 'NOTSET',
+            'propagate': False,
+        },
+        'zeep.wsdl': {
+            'level': 'NOTSET',
+            'propagate': False,
+        },
+
     },
 })
 

@@ -1,7 +1,7 @@
 from datetime import date
 
 from django.utils.translation import gettext_lazy as _
-from django.contrib.auth.models import AbstractBaseUser, AbstractUser
+from django.contrib.auth.models import AbstractUser
 from core.utils import Model
 from django.db import models
 
@@ -35,7 +35,7 @@ class User(AbstractUser, Model):
     status = EnumField(UserStatus, max_length=10, default=UserStatus.active)
     role = EnumField(UserRole, max_length=10, null=True)
     middle_name = models.CharField(_('first name'), max_length=30, blank=True)
-    birth_date = models.DateField(_('day of birth'), blank=True, null=True)
+    birth_date = models.DateField(_('day of birth'), blank=True, null=True)  # type: date
     phone_number = PhoneNumberField(blank=True)
 
     title = EnumField(UserTitle, max_length=10, blank=True, null=True)
@@ -51,7 +51,7 @@ class User(AbstractUser, Model):
         default=False,
         help_text=_(
             'Designates whether this company has only owner. '
-            'Unselect this to add ability adding shareholders.'
+            'Unselect this to add ability to add shareholders.'
         ),
     )
 
@@ -60,7 +60,7 @@ class User(AbstractUser, Model):
         default=False,
         help_text=_(
             'Designates whether this company has only owner. '
-            'Unselect this to add ability adding shareholders.'
+            'Unselect this to add ability to add shareholders.'
         ),
     )
     address = models.OneToOneField(
@@ -92,18 +92,16 @@ class User(AbstractUser, Model):
         return self.email_verified and self.phone_number_verified
 
     @property
-    def age(self):
+    def age(self) -> int:
         age = None
         today = date.today()
         birth_date = self.birth_date
-
-        if self.birth_date:
+        if birth_date:
             age = (today.year - birth_date.year) - int((today.month, today.day) < (birth_date.month, birth_date.day))
-
         return age
 
     @property
-    def age_verified(self):
+    def age_verified(self) -> bool:
         return self.birth_date and self.age >= USER_MIN_AGE
 
     def get_username(self):

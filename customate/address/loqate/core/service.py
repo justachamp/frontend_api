@@ -1,7 +1,4 @@
 import requests
-from requests import Session
-from requests.auth import HTTPBasicAuth
-import requests
 from address import settings
 
 
@@ -17,7 +14,6 @@ class Address:
     def __init__(self):
         self._key = getattr(settings, 'LOQATE_SERVICE_KEY')
         self._provider = requests
-        # self.logger = logging.getLogger(__name__)
 
     @property
     def headers(self):
