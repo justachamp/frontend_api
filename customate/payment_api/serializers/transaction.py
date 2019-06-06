@@ -25,6 +25,7 @@ class TransactionSerializer(ResourceSerializer):
     closing_balance = IntegerField(read_only=True, source='closingBalance')
     balance = IntegerField(read_only=True)
     execution_date = TimestampField(read_only=True, source='executionDate')
+    completion_date = TimestampField(read_only=True, source='completionDate')
     name = CharField(read_only=True)
     reserved = IntegerField(read_only=True)
     reservedAmount = IntegerField(read_only=True)

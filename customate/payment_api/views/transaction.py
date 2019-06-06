@@ -62,6 +62,7 @@ class TransactionViewSet(ResourceViewSet):
         'payment__currency': ('exact',),
         'payment__payment_account__id': ('exact',),
         'execution_date': ('exact', 'eq', 'ne', 'gt', 'lt', 'gte', 'lte'),
+        'completion_date': ('exact', 'eq', 'ne', 'gt', 'lt', 'gte', 'lte'),
         'payment__account__id': ('exact',),
     }
 
