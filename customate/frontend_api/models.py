@@ -148,7 +148,7 @@ class UserAccount(Account):
 
     def __init__(self, *args, **kwargs):
         self._payment_account = None
-        return super().__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     @property
     def payment_account(self):
