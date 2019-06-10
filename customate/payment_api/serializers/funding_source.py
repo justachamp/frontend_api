@@ -36,7 +36,7 @@ class FundingSourceSerializer(BaseFundingSourceSerializer):
         return data
 
     type = TypeEnumField(enum=FundingSourceType, required=True, primitive_value=True)
-    status = TypeEnumField(enum=FundingSourceStatus, required=False, primitive_value=True)
+    status = EnumField(enum=FundingSourceStatus, required=False, primitive_value=True)
     validation_message = CharField(required=False, source='validationMessage')
     currency = EnumField(enum=Currency, required=True, primitive_value=True)
     data = JSONField(required=True)
