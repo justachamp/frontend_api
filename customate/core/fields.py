@@ -242,6 +242,22 @@ class FundingSourceType(Enum):
         return self.value
 
 
+class FundingSourceStatus(Enum):
+    UNVERIFIED = 'UNVERIFIED'
+    PENDING = 'PENDING'
+    VALID = 'VALID'
+    INVALID = 'INVALID'
+
+    class Labels:
+        UNVERIFIED = 'Unverified'
+        PENDING = 'Pending'
+        VALID = 'Valid'
+        INVALID = 'Invalid'
+
+    def __repr__(self):
+        return self.value
+
+
 class PayeeType(Enum):
     WALLET = 'WALLET'
     BANK_ACCOUNT = 'BANK_ACCOUNT'
