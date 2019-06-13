@@ -75,15 +75,16 @@ class ZeepProvider:
 
 
 class BaseID3Client:
-    _provider = None
-    _parser = None
-    _service = {}
+    PROFILE_TEMPLATE = ''
+
 
     def __init__(self, parser, country_code):
-
+        self._provider = None
+        self._parser = None
+        self._service = {}
         self.country_code = country_code
         self._apply_profile(country_code)
-        self._apply_credentials(country_code)
+        self._apply_credentials()
         self._parser = parser
 
         self.logger = logging.getLogger(__name__)
@@ -130,35 +131,24 @@ class BaseID3Client:
         self.provider.client.wsdl.dump()
 
     def _apply_profile(self, country_code):
-        raise NotImplementedError
-
-    def _apply_credentials(self, country_code):
-        raise NotImplementedError
+        profile_name = self.PROFILE_TEMPLATE.format(country_code)
+        self.profile_id = getattr(settings, profile_name, None)
 
 
-class ID3Client(BaseID3Client):
-
-    def _apply_profile(self, country_code):
-        self.profile_id = getattr(settings, f'GBG_{country_code}_PROFILE_ID', None)
-        self.profile_version = getattr(settings, 'GBG_PROFILE_VERSION')
-
-    def _apply_credentials(self, country_code):
+    def _apply_credentials(self):
         self.user_name = getattr(settings, 'GBG_ACCOUNT')
         self.password = getattr(settings, 'GBG_PASSWORD')
         self.wsdl = getattr(settings, 'GBG_WDSL')
 
 
+class ID3Client(BaseID3Client):
+    profile_template = 'GBG_{}_PROFILE_ID'
+    profile_version = getattr(settings, 'GBG_PROFILE_VERSION')
+
+
 class ID3BankAccountClient(BaseID3Client):
-    # TODO: what is this for?  Looks like copy-pase of the above
-
-    def _apply_profile(self, country_code):
-        self.profile_id = getattr(settings, f'GBG_{country_code}_BANK_VALIDATION_PROFILE_ID', None)
-        self.profile_version = getattr(settings, 'GBG_PROFILE_VERSION')
-
-    def _apply_credentials(self, country_code):
-        self.user_name = getattr(settings, 'GBG_BANK_VALIDATION_ACCOUNT')
-        self.password = getattr(settings, 'GBG_BANK_VALIDATION_PASSWORD')
-        self.wsdl = getattr(settings, 'GBG_BANK_VALIDATION_WDSL')
+    PROFILE_TEMPLATE = 'GBG_{}_BANK_VALIDATION_PROFILE_ID'
+    profile_version = getattr(settings, 'GBG_BAV_PROFILE_VERSION')
 
 
 class ModelParser(object):
@@ -304,19 +294,19 @@ class BankAccountParser:
     @personal_details.setter
     def personal_details(self, user):
         self._personal_details = {
-            'Forename': user.get('first_name'),
-            'Surname': user.get('last_name'),
+            'Forename': user.get('firstName'),
+            'Surname': user.get('lastName'),
         }
 
     @property
     def banking_details(self):
-        return self._personal_details
+        return self._banking_details
 
     @banking_details.setter
     def banking_details(self, account):
         self._banking_details = {
             'SortCode': account.get('sortCode'),
-            'AccountNumber': account.get('accountNumber'),
+            'AccountNumber': account.get('bankAccount'),
         }
 
     @property
@@ -335,9 +325,9 @@ class BankAccountParser:
         }
 
     def parse(self, source):
-        self.personal_details = source.get('recipient', {})
-        self.banking_details = source.get('account', {})
-        self.current_address = source.get('recipient', {}).get('address', {})
+        self.personal_details = source.get('data', {})
+        self.banking_details = source.get('data', {})
+        self.current_address = source.get('address', {})
 
         self._data = {
             'Personal': {'PersonalDetails': self.personal_details},

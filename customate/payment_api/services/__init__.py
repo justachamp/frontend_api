@@ -4,6 +4,7 @@ from payment_api.services.mixin import (
 )
 from payment_api.services.payee import PayeeRequestResourceService
 from payment_api.services.payment import FundsRequestResourceService
+from payment_api.services.funding_source import FundingSourcesRequestResourceService
 
 
 __all__ = [
@@ -13,4 +14,5 @@ __all__ = [
     RequestResourceQuerysetMixin,
     PayeeRequestResourceService,
     FundsRequestResourceService,
+    FundingSourcesRequestResourceService
 ]

@@ -1,45 +1,67 @@
-from django.utils.functional import cached_property
+from rest_framework.exceptions import ValidationError
 
-from address.gbg.core.service import ID3BankAccountClient, BankAccountParser
-from core.fields import Country
+from core.fields import Country, Currency, FundingSourceType
 import logging
+
+from payment_api.services import BaseRequestResourceSerializerService
+from payment_api.validators import IBANBankValidator, GBPBankValidator
 
 logger = logging.getLogger(__name__)
 GB = Country.GB.value
 GBG_SUCCESS_STATUS = 'PASS'
 
 
-class FundingSourceService:
+class BaseValidationStrategy:
 
-    def __init__(self, funding_source):
-        self.funding_source = funding_source
+    def __init__(self, resource, data):
+        self._resource = resource
+        self._data = data
+
+    def is_valid(self, raise_exception=False):
+        raise NotImplementedError()
+
+
+class CreditCardValidationStrategy(BaseValidationStrategy):
+
+    def is_valid(self, raise_exception=False):
+        return True
+
+
+class DirectDebitValidationStrategy(BaseValidationStrategy):
+
+    SOURCE_NAME = FundingSourceType.DIRECT_DEBIT.label
+    GBP_CURRENCY_NAME = Currency.GBP.label
+
+    def is_valid(self, raise_exception=False):
+        try:
+            self.validate_bank_account()
+        except ValidationError as ex:
+            logger.error(ex)
+            if raise_exception:
+                raise ex
+
+        except Exception as ex:
+            logger.error(ex)
+            if raise_exception:
+                raise ex
 
     def validate_bank_account(self):
-        if self.country != Country.GB.value:
-            return self.funding_source
+        data = self._data
+        if data.get('currency') == Currency.GBP.value:
+            return GBPBankValidator(self._resource, data).is_valid(True)
+        else:
+            return IBANBankValidator(self._resource, data).is_valid(True)
 
-        gbg = self.gbg_client
-        verification = gbg.auth_sp(self.funding_source)
-        band_text = verification.BandText
-        self.funding_source.data['bank_account_verification'] = {
-            'gbg_authentication_identity': verification.AuthenticationID,
-            'gbg_verification_status': band_text
-        }
-        logger.info(f'instance.is_verified: {band_text}')
-        return band_text == GBG_SUCCESS_STATUS
 
-    @property
-    def country(self):
-        return self.address.get('country')
+class FundingSourcesRequestResourceService(BaseRequestResourceSerializerService):
 
-    @cached_property
-    def bank(self):
-        return self.funding_source.get('bank', {})
+    def get_validation_strategy(self, source_type, data):
+        if source_type == FundingSourceType.DIRECT_DEBIT.value:
+            return DirectDebitValidationStrategy(self._resource, data)
+        elif source_type == FundingSourceType.CREDIT_CARD.value:
+            return CreditCardValidationStrategy(self._resource, data)
 
-    @cached_property
-    def address(self):
-        return self.bank.get('address', {})
-
-    @property
-    def gbg_client(self):
-        return ID3BankAccountClient(parser=BankAccountParser, country_code=GB)
+    def validate_source(self, data):
+        validation_strategy = self.get_validation_strategy(data['type'], data)
+        validation_strategy.is_valid(True)
+        return data
