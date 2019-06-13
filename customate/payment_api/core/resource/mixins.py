@@ -138,7 +138,7 @@ class JsonApiErrorParser:
             errors = resp.get('errors')
             data = {}
             for error in errors:
-                pointer = error.get('source', {}).get('pointer', '').split('/')[-1]
+                pointer = error.get('source', {}).get('pointer', '').replace('/data/attributes/', '')
                 if not data.get(pointer):
                     data[pointer] = []
                 data[pointer].append(error.get('detail', ''))
