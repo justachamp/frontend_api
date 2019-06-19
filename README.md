@@ -1,76 +1,104 @@
-# Payment API
+# Frontend API
 
 ## What
-        This is a REST API service built on top of [Django REST Framework](https://django-rest-framework.readthedocs.io) and
-        [JSON API](https://jsonapi.org) spec for communication with client.
+This is a REST API service built on top of [Django REST Framework](https://django-rest-framework.readthedocs.io) and
+[JSON API](https://jsonapi.org) spec for communication with client.
 
-### Prerequisites
-    install docker https://www.docker.com/products/overview
+## Prerequisites
 
-### Installation steps
-    checkout the source code
-    > git clone repo
-    > cd customate_app/docker
-    > docker-compose build
-    > docker-compose up
+* Python 3.7
+* PostgreSQL 10
 
 
-## Working on the project
+## Installation steps
+### Install [pyenv](https://github.com/pyenv/pyenv) and python 3.7
+Following instructions are for OSX
+```
+$ brew install pyenv
+$ echo "eval \"$(pyenv init -)\"" >> ~/.bash_profile
+$ pyenv install 3.7.2
+```
 
-### project location
-    The code accessed by all the docker servers/instances is in the folder
-    /path/to/your/install/customate_app
 
-### bring up the docker work environment
-    start docker and set docker-machine environment variables
-    > cd /path/to/your/install/customate_app/docker/
-    > docker-compose up
+### Get source code
+```bash
+$ git clone git@bitbucket.org:customateteam/frontend-api.git
+$ cd frontend-api/customate
+$ echo "3.7.2" >> .python-version
 
-## Adding project requirements
+# Make sure that correct python version is installed
+$ source ~/.bash_profile
+# python --version
+Python 3.7.2
 
-### add new packages to container
-    when adding new requirements to the requirements.txt a new image must be
-    built in order to persist the changes across container restarts
+# Install python dependencies
+$ pip install -r requirements.txt
 
-    go inside the container
-    > docker exec -i -t customate_app_customate_1 bash
+```
 
-    to update requirements.txt
-    > pip install --upgrade --force-reinstall -r requirements.txt
 
-    to insall a new package
-    > pip install some-packege-name
+### Setup local env
+```
+$ cp env.sh.sample env.sh
+```
 
-    to freeze changes
-    > pip freeze > requirements.txt
 
-### other useful commands
+### Setup database
+For OS X I would recommend [Postgresapp](http://postgresapp.com/documentation/).
 
-    list out the docker containers and check their statuses
-    > docker ps
+**Import from existings stage/dev env**
 
-    stop all docker containers
-    > docker-compose down
+The most straitforward way to setup DB would be to grab full dump from stage/dev environments:
+```
+# schema only, without owners and grant/revoke previleges
+PGPASSWORD="******" pg_dump -s -O -x customate_frontend_stage --username=customate_frontend_stage --host=stage-psql.customate.net > schema.sql
+# data only
+PGPASSWORD="******" pg_dump -a -O -x customate_frontend_stage --username=customate_frontend_stage --host=stage-psql.customate.net > data.sql
 
-    get a shell on a named container
-    > docker exec -i -t container_name bash
+```
 
-    clean up old containers that have exited
-    > docker rm -v $(docker ps -a -q -f status=exited)
+After that, just import everything into your local db:
+```
+psql -U mydbuser --host=127.0.0.1 customate< schema.sql
+psql -U mydbuser --host=127.0.0.1 customate< data.sql
+```
 
-### accessing services running on docker containers
-    services running on docker containers are accessed via the port mappings in
-    docker/docker-compose.yml.
+**Fresh DB schema with empty data**
 
-    For example
-    psql -U customate -h 127.0.0.1 -p 5442
-    ssh -p 2222 root@localhost
+Once your DB is created via `CREATE DATABASE customate`, there is a way to create empty schema by applying migrations
+```
+# apply your local env
+$ source env.sh
+# run migrations
+$ ./manage.py migrate
+```
 
-### S3 static 
-    add to environemnt next variables:
-    AWS_ACCESS_KEY_ID=
-    AWS_SECRET_ACCESS_KEY=
-    AWS_S3_STORAGE_BUCKET_NAME=customate-dev-django
-    
-    For sync static files need execute:
-    python3.7 manage.py collectstatic
+Make sure that every migration was successfull by running:
+
+```
+$ ./manage.py showmigrations
+```
+
+
+### Run Django web server
+
+```
+./manage.py runserver
+```
+
+Once the server is up, REST APIs should be available at `http://localhost:8080/`
+
+
+## API documentation
+
+* [Frontend API documentation](https://frontendservice.docs.apiary.io/)
+* [Payment API documentation](https://customatepayment.docs.apiary.io/)
+
+
+## Git workflow
+We use pull request model:
+
+* `develop` -- for active development and testing
+* `master` -- for release/production code
+* `stage` -- branch contains merged code from `develop` branch once release is scheduled
+
