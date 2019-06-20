@@ -51,6 +51,14 @@ class ResourceSerializer(IncludedResourcesValidationMixin, Serializer):
 
         return req
 
+    def get_current_user(self):
+        """
+        Returns currently logged in User model.
+        :return:
+        :rtype: core.models.User
+        """
+        return self.request.user
+
     @property
     def client(self):
         view = self.view

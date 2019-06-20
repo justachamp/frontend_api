@@ -1,12 +1,12 @@
 from enumfields import Enum
-from customate.settings import COUNTRIES_AVAILABLE
-from rest_framework.exceptions import ValidationError
+from datetime import datetime
 
+from rest_framework.exceptions import ValidationError
 from rest_framework_json_api.serializers import ChoiceField, UUIDField as DefaultUUIDField, CharField
 from rest_framework_json_api.relations import ResourceRelatedField
-
 from rest_framework import serializers
-from datetime import datetime
+
+from customate.settings import COUNTRIES_AVAILABLE
 
 
 class TimestampField(serializers.DateTimeField):

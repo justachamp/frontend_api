@@ -46,8 +46,7 @@ class RetrieveAddressSerializer(serializers.Serializer):
     Id = serializers.CharField(max_length=200, required=True, source='id')
     DomesticId = serializers.CharField(max_length=200, source='domestic_id', required=False, allow_blank=True)
     Language = serializers.CharField(max_length=100, required=False, source='language', allow_blank=True)
-    LanguageAlternatives = serializers.CharField(max_length=100, source='language_alternatives', required=False,
-                                                 allow_blank=True)
+    LanguageAlternatives = serializers.CharField(max_length=100, source='language_alternatives', required=False, allow_blank=True)
     Department = serializers.CharField(max_length=200, source='department', required=False, allow_blank=True)
     Company = serializers.CharField(max_length=200, source='company', required=False, allow_blank=True)
     SubBuilding = serializers.CharField(max_length=100, source='sub_building', required=False, allow_blank=True)

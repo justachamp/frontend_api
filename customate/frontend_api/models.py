@@ -93,7 +93,6 @@ class Account(PolymorphicModel, Model):
         data = self.data
         gbg = data.get('gbg', None)
         if gbg and gbg.get('id'):
-            # last_date = gbg.get('date')
             last_date = datetime.datetime.strptime(gbg.get('date'), '%Y-%m-%dT%H:%M:%S.%f')
             now_date = datetime.datetime.utcnow()
             delta = now_date - last_date

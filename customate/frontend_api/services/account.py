@@ -1,15 +1,17 @@
+from traceback import format_exc
+import logging
 from collections import namedtuple
+import arrow
 from django.utils.functional import cached_property
 from rest_framework.exceptions import ValidationError
 from phonenumbers.phonenumberutil import region_code_for_country_code
-
-from core.fields import Dataset
-from core.models import User, USER_MIN_AGE
-from address.gbg.core.service import ID3Client, ModelParser
-
-import logging
-
+from core.fields import Dataset, Country
+from core.models import User, USER_MIN_AGE, Address as CoreAddress
+from frontend_api.models import Account
 from frontend_api.core.client import PaymentApiClient
+from external_apis.gbg.models import ContactDetails, PersonalDetails, Address
+from external_apis.gbg.models import IdentityDocument, UKIdentityDocument, SpainIdentityDocument, IdentityCard
+from external_apis.gbg.service import validate_identity_details
 
 logger = logging.getLogger(__name__)
 
@@ -28,22 +30,22 @@ IMMUTABLE_USER_FIELDS_IF_VERIFIED = (
 
 
 class AccountService:
-    __profile = None
+    _profile = None
 
     def __init__(self, profile):
-        self.__profile = profile
+        self._profile = profile
 
     def get_account_country(self):
-        if not self.__profile:
+        if not self._profile:
             return None
-        address = self.__profile.user.address if self.__profile.user else None
+        address = self._profile.user.address if self._profile.user else None
         current_country = address.country.value if address and address.country else None
-        return self.__profile.data.get('address', {}).get('country', current_country)
+        return self._profile.data.get('address', {}).get('country', current_country)
 
     def get_user_role(self):
-        if not self.__profile:
+        if not self._profile:
             return None
-        user = self.__profile.user
+        user = self._profile.user
         return user.role.value if user and user.role else None
 
     def save_profile(self, data):
@@ -51,39 +53,39 @@ class AccountService:
 
 
 class ProfileService:
-    __user = None
-    __data = None
+    _user = None
+    _data = None
 
     def __init__(self, user: User, data=None):
-        self.__user = user
+        self._user = user
 
         if data:
             account = data.get('account', {})
             account['type'] = user.account.__class__.__name__
             data['account'] = account
-        self.__data = data or {}
+        self._data = data or {}
 
     @property
     def profile(self):
-        user = self.__user
+        user = self._user
         return ProfileRecord(
             pk=user.id,
             id=user.id,
             user=user,
             address=user.address,
             account=user.account,
-            credentials = self.__data.get('credentials'),
-            data=self.__data
+            credentials=self._data.get('credentials'),
+            data=self._data
         )
 
 
 class ProfileValidationService:
-    __profile = None
+    _profile = None
     _errors = None
     _payment_service = None
 
     def __init__(self, profile: ProfileRecord):
-        self.__profile = profile
+        self._profile = profile
         self._errors = {}
 
     @cached_property
@@ -168,7 +170,35 @@ class ProfileValidationService:
 
     @property
     def profile(self):
-        return self.__profile
+        return self._profile
+
+    @staticmethod
+    def get_identity_document(country: Country, account: Account, user: User) -> IdentityDocument:
+        """
+        Returns IdentityData for specific country
+        :param country:
+        :param account:
+        :param user:
+        :return:
+        """
+        id_doc = None
+        if country == Country.GB:
+            dli_date = account.country_fields.get("driver_licence_issue_date")
+            id_doc = UKIdentityDocument(
+                passport_number=user.passport_number,
+                passport_expiry_date=user.passport_date_expiry,
+                driving_licence_number=account.country_fields.get("driver_licence_number"),
+                driving_licence_postcode=account.country_fields.get("driver_licence_postcode"),
+                driving_licence_issue_date=arrow.get(dli_date, "YYYY-MM-DD").datetime.date() if dli_date else None
+            )
+        elif country == Country.IT:  # Italy
+            id_doc = IdentityCard(number=account.country_fields.get("tax_code"), country=country)
+        elif country == Country.DK:  # Denmark
+            id_doc = IdentityCard(number=account.country_fields.get("id_card_number"), country=country)
+        elif country == Country.SP:  # Spain
+            id_doc = SpainIdentityDocument(tax_id_number=account.country_fields.get("tax_id"))
+
+        return id_doc
 
     def verify_profile(self, instance):
 
@@ -177,34 +207,56 @@ class ProfileValidationService:
             return None
 
         user = getattr(instance, 'user', None)
-
         if not user or user.is_admin:
             return None
 
-        """
-        a phone number should be verified before a user is allowed to pass KYC.
-        """
-        address = getattr(instance, 'address', None)
-        country = address.country.value if address and address.country else None
-        # account.gbg_authentication_count = 1
-        # account.verification_status = 'Fail'
+        # a phone number should be verified before a user is allowed to pass KYC(Know Your Customer).
+        address = getattr(instance, 'address', None)  # type: CoreAddress
+        country_val = address.country.value if address and address.country else None  # 2-letter country code
         self.payment_client.assign_payment_account()
-        if user.is_verified:
-            try:
-                if account.can_be_verified and country:
-                    gbg = ID3Client(parser=ModelParser, country_code=country)
-                    # authentication_id = account.gbg_authentication_identity
-                    # TODO in phase we should use IncrementalVerification endpoint if we already have authentication_id
-                    # TODO for now we just store it
 
-                    verification = gbg.auth_sp(user)
-                    band_text = verification.BandText
-                    account.gbg_authentication_identity = verification.AuthenticationID
-                    account.gbg_authentication_count += 1
-                    account.verification_status = band_text
-                    logger.error(f'instance.is_verified: {account.verification_status}, band text: {band_text}')
+        if not user.is_verified:
+            return None
 
-                    account.save()
+        if not (account.can_be_verified and country_val):
+            return None
 
-            except Exception as e:
-                logger.error(f'GBG verification exception: {e}')
+        try:
+            logger.info("GBG user verification (user=%r)" % user)
+
+            gbg_result = validate_identity_details(
+                country=address.country,
+                personal_details=PersonalDetails(
+                    first_name=user.first_name,
+                    middle_name=user.middle_name,
+                    last_name=user.last_name,
+                    birth_date=user.birth_date,
+                    gender=user.gender,
+                    title=user.title,
+                    mothers_maiden_name=user.mother_maiden_name,
+                    country_of_birth=user.country_of_birth
+                ), current_address=Address(
+                    city=address.city,
+                    post_code=address.postcode,
+                    address_line_1=address.address_line_1,
+                    address_line_2=address.address_line_2,
+                    locality=address.locality,
+                    country=address.country,
+                ), contact_details=ContactDetails(
+                    mobile_phone=str(user.phone_number),
+                    email=user.email
+                ),
+                identity_document=ProfileValidationService.get_identity_document(address.country, account, user)
+            )
+
+            # TODO: use "IncrementalVerification endpoint if we already have authentication_id
+            # TODO: for now we just store it
+
+            account.gbg_authentication_identity = gbg_result.AuthenticationID
+            account.verification_status = gbg_result.BandText
+            account.gbg_authentication_count += 1
+
+            account.save()
+
+        except Exception as e:
+            logger.error("GBG verification exception: %r" % format_exc())

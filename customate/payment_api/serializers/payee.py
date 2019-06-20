@@ -1,5 +1,4 @@
 from payment_api.serializers import (
-    IbanField,
     CharField,
     TypeEnumField,
     IntegerField,
