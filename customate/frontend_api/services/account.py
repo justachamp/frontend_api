@@ -189,7 +189,8 @@ class ProfileValidationService:
                 passport_expiry_date=user.passport_date_expiry,
                 driving_licence_number=account.country_fields.get("driver_licence_number"),
                 driving_licence_postcode=account.country_fields.get("driver_licence_postcode"),
-                driving_licence_issue_date=arrow.get(dli_date, "YYYY-MM-DD").datetime.date() if dli_date else None
+                driving_licence_issue_date=arrow.get(dli_date, "YYYY-MM-DD", tzinfo='local').datetime.date()
+                    if dli_date else None
             )
         elif country == Country.IT:  # Italy
             id_doc = IdentityCard(number=account.country_fields.get("tax_code"), country=country)
