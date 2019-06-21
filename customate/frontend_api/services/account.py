@@ -184,13 +184,14 @@ class ProfileValidationService:
         id_doc = None
         if country == Country.GB:
             dli_date = account.country_fields.get("driver_licence_issue_date")
+            dli_date = arrow.get(dli_date, "YYYY-MM-DD", tzinfo='local').datetime.date() \
+                if isinstance(dli_date, str) else dli_date
             id_doc = UKIdentityDocument(
                 passport_number=user.passport_number,
                 passport_expiry_date=user.passport_date_expiry,
                 driving_licence_number=account.country_fields.get("driver_licence_number"),
                 driving_licence_postcode=account.country_fields.get("driver_licence_postcode"),
-                driving_licence_issue_date=arrow.get(dli_date, "YYYY-MM-DD", tzinfo='local').datetime.date()
-                    if dli_date else None
+                driving_licence_issue_date=dli_date
             )
         elif country == Country.IT:  # Italy
             id_doc = IdentityCard(number=account.country_fields.get("tax_code"), country=country)
@@ -242,7 +243,7 @@ class ProfileValidationService:
                     address_line_1=address.address_line_1,
                     address_line_2=address.address_line_2,
                     locality=address.locality,
-                    country=address.country,
+                    country=address.country.value,
                 ), contact_details=ContactDetails(
                     mobile_phone=str(user.phone_number),
                     email=user.email
