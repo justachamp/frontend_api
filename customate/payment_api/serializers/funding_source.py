@@ -1,4 +1,5 @@
 import logging
+from traceback import format_exc
 from rest_framework.serializers import ValidationError
 from collections import OrderedDict
 
@@ -93,8 +94,8 @@ class FundingSourceSerializer(BaseFundingSourceSerializer):
             ), current_address=Address(
                 post_code=address["postcode"],
                 city=address["city"],
-                address_line_1=address["address"] or address["address_line_1"],
-                address_line_2=address["address_line_2"],
+                address_line_1=address.get("address") or address.get("address_line_1"),
+                address_line_2=address.get("address_line_2"),
                 country=address["country"],
                 locality=address["locality"]
             ), contact_details=ContactDetails(
@@ -117,7 +118,12 @@ class FundingSourceSerializer(BaseFundingSourceSerializer):
         :rtype: OrderedDict
         """
         logger.info("VALIDATE, res=%r" % res)
-        res = self.direct_debit_gbg_validation(res)
+        try:
+            res = self.direct_debit_gbg_validation(res)
+        except Exception as e:
+            logger.error("GBG crash: %r" % format_exc())
+            raise ValidationError("GBG validation failed")
+
         # TODO: add other funding source types validation
         return res
 
