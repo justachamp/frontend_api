@@ -49,7 +49,7 @@ class FundingSourceSerializer(BaseFundingSourceSerializer):
     )
 
     class Meta(ResourceMeta):
-        service = 'payment_api.services.FundingSourcesRequestResourceService'
+        #service = 'payment_api.services.FundingSourcesRequestResourceService'
         resource_name = 'funding_sources'
 
     def direct_debit_gbg_validation(self, res: OrderedDict):
