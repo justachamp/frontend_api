@@ -12,7 +12,8 @@ from payment_api.views import (
 
 SYSTEM_TRANSACTIONS = (
     # 'IncomingContribution',
-    'Lock',
+    'LockTransferAndFeeAmount',
+    'LockFeeAmount',
     'Release',
     'InternalFeeAndTax',
     'MoneyInBtFeeAndTax',
