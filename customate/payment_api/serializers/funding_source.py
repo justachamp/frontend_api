@@ -94,7 +94,7 @@ class FundingSourceSerializer(BaseFundingSourceSerializer):
             ), current_address=Address(
                 post_code=address["postcode"],
                 city=address["city"],
-                address_line_1=address.get("address") or address.get("address_line_1"),
+                address_line_1= address.get("address_line_1") or address.get("address"),
                 address_line_2=address.get("address_line_2"),
                 country=address["country"],
                 locality=address["locality"]

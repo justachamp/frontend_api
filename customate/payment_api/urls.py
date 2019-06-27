@@ -19,10 +19,13 @@ from payment_api.views import (
     FundingSourceRelationshipView,
     PayeeViewSet,
     PayeeRelationshipView,
+
 )
 
+from payment_api.views.cat import CatView
+
 from django.conf.urls import url
-from django.urls import include, re_path
+from django.urls import include, re_path, path
 from payment_api.router import urlpatterns as proxy_url
 
 urlpatterns = [
@@ -117,4 +120,13 @@ urlpatterns = [
             view=PayeeRelationshipView.as_view(),
             name='payee-relationships'
             ),
+
+    # re_path(r'^cats/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
+    #         CatView.as_view(),  # {'get': 'retrieve_related'}
+    #         name='cat-related'),
+
+    path('cats/', CatView.as_view()),
+    #path('snippets/<int:pk>/', views.SnippetDetail.as_view()),
 ]
+
+

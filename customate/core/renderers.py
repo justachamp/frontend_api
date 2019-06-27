@@ -52,7 +52,12 @@ class JSONRenderer(JSONRenderer):
         if force_type_resolution:
             resource_name = utils.get_resource_type_from_instance(resource_instance)
 
-        pk = resource_instance.pk if hasattr(resource_instance, 'pk') else resource_instance.id
+        if isinstance(resource_instance, dict):
+            print("RES INSTANCE=%r" % resource_instance)
+            pk = resource_instance["id"]
+        else:
+            pk = resource_instance.pk if hasattr(resource_instance, 'pk') else resource_instance.id
+
         resource_data = [
             ('type', resource_name),
             ('id', encoding.force_text(pk) if resource_instance else None),

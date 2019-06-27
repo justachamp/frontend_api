@@ -10,6 +10,7 @@ def filter_empty_values(res):
         return res
     return {k: v for k, v in res.items() if v is not None and v != ''}
 
+
 class GBGData(ABC):
     @abstractmethod
     def gbg_serialization(self):
@@ -120,15 +121,22 @@ class Address(GBGData):
         GBG serialization
         :return:
         """
+        full_address = "{} {} {} {}".format(
+            self.address_line_1,
+            self.address_line_2,
+            self.city,
+            self.locality
+        )
+
         res = {
             "Country": Address.get_full_country_name(self.country),
             "Street": "",
             "SubStreet": "",
-            "City": self.city,
+            "City": "",  # self.city,
             "SubCity": "",
-            "StateDistrict": self.locality,
+            "StateDistrict": "",  # self.locality,
             "POBox": "",
-            "Region": self.locality,
+            "Region": "",  # self.locality,
             "Principality": "",
             "ZipPostcode": self.post_code,
             "DpsZipPlus": "",
@@ -138,9 +146,9 @@ class Address(GBGData):
             "Building": "",
             "SubBuilding": "",
             "Premise": "",
-            "AddressLine1": self.address_line_1,
-            "AddressLine2": self.address_line_2,
-            "AddressLine3": self.address_line_3,
+            "AddressLine1": full_address,  # self.address_line_1,
+            "AddressLine2": "",  # self.address_line_2,
+            "AddressLine3": "",  # self.address_line_3,
             "AddressLine4": "",
             "AddressLine5": "",
             "AddressLine6": "",
@@ -261,7 +269,7 @@ class ContactDetails(GBGData):
                 }
             })
 
-        return {k:filter_empty_values(v) for k,v in res.items()}
+        return {k: filter_empty_values(v) for k, v in res.items()}
 
 
 class IdentityDocumentType(Enum):
@@ -367,7 +375,7 @@ class UKIdentityDocument(IdentityDocument):
                 }
             })
         # cleanup empty and None fields
-        rr = {k:filter_empty_values(v) for k,v in res.items()}
+        rr = {k: filter_empty_values(v) for k, v in res.items()}
         return {self.doc_type.name: rr}
 
 
