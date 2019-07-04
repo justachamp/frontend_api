@@ -36,8 +36,12 @@ class SubUserPermissionSerializer(HyperlinkedModelSerializer):
 
     class Meta:
         model = SubUserPermission
-        fields = ('url', 'account', 'manage_sub_user', 'manage_funding_sources', 'manage_unload_accounts',
-                  'manage_contract')
+        fields = (  'url', 
+                    'account', 
+                    'load_funds', 
+                    'manage_funding_sources', 
+                    'manage_schedules',
+                    'manage_payees')
 
 
 class AdminUserPermissionSerializer(HyperlinkedModelSerializer):
@@ -62,4 +66,4 @@ class AdminUserPermissionSerializer(HyperlinkedModelSerializer):
 
     class Meta:
         model = AdminUserPermission
-        fields = ('url', 'account', 'manage_admin_user', 'manage_tax', 'manage_fee', 'can_login_as_user',)
+        fields = ('url', 'account', 'manage_tax', 'manage_fee',)

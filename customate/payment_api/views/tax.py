@@ -1,4 +1,4 @@
-from rest_framework.permissions import AllowAny
+from frontend_api.permissions import IsSuperAdminOrReadOnly, AdminUserTaxPermission
 from payment_api.serializers import TaxSerializer, TaxGroupSerializer
 
 from payment_api.views import (
@@ -14,7 +14,7 @@ from payment_api.views import (
 class TaxViewSet(ResourceViewSet):
     resource_name = 'taxes'
     serializer_class = TaxSerializer
-    permission_classes = (AllowAny,)
+    permission_classes = ()
 
     filter_backends = (
         OrderingFilter,
@@ -39,7 +39,7 @@ class TaxRelationshipView(ResourceRelationshipView):
 class TaxGroupViewSet(ResourceViewSet):
     resource_name = 'tax_groups'
     serializer_class = TaxGroupSerializer
-    permission_classes = (AllowAny,)
+    permission_classes = (IsSuperAdminOrReadOnly|AdminUserTaxPermission,)
     filter_backends = (
         OrderingFilter,
         InclusionFilter

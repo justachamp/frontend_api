@@ -157,44 +157,23 @@ class UserAccount(Account):
     def payment_account(self, payment_account):
         self._payment_account = payment_account
 
+    @property 
+    def is_owner(self):
+        return True
+
     class JSONAPIMeta:
         resource_name = "UserAccount"
-
-    class Meta:
-        permissions = (
-            ('owner_access', 'Account owner'),
-            ('owner_account_access', 'Owner account access'),
-            ('owner_group_account_access', 'Owner group account access'),
-            ('sub_user_account_access', 'Sud user account access'),
-            ('sub_user_group_account_access', 'Sud user group account access'),
-            ('manage_sub_user', 'Manage sub-users'),
-            ('manage_funding_sources', 'Manage funding sources'),
-            ('manage_unload_accounts', 'Manage unload accounts'),
-            ('manage_contract', 'Manage contract'),
-        )
 
     def __str__(self):
         return "Owner account"
 
 
-class AdminUserAccount(Account):
-
-    class Meta:
-        permissions = (
-            ('admin_account_access', 'Admin account access'),
-            ('admin_group_account_access', 'Admin group account access'),
-            ('manage_admin_user', 'Manage admins'),
-            ('manage_tax', 'Manage tax'),
-            ('manage_fee', 'Manage fee'),
-            ('can_login_as_user', 'Login as user')
-        )
-
-    def __str__(self):
-        return "Admin account"
-
-
 class SubUserAccount(Account):
     owner_account = models.ForeignKey(UserAccount, on_delete=models.CASCADE, related_name="sub_user_accounts")
+
+    @property 
+    def is_owner(self):
+        return False
 
     def __str__(self):
         return "Sub user account"
@@ -202,33 +181,26 @@ class SubUserAccount(Account):
 
 class SubUserPermission(Model):
     account = models.OneToOneField(SubUserAccount, on_delete=models.CASCADE, related_name="permission")
-    manage_sub_user = models.BooleanField(_('manage sub users'), default=False)
+    load_funds = models.BooleanField(_('load_funds'), default=False)
     manage_funding_sources = models.BooleanField(_('manage funding sources'), default=False)
-    manage_unload_accounts = models.BooleanField(_('manage unload accounts'), default=False)
-    manage_contract = models.BooleanField(_('create contract'), default=False)
+    manage_payees = models.BooleanField(_('manage_payees'), default=False)
+    manage_schedules = models.BooleanField(_('manage schedules'), default=False)
 
-    @transaction.atomic
-    def save(self, *args, **kwargs):
-        from frontend_api.utils import sync_sub_user_permissions
-        sync_sub_user_permissions(self)
-        return super().save(*args, **kwargs)
 
     def __str__(self):
         return "Sub user permission"
 
 
+class AdminUserAccount(Account):
+
+    def __str__(self):
+        return "Admin account"
+
+
 class AdminUserPermission(Model):
     account = models.OneToOneField(AdminUserAccount, on_delete=models.CASCADE, related_name="permission")
-    manage_admin_user = models.BooleanField(_('manage admins'), default=False)
     manage_tax = models.BooleanField(_('manage tax'), default=False)
     manage_fee = models.BooleanField(_('manage fee'), default=False)
-    can_login_as_user = models.BooleanField(_('can login'), default=False)
-
-    @transaction.atomic
-    def save(self, *args, **kwargs):
-        from frontend_api.utils import sync_admin_user_permissions
-        sync_admin_user_permissions(self)
-        return super().save(*args, **kwargs)
 
     def __str__(self):
         return "Admin user permission"

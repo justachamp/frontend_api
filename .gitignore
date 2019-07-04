@@ -8,3 +8,5 @@ docker/environment
 docker/.env
 **/.idea
 *.DS_store
+env.sh
+aux

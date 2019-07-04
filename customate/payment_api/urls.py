@@ -128,5 +128,3 @@ urlpatterns = [
     path('cats/', CatView.as_view()),
     #path('snippets/<int:pk>/', views.SnippetDetail.as_view()),
 ]
-
-

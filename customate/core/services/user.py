@@ -4,7 +4,6 @@ from django.contrib.auth import get_user_model
 from core.models import Address
 from core.fields import UserRole, UserStatus
 
-from frontend_api.utils import assign_permissions
 from frontend_api.fields import AccountType
 from frontend_api.models import Account, Company, AdminUserAccount, SubUserAccount, UserAccount
 from frontend_api.core.client import PaymentApiClient
@@ -43,7 +42,6 @@ class UserService(object):
 
         account.save()
         user.save()
-        assign_permissions(user)
 
     def get_user_by_external_identity(self, identity, user_data=None, auto_create=False):
         try:

@@ -35,7 +35,7 @@ from frontend_api.serializers import (
     UserSerializer
 )
 
-from frontend_api.permissions import IsOwnerOrReadOnly
+from frontend_api.permissions import IsOwnerOrReadOnly, IsSuperAdminOrReadOnly
 
 from ..views import (
     PatchRelatedMixin,
@@ -98,7 +98,7 @@ class AccountViewSet(RelationshipMixin, PatchRelatedMixin, views.ModelViewSet):
 
     queryset = Account.objects.all()
     serializer_class = AccountSerializer
-    permission_classes = (IsOwnerOrReadOnly,)
+    permission_classes = (IsSuperAdminOrReadOnly|IsOwnerOrReadOnly,)
 
     filter_backends = (filters.QueryParameterValidationFilter, filters.OrderingFilter,
                        django_filters.DjangoFilterBackend, SearchFilter)
@@ -170,9 +170,8 @@ class AccountViewSet(RelationshipMixin, PatchRelatedMixin, views.ModelViewSet):
             user.email_verified = True
             user.save()
             invitation.pk = user.id
-
-            return response.Response(
-                CognitoInviteUserSerializer(instance=invitation, context={'request': request}).data)
+            resp = CognitoInviteUserSerializer(instance=invitation, context={'request': request}).data
+            return response.Response(resp)
 
     @action(methods=['POST'], detail=True, name='Invite sub user')
     @transaction.atomic
@@ -198,7 +197,7 @@ class UserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.ModelVi
 
     queryset = UserAccount.objects.all()
     serializer_class = UserAccountSerializer
-    permission_classes = (AllowAny,)
+    permission_classes = (IsSuperAdminOrReadOnly|IsOwnerOrReadOnly,)
 
     ordering_fields = ('user__email', 'user__username', 'user__status', 'user__first_name',
                        'user__last_name', 'user_middle_name', 'user__phone_number',
@@ -227,7 +226,7 @@ class AdminUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.Mo
 
     queryset = AdminUserAccount.objects.all()
     serializer_class = AdminUserAccountSerializer
-    permission_classes = (AllowAny,)
+    permission_classes = (IsSuperAdminOrReadOnly,)
 
     ordering_fields = ('user__email', 'user__username', 'user__status', 'user__first_name',
                        'user__last_name', 'user_middle_name', 'user__phone_number',
@@ -325,7 +324,7 @@ class SubUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.Mode
 
     queryset = SubUserAccount.objects.all()
     serializer_class = SubUserAccountSerializer
-    permission_classes = (IsOwnerOrReadOnly,)
+    permission_classes = (IsSuperAdminOrReadOnly|IsOwnerOrReadOnly,)
 
     # TODO move to service
     def get_owner_account(self):

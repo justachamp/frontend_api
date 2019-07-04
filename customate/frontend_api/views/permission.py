@@ -2,7 +2,7 @@ from rest_framework_json_api.views import RelationshipView
 
 from core import views
 
-from frontend_api.permissions import IsOwnerOrReadOnly
+from frontend_api.permissions import IsOwnerOrReadOnly, IsSuperAdminOrReadOnly
 from frontend_api.models import SubUserPermission, AdminUserPermission
 from frontend_api.serializers import SubUserPermissionSerializer, AdminUserPermissionSerializer
 
@@ -42,7 +42,7 @@ class AdminUserPermissionViewSet(PatchRelatedMixin, views.ModelViewSet):
 
     queryset = AdminUserPermission.objects.all()
     serializer_class = AdminUserPermissionSerializer
-    permission_classes = (IsOwnerOrReadOnly,)
+    permission_classes = (IsSuperAdminOrReadOnly,)
 
     def perform_create(self, serializer):
         logger.error('perform create')

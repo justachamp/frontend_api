@@ -71,6 +71,7 @@ class Command(BaseCommand):
                         user = serializer.save()
                         user.cognito_id = invitation.id
                         user.email_verified = True
+                        user.is_superuser = True
                         user.save()
                         invitation.pk = user.id
                     self.stdout.write(

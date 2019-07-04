@@ -17,7 +17,7 @@ from frontend_api.serializers import (
     UserStatusSerializer
 )
 
-from frontend_api.permissions import IsOwnerOrReadOnly
+from frontend_api.permissions import IsOwnerOrReadOnly, IsSuperAdminOrReadOnly 
 
 from ..views import PatchRelatedMixin, RelationshipPostMixin
 
@@ -37,7 +37,7 @@ class AdminUserViewSet(PatchRelatedMixin, views.ModelViewSet):
     queryset = User.objects.all().filter(role=UserRole.admin).order_by('-date_joined')
     serializer_class = AdminUserSerializer
     allowed_methods = ['head', 'get']
-    permission_classes = (IsOwnerOrReadOnly,)
+    permission_classes = (IsSuperAdminOrReadOnly,)
 
     def update(self, request, *args, **kwargs):
         return super().update(request, *args, **kwargs)

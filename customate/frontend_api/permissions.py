@@ -89,108 +89,70 @@ class IsOwnerOrReadOnly(permissions.BasePermission):
     """
     Custom permission to only allow owners of an object to edit it.
     """
-
-    def has_object_permission(self, request, view, obj):
-        # Read permissions are allowed to any request,
-        # so we'll always allow GET, HEAD or OPTIONS requests.
-        logger.error('IsOwnerOrReadOnly')
+    def has_permission(self, request, view):
         if request.method in permissions.SAFE_METHODS:
             return True
-
-        # Write permissions are only allowed to the owner of the snippet.
-        # raise Exception(f'obj {obj}')
-
-        return True #obj.owner == request.user
+        return request.user.account.is_owner
 
 
-class UserPermission(permissions.BasePermission):
-
-
+class SubUserLoadFundsPermission(permissions.BasePermission):
     """
-    Custom permission to only allow owners of an object to edit it.
+    Custom permission to only allow subusers of an object to edit it.
     """
+    def has_permission(self, request, view):
+        return getattr(request.user.account.permission, "load_funds")
 
-    def has_object_permission(self, request, view, obj):
-        # Read permissions are allowed to any request,
-        # so we'll always allow GET, HEAD or OPTIONS requests.
-        logger.error('IsOwnerOrReadOnly')
+
+class SubUserManageFundingSourcesPermission(permissions.BasePermission):
+    """
+    Custom permission to only allow subusers of an object to edit it.
+    """
+    def has_permission(self, request, view):
+        return getattr(request.user.account.permission, "manage_funding_sources")
+
+
+class SubUserManageSchedulesPermission(permissions.BasePermission):
+    """
+    Custom permission to only allow subusers of an object to edit it.
+    """
+    def has_permission(self, request, view):
+        return getattr(request.user.account.permission, "manage_schedules")
+
+
+class SubUserManagePayeesPermission(permissions.BasePermission):
+    """
+    Custom permission to only allow subusers of an object to edit it.
+    """
+    def has_permission(self, request, view):
+        return getattr(request.user.account.permission, "manage_payees")
+
+
+class IsSuperAdminOrReadOnly(permissions.BasePermission):
+    """
+    Custom permission to only allow super admins.
+    """
+    def has_permission(self, request, view):
         if request.method in permissions.SAFE_METHODS:
             return True
-
-        # Write permissions are only allowed to the owner of the snippet.
-        # raise Exception(f'obj {obj}')
+        return request.user.is_superuser 
 
 
-        return True #obj.owner == request.user
-
-    # account = models.OneToOneField(SubUserAccount, on_delete=models.CASCADE, related_name="permission")
-    #
-    #
-    # # manage_sub_user
-    # # view, create, update, delete
-    # manage_funding_sources = models.BooleanField(_('manage funding sources'), default=False)
-    # # view, create, update, delete
-    #
-    # manage_unload_accounts = models.BooleanField(_('manage unload accounts'), default=False)
-    # # view, create, update, delete
-    #
-    #
-    # create_transaction = models.BooleanField(_('create transaction'), default=False)
-    #
-    #
-    # create_contract = models.BooleanField(_('create contract'), default=False)
-    #
-    # load_funds = models.BooleanField(_('create transaction'), default=False)
-    # unload_funds = models.BooleanField(_('create transaction'), default=False)
-
-
-class AccountUserPermission(UserPermission):
+class AdminUserTaxPermission(permissions.BasePermission):
     """
-    Custom permission to only allow owners of an object to edit it.
+    Custom permission to only allow arbitrary admins.
     """
-    def has_object_permission(self, request, view, obj):
-        # Read permissions are allowed to any request,
-        # so we'll always allow GET, HEAD or OPTIONS requests.
-        logger.error('IsOwnerOrReadOnly')
-        if request.method in permissions.SAFE_METHODS:
-            return True
-
-        # Write permissions are only allowed to the owner of the snippet.
-        # raise Exception(f'obj {obj}')
-
-        return True  # obj.owner == request.user
+    def has_permission(self, request, view):
+        if request.user.is_staff:
+            return getattr(request.user.account.permission, "manage_tax")
 
 
-class SubUserPermission(UserPermission):
+class AdminUserFeePermission(permissions.BasePermission):
     """
-    Custom permission to only allow owners of an object to edit it.
+    Custom permission to only allow arbitrary admins.
     """
-    def has_object_permission(self, request, view, obj):
-        # Read permissions are allowed to any request,
-        # so we'll always allow GET, HEAD or OPTIONS requests.
-        logger.error('IsOwnerOrReadOnly')
-        if request.method in permissions.SAFE_METHODS:
-            return True
-
-        # Write permissions are only allowed to the owner of the snippet.
-        # raise Exception(f'obj {obj}')
-
-        return True  # obj.owner == request.user
+    def has_permission(self, request, view):
+        if request.user.is_staff:
+            return getattr(request.user.account.permission, "manage_fee")
 
 
-
-class AdminUserPermission(UserPermission):
-    """
-    Custom permission to only allow owners of an object to edit it.
-    """
-    def has_object_permission(self, request, view, obj):
-        # Read permissions are allowed to any request,
-        # so we'll always allow GET, HEAD or OPTIONS requests.
-        logger.error('IsOwnerOrReadOnly')
-        if request.method in permissions.SAFE_METHODS:
-            return True
-
-        # Write permissions are only allowed to the owner of the snippet.
-        # raise Exception(f'obj {obj}')
-
-        return True  # obj.owner == request.user
+# pull request

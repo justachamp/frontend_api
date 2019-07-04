@@ -37,6 +37,8 @@ urlpatterns = [
             ),
 
     # TODO: need remove
+    
+    # Invite/resend_invite
     re_path(r'^accounts/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
             views.AccountViewSet.as_view({'get': 'retrieve_related', 'patch': 'patch_related'}),
             name='account-related'),
@@ -82,7 +84,8 @@ urlpatterns = [
             view=views.SubUserPermissionRelationshipView.as_view(),
             name='sub-user-permission-relationships'
             ),
-
+    # pk - 
+    # related_field - 
     re_path(r'^admin_user_accounts/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
             views.AdminUserAccountViewSet.as_view({'get': 'retrieve_related', 'patch': 'patch_related'}),
             name='admin-user-account-related'),

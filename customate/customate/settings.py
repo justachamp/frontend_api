@@ -51,7 +51,6 @@ INSTALLED_APPS = [
     'frontend_api.apps.FrontendApiConfig',
     'payment_api.apps.PaymentApiConfig',
     'storages',
-    'guardian',
     'django_filters'
 ]
 
@@ -69,7 +68,6 @@ MIDDLEWARE = [
 
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
-    'guardian.backends.ObjectPermissionBackend'
 ]
 
 COGNITO_USER_POOL_ID = environ['COGNITO_USER_POOL_ID']

@@ -1,3 +1,4 @@
+import logging
 
 from rest_framework_json_api.serializers import (
     HyperlinkedModelSerializer,
@@ -24,6 +25,8 @@ from ..serializers import (
     UniqueValidator,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class BaseUserSerializer(HyperlinkedModelSerializer):
     role = EnumField(enum=UserRole, read_only=True)
@@ -38,7 +41,7 @@ class BaseUserSerializer(HyperlinkedModelSerializer):
     class Meta:
         model = User
         fields = ('url', 'role', 'status', 'username', 'first_name', 'last_name', 'middle_name', 'phone_number',
-                  'phone_number_verified', 'email_verified', 'is_verified',
+                  'phone_number_verified', 'email_verified', 'is_verified', 'is_superuser',
                   'birth_date', 'last_name', 'email', 'address', 'account', 'title', 'gender', 'country_of_birth',
                   'mother_maiden_name', 'passport_number', 'passport_date_expiry', 'passport_country_origin')
 
@@ -133,6 +136,7 @@ class AdminUserSerializer(BaseUserSerializer):
         user = User(**validated_data)
         user.role = UserRole.admin
         user.status = UserStatus.pending
+        user.is_staff = True
         address = Address()
         address.save()
         user.address = address
