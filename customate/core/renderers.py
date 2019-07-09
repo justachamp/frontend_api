@@ -1,11 +1,11 @@
 """
 Renderers
 """
-
+import logging
 from collections import OrderedDict
 
 from django.utils import encoding
-from jsonapi_client.resourceobject import ResourceObject
+from jsonapi_client.resourceobject import ResourceObject as JSONAPIClientResourceObject
 from rest_framework import relations
 
 from rest_framework.settings import api_settings
@@ -13,6 +13,7 @@ from rest_framework.settings import api_settings
 from rest_framework_json_api import utils
 from rest_framework_json_api.renderers import JSONRenderer
 
+logger = logging.getLogger(__name__)
 
 
 class ExternalResourceWrapper:
@@ -40,7 +41,7 @@ class ExternalResourceWrapper:
             return def_val
 
 
-class JSONRenderer(JSONRenderer):
+class CustomateJSONRenderer(JSONRenderer):
 
     @classmethod
     def build_json_resource_obj(cls, fields, resource, resource_instance, resource_name,
@@ -53,7 +54,7 @@ class JSONRenderer(JSONRenderer):
             resource_name = utils.get_resource_type_from_instance(resource_instance)
 
         if isinstance(resource_instance, dict):
-            print("RES INSTANCE=%r" % resource_instance)
+            logger.debug("RES INSTANCE=%r" % resource_instance)
             pk = resource_instance["id"]
         else:
             pk = resource_instance.pk if hasattr(resource_instance, 'pk') else resource_instance.id
@@ -80,5 +81,5 @@ class JSONRenderer(JSONRenderer):
     @classmethod
     def extract_relationships(cls, fields, resource, resource_instance):
         resource_instance = ExternalResourceWrapper(resource_instance) \
-            if isinstance(resource_instance, (ResourceObject,)) else resource_instance
+            if isinstance(resource_instance, JSONAPIClientResourceObject) else resource_instance
         return super().extract_relationships(fields, resource, resource_instance)

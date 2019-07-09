@@ -210,7 +210,7 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_RENDERER_CLASSES': (
         # 'rest_framework_json_api.renderers.JSONRenderer',
-        'core.renderers.JSONRenderer',
+        'core.renderers.CustomateJSONRenderer',
         # If you're performance testing, you will want to use the browseable API
         # without forms, as the forms can generate their own queries.
         # If performance testing, enable:

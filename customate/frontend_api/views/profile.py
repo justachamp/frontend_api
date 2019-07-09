@@ -7,13 +7,13 @@ from frontend_api.serializers import (
 from frontend_api.permissions import CheckFieldsCredentials
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 from frontend_api.services.account import ProfileService
 
 
 class DomainService:
-
     _service_object = None
     __service = None
 
@@ -27,9 +27,8 @@ class DomainService:
 
 
 class ProfileView(DomainService, APIView):
-
     permission_classes = (CheckFieldsCredentials,)
-    _service_object=ProfileService
+    _service_object = ProfileService
 
     credentials_required_fields = ['user.email', 'user.phone_number']
 

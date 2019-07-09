@@ -12,6 +12,9 @@ logger = logging.getLogger(__name__)
 class CatView(views.APIView):
     """
     Sample dummy view to test DRF without specific models.
+    Inspired by https://medium.com/django-rest-framework/django-rest-framework-viewset-when-you-don-t-have-a-model-335a0490ba6f
+
+    https://github.com/linovia/drf-demo
 
     """
     permission_classes = (AllowAny,)
