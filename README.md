@@ -36,6 +36,24 @@ $ pip install -r requirements.txt
 
 ```
 
+If there will be an issue with psycopg2, similar to this:
+```
+ld: library not found for -lssl
+    clang: error: linker command failed with exit code 1 (use -v to see invocation)
+    error: command 'clang' failed with exit status 1
+```
+
+try get paths with 
+
+```
+pg_config --ldflags
+```
+
+and then run:
+
+```
+env LDFLAGS='-L../../src/common -L/usr/local/opt/openssl/lib -L/usr/local/opt/readline/lib -Wl,-dead_strip_dylibs' pip install psycopg2==2.8.2
+```
 
 ### Setup local env
 ```
