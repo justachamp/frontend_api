@@ -121,7 +121,7 @@ class Address(GBGData):
         GBG serialization
         :return:
         """
-        full_address = "{} {} {} {}".format(
+        full_address = "{}, {}, {}, {}".format(
             self.address_line_1,
             self.address_line_2,
             self.city,
