@@ -31,8 +31,15 @@ class CheckFieldsCredentials(permissions.BasePermission):
 
     def check_credentials_required(self, request, view):
         data = request.data
-        for field in view.credentials_required_fields:
-            if self.check_field_in_request_data(request, field, data):
+
+        # view.credentials_required_fields = {
+        #     'key': None - to avoid conditional check
+        #     'key': func - to add conditional check before calling validate_credentials
+        # }
+
+        for field, skip_validate_credentials_func in view.credentials_required_fields.items():
+            if self.check_field_in_request_data(request, field, data) \
+                    and (skip_validate_credentials_func is None or skip_validate_credentials_func(request)):
                 return self.validate_credentials(request)
         request.data.pop("credentials", None)
 

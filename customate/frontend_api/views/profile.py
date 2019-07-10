@@ -30,7 +30,12 @@ class ProfileView(DomainService, APIView):
     permission_classes = (CheckFieldsCredentials,)
     _service_object = ProfileService
 
-    credentials_required_fields = ['user.email', 'user.phone_number']
+    credentials_required_fields = {}
+
+    def __init__(self, *args, **kwargs):
+        self.credentials_required_fields['user.email'] = ProfileView.can_change_email_without_credentials
+        self.credentials_required_fields['user.phone_number'] = ProfileView.can_change_phone_without_credentials
+        super().__init__(*args, **kwargs)
 
     def get(self, request, pk):
         self.service = request.user, None
@@ -53,3 +58,11 @@ class ProfileView(DomainService, APIView):
         serializer.is_valid(True)
         serializer.save()
         return response.Response(serializer.data)
+
+    @staticmethod
+    def can_change_email_without_credentials(request):
+        return not request.user.email_verified
+
+    @staticmethod
+    def can_change_phone_without_credentials(request):
+        return not request.user.phone_number_verified
