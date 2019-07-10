@@ -39,7 +39,7 @@ class CheckFieldsCredentials(permissions.BasePermission):
 
         for field, skip_validate_credentials_func in view.credentials_required_fields.items():
             if self.check_field_in_request_data(request, field, data) \
-                    and (skip_validate_credentials_func is None or (callable(skip_validate_credentials_func) and skip_validate_credentials_func(request))):
+                    and (skip_validate_credentials_func is None or (callable(skip_validate_credentials_func) and not skip_validate_credentials_func(request))):
                 return self.validate_credentials(request)
         request.data.pop("credentials", None)
 
