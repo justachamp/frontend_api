@@ -125,7 +125,7 @@ urlpatterns = [
             view=views.AddressRelationshipView.as_view(),
             name='address-relationships'
             ),
-path('profiles/<pk>/', view=views.ProfileView.as_view(), name='profiles')
+    path('profiles/<pk>/', view=views.ProfileView.as_view(), name='profiles'),
 
     # re_path(r'^profiles/(?P<pk>[^/.]+)$',
     #         view=views.ProfileView.as_view(),

@@ -21,6 +21,8 @@ from frontend_api.serializers.address import AddressSerializer, UserAddressSeria
 from frontend_api.serializers.shareholder import ShareholderSerializer
 from frontend_api.serializers.profile import ProfileSerializer
 
+from frontend_api.serializers.schedule import ScheduleSerializer
+
 
 # from payment_api.core.resource.fields import ExternalResourceRelatedField
 
@@ -57,5 +59,6 @@ __all__ = [
     AdminUserPermissionSerializer,
     ShareholderSerializer,
     ProfileSerializer,
+    ScheduleSerializer,
     # ExternalResourceRelatedField
 ]

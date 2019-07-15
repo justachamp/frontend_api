@@ -1,4 +1,4 @@
-from enumfields import Enum, EnumField  # Uses Ethan Furman's "enum34" backport
+from enumfields import Enum
 
 
 class CompanyType(Enum):
@@ -23,7 +23,6 @@ class CompanyType(Enum):
 
 
 class AccountType(Enum):
-
     personal = 'personal'
     business = 'business'
 
@@ -35,3 +34,38 @@ class AccountType(Enum):
         return self.value
 
 
+class ScheduleStatus(Enum):
+    open = 'open'
+    closed = 'closed'
+    overdue = 'overdue'
+    cancelled = 'cancelled'
+
+    class Labels:
+        open = 'Open'
+        closed = 'Closed'
+        overdue = 'Overdue'
+        cancelled = 'Cancelled'
+
+
+class SchedulePurpose(Enum):
+    receive = 'receive'
+    pay = 'pay'
+
+    class Labels:
+        receive = 'Receive funds'
+        pay = 'Pay funds'
+
+
+class SchedulePeriod(Enum):
+    one_time = 'one time'
+    weekly = 'weekly'
+    monthly = 'monthly'
+    quarterly = 'quarterly'
+    yearly = 'yearly'
+
+    class Labels:
+        one_time = 'One time payment'
+        weekly = 'Weekly'
+        monthly = 'Monthly'
+        quarterly = 'Quarterly'
+        yearly = 'Yearly'

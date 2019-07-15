@@ -17,7 +17,7 @@ router.register('shareholders', views.ShareholderViewSet)
 router.register('addresses', views.AddressViewSet)
 router.register('accounts', views.AccountViewSet)
 router.register('dataset', views.DatasetView, basename='dataset')
+router.register('schedules', views.ScheduleViewSet)
 # router.register('profiles', views.ProfileView.as_view())
-
 
 urlpatterns = router.urls

@@ -1,4 +1,5 @@
 from django.utils.functional import cached_property
+from jsonapi_client.common import HttpMethod
 from rest_framework.exceptions import ValidationError
 from jsonapi_client import Session as DefaultSession, Filter, ResourceTuple, Modifier
 import logging
@@ -57,6 +58,10 @@ class Session(DefaultSession):
     def _ext_fetch_by_url(self, url: str) -> 'Document':
         logger.info(f'fetch_by_url: {url}')
         return super()._ext_fetch_by_url(url)
+
+    def remove_by_filters(self, resource_type, filters):
+        url = self._url_for_resource(resource_type, None, filters)
+        return self.http_request(http_method=HttpMethod.DELETE, url=url, send_json={})
 
 
 class Client(ResourceMappingMixin, JsonApiErrorParser):

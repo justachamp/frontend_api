@@ -37,6 +37,5 @@ class PaymentViewSet(ResourceViewSet):
 
 
 class PaymentRelationshipView(ResourceRelationshipView):
-    serializer_class = PaymentSerializer
     resource_name = 'payments'
-
+    serializer_class = PaymentSerializer

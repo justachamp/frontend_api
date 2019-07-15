@@ -28,6 +28,7 @@ IMMUTABLE_USER_FIELDS_IF_VERIFIED = (
     'mother_maiden_name',
 )
 
+# TODO: Refactor 'service' classes to remove them at all (move logic to Views/Models as appropriate)
 
 class AccountService:
     _profile = None

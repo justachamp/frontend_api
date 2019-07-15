@@ -23,6 +23,7 @@ from .permission import (
 from .shareholder import ShareholderRelationshipView, ShareholderViewSet
 from .user import AdminUserViewSet, UserViewSet, UserRelationshipView
 from .profile import ProfileView
+from .schedule import ScheduleViewSet
 
 __all__ = [
     PatchRelatedMixin,
@@ -52,5 +53,6 @@ __all__ = [
     UserRelationshipView,
     CompanyRelationshipView,
     CompanyViewSet,
-    ProfileView
+    ProfileView,
+    ScheduleViewSet
 ]

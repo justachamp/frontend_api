@@ -6,9 +6,11 @@ from django.contrib.postgres.fields import JSONField
 from django.core.serializers.json import DjangoJSONEncoder
 
 from core.models import Model, Address
+from core.fields import Currency
+
 from django.contrib.auth import get_user_model
 from enumfields import EnumField
-from frontend_api.fields import AccountType, CompanyType
+from frontend_api.fields import AccountType, CompanyType, SchedulePurpose, SchedulePeriod, ScheduleStatus
 
 from polymorphic.models import PolymorphicModel
 
@@ -157,7 +159,7 @@ class UserAccount(Account):
     def payment_account(self, payment_account):
         self._payment_account = payment_account
 
-    @property 
+    @property
     def is_owner(self):
         return True
 
@@ -168,10 +170,16 @@ class UserAccount(Account):
         return "Owner account"
 
 
+class AdminUserAccount(Account):
+
+    def __str__(self):
+        return "Admin account"
+
+
 class SubUserAccount(Account):
     owner_account = models.ForeignKey(UserAccount, on_delete=models.CASCADE, related_name="sub_user_accounts")
 
-    @property 
+    @property
     def is_owner(self):
         return False
 
@@ -186,15 +194,8 @@ class SubUserPermission(Model):
     manage_payees = models.BooleanField(_('manage_payees'), default=False)
     manage_schedules = models.BooleanField(_('manage schedules'), default=False)
 
-
     def __str__(self):
         return "Sub user permission"
-
-
-class AdminUserAccount(Account):
-
-    def __str__(self):
-        return "Admin account"
 
 
 class AdminUserPermission(Model):
@@ -223,3 +224,33 @@ class Shareholder(Model):
 
     def __str__(self):
         return "%s the shareholder" % self.last_name
+
+
+class Schedule(Model):
+    name = models.CharField(_('schedule name'), max_length=150)
+    status = EnumField(ScheduleStatus)
+    user = models.ForeignKey(
+        get_user_model(),
+        on_delete=models.CASCADE,
+        blank=False
+    )
+    purpose = EnumField(SchedulePurpose)
+    currency = EnumField(Currency)
+    payee_id = models.UUIDField(help_text=_("Money recipient"))
+    funding_source_id = models.UUIDField()
+    period = EnumField(SchedulePeriod)
+    number_of_payments_left = models.PositiveIntegerField(
+        default=0, help_text=_("Number of payments left in the current schedule. Changes dynamically in time")
+    )
+    start_date = models.DateField()
+    payment_amount = models.PositiveIntegerField()
+    deposit_amount = models.PositiveIntegerField(
+        null=True, help_text=_("Initial payment independent of the rest of scheduled payments")
+    )
+    deposit_payment_date = models.DateField(null=True)  # This should be strictly < start_date
+    additional_information = models.CharField(max_length=250, blank=True, null=True)
+    total_paid_sum = models.PositiveIntegerField(default=0, help_text=_("Total sum of all Schedule's paid payments"))
+    total_sum_to_pay = models.PositiveIntegerField(
+        default=0,
+        help_text=_("Total sum that should be paid by this schedule")
+    )
