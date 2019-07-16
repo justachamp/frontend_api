@@ -6,6 +6,7 @@ Create ongoing payments in time based on previously setup contracts/agreements.
 **Endpoint**: ```/api/v1/schedules/```
 
 **Parameters**:
+
 * _name_, required. Human-readable name of schedule
 * _status_, optional. Currently, can be one of `open, closed, overdue, cancelled`
 * _purpose_, required. Can be one of `pay, receive`
@@ -23,8 +24,8 @@ Create ongoing payments in time based on previously setup contracts/agreements.
 
 
 ## Create new schedule
-```http
 
+```http
 POST /api/v1/schedules/ HTTP/1.1
 ACCESSTOKEN: eyJraWQiOiJNZ2dVVnNzdjY2QUdmRkdZaEY4a1dJVUl0bFdFeFpwcnNKNm51WmZMazFRPSIsImFsZyI6IlJTMjU2In0.eyJzdWIiOiIzNjIzZWQxZS03MDM4LTQ1ZDctYjAzMS1lZmRiZWU5MTIzYjciLCJldmVudF9pZCI6ImFiMTkyZDk2LTllODQtNDRiYy05NTllLTEzNDcwNzI0YTUyYSIsInRva2VuX3VzZSI6ImFjY2VzcyIsInNjb3BlIjoiYXdzLmNvZ25pdG8uc2lnbmluLnVzZXIuYWRtaW4iLCJhdXRoX3RpbWUiOjE1NjMzMTY0NjEsImlzcyI6Imh0dHBzOlwvXC9jb2duaXRvLWlkcC5ldS13ZXN0LTIuYW1hem9uYXdzLmNvbVwvZXUtd2VzdC0yX2J6U2ZnQ3pYSiIsImV4cCI6MTU2MzMyMDA2MSwiaWF0IjoxNTYzMzE2NDYxLCJqdGkiOiI0NDkzZmMxMC00MzZmLTQxZmUtOWFkZi1lMTdkOGRiMGRjZDMiLCJjbGllbnRfaWQiOiIxdDkzYm5tajFsbTY0dWQyb3ZuaTExdmZrNiIsInVzZXJuYW1lIjoiMzYyM2VkMWUtNzAzOC00NWQ3LWIwMzEtZWZkYmVlOTEyM2I3In0.PWBX8uXhijDlJZZT7nNuw_v6uiI8_mWoBx4bOQED3_wpnVwKF1FYVr0qfjQlwv0Jdwhlut7h_GI__L2smv_junkinWmq2ieCYQ4C-n9Rvoe4yYFK4NmcxcXXN1jU0kHIkjiOP-sh1ra2CJCP1wC6S-n_z7S_9Wj-etVbmmCwNdx2JhnBiZfnmcu31tubXF_AIXr4ngpwlv1KuOabuZEHX-LL-hxaF2lJaZTUES-WG2Cx8faqWXmI-5DbNGwi0aCMAScOeMI-DMQZpoqcdXT_BGFjZTBqKXTZ6Qr_aQegS3xEDsqP99CyHDC1PfgrsSvG80uQ3ZP3kSzighBjSJfJWw
 Accept: application/json, */*
@@ -60,7 +61,9 @@ User-Agent: HTTPie/1.0.2
         "type": "Schedule"
     }
 }
+```
 
+```http
 HTTP/1.1 201 Created
 Allow: GET, POST, HEAD, OPTIONS
 Content-Length: 486
@@ -96,9 +99,11 @@ X-Frame-Options: SAMEORIGIN
 
 ```
 
+
 ### Possible error responses
 
-```
+
+```http
 HTTP/1.1 400 Bad Request
 Allow: GET, POST, HEAD, OPTIONS
 Content-Length: 136
@@ -123,7 +128,7 @@ X-Frame-Options: SAMEORIGIN
 ```
 
 
-```
+```http
 
 HTTP/1.1 400 Bad Request
 Allow: GET, POST, HEAD, OPTIONS
@@ -149,7 +154,8 @@ X-Frame-Options: SAMEORIGIN
 ```
 
 
-```
+```http
+
 HTTP/1.1 400 Bad Request
 Allow: GET, POST, HEAD, OPTIONS
 Content-Length: 125
