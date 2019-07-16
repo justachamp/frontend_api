@@ -2,6 +2,7 @@ from rest_framework import permissions
 from rest_framework.exceptions import ValidationError
 
 from authentication.cognito.serializers import CognitoAuthRetrieveSerializer
+from core.fields import UserRole
 
 import logging
 logger = logging.getLogger(__name__)
@@ -92,7 +93,7 @@ class IsOwnerOrReadOnly(permissions.BasePermission):
     def has_permission(self, request, view):
         if request.method in permissions.SAFE_METHODS:
             return True
-        return request.user.account.is_owner
+        return request.user.role == UserRole.owner
 
 
 class SubUserLoadFundsPermission(permissions.BasePermission):

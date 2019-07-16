@@ -73,6 +73,9 @@ class Command(BaseCommand):
                         user.email_verified = True
                         user.is_superuser = True
                         user.save()
+                        user.account.permission.manage_tax = True 
+                        user.account.permission.manage_fee = True
+                        user.account.permission.save()
                         invitation.pk = user.id
                     self.stdout.write(
                         self.style.MIGRATE_LABEL(

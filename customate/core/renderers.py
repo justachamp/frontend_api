@@ -53,11 +53,9 @@ class CustomateJSONRenderer(JSONRenderer):
         if force_type_resolution:
             resource_name = utils.get_resource_type_from_instance(resource_instance)
 
-        if isinstance(resource_instance, dict):
-            logger.debug("RES INSTANCE=%r" % resource_instance)
-            pk = resource_instance["id"]
-        else:
-            pk = resource_instance.pk if hasattr(resource_instance, 'pk') else resource_instance.id
+        pk = (resource_instance.get("pk") if isinstance(resource_instance, dict) else None) or \
+             (resource_instance.pk if hasattr(resource_instance, "pk") else None) or \
+             None
 
         resource_data = [
             ('type', resource_name),
