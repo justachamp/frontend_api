@@ -23,15 +23,15 @@ logger = logging.getLogger(__name__)
 
 class ScheduleSerializer(HyperlinkedModelSerializer):
     name = CharField(required=True, validators=[UniqueValidator(queryset=Schedule.objects.all())])
-    status = EnumField(enum=ScheduleStatus, default=ScheduleStatus.open)
+    status = EnumField(enum=ScheduleStatus, default=ScheduleStatus.open, required=False)
     purpose = EnumField(enum=SchedulePurpose, required=True)
     currency = EnumField(enum=Currency, required=True)
     period = EnumField(enum=SchedulePeriod, required=True)
     number_of_payments_left = IntegerField(required=True)
     start_date = TimestampField
     payment_amount = IntegerField(required=True)
-    deposit_amount = IntegerField()
-    deposit_payment_date = TimestampField  # TODO: Validate that this should be strictly < start_date
+    deposit_amount = IntegerField(required=False)
+    deposit_payment_date = TimestampField(required=False)  # TODO: Validate that this should be strictly < start_date
     additional_information = CharField(required=False)
     payee_id = UUIDField(required=True)
     funding_source_id = UUIDField(required=True)
@@ -60,9 +60,9 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
         logger.info("VALIDATE, res=%r" % res)
         try:
             # TODO: custom validation logic here
-            if res["deposit_payment_date"] > res["start_date"]:
-                raise ValidationError("Deposit payment date must come prior to start date")
-
+            # if res["deposit_payment_date"] > res["start_date"]:
+            #     raise ValidationError("Deposit payment date must come prior to start date")
+            pass
         except Exception as e:
             logger.error(": %r" % format_exc())
             raise ValidationError("Schedule validation failed")
