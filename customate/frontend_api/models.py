@@ -243,13 +243,18 @@ class Schedule(Model):
         default=0, help_text=_("Number of payments left in the current schedule. Changes dynamically in time")
     )
     start_date = models.DateField()
+
+    #TODO: change PositiveInteger to DecimalField
     payment_amount = models.PositiveIntegerField()
     deposit_amount = models.PositiveIntegerField(
         null=True, help_text=_("Initial payment independent of the rest of scheduled payments")
     )
     deposit_payment_date = models.DateField(null=True)  # This should be strictly < start_date
     additional_information = models.CharField(max_length=250, blank=True, null=True)
-    total_paid_sum = models.PositiveIntegerField(default=0, help_text=_("Total sum of all Schedule's paid payments"))
+    total_paid_sum = models.PositiveIntegerField(
+        default=0,
+        help_text=_("Total sum of all Schedule's paid payments")
+    )
     total_sum_to_pay = models.PositiveIntegerField(
         default=0,
         help_text=_("Total sum that should be paid by this schedule")

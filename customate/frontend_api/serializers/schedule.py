@@ -1,13 +1,13 @@
 from collections import OrderedDict
 import logging
 from traceback import format_exc
+import arrow
 from rest_framework.serializers import ValidationError
+from rest_framework_json_api.serializers import HyperlinkedModelSerializer
 
-from rest_framework_json_api.serializers import (
-    HyperlinkedModelSerializer,
-    IntegerField)
+from rest_framework.fields import DateField, IntegerField
+from core.fields import Currency
 
-from core.fields import Currency, TimestampField
 from frontend_api.fields import ScheduleStatus, SchedulePeriod, SchedulePurpose
 from frontend_api.models import Schedule
 
@@ -28,15 +28,15 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
     currency = EnumField(enum=Currency, required=True)
     period = EnumField(enum=SchedulePeriod, required=True)
     number_of_payments_left = IntegerField(required=True)
-    start_date = TimestampField
+    start_date = DateField(required=True)
     payment_amount = IntegerField(required=True)
     deposit_amount = IntegerField(required=False)
-    deposit_payment_date = TimestampField(required=False)  # TODO: Validate that this should be strictly < start_date
+    deposit_payment_date = DateField(required=False)  # TODO: Validate that this should be strictly < start_date
     additional_information = CharField(required=False)
     payee_id = UUIDField(required=True)
     funding_source_id = UUIDField(required=True)
-    total_paid_sum = IntegerField(default=0)
-    total_sum_to_pay = IntegerField(default=0)
+    total_paid_sum = IntegerField(default=0, required=False)
+    total_sum_to_pay = IntegerField(default=0, required=False)
 
     class Meta:
         model = Schedule
@@ -58,14 +58,29 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
         :rtype: OrderedDict
         """
         logger.info("VALIDATE, res=%r" % res)
+
         try:
-            # TODO: custom validation logic here
-            # if res["deposit_payment_date"] > res["start_date"]:
-            #     raise ValidationError("Deposit payment date must come prior to start date")
-            pass
-        except Exception as e:
-            logger.error(": %r" % format_exc())
+            if res.get("deposit_payment_date"):
+                if res["deposit_payment_date"] < res["start_date"]:
+                    raise ValidationError({
+                        "deposit_payment_date": "Deposit payment date must come prior to start date"
+                    })
+
+                deposit_amount = res.get("deposit_amount")
+                if deposit_amount is None:
+                    raise ValidationError({"deposit_amount": "Please, specify deposit amount"})
+
+                if int(deposit_amount) < 0:
+                    raise ValidationError({"deposit_amount": "Deposit amount should be positive number"})
+
+            if int(res["payment_amount"]) < 0:
+                raise ValidationError({"payment_amount": "Payment amount should be positive number"})
+
+            if arrow.get(res["start_date"]) < arrow.utcnow():
+                raise ValidationError({"start_date": "Start date cannot be in the past"})
+
+        except (ValueError, TypeError):
+            logger.error("Validation failed due to: %r" % format_exc())
             raise ValidationError("Schedule validation failed")
 
         return res
-

@@ -1,4 +1,5 @@
 from core import views
+from django.db.utils import IntegrityError
 from rest_framework.permissions import AllowAny
 from rest_framework.serializers import ValidationError
 from frontend_api.models import Schedule
@@ -30,7 +31,12 @@ class ScheduleViewSet(views.ModelViewSet):
     }
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        try:
+            serializer.save(user=self.request.user)
+        except IntegrityError as e:
+            #TODO: make sure we handle database integrity errors as validation errors as well
+            raise ValidationError(str(e))
+
 
     def get_queryset(self, *args, **kwargs):
         return Schedule.objects.all().filter(user=self.request.user)
