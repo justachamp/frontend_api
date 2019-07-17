@@ -243,7 +243,7 @@ class Schedule(Model):
         default=0, help_text=_("Number of payments left in the current schedule. Changes dynamically in time")
     )
     start_date = models.DateField()
-    payment_amount = models.PositiveIntegerField()
+    payment_amount = models.PositiveIntegerField(customate/frontend_api/exceptions.py)
     fee_amount = models.PositiveIntegerField(
         default=0, help_text=_("Approximate fee amount for all payments (including deposit) in schedule")
     )
