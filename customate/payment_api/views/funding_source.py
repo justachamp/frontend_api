@@ -1,9 +1,9 @@
-import logging
-from rest_framework.permissions import AllowAny
 from payment_api.serializers import FundingSourceSerializer, UpdateFundingSourceSerializer
-
-logger = logging.getLogger(__name__)
-
+from frontend_api.permissions import (
+    IsSuperAdminOrReadOnly,
+    IsOwnerOrReadOnly,
+    SubUserManageFundingSourcesPermission
+)
 from payment_api.views import (
     InclusionFilter,
     OrderingFilter,
@@ -18,7 +18,7 @@ class FundingSourceViewSet(ResourceViewSet):
     resource_name = 'funding_sources'
     paginate_response = False
     serializer_class = FundingSourceSerializer
-    permission_classes = (AllowAny,)
+    permission_classes = (IsSuperAdminOrReadOnly|IsOwnerOrReadOnly|SubUserManageFundingSourcesPermission,)
 
     filter_backends = (
         OrderingFilter,
@@ -46,7 +46,6 @@ class FundingSourceViewSet(ResourceViewSet):
         return UpdateFundingSourceSerializer if self.request.method == 'PATCH' else FundingSourceSerializer
 
     def check_payment_account_id(self, filters, key, value):
-        logger.debug("filters=%r, key=%r, value=%r" % (filters, key, value))
         user = self.request.user
         if not user.is_anonymous and user.is_owner and user.account.payment_account_id:
             return user.account.payment_account_id

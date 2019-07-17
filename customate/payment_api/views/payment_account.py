@@ -1,7 +1,8 @@
-from rest_framework.permissions import AllowAny
 from payment_api.serializers import PaymentAccountSerializer
-
-
+from frontend_api.permissions import (
+    IsSuperAdminOrReadOnly,
+    IsOwnerOrReadOnly,
+)
 from payment_api.views import (
     InclusionFilter,
     IbanGeneralPartFiler,
@@ -17,7 +18,7 @@ from payment_api.views import (
 class PaymentAccountViewSet(ResourceViewSet):
     resource_name = 'payment_accounts'
     serializer_class = PaymentAccountSerializer
-    permission_classes = (AllowAny,)
+    permission_classes = (IsSuperAdminOrReadOnly|IsOwnerOrReadOnly, )
 
     def prepare_request_params(self):
         param = self.request.query_params.get('ibanGeneralPart')
