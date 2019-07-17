@@ -243,9 +243,10 @@ class Schedule(Model):
         default=0, help_text=_("Number of payments left in the current schedule. Changes dynamically in time")
     )
     start_date = models.DateField()
-
-    #TODO: change PositiveInteger to DecimalField
     payment_amount = models.PositiveIntegerField()
+    fee_amount = models.PositiveIntegerField(
+        default=0, help_text=_("Approximate fee amount for all payments (including deposit) in schedule")
+    )
     deposit_amount = models.PositiveIntegerField(
         null=True, help_text=_("Initial payment independent of the rest of scheduled payments")
     )
@@ -259,3 +260,15 @@ class Schedule(Model):
         default=0,
         help_text=_("Total sum that should be paid by this schedule")
     )
+
+    def __init__(self, *args, **kwargs):
+        self._fee_amount = 0  # We accept this value from UI, but don't store it database
+        super().__init__(*args, **kwargs)
+
+    def calculate_and_set_total_sum_to_pay(self):
+        self.total_sum_to_pay = self.fee_amount \
+                                + (self.deposit_amount if self.deposit_amount is not None else 0) \
+                                + (self.payment_amount * self.number_of_payments_left)
+
+    def is_cancelable(self):
+        return self.status in [ScheduleStatus.open, ScheduleStatus.overdue]

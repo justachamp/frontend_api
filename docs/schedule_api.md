@@ -15,6 +15,7 @@ Create ongoing payments in time based on previously setup contracts/agreements.
 * _number_of_payments_left_, required. Integer, which specifies the number of ongoing payments to be made.
 * _start_date_, required. Date in `YYYY-MM-DD` format to initiate first payment
 * _payment_amount_, required. Integer, payment amount
+* _fee_amount_, required. Integer, approximate fee amount for **all payments (including deposit)** in schedule
 * _deposit_payment_date_, optional.  This should be strictly less _start_date_
 * _deposit_amount_, optional. Integer, amount of deposit. Deposit is a one-off payment initiated **prior** to any payments in the schedule
 * _additional_information_, optional. Any textual information
@@ -46,6 +47,7 @@ User-Agent: HTTPie/1.0.2
             "number_of_payments_left": "12",
             "payee_id": "b51bd89f-09db-4597-96d3-33f04de06740",
             "payment_amount": "100",
+            "fee_amount": "20",
             "period": "monthly",
             "purpose": "pay",
             "start_date": "2019-08-01"
@@ -85,6 +87,7 @@ X-Frame-Options: SAMEORIGIN
             "number_of_payments_left": 12,
             "payee_id": "b51bd89f-09db-4597-96d3-33f04de06740",
             "payment_amount": 100,
+            "fee_amount": "20",
             "period": "monthly",
             "purpose": "pay",
             "start_date": "2019-08-01",

@@ -30,6 +30,7 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
     number_of_payments_left = IntegerField(required=True)
     start_date = DateField(required=True)
     payment_amount = IntegerField(required=True)
+    fee_amount = IntegerField(default=0, required=False)
     deposit_amount = IntegerField(required=False)
     deposit_payment_date = DateField(required=False)  # TODO: Validate that this should be strictly < start_date
     additional_information = CharField(required=False)
@@ -42,7 +43,7 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
         model = Schedule
         fields = (
             'name', 'status', 'purpose', 'currency', 'period', 'number_of_payments_left',
-            'start_date', 'payment_amount', 'deposit_amount', 'deposit_payment_date',
+            'start_date', 'payment_amount', 'fee_amount', 'deposit_amount', 'deposit_payment_date',
             'additional_information', 'payee_id', 'funding_source_id',
             'total_paid_sum', 'total_sum_to_pay'
         )
@@ -75,6 +76,9 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
 
             if int(res["payment_amount"]) < 0:
                 raise ValidationError({"payment_amount": "Payment amount should be positive number"})
+
+            if int(res["fee_amount"]) < 0:
+                raise ValidationError({"payment_amount": "Fee amount should be positive number"})
 
             if arrow.get(res["start_date"]) < arrow.utcnow():
                 raise ValidationError({"start_date": "Start date cannot be in the past"})

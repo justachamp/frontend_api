@@ -2,11 +2,10 @@ import logging
 
 from django.utils.functional import cached_property
 from traceback import format_exc
-from jsonapi_client import Filter
-from jsonapi_client.common import HttpStatus
 from customate import settings
-from payment_api.core.client import Session
+from payment_api.core.client import Client
 from payment_api.serializers import PaymentAccountSerializer
+from payment_api.services.schedule import ScheduleRequestResourceService
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +15,10 @@ class PaymentApiClient:
 
     def __init__(self, user):
         self._user = user
+
+    @cached_property
+    def client(self):
+        return Client(self._base_url)
 
     def assign_payment_account(self):
         user = self._user
@@ -39,18 +42,21 @@ class PaymentApiClient:
         return payment_account_id
 
     def cancel_schedule_payments(self, schedule_id):
-        resource_type = 'payments'
-        filters = Filter(payments__scheduleId=schedule_id)
-
         try:
             logger.debug(f'cancel_schedule_payments started')
-            status_code, response, _ = self.client.remove_by_filters(resource_type, filters)
-            if status_code != HttpStatus.NO_CONTENT_204:
-                logger.error("Schedule payments cancellation received unexpected response: %s", response)
+            resource_type = 'schedule_payments'
+            self.client.delete(resource_type, schedule_id)
         except Exception as e:
             logger.error("Schedule payments cancellation thrown an exception: %r" % format_exc())
             raise e
 
-    @cached_property
-    def client(self):
-        return Session(self._base_url, schema={})
+    def get_schedule_payments_details(self, schedule_id):
+        try:
+            logger.debug(f'get_schedule_payments_details started')
+            service = ScheduleRequestResourceService(resource=self)
+            schedule_payments_details = service.get_schedule_payment_details(schedule_id)
+
+            return schedule_payments_details.totalPaidSum
+        except Exception as e:
+            logger.error("Receiving schedule payments details thrown an exception: %r" % format_exc())
+            raise e
