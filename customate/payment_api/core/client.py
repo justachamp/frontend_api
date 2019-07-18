@@ -153,7 +153,11 @@ class Client(ResourceMappingMixin, JsonApiErrorParser):
             instance = self.client.create(resource_name)
             instance.id = resource_id
 
-            self.client.remove_resource(instance)
+            # Looks like we have to add resource to the session this way, so that it could be successfully remove by
+            # delete operation
+            self.client.add_resources(instance)
+            instance.delete()
+            instance.commit()
         except DocumentError as ex:
             logger.error("PaymentClient.delete thrown an exception: %r " % format_exc())
             data = self._parse_document_error(ex)

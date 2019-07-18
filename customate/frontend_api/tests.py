@@ -1,5 +1,12 @@
+from uuid import uuid4
+
 from django.test import TestCase
+from core.tests import TestUserManagementMixin
+from frontend_api.core.client import PaymentApiClient
 from frontend_api.models import Schedule
+
+import logging
+logger = logging.getLogger(__name__)
 
 
 class ScheduleModelTest(TestCase):
@@ -26,3 +33,21 @@ class ScheduleModelTest(TestCase):
         schedule.calculate_and_set_total_sum_to_pay()
 
         self.assertEquals(1075, schedule.total_sum_to_pay)
+
+
+class PaymentApiClientTest(TestCase, TestUserManagementMixin):
+    def setUp(self):
+        self._client = PaymentApiClient(None)
+
+    def test_cancel_schedule_payments_not_existing_record(self):
+        schedule_id = str(uuid4())
+        self._client.cancel_schedule_payments(schedule_id)
+
+        self.assertTrue(True)
+
+    def test_get_schedule_payments_details_not_existing_record(self):
+        schedule_id = str(uuid4())
+        schedule_payments_details = self._client.get_schedule_payments_details(schedule_id)
+
+        self.assertEqual(schedule_id, schedule_payments_details.schedule_id)
+        self.assertEqual(0, schedule_payments_details.total_paid_sum)

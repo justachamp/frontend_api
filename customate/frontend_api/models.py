@@ -1,6 +1,7 @@
 import datetime
+from dataclasses import dataclass
 
-from django.db import models, transaction
+from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.contrib.postgres.fields import JSONField
 from django.core.serializers.json import DjangoJSONEncoder
@@ -272,3 +273,9 @@ class Schedule(Model):
 
     def is_cancelable(self):
         return self.status in [ScheduleStatus.open, ScheduleStatus.overdue]
+
+
+@dataclass
+class SchedulePaymentsDetails:
+    schedule_id: str
+    total_paid_sum: int

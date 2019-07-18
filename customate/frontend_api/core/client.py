@@ -3,6 +3,7 @@ import logging
 from django.utils.functional import cached_property
 from traceback import format_exc
 from customate import settings
+from frontend_api.models import SchedulePaymentsDetails
 from payment_api.core.client import Client
 from payment_api.serializers import PaymentAccountSerializer
 from payment_api.services.schedule import ScheduleRequestResourceService
@@ -54,9 +55,9 @@ class PaymentApiClient:
         try:
             logger.debug(f'get_schedule_payments_details started')
             service = ScheduleRequestResourceService(resource=self)
-            schedule_payments_details = service.get_schedule_payment_details(schedule_id)
+            resource = service.get_schedule_payment_details(schedule_id)
 
-            return schedule_payments_details.totalPaidSum
+            return SchedulePaymentsDetails(schedule_id=resource.id, total_paid_sum=resource.totalPaidSum)
         except Exception as e:
             logger.error("Receiving schedule payments details thrown an exception: %r" % format_exc())
             raise e
