@@ -1,7 +1,6 @@
 from uuid import uuid4
 
-from django.test import TestCase
-from core.tests import TestUserManagementMixin
+from django.test import SimpleTestCase
 from frontend_api.core.client import PaymentApiClient
 from frontend_api.models import Schedule
 
@@ -9,7 +8,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class ScheduleModelTest(TestCase):
+class ScheduleModelTest(SimpleTestCase):
     def test_calculate_and_set_total_sum_to_pay_single_payment(self):
         schedule = Schedule(number_of_payments_left=1, payment_amount=100)
         schedule.calculate_and_set_total_sum_to_pay()
@@ -35,7 +34,7 @@ class ScheduleModelTest(TestCase):
         self.assertEquals(1075, schedule.total_sum_to_pay)
 
 
-class PaymentApiClientTest(TestCase, TestUserManagementMixin):
+class PaymentApiClientTest(SimpleTestCase):
     def setUp(self):
         self._client = PaymentApiClient(None)
 
