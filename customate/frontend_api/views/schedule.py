@@ -35,11 +35,12 @@ class ScheduleViewSet(views.ModelViewSet):
 
     @cached_property
     def payment_client(self):
-        return PaymentApiClient(self.schedule.user)
+        return PaymentApiClient(self.request.user)
 
     def perform_create(self, serializer):
         try:
-            schedule = serializer.save(user=self.request.user)
+            payee_details = self._get_payee_details(serializer.validated_data['payee_id'])
+            schedule = serializer.save(user=self.request.user, **payee_details)
             self.calculate_and_set_total_sum_to_pay(schedule)
         except IntegrityError as e:
             #TODO: make sure we handle database integrity errors as validation errors as well
@@ -63,4 +64,26 @@ class ScheduleViewSet(views.ModelViewSet):
         schedule.save(update_fields=["status"])
 
         self.payment_client.cancel_schedule_payments(schedule.id)
+
+    def _get_payee_details(self, payee_id):
+        payee = self.payment_client.get_payee_details(payee_id)
+        if payee is None:
+            raise ValidationError({"payee_id": "Payee with such id does not exist"})
+
+        details = {
+            'payee_recipient_name': '',
+            'payee_recipient_email': '',
+            'payee_iban': ''
+        }
+
+        try:
+            details['payee_recipient_name'] = payee['data']['recipient']['fullName']
+            details['payee_recipient_email'] = payee['data']['recipient']['email']
+            details['payee_iban'] = payee['data']['account']['iban']
+        except KeyError:
+            logger.warning('Key error occured during payee processing')
+
+        return details
+
+
 

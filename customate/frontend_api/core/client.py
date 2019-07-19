@@ -7,6 +7,7 @@ from frontend_api.models import SchedulePaymentsDetails
 from payment_api.core.client import Client
 from payment_api.serializers import PaymentAccountSerializer
 from payment_api.services.schedule import ScheduleRequestResourceService
+from payment_api.services.payee import PayeeRequestResourceService
 
 logger = logging.getLogger(__name__)
 
@@ -61,3 +62,14 @@ class PaymentApiClient:
         except Exception as e:
             logger.error("Receiving schedule payments details thrown an exception: %r" % format_exc())
             raise e
+
+    def get_payee_details(self, payee_id):
+        try:
+            logger.debug(f'get_payee_details started')
+            service = PayeeRequestResourceService(resource=self)
+            payee_details = service.get_payee_details(payee_id)
+
+            return payee_details
+        except Exception as e:
+            logger.error("Receiving payee details thrown an exception: %r" % format_exc())
+
