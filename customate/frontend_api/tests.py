@@ -31,7 +31,8 @@ class ScheduleModelTest(SimpleTestCase):
         schedule = Schedule(fee_amount=20, deposit_amount=55, number_of_payments_left=10, payment_amount=100)
         schedule.calculate_and_set_total_sum_to_pay()
 
-        self.assertEquals(1075, schedule.total_sum_to_pay)
+        # self.assertEquals(1075, schedule.total_sum_to_pay)
+        self.fail()
 
 
 class PaymentApiClientTest(SimpleTestCase):
