@@ -159,10 +159,6 @@ class UserAccount(Account):
     def payment_account(self, payment_account):
         self._payment_account = payment_account
 
-    @property
-    def is_owner(self):
-        return True
-
     class JSONAPIMeta:
         resource_name = "UserAccount"
 
@@ -178,10 +174,6 @@ class AdminUserAccount(Account):
 
 class SubUserAccount(Account):
     owner_account = models.ForeignKey(UserAccount, on_delete=models.CASCADE, related_name="sub_user_accounts")
-
-    @property
-    def is_owner(self):
-        return False
 
     def __str__(self):
         return "Sub user account"
@@ -254,3 +246,4 @@ class Schedule(Model):
         default=0,
         help_text=_("Total sum that should be paid by this schedule")
     )
+    

@@ -47,10 +47,8 @@ class FundingSourceViewSet(ResourceViewSet):
 
     def check_payment_account_id(self, filters, key, value):
         user = self.request.user
-        if not user.is_anonymous and user.is_owner and user.account.payment_account_id:
-            return user.account.payment_account_id
-        else:
-            self.get_queryset().set_empty_response()
+        return user.account.payment_account_id if \
+                user.is_owner else user.account.owner_account.payment_account_id
 
 
 class FundingSourceRelationshipView(ResourceRelationshipView):
