@@ -189,7 +189,18 @@ TBD
 ## Delete schedule
 TBD
 
-## List schedules
+## List schedules by filtering via 'customate' keyword 
+
+Searchable fields:
+
+ *  _name_
+ *  _payee_recipient_name_
+ *  _payee_recipient_email_ 
+ *  _payee_iban_
+
+
+HTTP Request:
+
 ```http
 GET /api/v1/schedules/?page[number]=1&amp;filter[search]=customate HTTP/1.1
 Host: 127.0.0.1:8000
@@ -204,7 +215,18 @@ Connection: keep-alive
 cache-control: no-cache
 ```
 
+
+
 ```http
+HTTP/1.1 200 OK
+Allow: GET, POST, HEAD, OPTIONS
+Content-Length: 486
+Content-Type: application/vnd.api+json
+Date: Tue, 16 Jul 2019 22:37:05 GMT
+Server: WSGIServer/0.2 CPython/3.7.2
+Vary: Accept, Cookie, Origin
+X-Frame-Options: SAMEORIGIN
+
 {
     "links": {
         "first": "http://127.0.0.1:8000/api/v1/schedules/?filter%5Bsearch%5D=customate&page%5Bnumber%5D=1",
@@ -274,4 +296,5 @@ cache-control: no-cache
         }
     }
 }
+
 ```
