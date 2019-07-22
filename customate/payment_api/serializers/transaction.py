@@ -19,6 +19,7 @@ class TransactionSerializer(ResourceSerializer):
 
     id = UUIDField(read_only=True)
     active = IntegerField(read_only=True)
+    is_hidden = IntegerField(read_only=True, source='isHidden')
     amount = IntegerField(read_only=True)
     net_amount = IntegerField(read_only=True, source='netAmount')
     actual_balance = IntegerField(read_only=True, source='actualBalance')

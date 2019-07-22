@@ -13,17 +13,6 @@ from payment_api.views import (
     ResourceViewSet
 )
 
-SYSTEM_TRANSACTIONS = (
-    'LockTransferAndFeeAmount',
-    'LockFeeAmount',
-    'Release',
-    'InternalFeeAndTax',
-    'MoneyInBtFeeAndTax',
-    'MoneyInCcFeeAndTax',
-    'MoneyInDdFeeAndTax',
-    'MoneyOutBtFeeAndTax',
-)
-
 
 class TransactionViewSet(ResourceViewSet):
     resource_name = 'transactions'
@@ -48,6 +37,7 @@ class TransactionViewSet(ResourceViewSet):
     filterset_fields = {
         'status': ('exact',),
         'active': ('exact',),
+        'is_hidden': ('exact',),
         'name': ('exact', 'not_in'),
         'payment__currency': ('exact',),
         'payment__payment_account__id': ('exact',),
@@ -58,8 +48,8 @@ class TransactionViewSet(ResourceViewSet):
 
     class Meta:
         filters = [
-            {'name__not_in': ','.join(SYSTEM_TRANSACTIONS)},
             {'active__exact': 1},
+            {'is_hidden__exact': 0},
             {'payment__account__id__exact': {'method': 'check_payment_account_id'}}
         ]
 

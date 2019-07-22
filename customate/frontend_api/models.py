@@ -1,6 +1,7 @@
 import datetime
+from dataclasses import dataclass
 
-from django.db import models, transaction
+from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.contrib.postgres.fields import JSONField
 from django.core.serializers.json import DjangoJSONEncoder
@@ -229,6 +230,9 @@ class Schedule(Model):
     purpose = EnumField(SchedulePurpose)
     currency = EnumField(Currency)
     payee_id = models.UUIDField(help_text=_("Money recipient"))
+    payee_recipient_name = models.CharField(max_length=50, default='')
+    payee_recipient_email = models.CharField(max_length=50, default='')
+    payee_iban = models.CharField(max_length=50, default='')
     funding_source_id = models.UUIDField()
     period = EnumField(SchedulePeriod)
     number_of_payments_left = models.PositiveIntegerField(
@@ -236,14 +240,38 @@ class Schedule(Model):
     )
     start_date = models.DateField()
     payment_amount = models.PositiveIntegerField()
+    fee_amount = models.PositiveIntegerField(
+        default=0, help_text=_("Approximate fee amount for all payments (including deposit) in schedule")
+    )
     deposit_amount = models.PositiveIntegerField(
         null=True, help_text=_("Initial payment independent of the rest of scheduled payments")
     )
     deposit_payment_date = models.DateField(null=True)  # This should be strictly < start_date
     additional_information = models.CharField(max_length=250, blank=True, null=True)
-    total_paid_sum = models.PositiveIntegerField(default=0, help_text=_("Total sum of all Schedule's paid payments"))
+    total_paid_sum = models.PositiveIntegerField(
+        default=0,
+        help_text=_("Total sum of all Schedule's paid payments")
+    )
     total_sum_to_pay = models.PositiveIntegerField(
         default=0,
         help_text=_("Total sum that should be paid by this schedule")
     )
-    
+
+    def __init__(self, *args, **kwargs):
+        self._fee_amount = 0  # We accept this value from UI, but don't store it database
+        super().__init__(*args, **kwargs)
+
+    def calculate_and_set_total_sum_to_pay(self):
+        self.total_sum_to_pay = self.fee_amount \
+                                + (self.deposit_amount if self.deposit_amount is not None else 0) \
+                                + (self.payment_amount * self.number_of_payments_left)
+
+    def is_cancelable(self):
+        return self.status in [ScheduleStatus.open, ScheduleStatus.overdue]
+
+
+@dataclass
+class SchedulePaymentsDetails:
+    schedule_id: str
+    total_paid_sum: int
+

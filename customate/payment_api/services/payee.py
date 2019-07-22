@@ -9,6 +9,9 @@ from payment_api.services import (
 
 class PayeeRequestResourceService(BaseService, AccountMixin, QuerysetMixin):
 
+    def get_payee_details(self, payee_id):
+        return self.queryset.one(payee_id)
+
     def get_wallet(self, currency):
         return self.queryset.filter(
             account__id=self.get_attr('payment_account_id', True),

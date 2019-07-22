@@ -193,6 +193,7 @@ logging.config.dictConfig({
 
 LOGIN_REDIRECT_URL = '/accounts/profile'
 
+# more settings here https://www.django-rest-framework.org/api-guide/settings/
 REST_FRAMEWORK = {
     'PAGE_SIZE': 10,
     # need custom handler
@@ -246,7 +247,8 @@ REST_FRAMEWORK = {
     'TEST_REQUEST_RENDERER_CLASSES': (
         'rest_framework_json_api.renderers.JSONRenderer',
     ),
-    'TEST_REQUEST_DEFAULT_FORMAT': 'vnd.api+json'
+    'TEST_REQUEST_DEFAULT_FORMAT': 'vnd.api+json',
+    'DATE_INPUT_FORMATS': ["%Y-%m-%d"]
 }
 
 ROOT_URLCONF = 'customate.urls'
@@ -320,7 +322,6 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
 CORS_ORIGIN_ALLOW_ALL = True
-# GUARDIAN_GET_CONTENT_TYPE = 'polymorphic.contrib.guardian.get_polymorphic_base_content_type'
 
 CORS_ALLOW_HEADERS = default_headers + (
     'ACCESSTOKEN',

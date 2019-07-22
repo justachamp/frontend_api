@@ -57,7 +57,7 @@ class SchedulePurpose(Enum):
 
 
 class SchedulePeriod(Enum):
-    one_time = 'one time'
+    one_time = 'one_time'
     weekly = 'weekly'
     monthly = 'monthly'
     quarterly = 'quarterly'

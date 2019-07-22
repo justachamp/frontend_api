@@ -1,5 +1,6 @@
 from enumfields import Enum
 from datetime import datetime
+import logging
 
 from rest_framework.exceptions import ValidationError
 from rest_framework_json_api.serializers import ChoiceField, UUIDField as DefaultUUIDField, CharField
@@ -7,6 +8,8 @@ from rest_framework_json_api.relations import ResourceRelatedField
 from rest_framework import serializers
 
 from customate.settings import COUNTRIES_AVAILABLE
+
+logger = logging.getLogger(__name__)
 
 
 class TimestampField(serializers.DateTimeField):
@@ -30,7 +33,8 @@ class TimestampField(serializers.DateTimeField):
         :param value: the DateTime value
         :return: a UTC timestamp integer
         """
-        result = super(TimestampField, self).to_representation(value)
+        result = super(TimestampField, self).to_internal_value(value)
+        logger.info("RESULT=%r" % result)
         return result.timestamp()
 
 

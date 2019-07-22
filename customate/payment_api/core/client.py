@@ -1,7 +1,8 @@
+from traceback import format_exc
+
 from django.utils.functional import cached_property
-from jsonapi_client.common import HttpMethod
 from rest_framework.exceptions import ValidationError
-from jsonapi_client import Session as DefaultSession, Filter, ResourceTuple, Modifier
+from jsonapi_client import Session as DefaultSession, Modifier
 import logging
 
 # Get an instance of a logger
@@ -58,10 +59,6 @@ class Session(DefaultSession):
     def _ext_fetch_by_url(self, url: str) -> 'Document':
         logger.info(f'fetch_by_url: {url}')
         return super()._ext_fetch_by_url(url)
-
-    def remove_by_filters(self, resource_type, filters):
-        url = self._url_for_resource(resource_type, None, filters)
-        return self.http_request(http_method=HttpMethod.DELETE, url=url, send_json={})
 
 
 class Client(ResourceMappingMixin, JsonApiErrorParser):
@@ -124,6 +121,7 @@ class Client(ResourceMappingMixin, JsonApiErrorParser):
             return instance
 
         except DocumentError as ex:
+            logger.error("PaymentClient.update thrown an exception: %r " % format_exc())
             data = self._parse_document_error(ex)
             if data:
                 raise ValidationError(data)
@@ -132,13 +130,13 @@ class Client(ResourceMappingMixin, JsonApiErrorParser):
 
     def create(self, resource_name, attributes):
         try:
-
             instance = self.client.create(resource_name)
             self._apply_resource_attributes(instance, attributes)
             instance.commit(custom_url=self.get_post_url(instance))
             logger.debug(instance)
             return instance
         except DocumentError as ex:
+            logger.error("PaymentClient.create thrown an exception: %r " % format_exc())
             data = self._parse_document_error(ex)
             if data:
                 raise ValidationError(data)
@@ -149,6 +147,24 @@ class Client(ResourceMappingMixin, JsonApiErrorParser):
                     error = ex.response.content
 
                 raise ValidationError([error, ex.json_data])
+
+    def delete(self, resource_name, resource_id):
+        try:
+            instance = self.client.create(resource_name)
+            instance.id = resource_id
+
+            # Looks like we have to add resource to the session this way, so that it could be successfully remove by
+            # delete operation
+            self.client.add_resources(instance)
+            instance.delete()
+            instance.commit()
+        except DocumentError as ex:
+            logger.error("PaymentClient.delete thrown an exception: %r " % format_exc())
+            data = self._parse_document_error(ex)
+            if data:
+                raise ValidationError(data)
+            else:
+                raise ex
 
     def add_model_schema(self, resource_name, properties):
         self.client.schema.add_model_schema({resource_name: {'properties': properties}})
