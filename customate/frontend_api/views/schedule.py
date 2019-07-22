@@ -7,7 +7,6 @@ from frontend_api.core.client import PaymentApiClient
 from frontend_api.fields import ScheduleStatus
 from frontend_api.models import Schedule
 
-
 from ..serializers.schedule import ScheduleSerializer
 
 import logging
@@ -22,11 +21,15 @@ class ScheduleViewSet(views.ModelViewSet):
 
     # Example: /api/v1/schedules/?page[number]=1&filter[currency.iexact]=EUR&filter[name.icontains]=test&sort=-status
     ordering_fields = ('name', 'status')
-    search_fields = ('name', )
+    search_fields = ('name', 'payee_recipient_name', 'payee_recipient_email', 'payee_iban')
 
     filterset_fields = {
         # "exact" filter is excluded by framework, we can use alternative like "filter[currency.iexact]=GBP"
         'name': ('icontains', 'contains', 'iexact'),
+        'payee_title': ('icontains', 'contains', 'iexact'),
+        'payee_recipient_name': ('icontains', 'contains', 'iexact'),
+        'payee_recipient_email': ('icontains', 'contains', 'iexact'),
+        'payee_iban': ('icontains', 'contains', 'iexact'),
         'currency': ('iexact', 'in'),
     }
 
@@ -66,24 +69,15 @@ class ScheduleViewSet(views.ModelViewSet):
         self.payment_client.cancel_schedule_payments(schedule.id)
 
     def _get_payee_details(self, payee_id):
-        payee = self.payment_client.get_payee_details(payee_id)
-        if payee is None:
-            raise ValidationError({"payee_id": "Payee with such id does not exist"})
-
-        details = {
-            'payee_recipient_name': '',
-            'payee_recipient_email': '',
-            'payee_iban': ''
-        }
-
         try:
-            details['payee_recipient_name'] = payee['data']['recipient']['fullName']
-            details['payee_recipient_email'] = payee['data']['recipient']['email']
-            details['payee_iban'] = payee['data']['account']['iban']
-        except KeyError:
-            logger.warning('Key error occured during payee processing')
+            payee_details = self.payment_client.get_payee_details(payee_id)
 
-        return details
-
-
+            return {
+                'payee_recipient_name': payee_details.recipient_name,
+                'payee_recipient_email': payee_details.recipient_email,
+                'payee_iban': payee_details.iban,
+                'payee_title': payee_details.title
+            }
+        except Exception:
+            raise ValidationError({"payee_id": "Issue during receiving payee information"})
 

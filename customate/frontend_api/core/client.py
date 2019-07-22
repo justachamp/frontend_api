@@ -3,7 +3,7 @@ import logging
 from django.utils.functional import cached_property
 from traceback import format_exc
 from customate import settings
-from frontend_api.models import SchedulePaymentsDetails
+from frontend_api.models import SchedulePaymentsDetails, PayeeDetails
 from payment_api.core.client import Client
 from payment_api.serializers import PaymentAccountSerializer
 from payment_api.services.schedule import ScheduleRequestResourceService
@@ -58,7 +58,7 @@ class PaymentApiClient:
             service = ScheduleRequestResourceService(resource=self)
             resource = service.get_schedule_payment_details(schedule_id)
 
-            return SchedulePaymentsDetails(schedule_id=resource.id, total_paid_sum=resource.totalPaidSum)
+            return SchedulePaymentsDetails(id=resource.id, total_paid_sum=resource.totalPaidSum)
         except Exception as e:
             logger.error("Receiving schedule payments details thrown an exception: %r" % format_exc())
             raise e
@@ -67,9 +67,18 @@ class PaymentApiClient:
         try:
             logger.debug(f'get_payee_details started')
             service = PayeeRequestResourceService(resource=self)
-            payee_details = service.get_payee_details(payee_id)
+            resource = service.get_payee_details(payee_id)
 
-            return payee_details
+            return PayeeDetails(
+                id=resource.id,
+                title=resource.title,
+                iban=resource['data']['recipient']['fullName'],
+                recipient_name=resource['data']['recipient']['fullName'],
+                recipient_email=resource['data']['recipient']['email']
+            )
+        except KeyError as e:
+            logger.error("Key error occurred during payee processing (did mapping was changed?): %r" % format_exc())
+            raise e
         except Exception as e:
             logger.error("Receiving payee details thrown an exception: %r" % format_exc())
-
+            raise e

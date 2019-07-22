@@ -238,8 +238,9 @@ class Schedule(Model):
     purpose = EnumField(SchedulePurpose)
     currency = EnumField(Currency)
     payee_id = models.UUIDField(help_text=_("Money recipient"))
-    payee_recipient_name = models.CharField(max_length=50, default='')
-    payee_recipient_email = models.CharField(max_length=50, default='')
+    payee_title = models.CharField(max_length=100, default='')
+    payee_recipient_name = models.CharField(max_length=254, default='')
+    payee_recipient_email = models.CharField(max_length=254, default='')
     payee_iban = models.CharField(max_length=50, default='')
     funding_source_id = models.UUIDField()
     period = EnumField(SchedulePeriod)
@@ -280,5 +281,15 @@ class Schedule(Model):
 
 @dataclass
 class SchedulePaymentsDetails:
-    schedule_id: str
+    id: str
     total_paid_sum: int
+
+
+@dataclass
+class PayeeDetails:
+    id: str
+    title: str
+    iban: str
+    recipient_name: str
+    recipient_email: str
+
