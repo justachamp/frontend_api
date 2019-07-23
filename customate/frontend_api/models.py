@@ -270,11 +270,11 @@ class Schedule(Model):
     def is_cancelable(self):
         return self.status in [ScheduleStatus.open, ScheduleStatus.overdue]
 
-
 @dataclass
 class SchedulePaymentsDetails:
     id: str
     total_paid_sum: int
+
 
 
 @dataclass
@@ -284,5 +284,3 @@ class PayeeDetails:
     iban: str
     recipient_name: str
     recipient_email: str
-
-

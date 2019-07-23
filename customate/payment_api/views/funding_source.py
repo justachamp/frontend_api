@@ -47,8 +47,11 @@ class FundingSourceViewSet(ResourceViewSet):
 
     def check_payment_account_id(self, filters, key, value):
         user = self.request.user
-        return user.account.payment_account_id if \
-                user.is_owner else user.account.owner_account.payment_account_id
+        try:
+            return user.account.payment_account_id if \
+                    user.is_owner else user.account.owner_account.payment_account_id
+        except AttributeError:
+            return None
 
 
 class FundingSourceRelationshipView(ResourceRelationshipView):
