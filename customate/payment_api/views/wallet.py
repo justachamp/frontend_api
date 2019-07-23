@@ -1,7 +1,8 @@
-from rest_framework.permissions import AllowAny
-
 from payment_api.serializers import WalletSerializer
-
+from frontend_api.permissions import (
+    IsSuperAdminOrReadOnly,
+    IsOwnerOrReadOnly,
+)
 
 from payment_api.views import (
     InclusionFilter,
@@ -16,7 +17,7 @@ from payment_api.views import (
 class WalletViewSet(ResourceViewSet):
     resource_name = 'wallets'
     serializer_class = WalletSerializer
-    permission_classes = (AllowAny,)
+    permission_classes = (IsSuperAdminOrReadOnly|IsOwnerOrReadOnly,)
 
     filter_backends = (
         OrderingFilter,

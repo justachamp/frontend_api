@@ -1,6 +1,6 @@
 
 from rest_framework_json_api.serializers import (
-    HyperlinkedModelSerializer,
+    HyperlinkedModelSerializer, CharField
 )
 
 from core.fields import SerializerField
@@ -146,6 +146,9 @@ class SubUserAccountSerializer(AccountFlexFieldsSerializerMixin, HyperlinkedMode
         required=False
     )
 
+    payment_account_id = CharField(read_only=True, source = "owner_account.payment_account_id")
+
+
     class Meta:
         model = SubUserAccount
         additional_fields = ACCOUNT_ADDITIONAL_FIELDS
@@ -158,6 +161,7 @@ class SubUserAccountSerializer(AccountFlexFieldsSerializerMixin, HyperlinkedMode
             'is_verified',
             'can_be_verified',
             'verification_status',
+            'payment_account_id'
         )
 
         # extra_kwargs = {
