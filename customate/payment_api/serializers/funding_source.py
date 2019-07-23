@@ -127,6 +127,15 @@ class FundingSourceSerializer(BaseFundingSourceSerializer):
         # TODO: add other funding source types validation
         return res
 
+    def create(self, validated_data):
+        return super().create(self._remove_new_instance_extra_fields(validated_data))
+
+    # @NOTE: could be generalized: move method to parent and introduce class-member with list of extra fields
+    def _remove_new_instance_extra_fields(self, data: dict) -> dict:
+        data.pop("address", None)
+
+        return data
+
 
 class UpdateFundingSourceSerializer(BaseFundingSourceSerializer):
     type = TypeEnumField(enum=FundingSourceType, primitive_value=True, read_only=True)
