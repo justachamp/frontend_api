@@ -35,6 +35,10 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
     deposit_payment_date = DateField(required=False)  # TODO: Validate that this should be strictly < start_date
     additional_information = CharField(required=False)
     payee_id = UUIDField(required=True)
+    payee_title = CharField(required=False)
+    payee_recipient_name = CharField(required=False)
+    payee_recipient_email = CharField(required=False)
+    payee_iban = CharField(required=False)
     funding_source_id = UUIDField(required=True)
     total_paid_sum = IntegerField(default=0, required=False)
     total_sum_to_pay = IntegerField(default=0, required=False)
@@ -44,8 +48,8 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
         fields = (
             'name', 'status', 'purpose', 'currency', 'period', 'number_of_payments_left',
             'start_date', 'payment_amount', 'fee_amount', 'deposit_amount', 'deposit_payment_date',
-            'additional_information', 'payee_id', 'funding_source_id',
-            'total_paid_sum', 'total_sum_to_pay'
+            'additional_information', 'payee_id', 'funding_source_id', 'payee_title',
+            'total_paid_sum', 'total_sum_to_pay', 'payee_iban', 'payee_recipient_name', 'payee_recipient_email'
         )
 
     # validate_{fieldname} also works

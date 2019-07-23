@@ -48,5 +48,5 @@ class PaymentApiClientTest(SimpleTestCase):
         schedule_id = str(uuid4())
         schedule_payments_details = self._client.get_schedule_payments_details(schedule_id)
 
-        self.assertEqual(schedule_id, schedule_payments_details.schedule_id)
+        self.assertEqual(schedule_id, schedule_payments_details.id)
         self.assertEqual(0, schedule_payments_details.total_paid_sum)
