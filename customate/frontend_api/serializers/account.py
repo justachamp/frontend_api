@@ -1,6 +1,6 @@
 
 from rest_framework_json_api.serializers import (
-    HyperlinkedModelSerializer, CharField
+    HyperlinkedModelSerializer
 )
 
 from core.fields import SerializerField
@@ -35,38 +35,36 @@ from frontend_api.core.resource.fields import ExternalResourceRelatedField
 
 import logging
 
-from payment_api.serializers import PaymentAccountSerializer
-
 logger = logging.getLogger(__name__)
 
 ACCOUNT_ADDITIONAL_FIELDS = {
     'GB': {
         'driver_licence_number': {
             'cls': CharField,
-            'kwargs': {'source': 'country_fields.driver_licence_number', 'default': None, 'allow_blank': True}
+            'kwargs': {'source': 'country_fields.driver_licence_number', 'required': False, 'allow_blank': True}
         },
         'driver_licence_postcode': {
             'cls': CharField,
-            'kwargs': {'source': 'country_fields.driver_licence_postcode', 'default': None, 'allow_blank': True}
+            'kwargs': {'source': 'country_fields.driver_licence_postcode', 'required': False, 'allow_blank': True}
         },
         'driver_licence_issue_date': {
             'cls': DateField,
-            'kwargs': {'source': 'country_fields.driver_licence_issue_date', 'default': None, 'allow_null': True}
+            'kwargs': {'source': 'country_fields.driver_licence_issue_date', 'required': False, 'allow_null': True}
         }
     },
     'IT': {'tax_code': {
             'cls': CharField,
-            'kwargs': {'source': 'country_fields.tax_code', 'default': None, 'allow_blank': True}
+            'kwargs': {'source': 'country_fields.tax_code', 'required': False, 'allow_blank': True}
         }
     },
     'DK': {'id_card_number': {
             'cls': CharField,
-            'kwargs': {'source': 'country_fields.id_card_number', 'default': None, 'allow_blank': True}
+            'kwargs': {'source': 'country_fields.id_card_number', 'required': False, 'allow_blank': True}
         }
     },
     'ES': {'tax_id': {
             'cls': CharField,
-            'kwargs': {'source': 'country_fields.tax_id', 'default': None, 'allow_blank': True}
+            'kwargs': {'source': 'country_fields.tax_id', 'required': False, 'allow_blank': True}
         }
     },
     'sub_user': {'permission': {
