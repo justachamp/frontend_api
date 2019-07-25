@@ -7,7 +7,7 @@ from address.loqate.serializers import RetrieveAddressSerializer, SearchAddressS
 
 from frontend_api.models import Address
 from frontend_api.serializers import UserAddressSerializer, CompanyAddressSerializer, AddressSerializer
-from frontend_api.permissions import IsOwnerOrReadOnly
+from frontend_api.permissions import IsOwnerOrReadOnly, AllowAny
 
 from ..views import PatchRelatedMixin
 
@@ -24,7 +24,7 @@ class UserAddressViewSet(PatchRelatedMixin, views.ModelViewSet):
 
     queryset = Address.objects.all()
     serializer_class = UserAddressSerializer
-    permission_classes = (IsOwnerOrReadOnly,)
+    permission_classes = (AllowAny,)
 
     def perform_create(self, serializer):
         logger.error('perform create')
@@ -38,13 +38,13 @@ class AddressViewSet(PatchRelatedMixin, views.ModelViewSet):
 
     queryset = Address.objects.all()
     serializer_class = AddressSerializer
-    permission_classes = (IsOwnerOrReadOnly,)
+    permission_classes = (AllowAny, )
 
     @action(methods=['POST'], detail=False, name='Search address')
     def search(self, request):
         data = request.data
         serializer = SearchAddressSerializer(data=data)
-        if serializer.is_valid(True) and serializer.validated_data.get('Text'):
+        if serializer.is_valid(True) and serializer.validated_data.get('text'):
             return response.Response(serializer.find(serializer.validated_data))
 
         return response.Response([])
@@ -62,7 +62,7 @@ class CompanyAddressViewSet(PatchRelatedMixin, views.ModelViewSet):
 
     queryset = Address.objects.all()
     serializer_class = CompanyAddressSerializer
-    permission_classes = (IsOwnerOrReadOnly,)
+    permission_classes = (AllowAny,)
 
     def perform_create(self, serializer):
         logger.error('perform create')

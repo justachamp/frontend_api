@@ -166,4 +166,12 @@ class AdminUserFeePermission(permissions.BasePermission):
             return getattr(request.user.account.permission, "manage_fee")
 
 
+class AllowAny(permissions.BasePermission):
+    """
+    Custom permission to only services users.
+    """
+    def has_permission(self, request, view):
+        return not request.user.is_anonymous
+
+
 # pull request
