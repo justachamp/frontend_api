@@ -2,6 +2,7 @@
 #
 # It will either return a new access token if it needed to refresh the existing one, None if the token
 # was validated and didn't need to be refreshed, or raise an Exception if it can't validate the token
+import logging
 import base64
 import datetime
 import json
@@ -12,8 +13,6 @@ from authentication.cognito import utils
 from authentication.cognito.core import constants, service, helpers
 from authentication.cognito.utils import PublicKey
 from rest_framework.exceptions import AuthenticationFailed
-# import the logging library
-import logging
 
 # Get an instance of a logger
 logger = logging.getLogger(__name__)

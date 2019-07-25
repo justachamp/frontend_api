@@ -2,27 +2,22 @@ from django.utils.functional import cached_property
 from django.conf import settings
 from rest_framework_json_api import utils
 
-from payment_api.core.resource.fields import ExternalResourceRelatedField
+from payment_api.core.resource.fields import ExternalResourceRelatedField as ERRField
 from payment_api.core.client import Client
 from payment_api.core.resource.models import ResourceQueryset
 
 
-class ExternalResourceRelatedField(ExternalResourceRelatedField):
+class ExternalResourceRelatedField(ERRField):
     base_url = settings.PAYMENT_API_URL
 
     def __init__(self, resource_identifier=None, *args, **kwargs):
         self._resource_identifier = resource_identifier
-        return super().__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     @cached_property
     def client(self):
         client = Client(self.base_url)
         client.resource_mapping = {'id': {'op': 'copy', 'value': 'pk'}}
-        # if self.field_name != self.source:
-        #     self.client.resource_mapping = {
-        #         'type': {'op': 'edit', 'value': self.field_name, 'old_value': self.source}
-        #     }
-
         return client
 
     def get_attribute(self, instance):

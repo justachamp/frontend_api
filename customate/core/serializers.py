@@ -1,6 +1,8 @@
+import logging
+from traceback import format_exc
 
+from rest_framework_json_api.serializers import Serializer as JSONAPISerializer
 from rest_framework_json_api.serializers import (
-    Serializer,
     SkipField,
     Mapping,
     OrderedDict,
@@ -11,6 +13,8 @@ from rest_framework_json_api.serializers import (
     DjangoValidationError,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class BulkExtensionMixin(object):
     def get_serializer(self, *args, **kwargs):
@@ -19,12 +23,14 @@ class BulkExtensionMixin(object):
         return super().get_serializer(*args, **kwargs)
 
 
-class Serializer(Serializer):
+class Serializer(JSONAPISerializer):
 
     def to_internal_value(self, data):
         """
         Dict of native values <- Dict of primitive datatypes.
         """
+        logger.info("Serializer: to_internal_value! %r " % data)
+
         if not isinstance(data, Mapping):
             message = self.error_messages['invalid'].format(
                 datatype=type(data).__name__
@@ -45,18 +51,18 @@ class Serializer(Serializer):
                 if validate_method is not None:
                     validated_value = validate_method(validated_value)
             except ValidationError as exc:
+                logger.error("Validation: %r" % format_exc())
                 errors[field.field_name] = exc.detail
             except DjangoValidationError as exc:
+                logger.error("DjangoValidation: %r" % format_exc())
                 errors[field.field_name] = get_error_detail(exc)
             except SkipField:
                 pass
             else:
                 source = field.result_source.split('.') if hasattr(field, 'result_source') else field.source_attrs
-
                 set_value(ret, source, validated_value)
 
         if errors:
             raise ValidationError(errors)
 
         return ret
-

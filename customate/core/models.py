@@ -1,16 +1,25 @@
+import uuid
 from datetime import date
 
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.models import AbstractUser
-from core.utils import Model
 from django.db import models
 
 from phonenumber_field.modelfields import PhoneNumberField
-
 from enumfields import EnumField
+
 from core.fields import UserStatus, UserRole, UserTitle, Gender, Country
 
 USER_MIN_AGE = 18
+
+
+class Model(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        abstract = True
 
 
 class Address(Model):
@@ -24,14 +33,15 @@ class Address(Model):
     postcode = models.CharField(max_length=20, blank=True)
 
     def __str__(self):
-        return "%s the address" % self.address
+        return "%s" % self.address
 
 
 class User(AbstractUser, Model):
-    cognito_id = models.UUIDField(null=True, unique=True)
-    email = models.EmailField(_('email address'), unique=True, blank=False)
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
+
+    cognito_id = models.UUIDField(null=True, unique=True)
+    email = models.EmailField(_('email address'), unique=True, blank=False)
     status = EnumField(UserStatus, max_length=10, default=UserStatus.active)
     role = EnumField(UserRole, max_length=10, null=True)
     middle_name = models.CharField(_('first name'), max_length=30, blank=True)
@@ -71,6 +81,9 @@ class User(AbstractUser, Model):
         null=True
     )
 
+    def __str__(self):
+        return "%s (cognito_id=%s, role=%r)" % (self.email, self.cognito_id, self.role)
+
     @property
     def is_owner(self):
         return self.role == UserRole.owner
@@ -106,12 +119,3 @@ class User(AbstractUser, Model):
 
     def get_username(self):
         return self.email
-
-
-
-
-
-
-
-
-

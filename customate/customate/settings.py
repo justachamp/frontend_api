@@ -197,8 +197,8 @@ LOGIN_REDIRECT_URL = '/accounts/profile'
 REST_FRAMEWORK = {
     'PAGE_SIZE': 10,
     # need custom handler
-    'EXCEPTION_HANDLER': 'rest_framework_json_api.exceptions.exception_handler',
-    # "EXCEPTION_HANDLER": 'customate.utils.custom_exception_handler',
+    # 'EXCEPTION_HANDLER': 'rest_framework_json_api.exceptions.exception_handler',
+    "EXCEPTION_HANDLER": 'customate.utils.exception_handler',
 
     'DEFAULT_PAGINATION_CLASS': 'rest_framework_json_api.pagination.JsonApiPageNumberPagination',
     'DEFAULT_PARSER_CLASSES': (
@@ -250,6 +250,14 @@ REST_FRAMEWORK = {
     'TEST_REQUEST_DEFAULT_FORMAT': 'vnd.api+json',
     'DATE_INPUT_FORMATS': ["%Y-%m-%d"]
 }
+
+
+# DRF JSON_API settings
+JSON_API_FORMAT_FIELD_NAMES = False
+JSON_API_FORMAT_TYPES = False,
+JSON_API_PLURALIZE_TYPES = False
+JSON_API_UNIFORM_EXCEPTIONS = False
+
 
 ROOT_URLCONF = 'customate.urls'
 

@@ -1,6 +1,6 @@
 from rest_framework.exceptions import ValidationError
 from rest_framework.fields import DateField, DictField, ListField, EmailField
-from rest_framework.validators import UniqueValidator
+from rest_framework.validators import UniqueValidator, UniqueTogetherValidator
 
 from rest_framework_json_api.serializers import CharField, PolymorphicModelSerializer, UUIDField, ChoiceField
 from rest_framework_json_api.relations import PolymorphicResourceRelatedField
@@ -24,12 +24,10 @@ from frontend_api.serializers.profile import ProfileSerializer
 from frontend_api.serializers.schedule import ScheduleSerializer
 
 
-# from payment_api.core.resource.fields import ExternalResourceRelatedField
-
-
 __all__ = [
     ValidationError,
     UniqueValidator,
+    UniqueTogetherValidator,
     UUIDField,
     CharField,
     DateField,

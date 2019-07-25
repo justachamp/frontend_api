@@ -1,3 +1,4 @@
+from traceback import format_exc
 from django.utils.functional import cached_property
 from core import views
 from django.db.utils import IntegrityError
@@ -47,6 +48,7 @@ class ScheduleViewSet(views.ModelViewSet):
             self.calculate_and_set_total_sum_to_pay(schedule)
         except IntegrityError as e:
             #TODO: make sure we handle database integrity errors as validation errors as well
+            logger.error("Unable to save Schedule=%r, due to %r" % (serializer.validated_data, format_exc()))
             raise ValidationError(str(e))
 
     def calculate_and_set_total_sum_to_pay(self, schedule):

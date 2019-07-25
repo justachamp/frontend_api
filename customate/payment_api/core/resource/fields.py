@@ -1,4 +1,4 @@
-from rest_framework.relations import ManyRelatedField as DRFManyRelatedField, MANY_RELATION_KWARGS, get_attribute
+from rest_framework.relations import ManyRelatedField as DRFManyRelatedField, MANY_RELATION_KWARGS
 from payment_api.core.resource.mixins import ResourceMappingMixin
 from core.fields import ResourceRelatedField, ResultResourceFieldMixin
 
