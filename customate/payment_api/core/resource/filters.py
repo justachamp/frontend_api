@@ -86,9 +86,13 @@ class RQLFilterSet(RQLFilterMixin):
         filters = getattr(meta, 'filters', None)
         if filters:
             for filter_obj in filters:
-                filter_data.update(filter_obj)
-
+                if not self._is_filter_already_set(filter_data, filter_obj):
+                    filter_data.update(filter_obj)
         return filter_data
+
+    def _is_filter_already_set(self, existing_filter_data, new_filter_obj):
+        filter_key = list(new_filter_obj.keys())[0]
+        return existing_filter_data.get(filter_key, None) is not None
 
     @property
     def qs(self):
