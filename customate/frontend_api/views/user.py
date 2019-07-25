@@ -17,7 +17,10 @@ from frontend_api.serializers import (
     UserStatusSerializer
 )
 
-from frontend_api.permissions import IsOwnerOrReadOnly, IsSuperAdminOrReadOnly 
+from frontend_api.permissions import (
+    IsOwnerOrReadOnly, 
+    IsSuperAdminOrReadOnly,
+    IsRegularAdminOrReadOnly )
 
 from ..views import PatchRelatedMixin, RelationshipPostMixin
 
@@ -77,7 +80,7 @@ class UserViewSet(PatchRelatedMixin, views.ModelViewSet):
     queryset = User.objects.all().exclude(email='AnonymousUser').order_by('-date_joined')
     serializer_class = UserSerializer
 
-    permission_classes = (IsOwnerOrReadOnly|IsSuperAdminOrReadOnly,)
+    permission_classes = (IsOwnerOrReadOnly|IsSuperAdminOrReadOnly|IsRegularAdminOrReadOnly,)
 
     filter_backends = (filters.QueryParameterValidationFilter, filters.OrderingFilter,
                        django_filters.DjangoFilterBackend, SearchFilter)

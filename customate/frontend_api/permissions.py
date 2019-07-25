@@ -138,6 +138,16 @@ class IsSuperAdminOrReadOnly(permissions.BasePermission):
         return request.user.is_superuser 
 
 
+class IsRegularAdminOrReadOnly(permissions.BasePermission):
+    """
+    Custom permission to only allow super admins.
+    """
+    def has_permission(self, request, view):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return request.user.is_staff 
+
+
 class AdminUserTaxPermission(permissions.BasePermission):
     """
     Custom permission to only allow arbitrary admins.
