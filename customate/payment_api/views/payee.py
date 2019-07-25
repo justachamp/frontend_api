@@ -49,7 +49,7 @@ class PayeeViewSet(ResourceViewSet):
             {'active__exact': 1},
             {'account__id__exact': {'method': 'check_payment_account_id'}},
             {'currency__not_in': 'DK'},
-            {'type__not_in': 'WALLET'}
+            {'type__exact': 'BANK_ACCOUNT'}
         ]
 
 
