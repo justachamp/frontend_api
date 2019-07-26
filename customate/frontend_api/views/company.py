@@ -1,5 +1,5 @@
 from django.forms.models import model_to_dict
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import MethodNotAllowed
 from rest_framework_json_api.views import RelationshipView
 
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class CompanyRelationshipView(RelationshipPostMixin, RelationshipView):
     serializer_class = CompanySerializer
     queryset = Company.objects
-    permission_classes = (AllowAny,)
+    permission_classes = (IsAuthenticated,)
     _related_serializers = {
         'address': CompanyAddressSerializer,
         'shareholders': ShareholderSerializer
@@ -62,7 +62,8 @@ class CompanyViewSet(PatchRelatedMixin, views.ModelViewSet):
 
     queryset = Company.objects.all()
     serializer_class = CompanySerializer
-    permission_classes = (IsOwnerOrReadOnly,)
+    permission_classes = (  IsAuthenticated, 
+                            IsOwnerOrReadOnly,)
 
     def perform_create(self, serializer):
         logger.error('perform create')

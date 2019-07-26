@@ -1,3 +1,4 @@
+from rest_framework.permissions import IsAuthenticated
 from payment_api.serializers import PayeeSerializer, UpdatePayeeSerializer
 from frontend_api.permissions import (
     IsSuperAdminOrReadOnly,
@@ -18,7 +19,10 @@ class PayeeViewSet(ResourceViewSet):
     resource_name = 'payees'
     paginate_response = False
     serializer_class = PayeeSerializer
-    permission_classes = (IsSuperAdminOrReadOnly|IsOwnerOrReadOnly|SubUserManagePayeesPermission,)
+    permission_classes = ( IsAuthenticated, 
+                           IsSuperAdminOrReadOnly|
+                           IsOwnerOrReadOnly|
+                           SubUserManagePayeesPermission,)
 
     filter_backends = (
         OrderingFilter,

@@ -2,7 +2,7 @@ from traceback import format_exc
 from django.utils.functional import cached_property
 from core import views
 from django.db.utils import IntegrityError
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.serializers import ValidationError
 from frontend_api.core.client import PaymentApiClient
 from frontend_api.fields import ScheduleStatus
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class ScheduleViewSet(views.ModelViewSet):
     queryset = Schedule.objects.all()
     serializer_class = ScheduleSerializer
-    permission_classes = (AllowAny,)
+    permission_classes = (IsAuthenticated,)
 
     # Example: /api/v1/schedules/?page[number]=1&filter[currency.iexact]=EUR&filter[name.icontains]=test&sort=-status
     ordering_fields = ('name', 'status')

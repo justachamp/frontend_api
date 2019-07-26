@@ -1,8 +1,10 @@
+from rest_framework.permissions import IsAuthenticated
+
 from payment_api.serializers import TransactionSerializer
 from frontend_api.permissions import (
     IsSuperAdminOrReadOnly,
     IsOwnerOrReadOnly,
-    SubUserManageFundingSourcesPermission
+    SubUserManageSchedulesPermission
 )
 from payment_api.views import (
     InclusionFilter,
@@ -18,7 +20,10 @@ class TransactionViewSet(ResourceViewSet):
     resource_name = 'transactions'
     allowed_methods = ['head', 'get']
     serializer_class = TransactionSerializer
-    permission_classes = (IsSuperAdminOrReadOnly|IsOwnerOrReadOnly|SubUserManageFundingSourcesPermission, )
+    permission_classes = (  IsAuthenticated, 
+                            IsSuperAdminOrReadOnly|
+                            IsOwnerOrReadOnly|
+                            SubUserManageSchedulesPermission, )
 
     def check_payment_account_id(self, filters, key, value):
         user = self.request.user

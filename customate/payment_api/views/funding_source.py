@@ -1,3 +1,5 @@
+from rest_framework.permissions import IsAuthenticated
+
 from payment_api.serializers import FundingSourceSerializer, UpdateFundingSourceSerializer
 from frontend_api.permissions import (
     IsSuperAdminOrReadOnly,
@@ -18,7 +20,10 @@ class FundingSourceViewSet(ResourceViewSet):
     resource_name = 'funding_sources'
     paginate_response = False
     serializer_class = FundingSourceSerializer
-    permission_classes = (IsSuperAdminOrReadOnly|IsOwnerOrReadOnly|SubUserManageFundingSourcesPermission,)
+    permission_classes = (  IsAuthenticated,
+                            IsSuperAdminOrReadOnly|
+                            IsOwnerOrReadOnly|
+                            SubUserManageFundingSourcesPermission,)
 
     filter_backends = (
         OrderingFilter,

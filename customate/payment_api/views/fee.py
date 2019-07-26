@@ -1,3 +1,4 @@
+from rest_framework.permissions import IsAuthenticated
 from frontend_api.permissions import IsSuperAdminOrReadOnly, AdminUserFeePermission
 from payment_api.serializers import FeeGroupSerializer, FeeGroupAccountSerializer
 
@@ -16,7 +17,9 @@ from payment_api.views import (
 class FeeGroupViewSet(ResourceViewSet):
     resource_name = 'fee_groups'
     serializer_class = FeeGroupSerializer
-    permission_classes = (IsSuperAdminOrReadOnly|AdminUserFeePermission, )
+    permission_classes = (  IsAuthenticated,
+                            IsSuperAdminOrReadOnly|
+                            AdminUserFeePermission, )
     filter_backends = (
         QueryParameterValidationFilter,
         OrderingFilter,
@@ -44,7 +47,7 @@ class FeeGroupRelationshipView(ResourceRelationshipView):
 class FeeGroupAccountViewSet(ResourceViewSet):
     resource_name = 'fee_group_accounts'
     serializer_class = FeeGroupAccountSerializer
-    permission_classes = ()
+    permission_classes = (IsAuthenticated,)
     # filter_backends = (
     #     QueryParameterValidationFilter,
     #     OrderingFilter,

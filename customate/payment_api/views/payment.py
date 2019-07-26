@@ -1,3 +1,5 @@
+from rest_framework.permissions import IsAuthenticated
+
 from payment_api.serializers import PaymentSerializer, LoadFundsSerializer
 from frontend_api.permissions import (
     IsSuperAdminOrReadOnly,
@@ -17,7 +19,10 @@ class LoadFundsViewSet(ResourceViewSet):
     resource_name = 'funds'
     allowed_methods = ['post']
     serializer_class = LoadFundsSerializer
-    permission_classes = (IsSuperAdminOrReadOnly|IsOwnerOrReadOnly|SubUserLoadFundsPermission,)
+    permission_classes = (  IsAuthenticated, 
+                            IsSuperAdminOrReadOnly|
+                            IsOwnerOrReadOnly|
+                            SubUserLoadFundsPermission,)
 
     filter_backends = (
         OrderingFilter,
@@ -30,7 +35,9 @@ class PaymentViewSet(ResourceViewSet):
     resource_name = 'payments'
     allowed_methods = ['head', 'get']
     serializer_class = PaymentSerializer
-    permission_classes = (IsSuperAdminOrReadOnly|IsOwnerOrReadOnly,)
+    permission_classes = (  IsAuthenticated, 
+                            IsSuperAdminOrReadOnly|
+                            IsOwnerOrReadOnly,)
 
     filter_backends = (
         OrderingFilter,

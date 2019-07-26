@@ -1,4 +1,4 @@
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import MethodNotAllowed, NotFound
 from rest_framework_json_api.views import RelationshipView
 
@@ -40,7 +40,8 @@ class AdminUserViewSet(PatchRelatedMixin, views.ModelViewSet):
     queryset = User.objects.all().filter(role=UserRole.admin).order_by('-date_joined')
     serializer_class = AdminUserSerializer
     allowed_methods = ['head', 'get']
-    permission_classes = (IsSuperAdminOrReadOnly,)
+    permission_classes = (  IsAuthenticated,
+                            IsSuperAdminOrReadOnly,)
 
     def update(self, request, *args, **kwargs):
         return super().update(request, *args, **kwargs)
@@ -80,7 +81,10 @@ class UserViewSet(PatchRelatedMixin, views.ModelViewSet):
     queryset = User.objects.all().exclude(email='AnonymousUser').order_by('-date_joined')
     serializer_class = UserSerializer
 
-    permission_classes = (IsOwnerOrReadOnly|IsSuperAdminOrReadOnly|IsRegularAdminOrReadOnly,)
+    permission_classes = (  IsAuthenticated, 
+                            IsOwnerOrReadOnly|
+                            IsSuperAdminOrReadOnly|
+                            IsRegularAdminOrReadOnly,)
 
     filter_backends = (filters.QueryParameterValidationFilter, filters.OrderingFilter,
                        django_filters.DjangoFilterBackend, SearchFilter)
@@ -146,7 +150,7 @@ class UserViewSet(PatchRelatedMixin, views.ModelViewSet):
 class UserRelationshipView(RelationshipPostMixin, RelationshipView):
     http_method_names = ['head', 'get']
     queryset = User.objects
-    permission_classes = (AllowAny,)
+    permission_classes = (IsAuthenticated,)
     # _related_serializers = {
     #     'address': UserAddressSerializer
     # }

@@ -1,5 +1,5 @@
 from django.db import transaction
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework_json_api.views import RelationshipView
 
 from core import views
@@ -23,7 +23,7 @@ class ShareholderViewSet(BulkExtensionMixin, PatchRelatedMixin, views.ModelViewS
 
     queryset = Shareholder.objects.all()
     serializer_class = ShareholderSerializer
-    permission_classes = (AllowAny,)
+    permission_classes = (IsAuthenticated,)
 
     @transaction.atomic
     def perform_create(self, serializer):

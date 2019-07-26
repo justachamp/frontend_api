@@ -93,8 +93,6 @@ class IsOwnerOrReadOnly(permissions.BasePermission):
     def has_permission(self, request, view):
         if request.method in permissions.SAFE_METHODS:
             return True
-        if request.user.is_anonymous:
-            return False 
         return request.user.role == UserRole.owner
 
 
@@ -168,12 +166,4 @@ class AdminUserFeePermission(permissions.BasePermission):
             return getattr(request.user.account.permission, "manage_fee")
 
 
-class AllowAny(permissions.BasePermission):
-    """
-    Custom permission to only services users.
-    """
-    def has_permission(self, request, view):
-        return not request.user.is_anonymous
-
-
-# pull request
+# test sshfs

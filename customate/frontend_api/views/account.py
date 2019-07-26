@@ -2,7 +2,7 @@ from django.db import transaction
 from django.contrib.auth.models import AnonymousUser
 
 from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from rest_framework.exceptions import MethodNotAllowed, NotFound
 from rest_framework import response
@@ -98,7 +98,9 @@ class AccountViewSet(RelationshipMixin, PatchRelatedMixin, views.ModelViewSet):
 
     queryset = Account.objects.all()
     serializer_class = AccountSerializer
-    permission_classes = (IsSuperAdminOrReadOnly|IsOwnerOrReadOnly,)
+    permission_classes = (  IsAuthenticated, 
+                            IsSuperAdminOrReadOnly|
+                            IsOwnerOrReadOnly,)
 
     filter_backends = (filters.QueryParameterValidationFilter, filters.OrderingFilter,
                        django_filters.DjangoFilterBackend, SearchFilter)
@@ -197,7 +199,9 @@ class UserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.ModelVi
 
     queryset = UserAccount.objects.all()
     serializer_class = UserAccountSerializer
-    permission_classes = (IsSuperAdminOrReadOnly|IsOwnerOrReadOnly,)
+    permission_classes = (  IsAuthenticated,
+                            IsSuperAdminOrReadOnly|
+                            IsOwnerOrReadOnly,)
 
     ordering_fields = ('user__email', 'user__username', 'user__status', 'user__first_name',
                        'user__last_name', 'user_middle_name', 'user__phone_number',
@@ -226,7 +230,8 @@ class AdminUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.Mo
 
     queryset = AdminUserAccount.objects.all()
     serializer_class = AdminUserAccountSerializer
-    permission_classes = (IsSuperAdminOrReadOnly,)
+    permission_classes = (  IsAuthenticated, 
+                            IsSuperAdminOrReadOnly,)
 
     ordering_fields = ('user__email', 'user__username', 'user__status', 'user__first_name',
                        'user__last_name', 'user_middle_name', 'user__phone_number',
@@ -324,7 +329,9 @@ class SubUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.Mode
 
     queryset = SubUserAccount.objects.all()
     serializer_class = SubUserAccountSerializer
-    permission_classes = (IsSuperAdminOrReadOnly|IsOwnerOrReadOnly,)
+    permission_classes = (IsAuthenticated, 
+                          IsSuperAdminOrReadOnly|
+                          IsOwnerOrReadOnly,)
 
     # TODO move to service
     def get_owner_account(self):
