@@ -1,6 +1,7 @@
+import datetime
+import arrow
 from dataclasses import dataclass
 from enumfields import EnumField
-
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import get_user_model
@@ -62,6 +63,29 @@ class Schedule(Model):
     def is_cancelable(self):
         return self.status in [ScheduleStatus.open, ScheduleStatus.overdue]
 
+    @property
+    def next_payment_date(self):
+        """
+        TODO: Calculate next payment date, according to weekends and custom holidays in separate table (TBD)
+        :return:
+        :rtype: datetime.date|None
+        """
+        res = None
+
+        if self.period is SchedulePeriod.one_time:
+            res = None
+        elif self.period is SchedulePeriod.weekly:
+            res = arrow.get(self.start_date).replace(weeks=+1)
+        elif self.period is SchedulePeriod.monthly:
+            res = arrow.get(self.start_date).replace(months=+1)
+            # Note how JAN->FEB is handled in following example:
+            # <Arrow [2019-01-31T11:58:11.459665+00:00]> -> <Arrow [2019-02-28T11:58:11.459665+00:00]>
+        elif self.period is SchedulePeriod.quarterly:
+            res = arrow.get(self.start_date).replace(months=+4)
+        elif self.period is SchedulePeriod.yearly:
+            res = arrow.get(self.start_date).replace(years=+1)
+
+        return res.datetime.date() if res else None
 
 @dataclass
 class SchedulePaymentsDetails:

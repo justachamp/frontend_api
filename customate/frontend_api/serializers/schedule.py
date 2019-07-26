@@ -3,7 +3,6 @@ import arrow
 from traceback import format_exc
 from collections import OrderedDict
 
-#from rest_framework.exceptions import ValidationError
 from rest_framework.serializers import ValidationError
 from rest_framework_json_api.serializers import HyperlinkedModelSerializer
 from rest_framework.fields import DateField, IntegerField
@@ -49,12 +48,15 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
             'name', 'status', 'purpose', 'currency', 'period', 'number_of_payments_left',
             'start_date', 'payment_amount', 'fee_amount', 'deposit_amount', 'deposit_payment_date',
             'additional_information', 'payee_id', 'funding_source_id', 'payee_title',
-            'total_paid_sum', 'total_sum_to_pay', 'payee_iban', 'payee_recipient_name', 'payee_recipient_email'
+            'total_paid_sum', 'total_sum_to_pay', 'payee_iban', 'payee_recipient_name', 'payee_recipient_email',
+
+            # we can use model properties as well
+            'next_payment_date'
         )
 
     def validate_name(self, value):
         """
-
+        Make sure we avoid duplicate names for the same user.
         :param name:
         :return:
         """
@@ -62,12 +64,8 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
         logger.info("Validate_name: %r, user=%r" % (value, request.user))
         entries_count = Schedule.objects.filter(name=value, user=request.user).count()
         if entries_count >= 1:
-            raise ValidationError(["Schedule with such name already exists"])
-
-        # raise ValidationError({
-        #     api_settings.NON_FIELD_ERRORS_KEY: [message]
-        # }, code='invalid')
-
+            #raise ValidationError({"name": "Schedule with such name already exists"})
+            raise ValidationError("Schedule with such name already exists")
         return value
 
     # validate_{fieldname} also works
