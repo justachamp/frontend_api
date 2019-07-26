@@ -93,6 +93,8 @@ class IsOwnerOrReadOnly(permissions.BasePermission):
     def has_permission(self, request, view):
         if request.method in permissions.SAFE_METHODS:
             return True
+        if request.user.is_anonymous:
+            return False 
         return request.user.role == UserRole.owner
 
 
