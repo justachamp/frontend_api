@@ -35,7 +35,12 @@ class ScheduleViewSet(views.ModelViewSet):
     }
 
     def get_queryset(self, *args, **kwargs):
-        return Schedule.objects.all().filter(user=self.request.user)
+        account = self.request.user.account
+        owner_account = account.owner_account \
+            if self.request.user.is_subuser else account
+        target_account_ids = [owner_account.id] + list(owner_account.sub_user_accounts.all().values_list('id', flat=True))
+
+        return Schedule.objects.all().filter(user__account__id__in=target_account_ids)
 
     @cached_property
     def payment_client(self):
