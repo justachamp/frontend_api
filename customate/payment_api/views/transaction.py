@@ -15,6 +15,9 @@ from payment_api.views import (
     ResourceViewSet
 )
 
+from core.fields import UserRole
+
+
 
 class TransactionViewSet(ResourceViewSet):
     resource_name = 'transactions'
@@ -26,11 +29,14 @@ class TransactionViewSet(ResourceViewSet):
                             SubUserManageSchedulesPermission, )
 
     def check_payment_account_id(self, filters, key, value):
-        user = self.request.user
-        if not user.is_anonymous and user.is_owner and user.account.payment_account_id:
-            return user.account.payment_account_id
-        else:
-            self.get_queryset().set_empty_response()
+        # TODO: somehow receive users payment_account_id from client if request from admin
+        if self.request.user.role == UserRole.admin:
+            return self.get_queryset().set_empty_response()
+        # Get and return users (owner) payment_account_id even if request from subuser
+        user  =  self.request.user \
+              if self.request.user.is_owner \
+            else self.request.user.account.owner_account.user 
+        return user.account.payment_account_id
 
     filter_backends = (
         OrderingFilter,

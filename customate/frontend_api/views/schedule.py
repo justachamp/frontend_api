@@ -7,6 +7,11 @@ from rest_framework.serializers import ValidationError
 from frontend_api.core.client import PaymentApiClient
 from frontend_api.fields import ScheduleStatus
 from frontend_api.models import Schedule
+from frontend_api.permissions import (
+            IsOwnerOrReadOnly, 
+            IsSuperAdminOrReadOnly,
+            SubUserManageSchedulesPermission
+        )
 
 from ..serializers.schedule import ScheduleSerializer
 
@@ -18,7 +23,10 @@ logger = logging.getLogger(__name__)
 class ScheduleViewSet(views.ModelViewSet):
     queryset = Schedule.objects.all()
     serializer_class = ScheduleSerializer
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated,
+                          IsSuperAdminOrReadOnly|
+                          IsOwnerOrReadOnly|
+                          SubUserManageSchedulesPermission)
 
     # Example: /api/v1/schedules/?page[number]=1&filter[currency.iexact]=EUR&filter[name.icontains]=test&sort=-status
     ordering_fields = ('name', 'status')
