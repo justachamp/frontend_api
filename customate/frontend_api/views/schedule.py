@@ -70,7 +70,7 @@ class ScheduleViewSet(views.ModelViewSet):
             raise ValidationError({"status": "Schedule with current status cannot be canceled"})
 
         # cancel Schedule
-        schedule.status = ScheduleStatus.canceled
+        schedule.status = ScheduleStatus.cancelled
         schedule.save(update_fields=["status"])
         self.payment_client.cancel_schedule_payments(schedule.id)
 
