@@ -1,4 +1,5 @@
 from rest_framework.permissions import IsAuthenticated
+from core.fields import UserRole
 from payment_api.serializers import PayeeSerializer, UpdatePayeeSerializer
 from frontend_api.permissions import (
     IsSuperAdminOrReadOnly,
@@ -19,10 +20,10 @@ class PayeeViewSet(ResourceViewSet):
     resource_name = 'payees'
     paginate_response = False
     serializer_class = PayeeSerializer
-    permission_classes = ( IsAuthenticated, 
-                           IsSuperAdminOrReadOnly|
-                           IsOwnerOrReadOnly|
-                           SubUserManagePayeesPermission,)
+    permission_classes = (IsAuthenticated,
+                          IsSuperAdminOrReadOnly |
+                          IsOwnerOrReadOnly |
+                          SubUserManagePayeesPermission,)
 
     filter_backends = (
         OrderingFilter,
@@ -39,9 +40,9 @@ class PayeeViewSet(ResourceViewSet):
         if self.request.user.role == UserRole.admin:
             return self.get_queryset().set_empty_response()
         # Get and return users (owner) payment_account_id even if request from subuser
-        user  =  self.request.user \
-              if self.request.user.is_owner \
-            else self.request.user.account.owner_account.user 
+        user = self.request.user \
+            if self.request.user.is_owner \
+            else self.request.user.account.owner_account.user
         return user.account.payment_account_id
 
     filterset_fields = {
