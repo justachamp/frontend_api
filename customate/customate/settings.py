@@ -46,8 +46,6 @@ INSTALLED_APPS = [
     'authentication.apps.AuthenticationConfig',
     'authentication.cognito.apps.CognitoConfig',
     'external_apis.apps.ExternalApisConfig',
-    'address.apps.AddressConfig',
-    'address.loqate.apps.LoqateConfig',
     'frontend_api.apps.FrontendApiConfig',
     'payment_api.apps.PaymentApiConfig',
     'storages',
