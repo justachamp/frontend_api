@@ -1,4 +1,5 @@
 import logging
+import re
 from traceback import format_exc
 
 from rest_framework.permissions import IsAuthenticated
@@ -6,7 +7,7 @@ from rest_framework.decorators import action
 from rest_framework import response
 from rest_framework_json_api.views import RelationshipView
 
-from external_apis.loqate.service import find_address
+from external_apis.loqate.service import find_address, retrieve_address
 
 from core import views
 
@@ -15,6 +16,16 @@ from frontend_api.serializers import UserAddressSerializer, CompanyAddressSerial
 from frontend_api.views.mixins import PatchRelatedMixin
 
 logger = logging.getLogger(__name__)
+
+
+def camelcase_to_snakecase(name):
+    """
+    CamelCase - > camel_case
+    :param name:
+    :return:
+    """
+    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
 
 class AddressRelationshipView(RelationshipView):
@@ -56,23 +67,39 @@ class AddressViewSet(views.ModelViewSet):
 
     @action(methods=['POST'], detail=False, name='Search address')
     def search(self, request):
+        """
+        Returns the list of suggested addresses
+        :param request:
+        :return:
+        """
         res = []
         data = request.data
         logger.info("Calling search,data=%r" % data)
         try:
             for r in find_address(params=data):
                 res.append(
-                    dict((k.lower(), v) for k, v in r.items())
+                    dict((camelcase_to_snakecase(k), v) for k, v in r.items())
                 )
         except Exception as e:
             logger.error("Find address failed, request.data=%r, exc=%r" % (data, format_exc()))
         return response.Response(res)
 
-    # @action(methods=['POST'], detail=False, name='Retrieve address detail')
-    # def search_detail(self, request):
-    #     data = request.data
-    #     logger.info("Calling search_detail: %r" % data)
-    #     id = data.get('id')
-    #     serializer = RetrieveAddressSerializer(data={'Id': id})
-    #     if serializer.is_valid(True):
-    #         return response.Response(serializer.retrieve(id))
+    @action(methods=['POST'], detail=False, name='Retrieve address detail')
+    def search_detail(self, request):
+        """
+        Returns full Address details for a specific address ID
+        :param request:
+        :return:
+        """
+        res = []
+        data = request.data
+        logger.info("Calling search_detail: %r" % data)
+        try:
+            for r in retrieve_address(params=data):
+                res.append(
+                    dict((camelcase_to_snakecase(k), v) for k, v in r.items())
+                )
+        except Exception as e:
+            logger.error("Retrieve address failed, request.data=%r, exc=%r" % (data, format_exc()))
+
+        return response.Response(res)
