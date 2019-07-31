@@ -67,6 +67,7 @@ class Schedule(Model):
     def next_payment_date(self):
         """
         TODO: Calculate next payment date, according to weekends and custom holidays in separate table (TBD)
+        TODO2: Take into account last_payment_date (instead of start_date)
         :return:
         :rtype: datetime.date|None
         """

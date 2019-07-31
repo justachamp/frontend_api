@@ -1,7 +1,6 @@
 from traceback import format_exc
 from django.utils.functional import cached_property
 from core import views
-from django.db.utils import IntegrityError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.serializers import ValidationError
 from frontend_api.core.client import PaymentApiClient

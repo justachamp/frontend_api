@@ -1,5 +1,6 @@
 import copy
 import requests
+import logging
 from typing import List, Dict
 
 from external_apis.loqate.settings import LOQATE_SERVICE_KEY
@@ -11,6 +12,25 @@ BASE_HEADERS = {
     'Content-Type': 'application/json',
     'CountryCode': 'GB'
 }
+
+logger = logging.getLogger(__name__)
+
+
+class LoqateError(Exception):
+    """
+    Custom exception for Loqate service error responses
+    """
+
+    def __init__(self, message, error_response):
+        # Call the base class constructor with the parameters it needs
+        super().__init__(message)
+        self.error_response = error_response
+
+    def __str__(self):
+        return "LoqateError: %s %s" % (
+            self.error_response.get("Cause"),
+            self.error_response.get("Resolution")
+        )
 
 
 def make_request(url, params):
@@ -25,14 +45,30 @@ def make_request(url, params):
     id = new_params.pop('id', None)
     if id:
         new_params["Id"] = id
-
-    # TODO: throw Error exceptions in case of following:
-    # {"data":[{
-    #   "error":"1001",
-    #   "description":"Id Invalid",
-    #   "cause":"The Id parameter supplied was invalid.",
-    #   "resolution":"You should only pass in IDs that have been returned from the Find service."}]}
     return requests.post(url, headers=BASE_HEADERS, params=new_params)
+
+
+def _check_errors(items: List):
+    """
+    Raises custom Loqate exception in case any errors in response.
+    This is how an error looks like:
+    ```
+    [{
+       "Error":"1001",
+       "Description":"Id Invalid",
+       "Cause":"The Id parameter supplied was invalid.",
+       "Resolution":"You should only pass in IDs that have been returned from the Find service."
+    }]
+    ```
+    :param items:
+    :return:
+    """
+    if len(items) == 0:
+        return
+
+    item = items[0]
+    if "Error" in item.keys():
+        raise LoqateError(message=item.get("Cause"), error_response=item)
 
 
 def find_address(params: Dict) -> List:
@@ -60,7 +96,9 @@ def find_address(params: Dict) -> List:
     :rtype
     """
     r = make_request(url=BASE_URL.format("Find"), params=params)
-    return r.json().get('Items')
+    items = r.json().get('Items')
+    _check_errors(items)
+    return items
 
 
 def retrieve_address(params):
@@ -132,4 +170,6 @@ def retrieve_address(params):
     :return:
     """
     r = make_request(url=BASE_URL.format("Retrieve"), params=params)
-    return r.json().get('Items')
+    items = r.json().get('Items')
+    _check_errors(items)
+    return items

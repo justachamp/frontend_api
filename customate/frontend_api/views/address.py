@@ -2,12 +2,13 @@ import logging
 import re
 from traceback import format_exc
 
+from rest_framework import response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
-from rest_framework import response
+from rest_framework.serializers import ValidationError
 from rest_framework_json_api.views import RelationshipView
 
-from external_apis.loqate.service import find_address, retrieve_address
+from external_apis.loqate.service import find_address, retrieve_address, LoqateError
 
 from core import views
 
@@ -80,6 +81,8 @@ class AddressViewSet(views.ModelViewSet):
                 res.append(
                     dict((camelcase_to_snakecase(k), v) for k, v in r.items())
                 )
+        except LoqateError as e:
+            raise ValidationError(str(e))
         except Exception as e:
             logger.error("Find address failed, request.data=%r, exc=%r" % (data, format_exc()))
         return response.Response(res)
@@ -99,6 +102,8 @@ class AddressViewSet(views.ModelViewSet):
                 res.append(
                     dict((camelcase_to_snakecase(k), v) for k, v in r.items())
                 )
+        except LoqateError as e:
+            raise ValidationError(str(e))
         except Exception as e:
             logger.error("Retrieve address failed, request.data=%r, exc=%r" % (data, format_exc()))
 
