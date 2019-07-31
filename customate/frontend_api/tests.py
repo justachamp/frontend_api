@@ -41,9 +41,15 @@ class ScheduleModelTest(SimpleTestCase):
 
     def test_next_payment_date_one_time(self):
         schedule = Schedule(period=SchedulePeriod.one_time, start_date=arrow.utcnow().datetime.date(),
-                            status=ScheduleStatus.open, payment_amount=100)
+                            status=ScheduleStatus.open, payment_amount=100, number_of_payments_left=1)
 
         self.assertEquals(schedule.start_date, schedule.next_payment_date)
+
+    def test_next_payment_date_one_time_all_payments_made(self):
+        schedule = Schedule(period=SchedulePeriod.one_time, start_date=arrow.utcnow().datetime.date(),
+                            status=ScheduleStatus.open, payment_amount=100, number_of_payments_left=0)
+
+        self.assertIsNone(schedule.next_payment_date)
 
     def test_next_payment_date_weekly_start_date_didnt_pass(self):
         schedule = Schedule(period=SchedulePeriod.weekly, start_date=arrow.utcnow().datetime.date(),

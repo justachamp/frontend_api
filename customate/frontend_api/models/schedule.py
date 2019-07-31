@@ -64,7 +64,8 @@ class Schedule(Model):
         return self.status in [ScheduleStatus.open, ScheduleStatus.overdue]
 
     def _can_have_next_payment(self):
-        return self.status in [ScheduleStatus.open, ScheduleStatus.overdue]
+        return self.status in [ScheduleStatus.open, ScheduleStatus.overdue] \
+               and self.number_of_payments_left != 0
 
     def _did_we_make_first_payment(self):
         # NOTE: don't think that we can rely on total_paid_sum field instead (considering long running transactions)
