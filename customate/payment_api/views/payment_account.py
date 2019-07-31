@@ -4,6 +4,8 @@ from payment_api.serializers import PaymentAccountSerializer
 from frontend_api.permissions import (
     IsSuperAdminOrReadOnly,
     IsOwnerOrReadOnly,
+    IsActive,
+    IsNotBlocked
 )
 from payment_api.views import (
     InclusionFilter,
@@ -21,8 +23,10 @@ class PaymentAccountViewSet(ResourceViewSet):
     resource_name = 'payment_accounts'
     serializer_class = PaymentAccountSerializer
     permission_classes = (  IsAuthenticated, 
-                            IsSuperAdminOrReadOnly|
-                            IsOwnerOrReadOnly, )
+                            IsActive,
+                            IsNotBlocked,
+                            IsSuperAdminOrReadOnly |
+                            IsOwnerOrReadOnly )
 
     def prepare_request_params(self):
         param = self.request.query_params.get('ibanGeneralPart')
@@ -59,6 +63,11 @@ class PaymentAccountViewSet(ResourceViewSet):
 class PaymentAccountRelationshipView(ResourceRelationshipView):
     serializer_class = PaymentAccountSerializer
     resource_name = 'payment_accounts'
+    permission_classes = (  IsAuthenticated, 
+                            IsActive,
+                            IsNotBlocked,
+                            IsSuperAdminOrReadOnly |
+                            IsOwnerOrReadOnly )
 
     class Meta:
         external_resource_name = 'accounts'

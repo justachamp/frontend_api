@@ -14,6 +14,7 @@ from core import views
 from frontend_api.models import Address
 from frontend_api.serializers import UserAddressSerializer, CompanyAddressSerializer, AddressSerializer
 from frontend_api.views.mixins import PatchRelatedMixin
+from frontend_api.permissions import IsActive, IsOwnerOrReadOnly
 
 logger = logging.getLogger(__name__)
 
@@ -31,12 +32,17 @@ def camelcase_to_snakecase(name):
 class AddressRelationshipView(RelationshipView):
     queryset = Address.objects
     serializer_class = AddressSerializer
+    permission_classes = ( IsAuthenticated,
+                           IsActive,
+                           IsOwnerOrReadOnly )
 
 
 class UserAddressViewSet(PatchRelatedMixin, views.ModelViewSet):
     queryset = Address.objects.all()
     serializer_class = UserAddressSerializer
-    permission_classes = (IsAuthenticated,)
+    permission_classes = ( IsAuthenticated,
+                           IsActive,
+                           IsOwnerOrReadOnly )
 
     def perform_create(self, serializer):
         logger.info("perform_create")
@@ -49,7 +55,9 @@ class UserAddressViewSet(PatchRelatedMixin, views.ModelViewSet):
 class CompanyAddressViewSet(PatchRelatedMixin, views.ModelViewSet):
     queryset = Address.objects.all()
     serializer_class = CompanyAddressSerializer
-    permission_classes = (IsAuthenticated,)
+    permission_classes = ( IsAuthenticated,
+                           IsActive,
+                           IsOwnerOrReadOnly )
 
     def perform_create(self, serializer):
         logger.info("perform_create")
@@ -63,7 +71,9 @@ class CompanyAddressViewSet(PatchRelatedMixin, views.ModelViewSet):
 class AddressViewSet(views.ModelViewSet):
     queryset = Address.objects.all()
     serializer_class = AddressSerializer
-    permission_classes = (IsAuthenticated,)
+    permission_classes = ( IsAuthenticated,
+                           IsActive,
+                           IsOwnerOrReadOnly )
 
     @action(methods=['POST'], detail=False, name='Search address')
     def search(self, request):

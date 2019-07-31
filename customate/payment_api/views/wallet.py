@@ -4,6 +4,8 @@ from payment_api.serializers import WalletSerializer
 from frontend_api.permissions import (
     IsSuperAdminOrReadOnly,
     IsOwnerOrReadOnly,
+    IsActive,
+    IsNotBlocked
 )
 
 from payment_api.views import (
@@ -20,8 +22,10 @@ class WalletViewSet(ResourceViewSet):
     resource_name = 'wallets'
     serializer_class = WalletSerializer
     permission_classes = (  IsAuthenticated, 
-                            IsSuperAdminOrReadOnly|
-                            IsOwnerOrReadOnly,)
+                            IsActive,
+                            IsNotBlocked,
+                            IsSuperAdminOrReadOnly |
+                            IsOwnerOrReadOnly )
 
     filter_backends = (
         OrderingFilter,
@@ -52,3 +56,8 @@ class WalletViewSet(ResourceViewSet):
 class WalletRelationshipView(ResourceRelationshipView):
     serializer_class = WalletSerializer
     resource_name = 'wallets'
+    permission_classes = (  IsAuthenticated, 
+                            IsActive,
+                            IsNotBlocked,
+                            IsSuperAdminOrReadOnly |
+                            IsOwnerOrReadOnly )

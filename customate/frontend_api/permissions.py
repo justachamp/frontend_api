@@ -2,7 +2,7 @@ from rest_framework import permissions
 from rest_framework.exceptions import ValidationError
 
 from authentication.cognito.serializers import CognitoAuthRetrieveSerializer
-from core.fields import UserRole
+from core.fields import UserRole, UserStatus
 
 import logging
 logger = logging.getLogger(__name__)
@@ -11,20 +11,15 @@ logger = logging.getLogger(__name__)
 class CheckFieldsCredentials(permissions.BasePermission):
 
     def has_permission(self, request, view):
-        if not request.user or not request.user.is_authenticated:
-            return False
-
         if request.method == 'PATCH':
             if self.check_credentials_required_fields_exists(view):
                 return self.check_credentials_required(request, view)
         request.data.pop("credentials", None)
         return True
 
-    def has_object_permission(self, request, view, obj):
-        return True
-
     @staticmethod
     def check_credentials_required_fields_exists(view):
+        print(getattr(view, 'credentials_required_fields'))
         if hasattr(view, 'credentials_required_fields'):
             return True
         else:
@@ -138,6 +133,16 @@ class IsSuperAdminOrReadOnly(permissions.BasePermission):
         return request.user.is_superuser 
 
 
+class IsRegularSubUserOrReadOnly(permissions.BasePermission):
+    """
+    Custom permission to only allow super admins.
+    """
+    def has_permission(self, request, view):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return request.user.role == UserRole.sub_user
+
+
 class IsRegularAdminOrReadOnly(permissions.BasePermission):
     """
     Custom permission to only allow super admins.
@@ -166,4 +171,35 @@ class AdminUserFeePermission(permissions.BasePermission):
             return getattr(request.user.account.permission, "manage_fee")
 
 
-# test sshfs
+class IsActive(permissions.BasePermission):
+    """
+    Custom permission to restrict access for inactive users
+    """
+    def has_permission(self, request, view):
+        if request.user.status in [UserStatus.inactive, UserStatus.banned, UserStatus.pending]:
+            return False
+        return True
+
+
+class IsNotBlocked(permissions.BasePermission):
+    """
+    Custom permission to restrict access for blocked users
+    """
+    def has_permission(self, request, view):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return request.user.status != UserStatus.blocked
+
+
+class IsVerified(permissions.BasePermission):
+    """
+    Custom permission to restrict access for unverified users
+    Restricts outgoing transactions but allows GET OPTIONS HEAD methods
+    """
+    def has_permission(self, request, view):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return request.user.is_verified and request.user.contact_verified
+
+
+
