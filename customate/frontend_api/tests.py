@@ -1,10 +1,11 @@
 from uuid import uuid4
-
 from django.test import SimpleTestCase
 from frontend_api.core.client import PaymentApiClient
+from frontend_api.fields import SchedulePeriod, ScheduleStatus
 from frontend_api.models import Schedule
-
+import arrow
 import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -32,6 +33,47 @@ class ScheduleModelTest(SimpleTestCase):
         schedule.calculate_and_set_total_sum_to_pay()
 
         self.assertEquals(1075, schedule.total_sum_to_pay)
+
+    def test_next_payment_date_closed_schedule(self):
+        schedule = Schedule(period=SchedulePeriod.one_time, status=ScheduleStatus.closed, payment_amount=100)
+
+        self.assertIsNone(schedule.next_payment_date)
+
+    def test_next_payment_date_one_time(self):
+        schedule = Schedule(period=SchedulePeriod.one_time, start_date=arrow.utcnow().datetime.date(),
+                            status=ScheduleStatus.open, payment_amount=100)
+
+        self.assertEquals(schedule.start_date, schedule.next_payment_date)
+
+    def test_next_payment_date_weekly_start_date_didnt_pass(self):
+        schedule = Schedule(period=SchedulePeriod.weekly, start_date=arrow.utcnow().datetime.date(),
+                            status=ScheduleStatus.open, number_of_payments_left=10, payment_amount=100)
+
+        self.assertEquals(schedule.start_date, schedule.next_payment_date)
+
+    def test_next_payment_date_weekly_start_date_pass(self):
+        schedule = Schedule(period=SchedulePeriod.weekly, start_date=arrow.get(2013, 5, 21).datetime.date(),
+                            status=ScheduleStatus.open, number_of_payments_left=10, payment_amount=100)
+
+        self.assertEquals(arrow.get(2013, 5, 28).datetime.date(), schedule.next_payment_date)
+
+    def test_next_payment_date_monthly(self):
+        schedule = Schedule(period=SchedulePeriod.monthly, start_date=arrow.get(2013, 5, 21).datetime.date(),
+                            status=ScheduleStatus.open, number_of_payments_left=10, payment_amount=100)
+
+        self.assertEquals(arrow.get(2013, 6, 21).datetime.date(), schedule.next_payment_date)
+
+    def test_next_payment_date_quarterly(self):
+        schedule = Schedule(period=SchedulePeriod.quarterly, start_date=arrow.get(2013, 5, 21).datetime.date(),
+                            status=ScheduleStatus.open, number_of_payments_left=10, payment_amount=100)
+
+        self.assertEquals(arrow.get(2013, 9, 21).datetime.date(), schedule.next_payment_date)
+
+    def test_next_payment_date_yearly(self):
+        schedule = Schedule(period=SchedulePeriod.yearly, start_date=arrow.get(2013, 5, 21).datetime.date(),
+                            status=ScheduleStatus.open, number_of_payments_left=10, payment_amount=100)
+
+        self.assertEquals(arrow.get(2014, 5, 21).datetime.date(), schedule.next_payment_date)
 
 
 class PaymentApiClientTest(SimpleTestCase):
