@@ -7,7 +7,7 @@ from core.fields import Dataset
 
 class DatasetView(viewsets.ViewSet):
 
-    permission_classes = ()
+    permission_classes = (AllowAny, )
 
     @action(methods=['GET'], detail=False)
     def all(self, request):

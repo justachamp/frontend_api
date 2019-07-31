@@ -1,4 +1,4 @@
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
 
 from payment_api.serializers import (
     IbanValidationSerializer, SortCodeAccountNumberValidationSerializer, CheckGBSerializer
@@ -11,7 +11,7 @@ from payment_api.views import (
 
 class IbanValidationViewSet(ResourceViewSet):
     resource_name = 'ibans'
-    permission_classes = (AllowAny,)
+    permission_classes = (IsAuthenticated,)
 
     def get_serializer_class(self):
         is_gb = CheckGBSerializer(data=self.request.data).is_valid(False)

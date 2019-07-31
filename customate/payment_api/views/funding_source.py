@@ -4,7 +4,9 @@ from payment_api.serializers import FundingSourceSerializer, UpdateFundingSource
 from frontend_api.permissions import (
     IsSuperAdminOrReadOnly,
     IsOwnerOrReadOnly,
-    SubUserManageFundingSourcesPermission
+    SubUserManageFundingSourcesPermission,
+    IsActive,
+    IsNotBlocked
 )
 from payment_api.views import (
     InclusionFilter,
@@ -21,9 +23,11 @@ class FundingSourceViewSet(ResourceViewSet):
     paginate_response = False
     serializer_class = FundingSourceSerializer
     permission_classes = (  IsAuthenticated,
-                            IsSuperAdminOrReadOnly|
-                            IsOwnerOrReadOnly|
-                            SubUserManageFundingSourcesPermission,)
+                            IsActive,
+                            IsNotBlocked,
+                            IsSuperAdminOrReadOnly |
+                            IsOwnerOrReadOnly |
+                            SubUserManageFundingSourcesPermission )
 
     filter_backends = (
         OrderingFilter,
@@ -62,3 +66,9 @@ class FundingSourceViewSet(ResourceViewSet):
 class FundingSourceRelationshipView(ResourceRelationshipView):
     serializer_class = FundingSourceSerializer
     resource_name = 'funding_sources'
+    permission_classes = (  IsAuthenticated,
+                            IsActive,
+                            IsNotBlocked,
+                            IsSuperAdminOrReadOnly |
+                            IsOwnerOrReadOnly |
+                            SubUserManageFundingSourcesPermission )

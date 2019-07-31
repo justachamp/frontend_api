@@ -4,7 +4,9 @@ from payment_api.serializers import PayeeSerializer, UpdatePayeeSerializer
 from frontend_api.permissions import (
     IsSuperAdminOrReadOnly,
     IsOwnerOrReadOnly,
-    SubUserManagePayeesPermission
+    SubUserManagePayeesPermission,
+    IsActive,
+    IsNotBlocked
 )
 from payment_api.views import (
     InclusionFilter,
@@ -21,9 +23,11 @@ class PayeeViewSet(ResourceViewSet):
     paginate_response = False
     serializer_class = PayeeSerializer
     permission_classes = (IsAuthenticated,
+                          IsActive, 
+                          IsNotBlocked, 
                           IsSuperAdminOrReadOnly |
                           IsOwnerOrReadOnly |
-                          SubUserManagePayeesPermission,)
+                          SubUserManagePayeesPermission )
 
     filter_backends = (
         OrderingFilter,
@@ -64,3 +68,9 @@ class PayeeViewSet(ResourceViewSet):
 class PayeeRelationshipView(ResourceRelationshipView):
     serializer_class = PayeeSerializer
     resource_name = 'payees'
+    permission_classes = (IsAuthenticated,
+                          IsActive, 
+                          IsNotBlocked, 
+                          IsSuperAdminOrReadOnly |
+                          IsOwnerOrReadOnly |
+                          SubUserManagePayeesPermission )

@@ -4,7 +4,9 @@ from payment_api.serializers import TransactionSerializer
 from frontend_api.permissions import (
     IsSuperAdminOrReadOnly,
     IsOwnerOrReadOnly,
-    SubUserManageSchedulesPermission
+    SubUserManageSchedulesPermission,
+    IsActive,
+    IsNotBlocked
 )
 from payment_api.views import (
     InclusionFilter,
@@ -24,9 +26,11 @@ class TransactionViewSet(ResourceViewSet):
     allowed_methods = ['head', 'get']
     serializer_class = TransactionSerializer
     permission_classes = (  IsAuthenticated, 
-                            IsSuperAdminOrReadOnly|
-                            IsOwnerOrReadOnly|
-                            SubUserManageSchedulesPermission, )
+                            IsActive, 
+                            IsNotBlocked,
+                            IsSuperAdminOrReadOnly |
+                            IsOwnerOrReadOnly |
+                            SubUserManageSchedulesPermission )
 
     def check_payment_account_id(self, filters, key, value):
         # TODO: somehow receive users payment_account_id from client if request from admin
@@ -69,6 +73,12 @@ class TransactionViewSet(ResourceViewSet):
 class TransactionRelationshipView(ResourceRelationshipView):
     serializer_class = TransactionSerializer
     resource_name = 'transactions'
+    permission_classes = (  IsAuthenticated, 
+                            IsActive, 
+                            IsNotBlocked,
+                            IsSuperAdminOrReadOnly |
+                            IsOwnerOrReadOnly |
+                            SubUserManageSchedulesPermission )
 
     def get_queryset(self):
         pass

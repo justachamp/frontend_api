@@ -33,6 +33,7 @@ class TransactionSerializer(ResourceSerializer):
     instruction_amount = IntegerField(read_only=True, source='instructionAmount')
     fee_amount = IntegerField(read_only=True, source='feeAmount')
     status = CharField(read_only=True)
+    creation_date = TimestampField(read_only=True, source='creationDate')
     update_date = TimestampField(read_only=True, source='updateDate')
     data = JSONField(read_only=True)
     payment = ExternalResourceRelatedField(

@@ -9,7 +9,9 @@ from frontend_api.models import Schedule
 from frontend_api.permissions import (
     IsOwnerOrReadOnly,
     IsSuperAdminOrReadOnly,
-    SubUserManageSchedulesPermission
+    SubUserManageSchedulesPermission,
+    IsNotBlocked,
+    IsActive
 )
 
 from ..serializers.schedule import ScheduleSerializer
@@ -23,9 +25,11 @@ class ScheduleViewSet(views.ModelViewSet):
     queryset = Schedule.objects.all()
     serializer_class = ScheduleSerializer
     permission_classes = (IsAuthenticated,
+                          IsActive,
+                          IsNotBlocked,
                           IsSuperAdminOrReadOnly |
                           IsOwnerOrReadOnly |
-                          SubUserManageSchedulesPermission)
+                          SubUserManageSchedulesPermission )
 
     # Example: /api/v1/schedules/?page[number]=1&filter[currency.iexact]=EUR&filter[name.icontains]=test&sort=-status
     ordering_fields = ('name', 'status')

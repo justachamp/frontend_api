@@ -18,6 +18,8 @@ from frontend_api.serializers import (
 )
 
 from frontend_api.permissions import (
+    IsActive,
+    IsNotBlocked, 
     IsOwnerOrReadOnly, 
     IsSuperAdminOrReadOnly,
     IsRegularAdminOrReadOnly )
@@ -41,7 +43,8 @@ class AdminUserViewSet(PatchRelatedMixin, views.ModelViewSet):
     serializer_class = AdminUserSerializer
     allowed_methods = ['head', 'get']
     permission_classes = (  IsAuthenticated,
-                            IsSuperAdminOrReadOnly,)
+                            IsActive,
+                            IsSuperAdminOrReadOnly )
 
     def update(self, request, *args, **kwargs):
         return super().update(request, *args, **kwargs)
@@ -82,9 +85,11 @@ class UserViewSet(PatchRelatedMixin, views.ModelViewSet):
     serializer_class = UserSerializer
 
     permission_classes = (  IsAuthenticated, 
-                            IsOwnerOrReadOnly|
-                            IsSuperAdminOrReadOnly|
-                            IsRegularAdminOrReadOnly,)
+                            IsActive,
+                            IsNotBlocked,
+                            IsOwnerOrReadOnly |
+                            IsSuperAdminOrReadOnly |
+                            IsRegularAdminOrReadOnly )
 
     filter_backends = (filters.QueryParameterValidationFilter, filters.OrderingFilter,
                        django_filters.DjangoFilterBackend, SearchFilter)
@@ -150,7 +155,12 @@ class UserViewSet(PatchRelatedMixin, views.ModelViewSet):
 class UserRelationshipView(RelationshipPostMixin, RelationshipView):
     http_method_names = ['head', 'get']
     queryset = User.objects
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (  IsAuthenticated, 
+                            IsActive,
+                            IsNotBlocked,
+                            IsOwnerOrReadOnly |
+                            IsSuperAdminOrReadOnly |
+                            IsRegularAdminOrReadOnly )
     # _related_serializers = {
     #     'address': UserAddressSerializer
     # }

@@ -7,7 +7,7 @@ from core import views
 
 from frontend_api.models import Company
 from frontend_api.serializers import CompanyAddressSerializer, CompanySerializer, ShareholderSerializer
-from frontend_api.permissions import IsOwnerOrReadOnly
+from frontend_api.permissions import IsActive, IsOwnerOrReadOnly
 
 from ..views import PatchRelatedMixin,  RelationshipPostMixin
 
@@ -18,7 +18,9 @@ logger = logging.getLogger(__name__)
 class CompanyRelationshipView(RelationshipPostMixin, RelationshipView):
     serializer_class = CompanySerializer
     queryset = Company.objects
-    permission_classes = (IsAuthenticated,)
+    permission_classes = ( IsAuthenticated,
+                           IsActive,
+                           IsOwnerOrReadOnly )
     _related_serializers = {
         'address': CompanyAddressSerializer,
         'shareholders': ShareholderSerializer
@@ -62,8 +64,9 @@ class CompanyViewSet(PatchRelatedMixin, views.ModelViewSet):
 
     queryset = Company.objects.all()
     serializer_class = CompanySerializer
-    permission_classes = (  IsAuthenticated, 
-                            IsOwnerOrReadOnly,)
+    permission_classes = ( IsAuthenticated,
+                           IsActive,
+                           IsOwnerOrReadOnly )
 
     def perform_create(self, serializer):
         logger.error('perform create')

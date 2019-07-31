@@ -35,7 +35,13 @@ from frontend_api.serializers import (
     UserSerializer
 )
 
-from frontend_api.permissions import IsOwnerOrReadOnly, IsSuperAdminOrReadOnly
+from frontend_api.permissions import ( 
+    IsOwnerOrReadOnly, 
+    IsSuperAdminOrReadOnly,
+    IsRegularAdminOrReadOnly,
+    IsRegularSubUserOrReadOnly,
+    IsActive,
+    IsNotBlocked )
 
 from ..views import (
     PatchRelatedMixin,
@@ -61,6 +67,11 @@ class AccountRelationshipView(RelationshipPostMixin, RelationshipView):
         'company': CompanySerializer,
         'sub_user_accounts': SubUserAccount
     }
+    permission_classes = (  IsAuthenticated, 
+                            IsActive,
+                            IsNotBlocked,
+                            IsSuperAdminOrReadOnly |
+                            IsOwnerOrReadOnly ) 
 
     def post_company(self, request, *args, **kwargs):
         related_field = kwargs.get('related_field')
@@ -82,16 +93,30 @@ class AccountRelationshipView(RelationshipPostMixin, RelationshipView):
 class UserAccountRelationshipView(RelationshipView):
     queryset = UserAccount.objects
     serializer_class = UserAccountSerializer
+    permission_classes = (  IsAuthenticated,
+                            IsActive,
+                            IsNotBlocked,
+                            IsSuperAdminOrReadOnly |
+                            IsOwnerOrReadOnly )
 
 
 class AdminUserAccountRelationshipView(RelationshipView):
     queryset = AdminUserAccount.objects
     serializer_class = AdminUserAccountSerializer
+    permission_classes = (  IsAuthenticated, 
+                            IsActive,
+                            IsNotBlocked,
+                            IsSuperAdminOrReadOnly )
 
 
 class SubUserAccountRelationshipView(RelationshipView):
     queryset = SubUserAccount.objects
     serializer_class = SubUserAccountSerializer
+    permission_classes = (IsAuthenticated, 
+                          IsActive,
+                          IsNotBlocked,
+                          IsSuperAdminOrReadOnly|
+                          IsOwnerOrReadOnly )
 
 
 class AccountViewSet(RelationshipMixin, PatchRelatedMixin, views.ModelViewSet):
@@ -99,8 +124,10 @@ class AccountViewSet(RelationshipMixin, PatchRelatedMixin, views.ModelViewSet):
     queryset = Account.objects.all()
     serializer_class = AccountSerializer
     permission_classes = (  IsAuthenticated, 
-                            IsSuperAdminOrReadOnly|
-                            IsOwnerOrReadOnly,)
+                            IsActive,
+                            IsNotBlocked,
+                            IsSuperAdminOrReadOnly |
+                            IsOwnerOrReadOnly ) 
 
     filter_backends = (filters.QueryParameterValidationFilter, filters.OrderingFilter,
                        django_filters.DjangoFilterBackend, SearchFilter)
@@ -200,8 +227,10 @@ class UserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.ModelVi
     queryset = UserAccount.objects.all()
     serializer_class = UserAccountSerializer
     permission_classes = (  IsAuthenticated,
+                            IsActive,
+                            IsNotBlocked,
                             IsSuperAdminOrReadOnly|
-                            IsOwnerOrReadOnly,)
+                            IsOwnerOrReadOnly )
 
     ordering_fields = ('user__email', 'user__username', 'user__status', 'user__first_name',
                        'user__last_name', 'user_middle_name', 'user__phone_number',
@@ -231,7 +260,9 @@ class AdminUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.Mo
     queryset = AdminUserAccount.objects.all()
     serializer_class = AdminUserAccountSerializer
     permission_classes = (  IsAuthenticated, 
-                            IsSuperAdminOrReadOnly,)
+                            IsActive,
+                            IsNotBlocked,
+                            IsSuperAdminOrReadOnly )
 
     ordering_fields = ('user__email', 'user__username', 'user__status', 'user__first_name',
                        'user__last_name', 'user_middle_name', 'user__phone_number',
@@ -263,8 +294,6 @@ class AdminUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.Mo
         related_serializer = self.get_related_serializer(related_field)
         account = self.get_object()
 
-        if account.permission:
-            raise MethodNotAllowed('POST')
         data = request.data.get('attributes') or {}
         data['account'] = account
         data['account_id'] = account.id
@@ -330,8 +359,10 @@ class SubUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.Mode
     queryset = SubUserAccount.objects.all()
     serializer_class = SubUserAccountSerializer
     permission_classes = (IsAuthenticated, 
+                          IsActive,
+                          IsNotBlocked,
                           IsSuperAdminOrReadOnly|
-                          IsOwnerOrReadOnly,)
+                          IsOwnerOrReadOnly )
 
     # TODO move to service
     def get_owner_account(self):
@@ -384,8 +415,6 @@ class SubUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.Mode
         related_serializer = self.get_related_serializer(related_field)
         account = self.get_object()
 
-        if account.permission:
-            raise MethodNotAllowed('POST')
         data = request.data.get('attributes') or {}
         data['account'] = account
         data['account_id'] = account.id

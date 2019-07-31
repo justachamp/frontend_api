@@ -63,6 +63,13 @@ class Schedule(Model):
     def is_cancelable(self):
         return self.status in [ScheduleStatus.open, ScheduleStatus.overdue]
 
+    def _can_have_next_payment(self):
+        return self.status in [ScheduleStatus.open, ScheduleStatus.overdue]
+
+    def _did_we_make_first_payment(self):
+        # NOTE: don't think that we can rely on total_paid_sum field instead (considering long running transactions)
+        return arrow.utcnow().datetime.date() > self.start_date
+
     @property
     def next_payment_date(self):
         """
@@ -73,8 +80,10 @@ class Schedule(Model):
         """
         res = None
 
-        if self.period is SchedulePeriod.one_time:
+        if not self._can_have_next_payment():
             res = None
+        elif self.period is SchedulePeriod.one_time or not self._did_we_make_first_payment():
+            res = arrow.get(self.start_date)
         elif self.period is SchedulePeriod.weekly:
             res = arrow.get(self.start_date).replace(weeks=+1)
         elif self.period is SchedulePeriod.monthly:
@@ -87,6 +96,7 @@ class Schedule(Model):
             res = arrow.get(self.start_date).replace(years=+1)
 
         return res.datetime.date() if res else None
+
 
 @dataclass
 class SchedulePaymentsDetails:

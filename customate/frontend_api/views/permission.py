@@ -4,7 +4,11 @@ from core import views
 from rest_framework.permissions import IsAuthenticated
 
 
-from frontend_api.permissions import IsOwnerOrReadOnly, IsSuperAdminOrReadOnly
+from frontend_api.permissions import (
+    IsActive,
+    IsNotBlocked,
+    IsOwnerOrReadOnly, 
+    IsSuperAdminOrReadOnly )
 from frontend_api.models import SubUserPermission, AdminUserPermission
 from frontend_api.serializers import SubUserPermissionSerializer, AdminUserPermissionSerializer
 
@@ -29,8 +33,11 @@ class SubUserPermissionViewSet(PatchRelatedMixin, views.ModelViewSet):
 
     queryset = SubUserPermission.objects.all()
     serializer_class = SubUserPermissionSerializer
-    permission_classes = (IsAuthenticated, 
-                          IsOwnerOrReadOnly,)
+    permission_classes = ( IsAuthenticated,
+                           IsActive, 
+                           IsNotBlocked,
+                           IsSuperAdminOrReadOnly |
+                           IsOwnerOrReadOnly )
 
     def perform_create(self, serializer):
         logger.error('perform create')
@@ -45,8 +52,9 @@ class AdminUserPermissionViewSet(PatchRelatedMixin, views.ModelViewSet):
 
     queryset = AdminUserPermission.objects.all()
     serializer_class = AdminUserPermissionSerializer
-    permission_classes = (IsAuthenticated ,
-                          IsSuperAdminOrReadOnly,)
+    permission_classes = ( IsAuthenticated,
+                           IsActive, 
+                           IsSuperAdminOrReadOnly )
 
     def perform_create(self, serializer):
         logger.error('perform create')

@@ -4,7 +4,10 @@ from payment_api.serializers import PaymentSerializer, LoadFundsSerializer
 from frontend_api.permissions import (
     IsSuperAdminOrReadOnly,
     IsOwnerOrReadOnly,
-    SubUserLoadFundsPermission
+    SubUserLoadFundsPermission,
+    SubUserManageSchedulesPermission,
+    IsActive,
+    IsNotBlocked
 )
 from payment_api.views import (
     InclusionFilter,
@@ -20,9 +23,11 @@ class LoadFundsViewSet(ResourceViewSet):
     allowed_methods = ['post']
     serializer_class = LoadFundsSerializer
     permission_classes = (  IsAuthenticated, 
-                            IsSuperAdminOrReadOnly|
-                            IsOwnerOrReadOnly|
-                            SubUserLoadFundsPermission,)
+                            IsActive,
+                            IsNotBlocked,
+                            IsSuperAdminOrReadOnly |
+                            IsOwnerOrReadOnly |
+                            SubUserLoadFundsPermission )
 
     filter_backends = (
         OrderingFilter,
@@ -36,8 +41,11 @@ class PaymentViewSet(ResourceViewSet):
     allowed_methods = ['head', 'get']
     serializer_class = PaymentSerializer
     permission_classes = (  IsAuthenticated, 
-                            IsSuperAdminOrReadOnly|
-                            IsOwnerOrReadOnly,)
+                            IsActive,
+                            IsNotBlocked,
+                            IsSuperAdminOrReadOnly |
+                            IsOwnerOrReadOnly |
+                            SubUserManageSchedulesPermission )
 
     filter_backends = (
         OrderingFilter,
@@ -49,3 +57,9 @@ class PaymentViewSet(ResourceViewSet):
 class PaymentRelationshipView(ResourceRelationshipView):
     resource_name = 'payments'
     serializer_class = PaymentSerializer
+    permission_classes = (  IsAuthenticated, 
+                            IsActive,
+                            IsNotBlocked,
+                            IsSuperAdminOrReadOnly |
+                            IsOwnerOrReadOnly |
+                            SubUserManageSchedulesPermission )

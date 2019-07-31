@@ -1,5 +1,9 @@
 from rest_framework.permissions import IsAuthenticated
-from frontend_api.permissions import IsSuperAdminOrReadOnly, AdminUserFeePermission
+from frontend_api.permissions import (
+            IsSuperAdminOrReadOnly, 
+            AdminUserFeePermission,
+            IsActive,
+            IsNotBlocked )
 from payment_api.serializers import FeeGroupSerializer, FeeGroupAccountSerializer
 
 
@@ -18,8 +22,10 @@ class FeeGroupViewSet(ResourceViewSet):
     resource_name = 'fee_groups'
     serializer_class = FeeGroupSerializer
     permission_classes = (  IsAuthenticated,
-                            IsSuperAdminOrReadOnly|
-                            AdminUserFeePermission, )
+                            IsActive, 
+                            IsNotBlocked,
+                            IsSuperAdminOrReadOnly |
+                            AdminUserFeePermission )
     filter_backends = (
         QueryParameterValidationFilter,
         OrderingFilter,
@@ -42,12 +48,21 @@ class FeeGroupViewSet(ResourceViewSet):
 class FeeGroupRelationshipView(ResourceRelationshipView):
     serializer_class = FeeGroupSerializer
     resource_name = 'fee_groups'
+    permission_classes = (  IsAuthenticated,
+                            IsActive, 
+                            IsNotBlocked,
+                            IsSuperAdminOrReadOnly |
+                            AdminUserFeePermission )
 
 
 class FeeGroupAccountViewSet(ResourceViewSet):
     resource_name = 'fee_group_accounts'
     serializer_class = FeeGroupAccountSerializer
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (  IsAuthenticated,
+                            IsActive, 
+                            IsNotBlocked,
+                            IsSuperAdminOrReadOnly |
+                            AdminUserFeePermission )
     # filter_backends = (
     #     QueryParameterValidationFilter,
     #     OrderingFilter,
@@ -72,3 +87,8 @@ class FeeGroupAccountViewSet(ResourceViewSet):
 class FeeGroupAccountRelationshipView(ResourceRelationshipView):
     resource_name = 'fee_group_accounts'
     serializer_class = FeeGroupAccountSerializer
+    permission_classes = (  IsAuthenticated,
+                            IsActive, 
+                            IsNotBlocked,
+                            IsSuperAdminOrReadOnly |
+                            AdminUserFeePermission )
