@@ -72,7 +72,7 @@ class PaymentApiClient:
             return PayeeDetails(
                 id=resource.id,
                 title=resource.title,
-                iban=resource['data']['recipient']['fullName'],
+                iban=resource['data']['account']['iban'],
                 recipient_name=resource['data']['recipient']['fullName'],
                 recipient_email=resource['data']['recipient']['email']
             )
