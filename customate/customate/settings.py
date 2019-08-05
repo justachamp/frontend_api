@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 
 from os import environ, path
 import logging.config
+from kombu import Queue, Exchange
+from celery.schedules import crontab
 from corsheaders.defaults import default_headers
 from django.utils.log import DEFAULT_LOGGING
 from django.core.management.color import supports_color
@@ -249,13 +251,11 @@ REST_FRAMEWORK = {
     'DATE_INPUT_FORMATS': ["%Y-%m-%d"]
 }
 
-
 # DRF JSON_API settings
 JSON_API_FORMAT_FIELD_NAMES = False
 JSON_API_FORMAT_TYPES = False
 JSON_API_PLURALIZE_TYPES = False
 JSON_API_UNIFORM_EXCEPTIONS = False
-
 
 ROOT_URLCONF = 'customate.urls'
 
@@ -354,3 +354,63 @@ STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 COUNTRIES_AVAILABLE = environ.get('COUNTRIES_AVAILABLE', '').split(',')
 FULL_RESOURCE_LIST_PAGE_SIZE = environ.get('FULL_RESOURCE_LIST_PAGE_SIZE', 200)
 PAYMENT_API_URL = environ['PAYMENT_API_URL']
+
+############ CELERY configuration ##################################
+CELERY_BROKER_URL = "amqp://{user}:{password}@{host}:{port}/".format(
+    user=environ['RABBITMQ_USER'],
+    password=environ['RABBITMQ_PASSWORD'],
+    host=environ.get('RABBITMQ_HOST', "localhost"),
+    port=environ.get('RABBITMQ_PORT', 5672)
+)
+
+CELERY_RESULT_BACKEND = "amqp"
+CELERY_TASK_RESULT_EXPIRES = 3600  # 1 hour, seconds
+
+# https://docs.celeryproject.org/en/latest/userguide/configuration.html#std:setting-task_acks_late
+CELERY_TASK_ACKS_LATE = True
+# Late ack means that the task messages will be acknowledged after the task has been executed,
+# not just before, which is the default behavior.
+
+
+DEFAULT_EXCHANGE = Exchange('default', type='direct')
+# # tasks that require heavy I/O
+IO_TASKS = {'queue': 'io_tasks', 'routing_key': 'io_tasks'}
+# # lightweight messaging tasks
+NOTIFICATION_TASKS = {'queue': 'notification_tasks', 'routing_key': 'notification_tasks'}
+
+CELERY_TASK_DEFAULT_QUEUE = IO_TASKS['queue']
+CELERY_TASK_DEFAULT_EXCHANGE = 'default'
+CELERY_TASK_DEFAULT_ROUTING_KEY = 'default'
+CELERY_TASK_DEFAULT_EXCHANGE_TYPE = 'direct'
+
+CELERY_TASK_QUEUES = (
+    Queue(IO_TASKS['queue'], exchange=DEFAULT_EXCHANGE, routing_key=IO_TASKS['routing_key']),
+    Queue(NOTIFICATION_TASKS['queue'], exchange=DEFAULT_EXCHANGE, routing_key=NOTIFICATION_TASKS['routing_key']),
+)
+
+# CELERY_TASK_ROUTES = (
+#     {'frontend_api.tasks.add': IO_TASKS},
+#     {'customate.celery.debug_task': NOTIFICATION_TASKS},
+#
+# )
+
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
+
+# This is for periodic execution of tasks
+# For more info: http://docs.celeryproject.org/en/latest/userguide/periodic-tasks.html#crontab-schedules
+CELERY_BEAT_SCHEDULE = {
+    # 'one_per_minute': {
+    #     'task': 'frontend_api.tasks.every_minute_test',
+    #     'schedule': crontab(minute='*/1'),
+    #     'args': ('one_per_hour', False, None)
+    # },
+
+    'once_per_day': {
+        'task': 'frontend_api.tasks.initiate_daily_payments',
+        # TODO: make sure we run somewhere in the morning bank opening time
+        'schedule': crontab(minute='*/5') if DEBUG else crontab(hour='*/24')
+    },
+}

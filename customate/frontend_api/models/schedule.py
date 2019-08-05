@@ -4,9 +4,8 @@ from dataclasses import dataclass
 from enumfields import EnumField
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from django.contrib.auth import get_user_model
 
-from core.models import Model
+from core.models import Model, User
 from core.fields import Currency
 
 from frontend_api.fields import SchedulePurpose, SchedulePeriod, ScheduleStatus
@@ -16,7 +15,7 @@ class Schedule(Model):
     name = models.CharField(_('schedule name'), max_length=150)
     status = EnumField(ScheduleStatus)
     user = models.ForeignKey(
-        get_user_model(),
+        User,
         on_delete=models.CASCADE,
         blank=False
     )
@@ -51,8 +50,11 @@ class Schedule(Model):
         help_text=_("Total sum that should be paid by this schedule")
     )
 
+    # class Meta:
+    #     ordering = ['-created_at']
+
     def __init__(self, *args, **kwargs):
-        self._fee_amount = 0  # We accept this value from UI, but don't store it database
+        self._fee_amount = 0  # We accept this value from UI, but don't store it in database
         super().__init__(*args, **kwargs)
 
     def calculate_and_set_total_sum_to_pay(self):
@@ -96,6 +98,87 @@ class Schedule(Model):
             res = arrow.get(self.start_date).replace(years=+1)
 
         return res.datetime.date() if res else None
+
+
+
+
+class ScheduleCommonFieldsMixin(Model):
+    scheduled_date = models.DateField()  # specific date on which the payment should be initiated
+    payment_account_id = models.UUIDField(help_text=_("Account id issued by payment API during registration"))
+
+    class Meta:
+        # https://stackoverflow.com/questions/3254436/django-model-mixins-inherit-from-models-model-or-from-object
+        abstract = True
+
+    name = models.CharField(_('schedule name'), max_length=150)
+    status = EnumField(ScheduleStatus)
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        blank=False
+    )
+    purpose = EnumField(SchedulePurpose)
+    currency = EnumField(Currency)
+    payee_id = models.UUIDField(help_text=_("Money recipient"))
+    payee_title = models.CharField(max_length=100, default='')
+    payee_recipient_name = models.CharField(max_length=254, default='')
+    payee_recipient_email = models.CharField(max_length=254, default='')
+    payee_iban = models.CharField(max_length=50, default='')
+    funding_source_id = models.UUIDField()
+    period = EnumField(SchedulePeriod)
+    number_of_payments_left = models.PositiveIntegerField(
+        default=0, help_text=_("Number of payments left in the current schedule. Changes dynamically in time")
+    )
+    start_date = models.DateField()
+    payment_amount = models.PositiveIntegerField()
+    fee_amount = models.PositiveIntegerField(
+        default=0, help_text=_("Approximate fee amount for all payments (including deposit) in schedule")
+    )
+    deposit_amount = models.PositiveIntegerField(
+        null=True, help_text=_("Initial payment independent of the rest of scheduled payments")
+    )
+    deposit_payment_date = models.DateField(null=True)  # This should be strictly < start_date
+
+
+class OnetimeSchedule(ScheduleCommonFieldsMixin):
+    class Meta:
+        managed = False  # disable automatic Django management of underlying DB table
+        db_table = "frontend_api_one_time_schedule"
+
+
+class WeeklySchedule(ScheduleCommonFieldsMixin):
+    class Meta:
+        # see more at: https://resources.rescale.com/using-database-views-in-django-orm/
+        managed = False
+        db_table = "frontend_api_weekly_schedule"
+
+
+class MonthlySchedule(ScheduleCommonFieldsMixin):
+    class Meta:
+        managed = False
+        db_table = "frontend_api_monthly_schedule"
+
+
+class QuarterlySchedule(ScheduleCommonFieldsMixin):
+    class Meta:
+        managed = False
+        db_table = "frontend_api_quarterly_schedule"
+
+
+class YearlySchedule(ScheduleCommonFieldsMixin):
+    class Meta:
+        managed = False
+        db_table = "frontend_api_yearly_schedule"
+
+
+class DepositsSchedule(ScheduleCommonFieldsMixin):
+    """
+    Special schedule to pay out deposit payments
+    """
+    class Meta:
+        managed = False
+        db_table = "frontend_api_deposits_schedule"
+
 
 
 @dataclass
