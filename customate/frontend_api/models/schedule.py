@@ -107,7 +107,7 @@ class Schedule(Model):
         funding source(s)
         :return:
         """
-        return SchedulePaymentType.external
+        return str(SchedulePaymentType.external.value)
 
 
 
