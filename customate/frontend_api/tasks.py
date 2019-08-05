@@ -8,7 +8,6 @@ from frontend_api.models.schedule import OnetimeSchedule, DepositsSchedule
 from frontend_api.models.schedule import WeeklySchedule, MonthlySchedule, QuarterlySchedule, YearlySchedule
 
 from frontend_api.fields import SchedulePurpose, SchedulePeriod, ScheduleStatus
-
 logger = logging.getLogger(__name__)
 PER_PAGE = 5
 
@@ -52,6 +51,16 @@ def process_all_deposit_payments(scheduled_date):
             logger.debug("id=%s, user_id=%s, payment_account_id=%s, payment_amount=%s, payments_left=%s" % (
                 s.id, s.user_id, s.payment_account_id, s.payment_amount, s.number_of_payments_left
             ))
+            #TODO: get scenario_type based on other payment data
+            # scenario, fs_type, payee_type
+            # OutgoingInternal, WALLET, WALLET
+            # CustomateToIban, WALLET, BANK_ACCOUNT
+            # CreditCardToIban, CREDIT_CARD, BANK_ACCOUNT
+            # DirectDebitToIban, DIRECT_DEBIT, BANK_ACCOUNT
+            # CreditCardWithOutgoingInternal, CREDIT_CARD, WALLET
+            # DirectDebitWithOutgoingInternal, CREDIT_CARD, WALLET
+
+
             # submit task for asynchronous processing to queue
             make_deposit_payment.delay(
                 schedule_id=str(s.id),

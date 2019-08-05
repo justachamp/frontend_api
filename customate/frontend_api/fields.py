@@ -69,3 +69,16 @@ class SchedulePeriod(Enum):
         monthly = 'Monthly'
         quarterly = 'Quarterly'
         yearly = 'Yearly'
+
+
+class SchedulePaymentType(Enum):
+    """
+    This is intrinsic type of PaymentAPI. Calculated dynamically based on other fields related to payment
+    """
+    internal = 'internal'
+    external = 'external'
+
+    class Labels:
+        receive = 'internal'
+        pay = 'external'
+

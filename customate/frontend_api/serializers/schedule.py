@@ -51,7 +51,7 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
             'total_paid_sum', 'total_sum_to_pay', 'payee_iban', 'payee_recipient_name', 'payee_recipient_email',
 
             # we can use model properties as well
-            'next_payment_date'
+            'next_payment_date', 'payment_type'
         )
 
     def validate_name(self, value):

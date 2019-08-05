@@ -8,7 +8,7 @@ from django.utils.translation import gettext_lazy as _
 from core.models import Model, User
 from core.fields import Currency
 
-from frontend_api.fields import SchedulePurpose, SchedulePeriod, ScheduleStatus
+from frontend_api.fields import SchedulePurpose, SchedulePeriod, ScheduleStatus, SchedulePaymentType
 
 
 class Schedule(Model):
@@ -100,6 +100,14 @@ class Schedule(Model):
 
         return res.datetime.date() if res else None
 
+    @property
+    def payment_type(self):
+        """
+        Returns schedule payment type. Helpful for the clietn to be able to calculate different fees when selecting
+        funding source(s)
+        :return:
+        """
+        return SchedulePaymentType.external
 
 
 
