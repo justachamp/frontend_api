@@ -73,8 +73,7 @@ class AddressViewSet(views.ModelViewSet):
     queryset = Address.objects.all()
     serializer_class = AddressSerializer
     permission_classes = ( IsAuthenticated,
-                           IsActive,
-                           IsOwnerOrReadOnly )
+                           IsActive )
 
     @action(methods=['POST'], detail=False, name='Search address')
     def search(self, request):

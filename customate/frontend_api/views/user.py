@@ -119,7 +119,6 @@ class UserViewSet(PatchRelatedMixin, views.ModelViewSet):
         return Response(serializer.data)
 
     def get_serializer_class(self):
-
         field = self.kwargs.get('related_field')
         # user = self.request.user
         id = self.kwargs.get('pk')
