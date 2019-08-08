@@ -66,9 +66,33 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
         logger.info("Validate_name: %r, user=%r" % (value, request.user))
         entries_count = Schedule.objects.filter(name=value, user=request.user).count()
         if entries_count >= 1:
-            #raise ValidationError({"name": "Schedule with such name already exists"})
+            # raise ValidationError({"name": "Schedule with such name already exists"})
             raise ValidationError("Schedule with such name already exists")
         return value
+
+    def validate_specific_funding_source(self, res: OrderedDict, field_name: str):
+        """
+        Calls payment-api and verifies that funding sources are correct.
+        :param res: dict of incoming fields from HTTP request
+        :param field_name: (funding_source_id, backup_funding_source_id)
+        :return:
+        """
+        user = self.context.get('request').user
+        payment_client = PaymentApiClient(user)
+
+        fs = payment_client.get_funding_source_details(res[field_name])
+        if fs.payment_account_id != str(user.account.payment_account_id):
+            raise ValidationError({
+                field_name: "Invalid funding source payment account"
+            })
+
+        # type(res["currency"]) == core.fields.Enum
+        if fs.currency != res["currency"].value:
+            raise ValidationError({
+                field_name: "Funding source currency should be the same as schedule currency"
+            })
+
+        return
 
     # validate_{fieldname} also works
     def validate(self, res: OrderedDict):
@@ -105,33 +129,15 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
             if arrow.get("%sT23:59:59" % res["start_date"]) < arrow.utcnow():
                 raise ValidationError({"start_date": "Start date cannot be in the past"})
 
-            """
-            Funding sources validation
-            """
-            user = self.context.get('request').user
-            payment_client = PaymentApiClient(user)
-            not_owner = lambda source: source.payment_account_id != str(user.account.payment_account_id)
-            improper_currency = lambda source: source.currency != res["currency"].value
-
-            # default funding source validation
-            source_details = payment_client.get_funding_source_details(res["funding_source_id"])
-            if not_owner(source_details):
-                raise ValidationError({"funding_source_id": "Funding source owner should be the same as scheduler owner"})
-
-            if improper_currency(source_details):
-                raise ValidationError({"funding_source_id": "Funding source currency should be the same as scheduler currency"})
-
-            # backup funding source validation
+            # Verify first funding source
+            self.validate_specific_funding_source(res, field_name="funding_source_id")
+            # Verify backup funding source
             if res.get("backup_funding_source_id"):
                 if res["backup_funding_source_id"] == res["funding_source_id"]:
-                    raise ValidationError({"backup_funding_source_id": "Backup funding source can not be the same as default"})
-
-                backup_source_details = payment_client.get_funding_source_details(res["backup_funding_source_id"])
-                if not_owner(backup_source_details):
-                    raise ValidationError({"backup_funding_source_id": "Backup funding source owner should be the same as scheduler owner"})
-
-                if improper_currency(backup_source_details):
-                    raise ValidationError({"backup_funding_source_id": "Backup funding source currency should be the same as scheduler currency"})
+                    raise ValidationError({
+                        "backup_funding_source_id": "Backup funding source can not be the same as default"
+                    })
+                self.validate_specific_funding_source(res, field_name="backup_funding_source_id")
 
         except (ValueError, TypeError):
             logger.error("Validation failed due to: %r" % format_exc())

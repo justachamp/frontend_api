@@ -51,9 +51,6 @@ class Schedule(Model):
         help_text=_("Total sum that should be paid by this schedule")
     )
 
-    # class Meta:
-    #     ordering = ['-created_at']
-
     def __init__(self, *args, **kwargs):
         self._fee_amount = 0  # We accept this value from UI, but don't store it in database
         super().__init__(*args, **kwargs)
@@ -65,10 +62,6 @@ class Schedule(Model):
 
     def is_cancelable(self):
         return self.status in [ScheduleStatus.open, ScheduleStatus.overdue]
-
-    def _can_have_next_payment(self):
-        return self.status in [ScheduleStatus.open, ScheduleStatus.overdue] \
-               and self.number_of_payments_left != 0
 
     def _did_we_make_first_payment(self):
         # NOTE: don't think that we can rely on total_paid_sum field instead (considering long running transactions)
@@ -84,7 +77,7 @@ class Schedule(Model):
         """
         res = None
 
-        if not self._can_have_next_payment():
+        if not (self.status in [ScheduleStatus.open, ScheduleStatus.overdue] and self.number_of_payments_left != 0):
             res = None
         elif self.period is SchedulePeriod.one_time or not self._did_we_make_first_payment():
             res = arrow.get(self.start_date)
@@ -104,12 +97,12 @@ class Schedule(Model):
     @property
     def payment_type(self):
         """
-        Returns schedule payment type. Helpful for the clietn to be able to calculate different fees when selecting
+        Returns schedule payment type. Helpful for the client to be able to calculate different fees when selecting
         funding source(s)
+        TODO: Implement corrent payment_type detection and return valid value for client
         :return:
         """
         return str(SchedulePaymentType.external.value)
-
 
 
 class ScheduleCommonFieldsMixin(Model):
@@ -185,10 +178,10 @@ class DepositsSchedule(ScheduleCommonFieldsMixin):
     """
     Special schedule to pay out deposit payments
     """
+
     class Meta:
         managed = False
         db_table = "frontend_api_deposits_schedule"
-
 
 
 @dataclass
@@ -204,6 +197,7 @@ class PayeeDetails:
     iban: str
     recipient_name: str
     recipient_email: str
+
 
 @dataclass
 class FundingSourceDetails:

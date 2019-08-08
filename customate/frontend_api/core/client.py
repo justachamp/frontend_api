@@ -84,7 +84,7 @@ class PaymentApiClient:
             logger.error("Receiving payee details thrown an exception: %r" % format_exc())
             raise e
 
-    def get_funding_source_details(self, source_id):
+    def get_funding_source_details(self, source_id) -> FundingSourceDetails:
         try:
             logger.debug(f'get_funding_source_details started')
             service = FundingSourceRequestResourceService(resource=self)
