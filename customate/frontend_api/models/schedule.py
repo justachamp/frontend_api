@@ -27,6 +27,7 @@ class Schedule(Model):
     payee_recipient_email = models.CharField(max_length=254, default='')
     payee_iban = models.CharField(max_length=50, default='')
     funding_source_id = models.UUIDField()
+    backup_funding_source_id = models.UUIDField(default=None, blank=True, null=True)
     period = EnumField(SchedulePeriod)
     number_of_payments_left = models.PositiveIntegerField(
         default=0, help_text=_("Number of payments left in the current schedule. Changes dynamically in time")
@@ -203,3 +204,9 @@ class PayeeDetails:
     iban: str
     recipient_name: str
     recipient_email: str
+
+@dataclass
+class FundingSourceDetails:
+    id: str
+    currency: EnumField(Currency)
+    payment_account_id: models.UUIDField()

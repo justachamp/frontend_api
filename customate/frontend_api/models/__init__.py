@@ -215,7 +215,7 @@ class Shareholder(Model):
         return "%s the shareholder" % self.last_name
 
 
-from frontend_api.models.schedule import SchedulePaymentsDetails, PayeeDetails, Schedule
+from frontend_api.models.schedule import SchedulePaymentsDetails, PayeeDetails, FundingSourceDetails, Schedule
 
 __all__ = [
     Company,
@@ -230,6 +230,7 @@ __all__ = [
     # Schedules
     Schedule,
     SchedulePaymentsDetails,
-    PayeeDetails
+    PayeeDetails,
+    FundingSourceDetails
 ]
 

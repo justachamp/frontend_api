@@ -3,11 +3,12 @@ import logging
 from django.utils.functional import cached_property
 from traceback import format_exc
 from customate import settings
-from frontend_api.models import SchedulePaymentsDetails, PayeeDetails
+from frontend_api.models import SchedulePaymentsDetails, PayeeDetails, FundingSourceDetails
 from payment_api.core.client import Client
 from payment_api.serializers import PaymentAccountSerializer
 from payment_api.services.schedule import ScheduleRequestResourceService
 from payment_api.services.payee import PayeeRequestResourceService
+from payment_api.services.source import FundingSourceRequestResourceService
 
 logger = logging.getLogger(__name__)
 
@@ -81,4 +82,19 @@ class PaymentApiClient:
             raise e
         except Exception as e:
             logger.error("Receiving payee details thrown an exception: %r" % format_exc())
+            raise e
+
+    def get_funding_source_details(self, source_id):
+        try:
+            logger.debug(f'get_funding_source_details started')
+            service = FundingSourceRequestResourceService(resource=self)
+            resource = service.get_source_details(source_id)
+
+            return FundingSourceDetails(
+                id=resource.id,
+                currency=resource.currency,
+                payment_account_id=resource.account.id
+            )
+        except Exception as e:
+            logger.error("Receiving funding source details thrown an exception: %r" % format_exc())
             raise e

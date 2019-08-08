@@ -10,6 +10,7 @@ from rest_framework.fields import DateField, IntegerField
 from core.fields import Currency
 from frontend_api.fields import ScheduleStatus, SchedulePeriod, SchedulePurpose
 from frontend_api.models.schedule import Schedule
+from frontend_api.core.client import PaymentApiClient
 
 from frontend_api.serializers import (
     UUIDField,
@@ -39,6 +40,7 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
     payee_recipient_email = CharField(required=False)
     payee_iban = CharField(required=False)
     funding_source_id = UUIDField(required=True)
+    backup_funding_source_id = UUIDField(required=False)
     total_paid_sum = IntegerField(default=0, required=False)
     total_sum_to_pay = IntegerField(default=0, required=False)
 
@@ -47,7 +49,7 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
         fields = (
             'name', 'status', 'purpose', 'currency', 'period', 'number_of_payments_left',
             'start_date', 'payment_amount', 'fee_amount', 'deposit_amount', 'deposit_payment_date',
-            'additional_information', 'payee_id', 'funding_source_id', 'payee_title',
+            'additional_information', 'payee_id', 'funding_source_id', 'backup_funding_source_id', 'payee_title',
             'total_paid_sum', 'total_sum_to_pay', 'payee_iban', 'payee_recipient_name', 'payee_recipient_email',
 
             # we can use model properties as well
@@ -102,6 +104,34 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
 
             if arrow.get("%sT23:59:59" % res["start_date"]) < arrow.utcnow():
                 raise ValidationError({"start_date": "Start date cannot be in the past"})
+
+            """
+            Funding sources validation
+            """
+            user = self.context.get('request').user
+            payment_client = PaymentApiClient(user)
+            not_owner = lambda source: source.payment_account_id != str(user.account.payment_account_id)
+            improper_currency = lambda source: source.currency != res["currency"].value
+
+            # default funding source validation
+            source_details = payment_client.get_funding_source_details(res["funding_source_id"])
+            if not_owner(source_details):
+                raise ValidationError({"funding_source_id": "Funding source owner should be the same as scheduler owner"})
+
+            if improper_currency(source_details):
+                raise ValidationError({"funding_source_id": "Funding source currency should be the same as scheduler currency"})
+
+            # backup funding source validation
+            if res.get("backup_funding_source_id"):
+                if res["backup_funding_source_id"] == res["funding_source_id"]:
+                    raise ValidationError({"backup_funding_source_id": "Backup funding source can not be the same as default"})
+
+                backup_source_details = payment_client.get_funding_source_details(res["backup_funding_source_id"])
+                if not_owner(backup_source_details):
+                    raise ValidationError({"backup_funding_source_id": "Backup funding source owner should be the same as scheduler owner"})
+
+                if improper_currency(backup_source_details):
+                    raise ValidationError({"backup_funding_source_id": "Backup funding source currency should be the same as scheduler currency"})
 
         except (ValueError, TypeError):
             logger.error("Validation failed due to: %r" % format_exc())
