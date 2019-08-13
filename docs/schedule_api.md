@@ -12,7 +12,8 @@ Create ongoing payments in time based on previously setup contracts/agreements.
 * _purpose_, required. Can be one of `pay, receive`
 * _currency_, required. 3-letter ISO code of corresponding currency
 * _period_, required. Can be one of `one_time, weekly, monthly, quarterly, yearly`
-* _number_of_payments_left_, required. Integer, which specifies the number of ongoing payments to be made.
+* _number_of_payments_, optional. Integer, which specifies the number of initial payments (upon creation).
+* _number_of_payments_left_, required. Integer, which specifies the number of ongoing payments to be made (editable by end user).
 * _start_date_, required. Date in `YYYY-MM-DD` format to initiate first payment
 * _payment_amount_, required. Integer, payment amount
 * _fee_amount_, required. Integer, approximate fee amount for **all payments (including deposit)** in schedule
@@ -21,6 +22,7 @@ Create ongoing payments in time based on previously setup contracts/agreements.
 * _additional_information_, optional. Any textual information
 * _payee_id_, required. UUID, identifies who should receive the money
 * _funding_source_id_, required. UUID, identifies the source of money (see Funding Source API)
+* _backup_funding_source_id_, optional. UUID, identifies the secondary source of money in case payment with the first one fails (see Funding Source API)
 
 
 
@@ -41,21 +43,23 @@ User-Agent: HTTPie/1.0.2
 {
     "data": {
         "attributes": {
-            "currency": "EUR",
-            "funding_source_id": "b51bd89f-09db-4597-96d3-33f04de06740",
-            "name": "My test schedule",
-            "number_of_payments_left": "12",
-            "payee_id": "b51bd89f-09db-4597-96d3-33f04de06740",
-            "payment_amount": "100",
-            "fee_amount": "20",
+            "additional_information": "lkjdglkdjflgkjdfgdfg",
+            "counterpart": "internal",
+            "currency": "GBP",
+            "funding_source_id": "5c490878-b2ad-4ab6-99dd-6d2726c5bc97",
+            "name": "My test schedule3",
+            "number_of_payments": "10",
+            "number_of_payments_left": "4",
+            "payee_id": "c5a239a6-7998-4a75-a7f9-ec7e24e1a356",
+            "payment_amount": 100,
             "period": "monthly",
             "purpose": "pay",
-            "start_date": "2019-08-01"
+            "start_date": "2019-08-08"
         },
         "relationships": {
             "payment_account": {
                 "data": {
-                    "id": "bc29764f-3d51-4de3-baff-5f38fee5acd9",
+                    "id": "a8e6de1c-3ba2-4dfe-94b2-57c832f04b3c",
                     "type": "payment_accounts"
                 }
             }
@@ -63,6 +67,7 @@ User-Agent: HTTPie/1.0.2
         "type": "Schedule"
     }
 }
+
 ```
 
 ```http
@@ -78,29 +83,41 @@ X-Frame-Options: SAMEORIGIN
 {
     "data": {
         "attributes": {
-            "additional_information": null,
-            "currency": "EUR",
+            "additional_information": "lkjdglkdjflgkjdfgdfg",
+            "backup_funding_source_id": null,
+            "currency": "GBP",
             "deposit_amount": null,
             "deposit_payment_date": null,
-            "funding_source_id": "b51bd89f-09db-4597-96d3-33f04de06740",
-            "name": "My test schedule",
-            "number_of_payments_left": 12,
-            "payee_id": "b51bd89f-09db-4597-96d3-33f04de06740",
+            "fee_amount": 0,
+            "funding_source_id": "5c490878-b2ad-4ab6-99dd-6d2726c5bc97",
+            "name": "My test schedule3",
+            "next_payment_date": "2019-08-08",
+            "number_of_payments": 10,
+            "number_of_payments_left": 10,
+            "payee_iban": "GB71SAPY60838290025800",
+            "payee_id": "c5a239a6-7998-4a75-a7f9-ec7e24e1a356",
+            "payee_recipient_email": "api_test@mailinator.com",
+            "payee_recipient_name": "api_test@mailinator.com",
+            "payee_title": "GBP",
             "payment_amount": 100,
-            "fee_amount": "20",
+            "payment_type": "external",
             "period": "monthly",
             "purpose": "pay",
-            "start_date": "2019-08-01",
+            "start_date": "2019-08-08",
             "status": "open",
             "total_paid_sum": 0,
-            "total_sum_to_pay": 0
+            "total_sum_to_pay": 1000
         },
-        "id": "b0e0ecbf-371e-4496-b28f-5f8256dac550",
+        "id": "63964c6b-f3ca-4f14-8ad8-da4cc186377b",
         "type": "Schedule"
     }
 }
 
+
 ```
+**NOTE** how the supplied _number_of_payments_left_ is ignored and initiated by value from _number_of_payments_.
+
+
 
 
 ### Possible error responses

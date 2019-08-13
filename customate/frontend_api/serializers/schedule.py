@@ -27,7 +27,8 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
     purpose = EnumField(enum=SchedulePurpose, required=True)
     currency = EnumField(enum=Currency, required=True)
     period = EnumField(enum=SchedulePeriod, required=True)
-    number_of_payments_left = IntegerField(required=True)
+    number_of_payments = IntegerField(required=True)
+    number_of_payments_left = IntegerField(required=False)
     start_date = DateField(required=True)
     payment_amount = IntegerField(required=True)
     fee_amount = IntegerField(default=0, required=False)
@@ -47,13 +48,13 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
     class Meta:
         model = Schedule
         fields = (
-            'name', 'status', 'purpose', 'currency', 'period', 'number_of_payments_left',
+            'name', 'status', 'purpose', 'currency', 'period', 'number_of_payments', 'number_of_payments_left',
             'start_date', 'payment_amount', 'fee_amount', 'deposit_amount', 'deposit_payment_date',
             'additional_information', 'payee_id', 'funding_source_id', 'backup_funding_source_id', 'payee_title',
             'total_paid_sum', 'total_sum_to_pay', 'payee_iban', 'payee_recipient_name', 'payee_recipient_email',
 
             # we can use model properties as well
-            'next_payment_date', 'payment_type'
+            'next_payment_date', 'payment_type',
         )
 
     def validate_name(self, value):
@@ -138,6 +139,11 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
                         "backup_funding_source_id": "Backup funding source can not be the same as default"
                     })
                 self.validate_specific_funding_source(res, field_name="backup_funding_source_id")
+
+            if int(res.get("number_of_payments")) < int(res.get("number_of_payments_left")):
+                raise ValidationError({
+                    "number_of_payments_left": "number_of_payments_left should be < number_of_payments"
+                })
 
         except (ValueError, TypeError):
             logger.error("Validation failed due to: %r" % format_exc())

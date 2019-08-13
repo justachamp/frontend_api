@@ -1,8 +1,14 @@
+import logging
 from traceback import format_exc
 from django.utils.functional import cached_property
+from rest_framework import status as status_codes
+from rest_framework.exceptions import NotFound
+
 from core import views
+from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.serializers import ValidationError
+from frontend_api.tasks import make_overdue_payment
 from frontend_api.core.client import PaymentApiClient
 from frontend_api.fields import ScheduleStatus
 from frontend_api.models import Schedule
@@ -14,9 +20,7 @@ from frontend_api.permissions import (
     IsActive
 )
 
-from ..serializers.schedule import ScheduleSerializer
-
-import logging
+from frontend_api.serializers.schedule import ScheduleSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +33,7 @@ class ScheduleViewSet(views.ModelViewSet):
                           IsNotBlocked,
                           IsSuperAdminOrReadOnly |
                           IsOwnerOrReadOnly |
-                          SubUserManageSchedulesPermission )
+                          SubUserManageSchedulesPermission)
 
     # Example: /api/v1/schedules/?page[number]=1&filter[currency.iexact]=EUR&filter[name.icontains]=test&sort=-status
     ordering_fields = ('name', 'status')
@@ -58,30 +62,64 @@ class ScheduleViewSet(views.ModelViewSet):
         return PaymentApiClient(self.request.user)
 
     def perform_create(self, serializer):
+        """
+        Create new Schedule / HTTP CREATE
+
+        :param serializer:
+        :return:
+        """
         try:
-            payee_details = self.get_payee_details(serializer.validated_data["payee_id"])
-            schedule = serializer.save(user=self.request.user, **payee_details)
-            schedule.calculate_and_set_total_sum_to_pay()
-            schedule.save(update_fields=["total_sum_to_pay"])
+            pd = self.payment_client.get_payee_details(serializer.validated_data["payee_id"])
+            schedule = serializer.save(
+                user=self.request.user,
+                payee_recipient_name=pd.recipient_name,
+                payee_recipient_email=pd.recipient_email,
+                payee_iban=pd.iban,
+                payee_title=pd.title,
+                number_of_payments_left=serializer.validated_data["number_of_payments"]
+            )
+
+            # schedule.save()
+            logger.info("Successfully created new schedule_id=%r" % schedule.id)
         except Exception as e:
             logger.error("Unable to save Schedule=%r, due to %r" % (serializer.validated_data, format_exc()))
-            raise ValidationError(str(e))
+            raise ValidationError("Unable to save schedule")
 
-    # We don't remove schedule instance, just changing status (can we change it here?) and cancelling related payments
-    def perform_destroy(self, schedule):
+    def perform_destroy(self, schedule: Schedule):
+        """
+        Handle HTTP DELETE here.
+        We don't remove schedule instance, just changing status and cancelling related payments
+        :param schedule:
+        :return:
+        """
+
         if not schedule.is_cancelable():
             raise ValidationError({"status": "Schedule with current status cannot be canceled"})
 
         # cancel Schedule
-        schedule.status = ScheduleStatus.cancelled
-        schedule.save(update_fields=["status"])
+        schedule.move_to_status(ScheduleStatus.cancelled)
         self.payment_client.cancel_schedule_payments(schedule.id)
 
-    def get_payee_details(self, payee_id):
-        payee_details = self.payment_client.get_payee_details(payee_id)
-        return {
-            'payee_recipient_name': payee_details.recipient_name,
-            'payee_recipient_email': payee_details.recipient_email,
-            'payee_iban': payee_details.iban,
-            'payee_title': payee_details.title
-        }
+    # TODO perform_edit
+
+    def pay_overdue(self, request, *args, **kwargs):
+        """
+        Tries to initiate the sequence of overdue payments initiated by client.
+        :param request:
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        schedule_id = kwargs.get('pk')
+
+        try:
+            schedule = Schedule.objects.get(id=schedule_id)
+        except Exception as e:
+            raise ValidationError("Unable to fetch schedule_id=%s " % schedule_id)
+
+        schedule.move_to_status(ScheduleStatus.processing)
+        make_overdue_payment.delay(
+            schedule_id=schedule_id,
+            user_id=request.user.id
+        )
+        return Response(status=status_codes.HTTP_204_NO_CONTENT)

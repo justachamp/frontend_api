@@ -131,6 +131,10 @@ urlpatterns = [
     #         view=views.ProfileView.as_view(),
     #         name='profiles'
     #         )
+
+    re_path(r'^schedules/(?P<pk>[^/.]+)/pay_overdue/$',
+            views.ScheduleViewSet.as_view({'post': 'pay_overdue'}),
+            name='schedule-pay-overdue'),
 ]
 
 

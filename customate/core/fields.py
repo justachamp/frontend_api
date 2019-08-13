@@ -178,10 +178,36 @@ class LoadFundsPaymentType(Enum):
         return self.value
 
 
-class PaymentType(Enum):
+class FundingSourceType(Enum):
+    WALLET = 'WALLET'
+    DIRECT_DEBIT = 'DIRECT_DEBIT'
+    CREDIT_CARD = 'CREDIT_CARD'
+
+    class Labels:
+        WALLET = 'Wallet'
+        DIRECT_DEBIT = 'Direct debit'
+        CREDIT_CARD = 'Credit card'
+
+    def __repr__(self):
+        return self.value
+
+
+class PayeeType(Enum):
+    WALLET = 'WALLET'
+    BANK_ACCOUNT = 'BANK_ACCOUNT'
+
+    class Labels:
+        WALLET = 'Wallet'
+        BANK_ACCOUNT = 'Bank account'
+
+    def __repr__(self):
+        return self.value
+
+
+class PaymentScenario(Enum):
     CreditCardToIban = 'CreditCardToIban'
     IncomingContribution = 'IncomingContribution'
-    CustomateToCustomate = 'CustomateToCustomate'
+    OutgoingInternal = 'OutgoingInternal'
     CustomateToIban = 'CustomateToIban'
     DirectDebitToIban = 'DirectDebitToIban'
     CreditCardWithOutgoingInternal = 'CreditCardWithOutgoingInternal'
@@ -219,6 +245,10 @@ class PaymentStatusType(Enum):
     def __repr__(self):
         return self.value
 
+    # @staticmethod
+    # def is_failed(status) -> bool:
+    #     return status is PaymentStatusType.FAILED or status is PaymentStatusType.REFUND
+
 
 class FeeType(Enum):
     STATIC = 'STATIC'
@@ -227,20 +257,6 @@ class FeeType(Enum):
     class Labels:
         STATIC = 'Static'
         PERCENTAGE = 'Percentage'
-
-    def __repr__(self):
-        return self.value
-
-
-class FundingSourceType(Enum):
-    WALLET = 'WALLET'
-    DIRECT_DEBIT = 'DIRECT_DEBIT'
-    CREDIT_CARD = 'CREDIT_CARD'
-
-    class Labels:
-        WALLET = 'Wallet'
-        DIRECT_DEBIT = 'Direct debit'
-        CREDIT_CARD = 'Credit card'
 
     def __repr__(self):
         return self.value
@@ -257,18 +273,6 @@ class FundingSourceStatus(Enum):
         PENDING = 'Pending'
         VALID = 'Valid'
         INVALID = 'Invalid'
-
-    def __repr__(self):
-        return self.value
-
-
-class PayeeType(Enum):
-    WALLET = 'WALLET'
-    BANK_ACCOUNT = 'BANK_ACCOUNT'
-
-    class Labels:
-        WALLET = 'Wallet'
-        BANK_ACCOUNT = 'Bank account'
 
     def __repr__(self):
         return self.value

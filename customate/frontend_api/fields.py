@@ -39,12 +39,14 @@ class ScheduleStatus(Enum):
     closed = 'closed'
     overdue = 'overdue'
     cancelled = 'cancelled'
+    #processing = 'processing' # this is in fact for pay overdue only
 
     class Labels:
         open = 'Open'
         closed = 'Closed'
         overdue = 'Overdue'
         cancelled = 'Cancelled'
+        #processing = 'Processing'
 
 
 class SchedulePurpose(Enum):
@@ -82,3 +84,13 @@ class SchedulePaymentType(Enum):
         receive = 'internal'
         pay = 'external'
 
+
+class SchedulePaymentInitiator(Enum):
+    schedule = 'schedule'
+    backup = 'backup'
+    pay_overdue = 'pay_overdue'
+
+    class Labels:
+        schedule = 'schedule'
+        reserve = 'reserve'
+        pay_overdue = 'pay_overdue'

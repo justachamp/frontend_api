@@ -21,7 +21,7 @@ from core.fields import (
     FundingSourceStatus,
     PayeeType,
     LoadFundsPaymentType,
-    PaymentType,
+    PaymentScenario,
     PaymentStatusType
 )
 from payment_api.core.resource.fields import ExternalResourceRelatedField
@@ -53,7 +53,7 @@ __all__ = [
     JSONField,
     TimestampField,
     LoadFundsPaymentType,
-    PaymentType,
+    PaymentScenario,
     Country,
     Currency,
     OperationType,

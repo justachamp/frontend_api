@@ -2,11 +2,12 @@ import logging
 
 from django.utils.functional import cached_property
 from traceback import format_exc
+
 from customate import settings
-from frontend_api.models import SchedulePaymentsDetails, PayeeDetails, FundingSourceDetails
+from frontend_api.models import PayeeDetails, FundingSourceDetails, PaymentDetails
 from payment_api.core.client import Client
 from payment_api.serializers import PaymentAccountSerializer
-from payment_api.services.schedule import ScheduleRequestResourceService
+from payment_api.serializers.payment import ForcePaymentSerializer, MakingPaymentSerializer
 from payment_api.services.payee import PayeeRequestResourceService
 from payment_api.services.source import FundingSourceRequestResourceService
 
@@ -14,6 +15,15 @@ logger = logging.getLogger(__name__)
 
 
 class PaymentApiClient:
+    """
+    TODO: rewrite this crappy client to use explicit JSON REST API calls to Payment-api backend.
+    Get rid of:
+      * Views
+      * Serializers
+      * Services
+      * ANY dependency on payment-api package
+
+    """
     _base_url = settings.PAYMENT_API_URL
 
     def __init__(self, user):
@@ -46,27 +56,50 @@ class PaymentApiClient:
 
     def cancel_schedule_payments(self, schedule_id):
         try:
-            logger.debug(f'cancel_schedule_payments started')
-            resource_type = 'schedule_payments'
-            self.client.delete(resource_type, schedule_id)
+            logger.info("Cancelling payments for schedule_id=%r" % schedule_id)
+            self.client.delete('schedule_payments', schedule_id)
         except Exception as e:
             logger.error("Schedule payments cancellation thrown an exception: %r" % format_exc())
             raise e
 
-    def get_schedule_payments_details(self, schedule_id):
-        try:
-            logger.debug(f'get_schedule_payments_details started')
-            service = ScheduleRequestResourceService(resource=self)
-            resource = service.get_schedule_payment_details(schedule_id)
+    @staticmethod
+    def force_payment(user_id: str, payment_id: str):
+        from payment_api.views.payment import ForcePaymentViewSet
 
-            return SchedulePaymentsDetails(id=resource.id, total_paid_sum=resource.totalPaidSum)
-        except Exception as e:
-            logger.error("Receiving schedule payments details thrown an exception: %r" % format_exc())
-            raise e
+        view = ForcePaymentViewSet()
+        serializer = ForcePaymentSerializer(
+            data={
+                'user_id': user_id,
+                'original_payment_id': payment_id
+            },
+            context={'view': view}
+        )
+        serializer.is_valid(True)
+        return serializer.save()
+
+    @staticmethod
+    def create_payment(payment_detail: PaymentDetails):
+        from payment_api.views.payment import MakingPaymentViewSet
+
+        view = MakingPaymentViewSet()
+        serializer = MakingPaymentSerializer(
+            data={
+                'user_id': str(payment_detail.user_id),
+                'schedule_id': str(payment_detail.schedule_id),
+                'currency': payment_detail.currency.name,
+                'data': {'amount': payment_detail.amount, 'description': payment_detail.description},
+                'payment_account': {'id': str(payment_detail.payment_account_id), 'type': 'payment_accounts'},
+                'origin': {'id': str(payment_detail.funding_source_id), 'type': 'funding_sources'},
+                'recipient': {'id': str(payment_detail.payee_id), 'type': 'payees'}
+            },
+            context={'view': view}
+        )
+        serializer.is_valid(True)
+        return serializer.save()
 
     def get_payee_details(self, payee_id):
         try:
-            logger.debug(f'get_payee_details started')
+            logger.info("Getting details for payee_id=%r" % payee_id)
             service = PayeeRequestResourceService(resource=self)
             resource = service.get_payee_details(payee_id)
 
@@ -78,10 +111,10 @@ class PaymentApiClient:
                 recipient_email=resource['data']['recipient']['email']
             )
         except KeyError as e:
-            logger.error("Key error occurred during payee processing (did mapping was changed?): %r" % format_exc())
+            logger.error("Key error occurred during payee processing (mapping changed?): %r" % format_exc())
             raise e
         except Exception as e:
-            logger.error("Receiving payee details thrown an exception: %r" % format_exc())
+            logger.error("Unable to get payee details (payee_id=%r): %r" % (payee_id, format_exc()))
             raise e
 
     def get_funding_source_details(self, source_id) -> FundingSourceDetails:

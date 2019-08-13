@@ -3,7 +3,7 @@ from payment_api.serializers import (
     CharField,
     Currency,
     EnumField,
-    PaymentType,
+    PaymentScenario,
     LoadFundsPaymentType,
     PaymentStatusType,
     ResourceMeta,
@@ -23,7 +23,7 @@ class LoadFundsSerializer(ResourceSerializer):
     }
 
     id = UUIDField(read_only=True)
-    contract_id = UUIDField(source='contractId', required=False)
+    schedule_id = UUIDField(source='scheduleId', required=False)
     creation_date = TimestampField(read_only=True, source='creationDate')
     currency = EnumField(enum=Currency, primitive_value=True)
     scenario = EnumField(enum=LoadFundsPaymentType, primitive_value=True)
@@ -69,6 +69,45 @@ class LoadFundsSerializer(ResourceSerializer):
         external_resource_name = 'payments'
 
 
+class MakingPaymentSerializer(ResourceSerializer):
+    included_serializers = {
+        'payment_account': 'payment_api.serializers.PaymentAccountSerializer',
+        'origin': 'payment_api.serializers.FundingSourceSerializer',
+        'recipient': 'payment_api.serializers.PayeeSerializer',
+    }
+
+    id = UUIDField(read_only=True)
+    # @NOTE: doesn't work with UUIDField
+    status = EnumField(enum=PaymentStatusType, primitive_value=True, read_only=True)
+    schedule_id = CharField(source='scheduleId', required=True)
+    currency = EnumField(enum=Currency, primitive_value=True)
+    scenario = EnumField(enum=PaymentScenario, primitive_value=True)
+    user_id = CharField(source='userId', required=True)
+    data = JSONField(required=True)
+
+    payment_account = ExternalResourceRelatedField(
+        required=True,
+        related_link_view_name='payment-related',
+        self_link_view_name='payment-relationships',
+        source='account'
+    )
+
+    origin = ExternalResourceRelatedField(
+        required=True,
+        related_link_view_name='payment-related',
+        self_link_view_name='payment-relationships'
+    )
+
+    recipient = ExternalResourceRelatedField(
+        required=True,
+        related_link_view_name='payment-related',
+        self_link_view_name='payment-relationships'
+    )
+
+    class Meta(ResourceMeta):
+        resource_name = 'payments'
+
+
 class PaymentSerializer(ResourceSerializer):
     included_serializers = {
         'transactions': 'payment_api.serializers.TransactionSerializer',
@@ -78,7 +117,7 @@ class PaymentSerializer(ResourceSerializer):
     }
 
     id = UUIDField(read_only=True)
-    contract_id = UUIDField(read_only=True, source='contractId')
+    schedule_id = UUIDField(read_only=True, source='scheduleId')
     creation_date = TimestampField(read_only=True, source='creationDate')
     currency = CharField(read_only=True)
     scenario = CharField(read_only=True),
@@ -117,5 +156,11 @@ class PaymentSerializer(ResourceSerializer):
         resource_name = 'payments'
 
 
+class ForcePaymentSerializer(ResourceSerializer):
+    user_id = UUIDField(source='userId', primitive_value=True, required=True)
+    original_payment_id = UUIDField(source='originalPaymentId', primitive_value=True, required=True)
+    new_payment_id = UUIDField(source='newPaymentId', primitive_value=True, required=False)
+    new_payment_status = CharField(read_only=True, required=False),
 
-
+    class Meta(ResourceMeta):
+        resource_name = 'forced_payments'

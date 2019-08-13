@@ -1,10 +1,15 @@
 from traceback import format_exc
 from botocore.exceptions import ClientError
+from django.test import SimpleTestCase
+
 from authentication.cognito.core.actions import admin_delete_user, \
     admin_update_user_attributes, admin_disable_user
 from authentication.cognito.core.helpers import sign_up
 
 import logging
+
+from core.fields import PaymentScenario, PayeeType, FundingSourceType
+
 logger = logging.getLogger(__name__)
 
 
@@ -50,3 +55,5 @@ class TestUserManagementMixin(object):
         except Exception as ex:
             logger.error("Could not create a test user for use with other test methods: %r" % format_exc())
             raise ex
+
+

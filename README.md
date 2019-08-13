@@ -104,6 +104,11 @@ $ ./manage.py showmigrations
 ./manage.py runserver
 ```
 
+### Run Celery (workers for all queues and celerybeatd)
+```
+celery worker --app customate --beat --loglevel info
+```
+
 Once the server is up, REST APIs should be available at `http://localhost:8080/`
 
 

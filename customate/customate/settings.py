@@ -411,6 +411,6 @@ CELERY_BEAT_SCHEDULE = {
     'once_per_day': {
         'task': 'frontend_api.tasks.initiate_daily_payments',
         # TODO: make sure we run somewhere in the morning bank opening time
-        'schedule': crontab(minute='*/5') if DEBUG else crontab(hour='*/24')
+        'schedule': crontab(hour='9', minute="15") # 9:15 UTC every day
     },
 }

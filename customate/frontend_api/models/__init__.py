@@ -1,12 +1,15 @@
 import datetime
-from enumfields import EnumField
+from dataclasses import dataclass
+from uuid import UUID
 
+from enumfields import EnumField
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.contrib.postgres.fields import JSONField
 from django.core.serializers.json import DjangoJSONEncoder
 from django.contrib.auth import get_user_model
 from core.models import Model, Address
+from core.fields import Currency, PaymentScenario
 from frontend_api.fields import AccountType, CompanyType
 
 from polymorphic.models import PolymorphicModel
@@ -215,7 +218,19 @@ class Shareholder(Model):
         return "%s the shareholder" % self.last_name
 
 
-from frontend_api.models.schedule import SchedulePaymentsDetails, PayeeDetails, FundingSourceDetails, Schedule
+@dataclass
+class PaymentDetails:
+    user_id: UUID
+    payment_account_id: UUID
+    schedule_id: UUID
+    currency: Currency
+    amount: int
+    description: str
+    payee_id: UUID
+    funding_source_id: UUID
+
+
+from frontend_api.models.schedule import PayeeDetails, FundingSourceDetails, Schedule
 
 __all__ = [
     Company,
@@ -229,8 +244,6 @@ __all__ = [
 
     # Schedules
     Schedule,
-    SchedulePaymentsDetails,
     PayeeDetails,
     FundingSourceDetails
 ]
-
