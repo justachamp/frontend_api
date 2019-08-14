@@ -57,10 +57,6 @@ class Schedule(Model):
         help_text=_("Total sum that should be paid by this schedule")
     )
 
-    was_accepted = models.NullBooleanField(
-        help_text=_("Indicates whether this payment Schedule was accepted by payee(counterpart)")
-    )
-
     def save(self, *args, **kwargs):
         """
         Pre-calculate some fields in this overridden method.
