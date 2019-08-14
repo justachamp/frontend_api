@@ -39,14 +39,18 @@ class ScheduleStatus(Enum):
     closed = 'closed'
     overdue = 'overdue'
     cancelled = 'cancelled'
-    #processing = 'processing' # this is in fact for pay overdue only
+    processing = 'processing'  # block user from altering our model
+    pending = 'pending'  # for 'receive funds' scenario only
+    rejected = 'rejected'  # for 'receive funds' scenario only
 
     class Labels:
         open = 'Open'
         closed = 'Closed'
         overdue = 'Overdue'
         cancelled = 'Cancelled'
-        #processing = 'Processing'
+        processing = 'Processing'
+        pending = 'Pending'
+        rejected = 'Rejected'
 
 
 class SchedulePurpose(Enum):
