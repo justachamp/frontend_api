@@ -86,7 +86,7 @@ class Migration(migrations.Migration):
         migrations.RunSQL(sql_yearly),
         migrations.RunSQL("DROP VIEW IF EXISTS public.frontend_api_deposits_schedule"),
         migrations.RunSQL(sql_deposits),
-        migrations.RunSQL("DROP CONSTRAINT IF EXISTS frontend_api_schedulepayments_payment_id_schedule_id"),
+        migrations.RunSQL("ALTER TABLE frontend_api_schedule DROP CONSTRAINT IF EXISTS frontend_api_schedulepayments_payment_id_schedule_id"),
         migrations.RunSQL(sql_schedule_payments_constraint),
         migrations.AddField(
             model_name='schedule',
