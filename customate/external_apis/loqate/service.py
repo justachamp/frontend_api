@@ -37,10 +37,17 @@ def make_request(url, params):
     new_params = copy.deepcopy(params)
     # include service key in each request
     new_params.update({"Key": LOQATE_SERVICE_KEY})
+
     if "Countries" not in new_params:
-        new_params.update({
-            "Countries": ','.join(COUNTRIES_AVAILABLE)
-        })
+        if "country" in new_params:
+            new_params.update({
+                "Countries": new_params['country']
+            })
+        else:
+            new_params.update({
+                "Countries": ','.join(COUNTRIES_AVAILABLE)
+            })
+
     # lowercase ids -> uppercase ids
     id = new_params.pop('id', None)
     if id:
