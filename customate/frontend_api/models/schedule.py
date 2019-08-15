@@ -219,6 +219,15 @@ class Schedule(Model):
         logger.debug("Reduced number_of_payments_left=%s (schedule_id=%s)" % (self.number_of_payments_left, self.id))
         self.save(update_fields=["number_of_payments_left"])
 
+    @staticmethod
+    def has_active_schedules_with_source(funding_source_id):
+        statuses = [ScheduleStatus.open, ScheduleStatus.pending, ScheduleStatus.processing, ScheduleStatus.overdue]
+
+        return Schedule.objects.filter(
+            funding_source_id=funding_source_id,
+            status__in=statuses
+        ).exists()
+
 
 class ScheduleCommonFieldsMixin(Model):
     scheduled_date = models.DateField()  # specific date on which the payment should be initiated

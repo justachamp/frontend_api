@@ -1,5 +1,7 @@
 from rest_framework.permissions import IsAuthenticated
 
+from frontend_api.models import Schedule
+from core.exceptions import ConflictError
 from payment_api.serializers import FundingSourceSerializer, UpdateFundingSourceSerializer
 from frontend_api.permissions import (
     IsSuperAdminOrReadOnly,
@@ -61,6 +63,17 @@ class FundingSourceViewSet(ResourceViewSet):
                     user.is_owner else user.account.owner_account.payment_account_id
         except AttributeError:
             return None
+
+    def perform_destroy(self, funding_source, *args, **kwargs):
+        """
+        Handle HTTP DELETE here.
+        :return:
+        """
+
+        if Schedule.has_active_schedules_with_source(funding_source.id):
+            raise ConflictError(f'Cannot remove funding source that is used in active schedule ({funding_source.id})')
+
+        return super().perform_destroy(funding_source)
 
 
 class FundingSourceRelationshipView(ResourceRelationshipView):
