@@ -79,7 +79,9 @@ class ResourceViewSet(ModelViewSet):
         if not self._queryset:
             modifiers = []
             if self.paginate_response:
-                page_size = self.paginator.page_size
+                page_size = int(self.request.query_params.get(self.paginator.page_size_query_param, self.paginator.page_size))
+                if page_size > settings.FULL_RESOURCE_LIST_PAGE_SIZE:
+                    page_size = settings.FULL_RESOURCE_LIST_PAGE_SIZE
                 page_number = self.request.query_params.get(self.paginator.page_query_param, 1)
             else:
                 page_size = settings.FULL_RESOURCE_LIST_PAGE_SIZE
