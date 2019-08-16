@@ -1,20 +1,20 @@
-from unittest import skip
-from uuid import uuid4
-from django.test import SimpleTestCase
-from rest_framework.exceptions import ValidationError
-from rest_framework import status as status_codes
+#from unittest import skip
+#from uuid import uuid4
+#from django.test import SimpleTestCase
+#from rest_framework.exceptions import ValidationError
+#from rest_framework import status as status_codes
 
-from core.fields import Currency, PaymentScenario, PaymentStatusType
-from core.models import User
-from frontend_api.core.client import PaymentApiClient, PaymentDetails
-from frontend_api.fields import SchedulePeriod, ScheduleStatus
-from frontend_api.models import Schedule
-import arrow
-import logging
+#from core.fields import Currency, PaymentScenario, PaymentStatusType
+#from core.models import User
+#from frontend_api.core.client import PaymentApiClient, PaymentDetails
+#from frontend_api.fields import SchedulePeriod, ScheduleStatus
+#from frontend_api.models import Schedule
+#import arrow
+#import logging
 
-logger = logging.getLogger(__name__)
+#logger = logging.getLogger(__name__)
 
-
+"""
 class ScheduleModelTest(SimpleTestCase):
     def test_calculate_and_set_total_sum_to_pay_single_payment(self):
         schedule = Schedule(number_of_payments_left=1, payment_amount=100)
@@ -148,3 +148,4 @@ class PaymentApiClientTest(SimpleTestCase):
             self._client.create_payment(payment_details)
 
         self.assertEqual(e.exception.status_code, status_codes.HTTP_400_BAD_REQUEST)
+"""
