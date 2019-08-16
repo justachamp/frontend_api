@@ -1,6 +1,9 @@
 import logging
 from traceback import format_exc
+from uuid import UUID
 from django.utils.functional import cached_property
+from django.shortcuts import get_object_or_404
+from rest_framework.decorators import action
 from rest_framework import status as status_codes
 from rest_framework.exceptions import NotFound
 
@@ -11,8 +14,9 @@ from rest_framework.serializers import ValidationError
 from frontend_api.tasks import make_overdue_payment
 from frontend_api.core.client import PaymentApiClient
 from frontend_api.fields import ScheduleStatus
-from frontend_api.models import Schedule
+from frontend_api.models import Schedule, Document
 from frontend_api.permissions import (
+    HasParticularDocumentPermission,
     IsOwnerOrReadOnly,
     IsSuperAdminOrReadOnly,
     SubUserManageSchedulesPermission,
@@ -99,6 +103,30 @@ class ScheduleViewSet(views.ModelViewSet):
         # cancel Schedule
         schedule.move_to_status(ScheduleStatus.cancelled)
         self.payment_client.cancel_schedule_payments(schedule.id)
+
+    def get_payee_details(self, payee_id):
+        payee_details = self.payment_client.get_payee_details(payee_id)
+        return {
+            'payee_recipient_name': payee_details.recipient_name,
+            'payee_recipient_email': payee_details.recipient_email,
+            'payee_iban': payee_details.iban,
+            'payee_title': payee_details.title
+        }
+
+    @action(methods=['DELETE'], detail=True, permission_classes = (
+            IsAuthenticated, IsActive, HasParticularDocumentPermission
+        ))
+    def documents(self, request, pk):
+        """
+        The method for removing document objects from database.
+        """
+        document_id = request.query_params.get("document_id")
+        if not document_id:
+            logger.error("The 'document_id' parameter has not passed %r" % format_exc())
+            raise ValidationError("The 'document_id' parameter is required")
+        document = get_object_or_404(Document, id=document_id)
+        document.delete()
+        return Response(None, status=204)
 
     # TODO perform_edit
 

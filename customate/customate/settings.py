@@ -347,6 +347,7 @@ AWS_S3_CUSTOM_DOMAIN = environ.get('AWS_CDN_HOST')
 AWS_S3_OBJECT_PARAMETERS = {
     'CacheControl': 'max-age=86400',
 }
+AWS_S3_EXPIRE_PRESIGNED_URL = 20   # Expired time in seconds for AWS S3 presigned link
 AWS_LOCATION = 'static'
 STATIC_URL = 'https://%s/%s/' % (AWS_S3_CUSTOM_DOMAIN, AWS_LOCATION)
 STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'

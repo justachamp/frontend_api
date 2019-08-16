@@ -218,6 +218,9 @@ class Shareholder(Model):
         return "%s the shareholder" % self.last_name
 
 
+from .schedule import PayeeDetails, FundingSourceDetails, Schedule
+from .document import Document
+
 @dataclass
 class PaymentDetails:
     user_id: UUID
@@ -230,7 +233,8 @@ class PaymentDetails:
     funding_source_id: UUID
 
 
-from frontend_api.models.schedule import PayeeDetails, FundingSourceDetails, Schedule
+
+
 
 __all__ = [
     Company,
@@ -244,6 +248,7 @@ __all__ = [
 
     # Schedules
     Schedule,
+    Document,
     PayeeDetails,
     FundingSourceDetails
 ]

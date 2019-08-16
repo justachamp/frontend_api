@@ -125,7 +125,14 @@ urlpatterns = [
             view=views.AddressRelationshipView.as_view(),
             name='address-relationships'
             ),
+    #re_path(r'^schedules/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
+    #        views.ScheduleViewSet.as_view({'get': 'retrieve_related'}),
+    #        name='schedule-related'),
+    path('presigned-urls/', view=views.PreSignedUrlView.as_view(), name="presigned-urls"),
+
     path('profiles/<pk>/', view=views.ProfileView.as_view(), name='profiles'),
+
+
 
     # re_path(r'^profiles/(?P<pk>[^/.]+)$',
     #         view=views.ProfileView.as_view(),

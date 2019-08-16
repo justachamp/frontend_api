@@ -1,10 +1,23 @@
+# -*- coding: utf-8 -*-
+
+from uuid import UUID
+from typing import Callable
+import logging
+import traceback
+
+
 from rest_framework import permissions
+from rest_framework.exceptions import ValidationError
+from django.shortcuts import get_object_or_404
+from django.contrib.auth import get_user_model
 from rest_framework.exceptions import ValidationError
 
 from authentication.cognito.serializers import CognitoAuthRetrieveSerializer
 from core.fields import UserRole, UserStatus
 
-import logging
+from frontend_api.models import Schedule, Document 
+from core.fields import UserRole
+
 logger = logging.getLogger(__name__)
 
 
@@ -79,8 +92,6 @@ class CheckFieldsCredentials(permissions.BasePermission):
         return getattr(entity, key) if hasattr(entity, key) else None
 
 
-
-
 class IsOwnerOrReadOnly(permissions.BasePermission):
     """
     Custom permission to only allow owners of an object to edit it.
@@ -91,12 +102,76 @@ class IsOwnerOrReadOnly(permissions.BasePermission):
         return request.user.role == UserRole.owner
 
 
+class HasParticularDocumentPermission(permissions.BasePermission):
+    """
+    Custom permission to allow handle documents.
+    """
+
+    def has_get_or_post_permission(self, request) -> bool:
+        """
+        Check permissions for getting from or posting document to particular schedule
+        """
+        schedule_id = request.query_params.get("schedule_id")
+        schedule = get_object_or_404(Schedule, id=UUID(schedule_id))
+        recipient = get_object_or_404(get_user_model(), email=schedule.payee_recipient_email)
+        user = request.user 
+        # Check if user from request is recipient or sender
+        if user.role == UserRole.owner:
+            return any([recipient == user, schedule.user == user])
+        # Check if subuser from request is subuser of recipient or sender
+        if user.role == UserRole.sub_user:
+            return getattr(user.account.permission, "manage_schedules") and \
+                        any([recipient == user.account.owner_account.user,
+                             schedule.user == user.account.owner_account.user,
+                             schedule.user == user])
+        return False
+
+    def has_delete_permission(self, request) -> bool:
+        """
+        Check if user able to delete document
+        """
+        document_id = request.query_params.get("document_id")
+        if not document_id:
+            logger.error("The 'document_id' parameter has not passed %r" % traceback.format_exc())
+            raise ValidationError("The 'document_id' field is requred.")
+        document = get_object_or_404(Document, id=UUID(document_id))
+        user = request.user 
+        schedule_creator_account = document.schedule.user.account.owner_account if \
+                                    hasattr(document.schedule.user.account, "owner_account") else \
+                                     document.schedule.user.account  
+        # If document has created by subuser and owner wants to remove it.
+        if all([ document.user.role == UserRole.sub_user,   
+                 user.role == UserRole.owner ]):    
+                        # Check if schedule belongs to user from request
+            return all([schedule_creator_account == user.account,   
+                        # And check if subuser is subuser of user from request
+                        user.account.sub_user_accounts.filter(user=document.user)])  
+        return user == document.user
+
+    def has_permission(self, request, view) -> Callable:
+        methods = {
+            "get_s3_object": self.has_get_or_post_permission,
+            "post_s3_object": self.has_get_or_post_permission,
+            "delete_s3_object": self.has_delete_permission
+        }
+        if request.method == "DELETE":
+            return self.has_delete_permission(request)
+        method_name = request.query_params.get("method_name")
+        try:
+            return methods[method_name](request)
+        except KeyError:
+            logger.error("Got unrecognized method name %r" % traceback.format_exc())
+            raise ValidationError("Unrecognized method: {}".format(method_name))
+
+
 class SubUserLoadFundsPermission(permissions.BasePermission):
     """
     Custom permission to only allow subusers of an object to edit it.
     """
     def has_permission(self, request, view):
-        return getattr(request.user.account.permission, "load_funds")
+        if request.user.role == UserRole.sub_user:
+            return getattr(request.user.account.permission, "load_funds")
+        return False
 
 
 class SubUserManageFundingSourcesPermission(permissions.BasePermission):
@@ -104,7 +179,9 @@ class SubUserManageFundingSourcesPermission(permissions.BasePermission):
     Custom permission to only allow subusers of an object to edit it.
     """
     def has_permission(self, request, view):
-        return getattr(request.user.account.permission, "manage_funding_sources")
+        if request.user.role == UserRole.sub_user:
+            return getattr(request.user.account.permission, "manage_funding_sources")
+        return False
 
 
 class SubUserManageSchedulesPermission(permissions.BasePermission):
@@ -112,7 +189,9 @@ class SubUserManageSchedulesPermission(permissions.BasePermission):
     Custom permission to only allow subusers of an object to edit it.
     """
     def has_permission(self, request, view):
-        return getattr(request.user.account.permission, "manage_schedules")
+        if request.user.role == UserRole.sub_user:        
+            return getattr(request.user.account.permission, "manage_schedules")
+        return False 
 
 
 class SubUserManagePayeesPermission(permissions.BasePermission):
@@ -120,7 +199,9 @@ class SubUserManagePayeesPermission(permissions.BasePermission):
     Custom permission to only allow subusers of an object to edit it.
     """
     def has_permission(self, request, view):
-        return getattr(request.user.account.permission, "manage_payees")
+        if request.user.role == UserRole.sub_user:
+            return getattr(request.user.account.permission, "manage_payees")
+        return False
 
 
 class IsSuperAdminOrReadOnly(permissions.BasePermission):

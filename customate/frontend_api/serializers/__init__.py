@@ -22,6 +22,7 @@ from frontend_api.serializers.shareholder import ShareholderSerializer
 from frontend_api.serializers.profile import ProfileSerializer
 
 from frontend_api.serializers.schedule import ScheduleSerializer
+from .document import DocumentSerializer
 
 
 __all__ = [
@@ -58,5 +59,6 @@ __all__ = [
     ShareholderSerializer,
     ProfileSerializer,
     ScheduleSerializer,
+    DocumentSerializer
     # ExternalResourceRelatedField
 ]
