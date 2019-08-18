@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from core.fields import UserRole
+
 RESEND = 'RESEND'
 
 
@@ -73,7 +74,7 @@ class Command(BaseCommand):
                         user.email_verified = True
                         user.is_superuser = True
                         user.save()
-                        user.account.permission.manage_tax = True 
+                        user.account.permission.manage_tax = True
                         user.account.permission.manage_fee = True
                         user.account.permission.save()
                         invitation.pk = user.id

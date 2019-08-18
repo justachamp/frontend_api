@@ -325,7 +325,10 @@ class SchedulePayments(Model):
     )
     payment_id = models.UUIDField(help_text=_("Original UUID from payment-api service"))
     parent_payment_id = models.UUIDField(
-        help_text=_("In case of follow-up payments, this points to a preceding payment UUID ")
+        help_text=_("In case of follow-up payments, this points to a preceding payment UUID "),
+        null=True,
+        blank=True,
+        default=None
     )
     funding_source_id = models.UUIDField()
     payment_status = EnumField(PaymentStatusType)

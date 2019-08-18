@@ -221,6 +221,7 @@ class Shareholder(Model):
 from .schedule import PayeeDetails, FundingSourceDetails, Schedule
 from .document import Document
 
+
 @dataclass
 class PaymentDetails:
     user_id: UUID
@@ -231,9 +232,7 @@ class PaymentDetails:
     description: str
     payee_id: UUID
     funding_source_id: UUID
-
-
-
+    parent_payment_id: UUID
 
 
 __all__ = [

@@ -78,19 +78,23 @@ class PaymentApiClient:
         return serializer.save()
 
     @staticmethod
-    def create_payment(payment_detail: PaymentDetails):
+    def create_payment(p: PaymentDetails):
         from payment_api.views.payment import MakingPaymentViewSet
 
         view = MakingPaymentViewSet()
         serializer = MakingPaymentSerializer(
             data={
-                'user_id': str(payment_detail.user_id),
-                'schedule_id': str(payment_detail.schedule_id),
-                'currency': payment_detail.currency.name,
-                'data': {'amount': payment_detail.amount, 'description': payment_detail.description},
-                'payment_account': {'id': str(payment_detail.payment_account_id), 'type': 'payment_accounts'},
-                'origin': {'id': str(payment_detail.funding_source_id), 'type': 'funding_sources'},
-                'recipient': {'id': str(payment_detail.payee_id), 'type': 'payees'}
+                'user_id': str(p.user_id),
+                'schedule_id': str(p.schedule_id),
+                'currency': p.currency.name,
+                'data': {
+                    'amount': p.amount,
+                    'description': p.description,
+                    'parentPaymentId': str(p.parent_payment_id) if p.parent_payment_id else None
+                },
+                'payment_account': {'id': str(p.payment_account_id), 'type': 'payment_accounts'},
+                'origin': {'id': str(p.funding_source_id), 'type': 'funding_sources'},
+                'recipient': {'id': str(p.payee_id), 'type': 'payees'}
             },
             context={'view': view}
         )

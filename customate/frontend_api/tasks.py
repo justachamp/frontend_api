@@ -1,5 +1,5 @@
 from __future__ import absolute_import, unicode_literals
-from typing import Dict
+from typing import Dict, Callable
 from traceback import format_exc
 import arrow
 import logging
@@ -7,6 +7,7 @@ from uuid import UUID
 from celery import shared_task
 from django.core.paginator import Paginator
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.utils import IntegrityError
 from core.models import User
 from core.fields import Currency, PaymentStatusType
 from frontend_api.models import Schedule
@@ -41,10 +42,10 @@ def make_payment(user_id: str, payment_account_id: str, schedule_id: str, curren
     :param parent_payment_id: Parent payment to make sure we could trace retry-payment chains
     :return:
     """
-    logger.info("Going to create payment. user_id=%s, payment_account_id=%s, schedule_id=%s (amount=%s)" % (
-        user_id, payment_account_id, schedule_id, payment_amount
+    logger.info("make payment: user_id=%s, payment_account_id=%s, schedule_id=%s, amount=%s, parent_payment_id=%s" % (
+        user_id, payment_account_id, schedule_id, payment_amount, type(parent_payment_id)
     ))
-    payment = PaymentApiClient.create_payment(payment_detail=PaymentDetails(
+    PaymentApiClient.create_payment(p=PaymentDetails(
         user_id=UUID(user_id),
         payment_account_id=UUID(payment_account_id),
         schedule_id=UUID(schedule_id),
@@ -52,18 +53,9 @@ def make_payment(user_id: str, payment_account_id: str, schedule_id: str, curren
         amount=payment_amount,
         description=additional_information,
         payee_id=UUID(payee_id),
-        funding_source_id=UUID(funding_source_id)
+        funding_source_id=UUID(funding_source_id),
+        parent_payment_id=UUID(parent_payment_id) if parent_payment_id else None
     ))
-
-    # Save payment info into our local DB for further use
-    record = SchedulePayments(
-        schedule=Schedule.objects.get(pk=schedule_id),  # is there a better way of not fetching the entire object??
-        payment_id=payment.id,  # save original payment id
-        funding_source_id=funding_source_id,
-        parent_payment_id=parent_payment_id,
-        payment_status=payment.status
-    )
-    record.save()
 
 
 @shared_task
@@ -73,12 +65,18 @@ def on_payment_change(payment_info: Dict):
     :param payment_info:
     :return:
     """
-    logger.info("on_payment_change=%r" % payment_info)
     payment_id = payment_info.get("payment_id")
+    parent_payment_id = payment_info.get("parent_payment_id")
     schedule_id = payment_info.get("schedule_id")
     funding_source_id = payment_info.get("funding_source_id")
     payment_status = PaymentStatusType(payment_info.get('status'))
     amount = int(payment_info.get("amount"))
+
+    logger.info("on_payment_change (payment_id=%s), payment_info=%r" % (payment_id, payment_info))
+
+    if schedule_id is None:
+        logger.info("Skipping payment_id=%s processing as it is not related to any schedule" % payment_id)
+        return
 
     try:
         schedule = Schedule.objects.get(id=schedule_id)
@@ -86,27 +84,42 @@ def on_payment_change(payment_info: Dict):
         logger.error("Given schedule(id=%s) no longer exists, exiting" % schedule_id)
         return
 
-    # get corresponding SchedulePayment
-    schedule_payment = SchedulePayments.objects.get(payment_id=payment_id, schedule_id=schedule_id)
-
-    # update SchedulePayment status
-    schedule_payment.payment_status = payment_status
-    schedule_payment.save(update_fields=['payment_status'])
+    try:
+        # Save/update payment info into DB here, by avoiding duplicates using DB constraint on (schedule_id, payment_id)
+        schedule_payment = SchedulePayments(
+            schedule_id=schedule_id,
+            payment_id=payment_id,
+            funding_source_id=funding_source_id,
+            parent_payment_id=parent_payment_id,
+            payment_status=payment_status
+        )
+        schedule_payment.save()
+        logger.info("Created new SchedulePayment(payment_id=%s, schedule_id=%s)" % (payment_id, schedule_id))
+    except IntegrityError as e:
+        if "frontend_api_schedulepayments_payment_id_schedule_id" in str(e):
+            logger.info("SchedulePayment(payment_id=%s, schedule_id=%s) record already exists, updating status only" % (
+                payment_id, schedule_id
+            ))
+            schedule_payment = SchedulePayments.objects.get(schedule_id=schedule_id, payment_id=payment_id)
+            schedule_payment.payment_status = payment_status
+            schedule_payment.save(update_fields=['payment_status'])
+        else:
+            logger.error("Got DB exception(payment_id=%s): %r " % (payment_id, format_exc()))
 
     # update Schedule status
     schedule.update_status()
 
     # Retry payment using backup funding source if it is available
     if payment_status in [PaymentStatusType.FAILED, PaymentStatusType.REFUND] \
-            and schedule.backup_funding_source_id and schedule_payment.parent_payment_id is None:
+            and schedule.backup_funding_source_id and parent_payment_id is None:
         logger.info("Retrying payment(id=%s, status=%s) using backup funding source(id=%s)" % (
             payment_id, payment_status, schedule.backup_funding_source_id
         ))
         make_payment.delay(
-            user_id=str(schedule.user),
+            user_id=str(schedule.user_id),
             payment_account_id=str(schedule.payment_account_id),
             schedule_id=str(schedule.id),
-            currency=str(schedule.currency),
+            currency=str(schedule.currency.value),
             payment_amount=amount,  # NOTE: use the same amount of original payment!
             additional_information=str(schedule.additional_information),
             payee_id=str(schedule.payee_id),
@@ -119,7 +132,7 @@ def on_payment_change(payment_info: Dict):
         schedule.reduce_number_of_payments_left()
         return
 
-    #TODO: Consider all above mentioned logic for 'Pay overdue' case
+    # TODO: Consider all above mentioned logic for 'Pay overdue' case
 
 
 @shared_task
@@ -141,9 +154,11 @@ def make_overdue_payment(schedule_id: str, user_id: str):
         ))
         return
 
+    # Select all SchedulePayments which are last in chains and are not in SUCCESS status
+
     # TODO: refactor
-    #payment_client = PaymentApiClient(user)
-    #schedule.pay_overdue(payment_client)
+    # payment_client = PaymentApiClient(user)
+    # schedule.pay_overdue(payment_client)
 
 
 def process_all_deposit_payments(scheduled_date):
@@ -169,10 +184,10 @@ def process_all_deposit_payments(scheduled_date):
 
             # submit task for asynchronous processing to queue
             make_payment.delay(
-                user_id=str(s.user),
+                user_id=str(s.user_id),
                 payment_account_id=str(s.payment_account_id),
                 schedule_id=str(s.id),
-                currency=str(s.currency),
+                currency=str(s.currency.value),
                 payment_amount=int(s.deposit_amount),
                 additional_information=str(s.additional_information),
                 payee_id=str(s.payee_id),
@@ -193,10 +208,10 @@ def submit_scheduled_payment(s: ScheduleCommonFieldsMixin):
 
     # submit task for asynchronous processing to queue
     make_payment.delay(
-        user_id=str(s.user),
+        user_id=str(s.user_id),
         payment_account_id=str(s.payment_account_id),
         schedule_id=str(s.id),
-        currency=str(s.currency),
+        currency=str(s.currency.value),
         payment_amount=int(s.payment_amount),
         additional_information=str(s.additional_information),
         payee_id=str(s.payee_id),

@@ -81,7 +81,7 @@ class MakingPaymentSerializer(ResourceSerializer):
     status = EnumField(enum=PaymentStatusType, primitive_value=True, read_only=True)
     schedule_id = CharField(source='scheduleId', required=True)
     currency = EnumField(enum=Currency, primitive_value=True)
-    scenario = EnumField(enum=PaymentScenario, primitive_value=True)
+    #scenario = EnumField(enum=PaymentScenario, primitive_value=True)
     user_id = CharField(source='userId', required=True)
     data = JSONField(required=True)
 
