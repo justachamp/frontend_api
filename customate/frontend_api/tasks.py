@@ -43,19 +43,27 @@ def make_payment(user_id: str, payment_account_id: str, schedule_id: str, curren
     :return:
     """
     logger.info("make payment: user_id=%s, payment_account_id=%s, schedule_id=%s, amount=%s, parent_payment_id=%s" % (
-        user_id, payment_account_id, schedule_id, payment_amount, type(parent_payment_id)
+        user_id, payment_account_id, schedule_id, payment_amount, parent_payment_id
     ))
-    PaymentApiClient.create_payment(p=PaymentDetails(
-        user_id=UUID(user_id),
-        payment_account_id=UUID(payment_account_id),
-        schedule_id=UUID(schedule_id),
-        currency=Currency(currency),
-        amount=payment_amount,
-        description=additional_information,
-        payee_id=UUID(payee_id),
-        funding_source_id=UUID(funding_source_id),
-        parent_payment_id=UUID(parent_payment_id) if parent_payment_id else None
-    ))
+    # TODO: introduce new Schedule status == ABORTED if we fail here
+    try:
+        PaymentApiClient.create_payment(p=PaymentDetails(
+            user_id=UUID(user_id),
+            payment_account_id=UUID(payment_account_id),
+            schedule_id=UUID(schedule_id),
+            currency=Currency(currency),
+            amount=payment_amount,
+            description=additional_information,
+            payee_id=UUID(payee_id),
+            funding_source_id=UUID(funding_source_id),
+            parent_payment_id=UUID(parent_payment_id) if parent_payment_id else None
+        ))
+    except Exception as e:
+        logger.error("Unable to create payment for schedule_id=%s: %r" % (schedule_id, format_exc()))
+        #sch = Schedule.objects.get(id=schedule_id)
+        #sch.status = ScheduleStatus.aborted
+        #sch.save(update_fields=['status'])
+        return
 
 
 @shared_task

@@ -357,11 +357,12 @@ FULL_RESOURCE_LIST_PAGE_SIZE = environ.get('FULL_RESOURCE_LIST_PAGE_SIZE', 200)
 PAYMENT_API_URL = environ['PAYMENT_API_URL']
 
 ############ CELERY configuration ##################################
-CELERY_BROKER_URL = "amqp://{user}:{password}@{host}:{port}/".format(
+CELERY_BROKER_URL = "amqp://{user}:{password}@{host}:{port}/{vhost}".format(
     user=environ['RABBITMQ_USER'],
     password=environ['RABBITMQ_PASSWORD'],
     host=environ.get('RABBITMQ_HOST', "localhost"),
-    port=environ.get('RABBITMQ_PORT', 5672)
+    port=environ.get('RABBITMQ_PORT', 5672),
+    vhost=environ.get('RABBITMQ_VHOST', '')
 )
 
 CELERY_RESULT_BACKEND = "amqp"
