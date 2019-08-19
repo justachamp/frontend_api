@@ -73,9 +73,13 @@ class ScheduleViewSet(views.ModelViewSet):
         :return:
         """
         try:
+            user = self.request.user
             pd = self.payment_client.get_payee_details(serializer.validated_data["payee_id"])
+            if pd.payment_account_id == str(user.account.payment_account_id):
+                raise ValidationError({"payee_id": "Current user's payee cannot be used for creation 'pay funds' schedule"})
+
             schedule = serializer.save(
-                user=self.request.user,
+                user=user,
                 payee_recipient_name=pd.recipient_name,
                 payee_recipient_email=pd.recipient_email,
                 payee_iban=pd.iban,
@@ -83,7 +87,6 @@ class ScheduleViewSet(views.ModelViewSet):
                 number_of_payments_left=serializer.validated_data["number_of_payments"]
             )
 
-            # schedule.save()
             logger.info("Successfully created new schedule_id=%r" % schedule.id)
         except Exception as e:
             logger.error("Unable to save Schedule=%r, due to %r" % (serializer.validated_data, format_exc()))
@@ -103,15 +106,6 @@ class ScheduleViewSet(views.ModelViewSet):
         # cancel Schedule
         schedule.move_to_status(ScheduleStatus.cancelled)
         self.payment_client.cancel_schedule_payments(schedule.id)
-
-    def get_payee_details(self, payee_id):
-        payee_details = self.payment_client.get_payee_details(payee_id)
-        return {
-            'payee_recipient_name': payee_details.recipient_name,
-            'payee_recipient_email': payee_details.recipient_email,
-            'payee_iban': payee_details.iban,
-            'payee_title': payee_details.title
-        }
 
     @action(methods=['DELETE'], detail=True, permission_classes = (
             IsAuthenticated, IsActive, HasParticularDocumentPermission
