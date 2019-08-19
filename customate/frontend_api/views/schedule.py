@@ -40,7 +40,7 @@ class ScheduleViewSet(views.ModelViewSet):
                           SubUserManageSchedulesPermission)
 
     # Example: /api/v1/schedules/?page[number]=1&filter[currency.iexact]=EUR&filter[name.icontains]=test&sort=-status
-    ordering_fields = ('name', 'status')
+    ordering_fields = ('id', 'name', 'status')
     search_fields = ('name', 'payee_recipient_name', 'payee_recipient_email', 'payee_iban')
 
     filterset_fields = {
