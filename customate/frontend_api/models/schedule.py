@@ -376,6 +376,7 @@ class PayeeDetails:
     iban: str
     recipient_name: str
     recipient_email: str
+    payment_account_id: models.UUIDField()
 
 
 @dataclass
