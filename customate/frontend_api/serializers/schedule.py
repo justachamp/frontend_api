@@ -7,7 +7,7 @@ from rest_framework.serializers import ValidationError
 from rest_framework_json_api.serializers import HyperlinkedModelSerializer
 from rest_framework.fields import DateField, IntegerField
 
-from core.fields import Currency, SerializerField
+from core.fields import Currency, SerializerField, FundingSourceType
 from frontend_api.fields import ScheduleStatus, SchedulePeriod, SchedulePurpose
 from frontend_api.models.schedule import Schedule
 from frontend_api.serializers.document import DocumentSerializer
@@ -90,8 +90,8 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
                 field_name: "Invalid funding source payment account"
             })
 
-        # type(res["currency"]) == core.fields.Enum
-        if fs.currency != res["currency"].value:
+        # @NOTE: we allow payments from credit card that have different currency
+        if fs.type != FundingSourceType.CREDIT_CARD and fs.currency != res["currency"].value:
             raise ValidationError({
                 field_name: "Funding source currency should be the same as schedule currency"
             })

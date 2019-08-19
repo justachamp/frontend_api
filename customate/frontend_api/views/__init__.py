@@ -116,7 +116,7 @@ class PreSignedUrlView(APIView):
         The method returns presigned url for further sharing file
         """
         document_id = request.query_params.get("document_id")
-        document = get_object_or_404(Document, id=UUID(document_id))
+        document = get_object_or_404(Document, id=document_id)
         try:
             response = self.s3_client.generate_presigned_url(
                                             'delete_object',
@@ -133,7 +133,7 @@ class PreSignedUrlView(APIView):
         try:
             response = getattr(self, method_name)(request)
         except AttributeError as e:
-            logger.error("Got unrecognized method name %r" %  traceback.format_exc())
+            logger.error("Got unrecognized method name %r" % traceback.format_exc())
             raise ValidationError("Unrecognized method: {}".format(method_name))
         return Response(response)
 

@@ -112,7 +112,8 @@ class PaymentApiClient:
                 title=resource.title,
                 iban=resource['data']['account']['iban'],
                 recipient_name=resource['data']['recipient']['fullName'],
-                recipient_email=resource['data']['recipient']['email']
+                recipient_email=resource['data']['recipient']['email'],
+                payment_account_id=resource.account.id
             )
         except KeyError as e:
             logger.error("Key error occurred during payee processing (mapping changed?): %r" % format_exc())
@@ -129,6 +130,7 @@ class PaymentApiClient:
 
             return FundingSourceDetails(
                 id=resource.id,
+                type=resource.type,
                 currency=resource.currency,
                 payment_account_id=resource.account.id
             )

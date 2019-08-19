@@ -42,9 +42,11 @@ def make_payment(user_id: str, payment_account_id: str, schedule_id: str, curren
     :param parent_payment_id: Parent payment to make sure we could trace retry-payment chains
     :return:
     """
-    logger.info("make payment: user_id=%s, payment_account_id=%s, schedule_id=%s, amount=%s, parent_payment_id=%s" % (
-        user_id, payment_account_id, schedule_id, payment_amount, parent_payment_id
+    logger.info("make payment: user_id=%s, payment_account_id=%s, schedule_id=%s, amount=%s, parent_payment_id=%s, "
+                "funding_source_id=%s, payee_id=%s" % (
+        user_id, payment_account_id, schedule_id, payment_amount, parent_payment_id, funding_source_id, payee_id
     ))
+
     # TODO: introduce new Schedule status == ABORTED if we fail here
     try:
         PaymentApiClient.create_payment(p=PaymentDetails(
