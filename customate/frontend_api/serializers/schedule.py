@@ -90,7 +90,7 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
                 field_name: "Invalid funding source payment account"
             })
 
-        # type(res["currency"]) == core.fields.Enum
+        # @NOTE: we allow payments from credit card that have different currency
         if fs.type != FundingSourceType.CREDIT_CARD and fs.currency != res["currency"].value:
             raise ValidationError({
                 field_name: "Funding source currency should be the same as schedule currency"

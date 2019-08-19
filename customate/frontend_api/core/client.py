@@ -129,6 +129,7 @@ class PaymentApiClient:
 
             return FundingSourceDetails(
                 id=resource.id,
+                type=resource.type,
                 currency=resource.currency,
                 payment_account_id=resource.account.id
             )
