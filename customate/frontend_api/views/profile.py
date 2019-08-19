@@ -5,14 +5,14 @@ from rest_framework.permissions import IsAuthenticated
 from frontend_api.serializers import (
     ProfileSerializer
 )
-from frontend_api.permissions import ( 
-        CheckFieldsCredentials,
-        IsOwnerOrReadOnly,
-        IsSuperAdminOrReadOnly,
-        SubUserManageSchedulesPermission,
-        IsNotBlocked,
-        IsActive
-)
+from frontend_api.permissions import (
+    CheckFieldsCredentials,
+    IsOwnerOrReadOnly,
+    IsSuperAdminOrReadOnly,
+    SubUserManageSchedulesPermission,
+    IsNotBlocked,
+    IsActive,
+    IsBlockedUsersUpdateContactInfoRequest)
 
 import logging
 
@@ -37,7 +37,7 @@ class DomainService:
 class ProfileView(DomainService, APIView):
     permission_classes = ( IsAuthenticated,
                            IsActive,
-                           IsNotBlocked, 
+                           IsNotBlocked | IsBlockedUsersUpdateContactInfoRequest,
                            CheckFieldsCredentials )
     _service_object = ProfileService
 
