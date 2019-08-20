@@ -15,6 +15,9 @@ logger = logging.getLogger(__name__)
 
 
 class Schedule(Model):
+    ACTIVE_SCHEDULE_STATUSES = [ScheduleStatus.open, ScheduleStatus.pending, ScheduleStatus.processing,
+                                ScheduleStatus.overdue]
+
     name = models.CharField(_('schedule name'), max_length=150)
     status = EnumField(ScheduleStatus)
     user = models.ForeignKey(
@@ -221,11 +224,16 @@ class Schedule(Model):
 
     @staticmethod
     def has_active_schedules_with_source(funding_source_id):
-        statuses = [ScheduleStatus.open, ScheduleStatus.pending, ScheduleStatus.processing, ScheduleStatus.overdue]
-
         return Schedule.objects.filter(
             funding_source_id=funding_source_id,
-            status__in=statuses
+            status__in=Schedule.ACTIVE_SCHEDULE_STATUSES
+        ).exists()
+
+    @staticmethod
+    def has_active_schedules_with_payee(payee_id):
+        return Schedule.objects.filter(
+            payee_id=payee_id,
+            status__in=Schedule.ACTIVE_SCHEDULE_STATUSES
         ).exists()
 
 
