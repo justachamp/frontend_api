@@ -6,7 +6,7 @@ from enumfields import EnumField
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from core.models import Model, User
-from core.fields import Currency, PaymentStatusType, FundingSourceType
+from core.fields import Currency, PaymentStatusType, FundingSourceType, PayeeType
 from rest_framework.serializers import ValidationError
 from frontend_api.fields import SchedulePurpose, SchedulePeriod, ScheduleStatus, SchedulePaymentType, \
     SchedulePaymentInitiator
@@ -373,6 +373,7 @@ class SchedulePayments(Model):
 class PayeeDetails:
     id: str
     title: str
+    type: EnumField(PayeeType)
     iban: str
     recipient_name: str
     recipient_email: str

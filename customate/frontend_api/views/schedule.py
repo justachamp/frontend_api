@@ -8,6 +8,7 @@ from rest_framework import status as status_codes
 from rest_framework.exceptions import NotFound
 
 from core import views
+from core.fields import PayeeType
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.serializers import ValidationError
@@ -75,7 +76,7 @@ class ScheduleViewSet(views.ModelViewSet):
         try:
             user = self.request.user
             pd = self.payment_client.get_payee_details(serializer.validated_data["payee_id"])
-            if pd.payment_account_id == str(user.account.payment_account_id):
+            if pd.type == PayeeType.WALLET.value and pd.payment_account_id == str(user.account.payment_account_id):
                 raise ValidationError({"payee_id": "Current user's payee cannot be used for creation 'pay funds' schedule"})
 
             schedule = serializer.save(
