@@ -102,7 +102,7 @@ class User(AbstractUser, Model):
 
     @property
     def is_owner_account_verified(self):
-        return not self.is_subuser or self.account.is_owner_account_verified
+        return self.is_subuser and self.account.is_owner_account_verified
 
     @property
     def contact_verified(self):

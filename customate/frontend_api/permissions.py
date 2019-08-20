@@ -294,7 +294,8 @@ class IsVerified(permissions.BasePermission):
     def has_permission(self, request, view):
         if request.method in permissions.SAFE_METHODS:
             return True
-        return request.user.is_verified and request.user.contact_verified and request.user.is_owner_account_verified
+        return request.user.is_verified and request.user.contact_verified \
+               and (not request.user.is_subuser or request.user.is_owner_account_verified)
 
 
 
