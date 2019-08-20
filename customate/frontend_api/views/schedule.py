@@ -88,6 +88,8 @@ class ScheduleViewSet(views.ModelViewSet):
             )
 
             logger.info("Successfully created new schedule_id=%r" % schedule.id)
+        except ValidationError as e:
+            raise e
         except Exception as e:
             logger.error("Unable to save Schedule=%r, due to %r" % (serializer.validated_data, format_exc()))
             raise ValidationError("Unable to save schedule")
