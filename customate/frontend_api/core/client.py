@@ -79,9 +79,9 @@ class PaymentApiClient:
 
     @staticmethod
     def create_payment(p: PaymentDetails):
-        from payment_api.views.payment import MakingPaymentViewSet
+        from payment_api.views.payment import MakePaymentViewSet
 
-        view = MakingPaymentViewSet()
+        view = MakePaymentViewSet()
         serializer = MakingPaymentSerializer(
             data={
                 'user_id': str(p.user_id),
@@ -110,7 +110,7 @@ class PaymentApiClient:
             return PayeeDetails(
                 id=resource.id,
                 title=resource.title,
-                type=resource.attributes.type,
+                type=resource.attributes.type,  # @NOTE ResourceObject has its own "type" field
                 iban=resource['data']['account']['iban'],
                 recipient_name=resource['data']['recipient']['fullName'],
                 recipient_email=resource['data']['recipient']['email'],
@@ -131,7 +131,7 @@ class PaymentApiClient:
 
             return FundingSourceDetails(
                 id=resource.id,
-                type=resource.fields.type,  # @NOTE ResourceObject has its own "type" field
+                type=resource.attributes.type,  # @NOTE ResourceObject has its own "type" field
                 currency=resource.currency,
                 payment_account_id=resource.account.id
             )

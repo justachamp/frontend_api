@@ -157,6 +157,7 @@ class SubUserAccountSerializer(AccountFlexFieldsSerializerMixin, HyperlinkedMode
             'permission',
             'gbg_authentication_count',
             'is_verified',
+            'is_owner_account_verified',
             'can_be_verified',
             'verification_status',
             'payment_account_id'

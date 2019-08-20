@@ -101,6 +101,10 @@ class User(AbstractUser, Model):
         return self.contact_verified and self.age_verified
 
     @property
+    def is_owner_account_verified(self):
+        return not self.is_subuser or self.account.is_owner_account_verified
+
+    @property
     def contact_verified(self):
         return self.email_verified and self.phone_number_verified
 

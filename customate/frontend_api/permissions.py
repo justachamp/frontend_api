@@ -7,7 +7,6 @@ import traceback
 
 
 from rest_framework import permissions
-from rest_framework.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from django.contrib.auth import get_user_model
 from rest_framework.exceptions import ValidationError
@@ -15,8 +14,7 @@ from rest_framework.exceptions import ValidationError
 from authentication.cognito.serializers import CognitoAuthRetrieveSerializer
 from core.fields import UserRole, UserStatus
 
-from frontend_api.models import Schedule, Document 
-from core.fields import UserRole
+from frontend_api.models import Schedule, Document
 
 logger = logging.getLogger(__name__)
 
@@ -296,7 +294,7 @@ class IsVerified(permissions.BasePermission):
     def has_permission(self, request, view):
         if request.method in permissions.SAFE_METHODS:
             return True
-        return request.user.is_verified and request.user.contact_verified
+        return request.user.is_verified and request.user.contact_verified and request.user.is_owner_account_verified
 
 
 

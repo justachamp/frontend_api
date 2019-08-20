@@ -178,6 +178,10 @@ class SubUserAccount(Account):
     def __str__(self):
         return "Sub user account"
 
+    @property
+    def is_owner_account_verified(self):
+        return self.owner_account.is_verified
+
 
 class SubUserPermission(Model):
     account = models.OneToOneField(SubUserAccount, on_delete=models.CASCADE, related_name="permission")

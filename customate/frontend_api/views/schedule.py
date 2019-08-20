@@ -1,11 +1,9 @@
 import logging
 from traceback import format_exc
-from uuid import UUID
 from django.utils.functional import cached_property
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import action
 from rest_framework import status as status_codes
-from rest_framework.exceptions import NotFound
 
 from core import views
 from core.fields import PayeeType
@@ -22,8 +20,8 @@ from frontend_api.permissions import (
     IsSuperAdminOrReadOnly,
     SubUserManageSchedulesPermission,
     IsNotBlocked,
-    IsActive
-)
+    IsActive,
+    IsVerified)
 
 from frontend_api.serializers.schedule import ScheduleSerializer
 
@@ -36,6 +34,7 @@ class ScheduleViewSet(views.ModelViewSet):
     permission_classes = (IsAuthenticated,
                           IsActive,
                           IsNotBlocked,
+                          IsVerified,
                           IsSuperAdminOrReadOnly |
                           IsOwnerOrReadOnly |
                           SubUserManageSchedulesPermission)
