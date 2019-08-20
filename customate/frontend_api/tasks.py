@@ -125,9 +125,16 @@ def on_payment_change(payment_info: Dict):
         logger.info("Retrying payment(id=%s, status=%s) using backup funding source(id=%s)" % (
             payment_id, payment_status, schedule.backup_funding_source_id
         ))
+
+        try:
+            user = User.objects.get(id=schedule.user_id)
+        except ObjectDoesNotExist:
+            logger.error("Given user(id=%s) no longer exists, exiting" % schedule.user_id)
+            return
+
         make_payment.delay(
             user_id=str(schedule.user_id),
-            payment_account_id=str(schedule.payment_account_id),
+            payment_account_id=str(user.account.payment_account_id),
             schedule_id=str(schedule.id),
             currency=str(schedule.currency.value),
             payment_amount=amount,  # NOTE: use the same amount of original payment!
