@@ -131,7 +131,7 @@ class PaymentApiClient:
 
             return FundingSourceDetails(
                 id=resource.id,
-                type=resource.attributes.type,
+                type=resource.fields.type,  # @NOTE ResourceObject has its own "type" field
                 currency=resource.currency,
                 payment_account_id=resource.account.id
             )
