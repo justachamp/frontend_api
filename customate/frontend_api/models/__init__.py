@@ -133,6 +133,7 @@ class Account(PolymorphicModel, Model):
         return not self.is_verified and self.possible_to_verify
 
 
+
 class UserAccount(Account):
     account_type = EnumField(AccountType, max_length=10, default=AccountType.personal)
     position = models.CharField(max_length=50, blank=True, null=True)
@@ -181,6 +182,14 @@ class SubUserAccount(Account):
     @property
     def is_owner_account_verified(self):
         return self.owner_account.is_verified
+
+    @property
+    def payment_account_id(self):
+        """
+        Return owner's payment account id
+        :return:
+        """
+        return self.owner_account.payment_account_id
 
 
 class SubUserPermission(Model):
