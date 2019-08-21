@@ -76,7 +76,9 @@ class ScheduleViewSet(views.ModelViewSet):
             user = self.request.user
             pd = self.payment_client.get_payee_details(serializer.validated_data["payee_id"])
             if pd.type == PayeeType.WALLET.value and pd.payment_account_id == str(user.account.payment_account_id):
-                raise ValidationError({"payee_id": "Current user's payee cannot be used for creation 'pay funds' schedule"})
+                raise ValidationError({
+                    "payee_id": "Current user's payee cannot be used for creation 'pay funds' schedule"
+                })
 
             schedule = serializer.save(
                 user=user,
@@ -109,17 +111,17 @@ class ScheduleViewSet(views.ModelViewSet):
         schedule.move_to_status(ScheduleStatus.cancelled)
         self.payment_client.cancel_schedule_payments(schedule.id)
 
-    @action(methods=['DELETE'], detail=True, permission_classes = (
+    @action(methods=['DELETE'], detail=True, permission_classes=(
             IsAuthenticated, IsActive, HasParticularDocumentPermission
-        ))
+    ))
     def documents(self, request, pk):
         """
         The method for removing document objects from database.
         """
         document_id = request.query_params.get("document_id")
         if not document_id:
-            logger.error("The 'document_id' parameter has not passed %r" % format_exc())
-            raise ValidationError("The 'document_id' parameter is required")
+            logger.error("Missing 'document_id' %r" % format_exc())
+            raise ValidationError("'document_id' is required")
         document = get_object_or_404(Document, id=document_id)
         document.delete()
         return Response(None, status=204)
@@ -135,15 +137,13 @@ class ScheduleViewSet(views.ModelViewSet):
         :return:
         """
         schedule_id = kwargs.get('pk')
-
         try:
             schedule = Schedule.objects.get(id=schedule_id)
         except Exception as e:
             raise ValidationError("Unable to fetch schedule_id=%s " % schedule_id)
-
         schedule.move_to_status(ScheduleStatus.processing)
+        logger.info("Submit make_overdue_payment(schedule_id=%s) task for processing" % schedule_id)
         make_overdue_payment.delay(
             schedule_id=schedule_id,
-            user_id=request.user.id
         )
         return Response(status=status_codes.HTTP_204_NO_CONTENT)

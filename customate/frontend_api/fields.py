@@ -39,8 +39,9 @@ class ScheduleStatus(Enum):
     closed = 'closed'
     overdue = 'overdue'
     cancelled = 'cancelled'
-    processing = 'processing'  # block user from altering our model
-    pending = 'pending'  # for 'receive funds' scenario only
+    aborted = 'aborted'  # this is used for unexpected errors during payment creation/processing/etc.
+    processing = 'processing'  # block user from altering our model to avoid concurrency problems
+    pending = 'pending'  # for 'receive funds' scenario only(wait for other part to accept proposed payment schedule)
     rejected = 'rejected'  # for 'receive funds' scenario only
 
     class Labels:
@@ -48,6 +49,7 @@ class ScheduleStatus(Enum):
         closed = 'Closed'
         overdue = 'Overdue'
         cancelled = 'Cancelled'
+        aborted = 'Aborted'
         processing = 'Processing'
         pending = 'Pending'
         rejected = 'Rejected'

@@ -11,8 +11,9 @@ from django.db.utils import IntegrityError
 from core.models import User
 from core.fields import Currency, PaymentStatusType
 from frontend_api.models import Schedule
-from frontend_api.models.schedule import OnetimeSchedule, DepositsSchedule, SchedulePayments, ScheduleCommonFieldsMixin
+from frontend_api.models.schedule import OnetimeSchedule, DepositsSchedule, AbstractSchedule
 from frontend_api.models.schedule import WeeklySchedule, MonthlySchedule, QuarterlySchedule, YearlySchedule
+from frontend_api.models.schedule import SchedulePayments, LastSchedulePayments
 from frontend_api.core.client import PaymentApiClient, PaymentDetails
 from frontend_api.fields import SchedulePurpose, ScheduleStatus
 
@@ -42,12 +43,12 @@ def make_payment(user_id: str, payment_account_id: str, schedule_id: str, curren
     :param parent_payment_id: Parent payment to make sure we could trace retry-payment chains
     :return:
     """
-    logger.info("make payment: user_id=%s, payment_account_id=%s, schedule_id=%s, amount=%s, parent_payment_id=%s, "
-                "funding_source_id=%s, payee_id=%s" % (
-        user_id, payment_account_id, schedule_id, payment_amount, parent_payment_id, funding_source_id, payee_id
-    ))
+    logger.info("make payment: user_id=%s, payment_account_id=%s, schedule_id=%s, currency=%s, payment_amount=%s, "
+                "additional_information=%s, payee_id=%s, funding_source_id=%s, parent_payment_id=%s" % (
+                    user_id, payment_account_id, schedule_id, currency, payment_amount,
+                    additional_information, payee_id, funding_source_id, parent_payment_id
+                ))
 
-    # TODO: introduce new Schedule status == ABORTED if we fail here
     try:
         PaymentApiClient.create_payment(p=PaymentDetails(
             user_id=UUID(user_id),
@@ -62,9 +63,7 @@ def make_payment(user_id: str, payment_account_id: str, schedule_id: str, curren
         ))
     except Exception as e:
         logger.error("Unable to create payment for schedule_id=%s: %r" % (schedule_id, format_exc()))
-        #sch = Schedule.objects.get(id=schedule_id)
-        #sch.status = ScheduleStatus.aborted
-        #sch.save(update_fields=['status'])
+        Schedule.objects.get(id=schedule_id).move_to_status(ScheduleStatus.aborted)
         return
 
 
@@ -88,10 +87,17 @@ def on_payment_change(payment_info: Dict):
         logger.info("Skipping payment_id=%s processing as it is not related to any schedule" % payment_id)
         return
 
+    # some sanity checks
     try:
-        schedule = Schedule.objects.get(id=schedule_id)
+        schedule = Schedule.objects.get(id=schedule_id)  # type: Schedule
     except ObjectDoesNotExist:
         logger.error("Given schedule(id=%s) no longer exists, exiting" % schedule_id)
+        return
+
+    try:
+        _ = User.objects.get(id=schedule.user_id)
+    except ObjectDoesNotExist:
+        logger.error("Given user(id=%s) no longer exists, exiting" % schedule.user_id)
         return
 
     try:
@@ -101,10 +107,12 @@ def on_payment_change(payment_info: Dict):
             payment_id=payment_id,
             funding_source_id=funding_source_id,
             parent_payment_id=parent_payment_id,
-            payment_status=payment_status
+            payment_status=payment_status,
+            original_amount=amount
         )
         schedule_payment.save()
         logger.info("Created new SchedulePayment(payment_id=%s, schedule_id=%s)" % (payment_id, schedule_id))
+
     except IntegrityError as e:
         if "frontend_api_schedulepayments_payment_id_schedule_id" in str(e):
             logger.info("SchedulePayment(payment_id=%s, schedule_id=%s) record already exists, updating status only" % (
@@ -120,21 +128,16 @@ def on_payment_change(payment_info: Dict):
     schedule.update_status()
 
     # Retry payment using backup funding source if it is available
+    # NOTE: check that we're being called after primary FS was already used(!)
     if payment_status in [PaymentStatusType.FAILED, PaymentStatusType.REFUND] \
-            and schedule.backup_funding_source_id and parent_payment_id is None:
-        logger.info("Retrying payment(id=%s, status=%s) using backup funding source(id=%s)" % (
-            payment_id, payment_status, schedule.backup_funding_source_id
+            and schedule.backup_funding_source_id \
+            and funding_source_id == str(schedule.funding_source_id):
+        logger.info("Retrying payment(id=%s, status=%s) using backup funding source(id=%s,was=%s)" % (
+            payment_id, payment_status, schedule.backup_funding_source_id, funding_source_id
         ))
-
-        try:
-            user = User.objects.get(id=schedule.user_id)
-        except ObjectDoesNotExist:
-            logger.error("Given user(id=%s) no longer exists, exiting" % schedule.user_id)
-            return
-
         make_payment.delay(
             user_id=str(schedule.user_id),
-            payment_account_id=str(user.account.payment_account_id),
+            payment_account_id=str(schedule.payment_account_id),
             schedule_id=str(schedule.id),
             currency=str(schedule.currency.value),
             payment_amount=amount,  # NOTE: use the same amount of original payment!
@@ -145,37 +148,50 @@ def on_payment_change(payment_info: Dict):
         )
         return
 
-    if payment_status is PaymentStatusType.SUCCESS:
-        schedule.reduce_number_of_payments_left()
-        return
-
-    # TODO: Consider all above mentioned logic for 'Pay overdue' case
-
 
 @shared_task
-def make_overdue_payment(schedule_id: str, user_id: str):
+def make_overdue_payment(schedule_id: str):
     """
-    Uses forced payments API:
-       https://customatepayment.docs.apiary.io/#reference/0/payment-management/create-forced-payment
-
+    Tries to make follow-up payments based on last failed list of payments for specific schedule.
     :param schedule_id:
-    :param user_id:
     :return:
     """
+    logger.info("make_overdue_payment(schedule_id=%s)" % schedule_id)
     try:
-        schedule = Schedule.objects.get(id=schedule_id)
-        user = User.objects.get(id=user_id)
+        schedule = Schedule.objects.get(id=schedule_id)  # type: Schedule
     except Exception as e:
-        logger.error("Unable to fetch schedule(id=%s) and/or user(id=%s) from DB: %r" % (
-            schedule_id, user_id, format_exc()
+        logger.error("Unable to fetch schedule(id=%s) from DB: %r" % (
+            schedule_id, format_exc()
+        ))
+        return
+
+    if schedule.status is not ScheduleStatus.overdue:
+        logger.error("Schedule(id=%s) expected status is not %s, got status=%s instead. Exiting" % (
+            schedule_id, ScheduleStatus.overdue, schedule.status
         ))
         return
 
     # Select all SchedulePayments which are last in chains and are not in SUCCESS status
+    overdue_payments = LastSchedulePayments.objects.filter(
+        schedule_id=schedule_id,
+        status__in=[PaymentStatusType.FAILED, PaymentStatusType.REFUND]  # TODO: do we really need 'REFUND' here ?
+    ).order_by("created_at")  # type: list[LastSchedulePayments]
 
-    # TODO: refactor
-    # payment_client = PaymentApiClient(user)
-    # schedule.pay_overdue(payment_client)
+    for op in overdue_payments:
+        logger.info("SchedulePayment(id=%s, payment_id=%s, parent_payment_id=%s) is overdue, retrying payment." % (
+            op.id, op.payment_id, op.parent_payment_id
+        ))
+        make_payment.delay(
+            user_id=str(schedule.user_id),
+            payment_account_id=str(schedule.payment_account_id),
+            schedule_id=str(schedule_id),
+            currency=str(schedule.currency.value),
+            payment_amount=int(op.original_amount),  # NOTE: use original amount saved at the time of initial payment!
+            additional_information=str(schedule.additional_information),
+            payee_id=str(schedule.payee_id),
+            funding_source_id=str(schedule.funding_source_id),  # NOTE: always retry using primary FS
+            parent_payment_id=str(op.payment_id)  # NOTE: keep payment chain in order!
+        )
 
 
 def process_all_deposit_payments(scheduled_date):
@@ -212,7 +228,7 @@ def process_all_deposit_payments(scheduled_date):
             )
 
 
-def submit_scheduled_payment(s: ScheduleCommonFieldsMixin):
+def submit_scheduled_payment(s: Schedule):
     """
     A common method to submit payments for execution
     :param s:

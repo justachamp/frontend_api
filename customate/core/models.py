@@ -102,6 +102,7 @@ class User(AbstractUser, Model):
 
     @property
     def is_owner_account_verified(self):
+        #TODO: where do we get self.account from?????
         return self.is_subuser and self.account.is_owner_account_verified
 
     @property

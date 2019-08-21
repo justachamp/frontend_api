@@ -5,8 +5,6 @@ from frontend_api.models.schedule import Schedule
 
 
 def drop_field(apps, schema_editor):
-    if not schema_editor.connection.vendor == 'postgres':
-        return
     if hasattr(Schedule, 'was_accepted'):
         migrations.RemoveField(
             model_name='schedule',
