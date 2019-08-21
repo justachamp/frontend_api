@@ -21,7 +21,7 @@ from frontend_api.permissions import (
     SubUserManageSchedulesPermission,
     IsNotBlocked,
     IsActive,
-    IsVerified)
+    IsAccountVerified)
 
 from frontend_api.serializers.schedule import ScheduleSerializer
 
@@ -34,7 +34,7 @@ class ScheduleViewSet(views.ModelViewSet):
     permission_classes = (IsAuthenticated,
                           IsActive,
                           IsNotBlocked,
-                          IsVerified,
+                          IsAccountVerified,
                           IsSuperAdminOrReadOnly |
                           IsOwnerOrReadOnly |
                           SubUserManageSchedulesPermission)

@@ -294,8 +294,17 @@ class IsVerified(permissions.BasePermission):
     def has_permission(self, request, view):
         if request.method in permissions.SAFE_METHODS:
             return True
-        return request.user.is_verified and request.user.contact_verified \
+        return request.user.is_verified and request.user.contact_verified
+
+
+class IsAccountVerified(permissions.BasePermission):
+    """
+    Custom permission to restrict access for users with unverified account or owner's account
+    Restricts outgoing transactions but allows GET OPTIONS HEAD methods
+    """
+    def has_permission(self, request, view):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return request.user.account.is_verified \
                and (not request.user.is_subuser or request.user.is_owner_account_verified)
-
-
 

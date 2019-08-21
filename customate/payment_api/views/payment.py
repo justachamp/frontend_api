@@ -8,7 +8,7 @@ from frontend_api.permissions import (
     SubUserManageSchedulesPermission,
     IsActive,
     IsNotBlocked,
-    IsVerified)
+    IsAccountVerified)
 from payment_api.serializers.payment import MakingPaymentSerializer
 from payment_api.views import (
     InclusionFilter,
@@ -62,7 +62,7 @@ class MakePaymentViewSet(ResourceViewSet):
     permission_classes = (IsAuthenticated,
                           IsActive,
                           IsNotBlocked,
-                          IsVerified,
+                          IsAccountVerified,
                           IsSuperAdminOrReadOnly |
                           IsOwnerOrReadOnly |
                           SubUserManageSchedulesPermission)
