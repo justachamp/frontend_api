@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 
 from os import environ, path
 import logging.config
+import arrow
 from kombu import Queue, Exchange
 from celery.schedules import crontab
 from corsheaders.defaults import default_headers
@@ -347,7 +348,7 @@ AWS_S3_CUSTOM_DOMAIN = environ.get('AWS_CDN_HOST')
 AWS_S3_OBJECT_PARAMETERS = {
     'CacheControl': 'max-age=86400',
 }
-AWS_S3_EXPIRE_PRESIGNED_URL = 20   # Expired time in seconds for AWS S3 presigned link
+AWS_S3_EXPIRE_PRESIGNED_URL = 20  # Expired time in seconds for AWS S3 presigned link
 AWS_LOCATION = 'static'
 STATIC_URL = 'https://%s/%s/' % (AWS_S3_CUSTOM_DOMAIN, AWS_LOCATION)
 STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
@@ -413,6 +414,9 @@ CELERY_BEAT_SCHEDULE = {
     'once_per_day': {
         'task': 'frontend_api.tasks.initiate_daily_payments',
         # TODO: make sure we run somewhere in the morning bank opening time
-        'schedule': crontab(hour='9', minute="15") # 9:15 UTC every day
+        'schedule': crontab(hour='9', minute="15")  # 9:15 UTC every day
     },
 }
+
+PAYMENT_SYSTEM_CLOSING_TIME = environ['PAYMENT_SYSTEM_CLOSING_TIME']  # HH:mm format
+_ = arrow.get("2000-01-01T%s:00" % PAYMENT_SYSTEM_CLOSING_TIME, ['YYYY-MM-DDTH:mm:ss'])  # make sure we fail early

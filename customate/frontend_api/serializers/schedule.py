@@ -3,6 +3,8 @@ import arrow
 from traceback import format_exc
 from collections import OrderedDict
 
+from customate.settings import PAYMENT_SYSTEM_CLOSING_TIME
+
 from rest_framework.serializers import ValidationError
 from rest_framework_json_api.serializers import HyperlinkedModelSerializer
 from rest_framework.fields import DateField, IntegerField
@@ -74,6 +76,26 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
             raise ValidationError("Schedule with such name already exists")
         return value
 
+    def validate_start_date(self, value):
+        """
+        Make sure schedule start date not in the past.
+        If schedule starts today make sure that we are able to process first payment today.
+        :param name:
+        :return:
+        """
+        utcnow = arrow.utcnow()
+        current_day_start, current_day_end = utcnow.span('day')
+        ps_hour, ps_minute = PAYMENT_SYSTEM_CLOSING_TIME.split(':')
+        last_payment_time = utcnow.replace(hour=int(ps_hour), minute=int(ps_minute))
+        schedule_start_time = arrow.get(value).replace(hour=utcnow.hour, minute=utcnow.minute, second=utcnow.second)
+        if schedule_start_time < current_day_start:
+            raise ValidationError("Start date cannot be in the past")
+        elif last_payment_time < schedule_start_time < current_day_end:
+            raise ValidationError(
+                "You cannot set today's date if the schedule is being created after %s UTC."
+                "Please, try choosing a date in the future." % last_payment_time.strftime('%H:%M')
+            )
+
     def validate_specific_funding_source(self, res: OrderedDict, field_name: str):
         """
         Calls payment-api and verifies that funding sources are correct.
@@ -129,9 +151,6 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
 
             if int(res["fee_amount"]) < 0:
                 raise ValidationError({"payment_amount": "Fee amount should be positive number"})
-
-            if arrow.get("%sT23:59:59" % res["start_date"]) < arrow.utcnow():
-                raise ValidationError({"start_date": "Start date cannot be in the past"})
 
             # Verify first funding source
             self.validate_specific_funding_source(res, field_name="funding_source_id")
