@@ -174,7 +174,7 @@ def make_overdue_payment(schedule_id: str):
     # Select all SchedulePayments which are last in chains and are not in SUCCESS status
     overdue_payments = LastSchedulePayments.objects.filter(
         schedule_id=schedule_id,
-        status__in=[PaymentStatusType.FAILED, PaymentStatusType.REFUND]  # TODO: do we really need 'REFUND' here ?
+        payment_status__in=[PaymentStatusType.FAILED, PaymentStatusType.REFUND]  # TODO: do we really need 'REFUND' here ?
     ).order_by("created_at")  # type: list[LastSchedulePayments]
 
     for op in overdue_payments:
