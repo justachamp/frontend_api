@@ -76,14 +76,14 @@ class BaseAuthValidationMixin(object):
                 email = item['Value'].lower()
                 item['Value'] = email
             if self.user_service.user_exists(email):
-                raise serializers.ValidationError("Email already exists, you cannot register the same email twice")
+                raise serializers.ValidationError("Someone's already using that e-mail")
 
         return data
 
     def validate_username(self, email):
         email = email.lower()
         if self.user_service.user_exists(email):
-            raise serializers.ValidationError("Email already exists, you cannot register the same email twice")
+            raise serializers.ValidationError("Someone's already using that e-mail")
         return email
 
 
