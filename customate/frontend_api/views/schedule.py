@@ -1,16 +1,20 @@
 import logging
 from traceback import format_exc
+
+import arrow
 from django.utils.functional import cached_property
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import action
 from rest_framework import status as status_codes
-
-from core import views
-from core.fields import PayeeType
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.serializers import ValidationError
-from frontend_api.tasks import make_overdue_payment
+
+import celery
+from core import views
+from core.fields import PayeeType
+from customate.settings import CELERY_BEAT_SCHEDULE
+from frontend_api.tasks import make_overdue_payment, make_payment
 from frontend_api.core.client import PaymentApiClient
 from frontend_api.fields import ScheduleStatus
 from frontend_api.models import Schedule, Document
@@ -26,6 +30,11 @@ from frontend_api.permissions import (
 from frontend_api.serializers.schedule import ScheduleSerializer
 
 logger = logging.getLogger(__name__)
+
+SCHEDULES_START_PROCESSING_TIME = CELERY_BEAT_SCHEDULE["once_per_day"]["schedule"]  # type: celery.schedules.crontab
+# make sure we fail early if config is wrong
+_ = int(SCHEDULES_START_PROCESSING_TIME.hour)
+_ = int(SCHEDULES_START_PROCESSING_TIME.minute)
 
 
 class ScheduleViewSet(views.ModelViewSet):
@@ -90,6 +99,48 @@ class ScheduleViewSet(views.ModelViewSet):
             )
 
             logger.info("Successfully created new schedule_id=%r" % schedule.id)
+
+            # Immediately create first payments
+            scheduler_start_time = arrow.get("{full_date}T{hour}:{minute}:00".format(
+                full_date=arrow.utcnow().format("YYYY-MM-DD"),
+                hour=int(SCHEDULES_START_PROCESSING_TIME.hour),
+                minute=int(SCHEDULES_START_PROCESSING_TIME.minute)
+            ), ['YYYY-MM-DDTH:mm:ss'])
+            current_date = arrow.utcnow().datetime.date()
+
+            if arrow.utcnow() > scheduler_start_time:
+                # service already started payment processing and missed first payment date which is now
+                if schedule.deposit_payment_date == current_date:
+                    logger.info("Submitting deposit payment for schedule_id=%s, deposit_payment_date=%s" % (
+                        schedule.id, schedule.deposit_payment_date
+                    ))
+                    # initiate one-off deposit payment
+                    make_payment.delay(
+                        user_id=str(user.id),
+                        payment_account_id=str(schedule.payment_account_id),
+                        schedule_id=str(schedule.id),
+                        currency=str(schedule.currency.value),
+                        payment_amount=int(schedule.deposit_amount),  # NOTE: deposit amount here!
+                        additional_information=str(schedule.additional_information),
+                        payee_id=str(schedule.payee_id),
+                        funding_source_id=str(schedule.funding_source_id)
+                    )
+
+                if schedule.start_date == current_date:
+                    logger.info("Submitting first payment for schedule_id=%s, start_date=%s" % (
+                        schedule.id, schedule.start_date
+                    ))
+                    make_payment.delay(
+                        user_id=str(user.id),
+                        payment_account_id=str(schedule.payment_account_id),
+                        schedule_id=str(schedule.id),
+                        currency=str(schedule.currency.value),
+                        payment_amount=int(schedule.payment_amount),  # NOTE: regular amount
+                        additional_information=str(schedule.additional_information),
+                        payee_id=str(schedule.payee_id),
+                        funding_source_id=str(schedule.funding_source_id)
+                    )
+
         except ValidationError as e:
             raise e
         except Exception as e:
