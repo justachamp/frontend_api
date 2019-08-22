@@ -12,6 +12,7 @@ class Migration(migrations.Migration):
     ]
 
     sql_ltree_initialize = """
+CREATE EXTENSION IF NOT EXISTS ltree;
 ALTER TABLE public.frontend_api_schedulepayments ADD payment_path ltree;
 CREATE INDEX schedulepayments_payment_path_idx ON public.frontend_api_schedulepayments USING GIST (payment_path);
 CREATE INDEX schedulepayments_payment_id_idx ON public.frontend_api_schedulepayments (payment_path);
