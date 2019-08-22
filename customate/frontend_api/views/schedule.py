@@ -32,9 +32,8 @@ from frontend_api.serializers.schedule import ScheduleSerializer
 logger = logging.getLogger(__name__)
 
 SCHEDULES_START_PROCESSING_TIME = CELERY_BEAT_SCHEDULE["once_per_day"]["schedule"]  # type: celery.schedules.crontab
-# make sure we fail early if config is wrong
-_ = int(SCHEDULES_START_PROCESSING_TIME.hour)
-_ = int(SCHEDULES_START_PROCESSING_TIME.minute)
+SCHEDULES_START_PROCESSING_TIME_HOUR = int(list(SCHEDULES_START_PROCESSING_TIME.hour)[0])
+SCHEDULES_START_PROCESSING_TIME_MINUTE = int(list(SCHEDULES_START_PROCESSING_TIME.minute)[0])
 
 
 class ScheduleViewSet(views.ModelViewSet):
@@ -103,8 +102,8 @@ class ScheduleViewSet(views.ModelViewSet):
             # Immediately create first payments
             scheduler_start_time = arrow.get("{full_date}T{hour}:{minute}:00".format(
                 full_date=arrow.utcnow().format("YYYY-MM-DD"),
-                hour=int(SCHEDULES_START_PROCESSING_TIME.hour),
-                minute=int(SCHEDULES_START_PROCESSING_TIME.minute)
+                hour=SCHEDULES_START_PROCESSING_TIME_HOUR,
+                minute=SCHEDULES_START_PROCESSING_TIME_MINUTE
             ), ['YYYY-MM-DDTH:mm:ss'])
             current_date = arrow.utcnow().datetime.date()
 
