@@ -263,4 +263,4 @@ class ProfileValidationService:
 
         except Exception as e:
             logger.error("GBG verification (user=%s, address=%s) exception: %r" % (user, address, format_exc()))
-            raise ValidationError("KYC request is unsuccessful. Please, contact the support team.")
+            # raise ValidationError("KYC request is unsuccessful. Please, contact the support team.")
