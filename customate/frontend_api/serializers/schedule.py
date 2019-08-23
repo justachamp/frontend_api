@@ -95,8 +95,9 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
                 "You cannot set today's date if the schedule is being created after %s UTC."
                 "Please, try choosing a date in the future." % last_payment_time.strftime('%H:%M')
             )
+        return value
 
-    def validate_specific_funding_source(self, res: OrderedDict, field_name: str):
+    def check_specific_funding_source(self, res: OrderedDict, field_name: str):
         """
         Calls payment-api and verifies that funding sources are correct.
         :param res: dict of incoming fields from HTTP request
@@ -153,14 +154,14 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
                 raise ValidationError({"payment_amount": "Fee amount should be positive number"})
 
             # Verify first funding source
-            self.validate_specific_funding_source(res, field_name="funding_source_id")
+            self.check_specific_funding_source(res, field_name="funding_source_id")
             # Verify backup funding source
             if res.get("backup_funding_source_id"):
                 if res["backup_funding_source_id"] == res["funding_source_id"]:
                     raise ValidationError({
                         "backup_funding_source_id": "Backup funding source can not be the same as default"
                     })
-                self.validate_specific_funding_source(res, field_name="backup_funding_source_id")
+                self.check_specific_funding_source(res, field_name="backup_funding_source_id")
 
             if int(res.get("number_of_payments")) < int(res.get("number_of_payments_left")):
                 raise ValidationError({
