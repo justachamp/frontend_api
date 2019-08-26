@@ -2,6 +2,7 @@ from django.db import transaction
 from rest_framework_json_api.serializers import Serializer
 
 from authentication.cognito.core.mixins import AuthSerializerMixin
+from frontend_api.exceptions import GBGVerificationError
 from frontend_api.services.account import ProfileValidationService
 
 from core.fields import SerializerField
@@ -119,5 +120,11 @@ class ProfileSerializer(DomainService, BaseAuthUserSerializerMixin, Serializer):
         update_model(instance.user, validated_data.get('user', {}))
         update_model(instance.address, validated_data.get('address', {}))
         update_model(instance.account, validated_data.get('account', {}))
-        self.service.verify_profile(instance)
+
+        try:
+            self.service.verify_profile(instance)
+        except GBGVerificationError as e:
+            if not validated_data.get("is_gbg_optional", False):
+                raise e
+
         return instance
