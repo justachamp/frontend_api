@@ -35,7 +35,7 @@ class BaseUserSerializer(HyperlinkedModelSerializer):
     email = EmailField(required=False, validators=[UniqueValidator(
         queryset=User.objects.all(), message="Someone's already using that e-mail")])
     phone_number = CharField(required=False, validators=[UniqueValidator(
-        queryset=User.objects.all(), message="Someone's already using that phone number")])
+        queryset=User.objects.all(), message="Someone's already using that phone number", lookup='iexact')])
     title = EnumField(enum=UserTitle, required=False, allow_null=True, allow_blank=True)
     gender = EnumField(enum=Gender, required=False, allow_null=True, allow_blank=True)
     country_of_birth = EnumField(enum=Country, required=False, allow_null=True, allow_blank=True)
