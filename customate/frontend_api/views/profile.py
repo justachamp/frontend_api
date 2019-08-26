@@ -60,6 +60,7 @@ class ProfileView(DomainService, APIView):
         data = request.data
         self.service = request.user, data
         profile = self.service.profile
+        is_gbg_optional = request.query_params.get("is_gbg_optional", 'true') == 'true'
 
         serializer = ProfileSerializer(
             instance=self.service.profile,
@@ -67,7 +68,8 @@ class ProfileView(DomainService, APIView):
             context={'request': request, 'profile': profile, 'additional_keys': {'account': ['permission']}})
 
         serializer.is_valid(True)
-        serializer.save()
+        serializer.save(is_gbg_optional=is_gbg_optional)
+
         return response.Response(serializer.data)
 
     @staticmethod
