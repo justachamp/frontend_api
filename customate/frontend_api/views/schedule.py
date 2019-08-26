@@ -94,6 +94,7 @@ class ScheduleViewSet(views.ModelViewSet):
                 payee_recipient_email=pd.recipient_email,
                 payee_iban=pd.iban,
                 payee_title=pd.title,
+                payee_type=pd.type,
                 number_of_payments_left=serializer.validated_data["number_of_payments"]
             )
 

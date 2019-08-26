@@ -9,7 +9,7 @@ from rest_framework.serializers import ValidationError
 from rest_framework_json_api.serializers import HyperlinkedModelSerializer
 from rest_framework.fields import DateField, IntegerField
 
-from core.fields import Currency, SerializerField, FundingSourceType
+from core.fields import Currency, SerializerField, FundingSourceType, PayeeType
 from frontend_api.fields import ScheduleStatus, SchedulePeriod, SchedulePurpose
 from frontend_api.models.schedule import Schedule
 from frontend_api.serializers.document import DocumentSerializer
@@ -43,6 +43,7 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
     payee_recipient_name = CharField(required=False)
     payee_recipient_email = CharField(required=False)
     payee_iban = CharField(required=False)
+    payee_type = EnumField(enum=PayeeType, required=False)
     funding_source_id = UUIDField(required=True)
     backup_funding_source_id = UUIDField(required=False)
     total_paid_sum = IntegerField(default=0, required=False)
@@ -57,7 +58,7 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
             'start_date', 'payment_amount', 'fee_amount', 'deposit_amount', 'deposit_payment_date',
             'additional_information', 'payee_id', 'funding_source_id', 'backup_funding_source_id', 'payee_title',
             'total_paid_sum', 'total_sum_to_pay', 'payee_iban', 'payee_recipient_name', 'payee_recipient_email',
-            'documents',
+            'payee_type', 'documents',
             # we can use model properties as well
             'next_payment_date', 'payment_type',
         )

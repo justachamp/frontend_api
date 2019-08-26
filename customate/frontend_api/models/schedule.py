@@ -33,6 +33,7 @@ class AbstractSchedule(Model):
     payee_recipient_name = models.CharField(max_length=254, default='')
     payee_recipient_email = models.CharField(max_length=254, default='')
     payee_iban = models.CharField(max_length=50, default='')
+    payee_type = EnumField(PayeeType)
     funding_source_id = models.UUIDField()
     backup_funding_source_id = models.UUIDField(default=None, blank=True, null=True)
     period = EnumField(SchedulePeriod)
@@ -128,9 +129,10 @@ class Schedule(AbstractSchedule):
         """
         Returns schedule payment type. Helpful for the client to be able to calculate different fees when selecting
         funding source(s)
-        TODO: Implement correct payment_type detection and return valid value for client
         :return:
         """
+        if self.payee_type is PayeeType.WALLET:
+            return str(SchedulePaymentType.internal.value)
         return str(SchedulePaymentType.external.value)
 
     @property
