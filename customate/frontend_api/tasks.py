@@ -363,7 +363,7 @@ def initiate_daily_payments():
     process_all_weekly_payments(now)
     process_all_monthly_payments(now)
     process_all_quarterly_payments(now)
-    process_all_monthly_payments(now)
+    process_all_yearly_payments(now)
 
 
 @shared_task
