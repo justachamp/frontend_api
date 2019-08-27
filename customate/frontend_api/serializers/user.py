@@ -1,8 +1,8 @@
 import logging
 
+from phonenumber_field.serializerfields import PhoneNumberField
 from rest_framework_json_api.serializers import (
-    HyperlinkedModelSerializer,
-)
+    HyperlinkedModelSerializer)
 from core.fields import UserRole, UserStatus, UserTitle, Gender, Country
 from core.models import User
 from frontend_api.models import (
@@ -28,14 +28,21 @@ from ..serializers import (
 logger = logging.getLogger(__name__)
 
 
+class PhoneField(PhoneNumberField):
+    def to_internal_value(self, value):
+        super().to_internal_value(value)  # Returns PhoneNumber instance, that couldn't be adapted to SQL parameter
+        return value
+
+
 class BaseUserSerializer(HyperlinkedModelSerializer):
     role = EnumField(enum=UserRole, read_only=True)
     username = CharField(required=False)
     status = EnumField(enum=UserStatus, required=False, read_only=True)
     email = EmailField(required=False, validators=[UniqueValidator(
         queryset=User.objects.all(), message="Someone's already using that e-mail")])
-    phone_number = CharField(required=False, validators=[UniqueValidator(
-        queryset=User.objects.all(), message="Someone's already using that phone number", lookup='iexact')])
+    phone_number = PhoneField(required=False, validators=[
+        UniqueValidator(queryset=User.objects.all(), message="Someone's already using that phone number", lookup='iexact')
+    ])
     title = EnumField(enum=UserTitle, required=False, allow_null=True, allow_blank=True)
     gender = EnumField(enum=Gender, required=False, allow_null=True, allow_blank=True)
     country_of_birth = EnumField(enum=Country, required=False, allow_null=True, allow_blank=True)
