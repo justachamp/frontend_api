@@ -122,9 +122,10 @@ class ProfileSerializer(DomainService, BaseAuthUserSerializerMixin, Serializer):
         update_model(instance.account, validated_data.get('account', {}))
 
         try:
-            self.service.verify_profile(instance)
+            if not validated_data.get("skip_gbg", False):
+                self.service.verify_profile(instance)
         except GBGVerificationError as e:
-            if not validated_data.get("is_gbg_optional", False):
+            if not validated_data.get("ignore_gbg_exception", False):
                 raise e
 
         return instance

@@ -35,7 +35,7 @@ class AbstractSchedule(Model):
     payee_recipient_name = models.CharField(max_length=254, default='')
     payee_recipient_email = models.CharField(max_length=254, default='')
     payee_iban = models.CharField(max_length=50, default='')
-    payee_type = EnumField(PayeeType)
+    payee_type = EnumField(PayeeType, max_length=50)
     funding_source_id = models.UUIDField()
     backup_funding_source_id = models.UUIDField(default=None, blank=True, null=True)
     period = EnumField(SchedulePeriod)
@@ -61,6 +61,13 @@ class AbstractSchedule(Model):
         return "Schedule(id=%s, period=%s, amount=%s, deposit_amount=%s, start_date=%s)" % (
             self.id, self.period, self.payment_amount, self.deposit_amount, self.start_date
         )
+
+    @property
+    def deposit_additional_information(self):
+        if self.additional_information is not None and self.additional_information != '':
+            return f'Deposit for {self.additional_information}'
+        else:
+            return 'Deposit'
 
 
 class Schedule(AbstractSchedule):
