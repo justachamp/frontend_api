@@ -2,6 +2,8 @@ import logging
 import datetime
 import arrow
 from dataclasses import dataclass
+
+from django.core.validators import RegexValidator
 from enumfields import EnumField
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -52,7 +54,8 @@ class AbstractSchedule(Model):
         null=True, help_text=_("Initial payment independent of the rest of scheduled payments")
     )
     deposit_payment_date = models.DateField(null=True)  # This should be strictly < start_date
-    additional_information = models.CharField(max_length=250, blank=True, null=True)
+    additional_information = models.CharField(max_length=250, blank=True, null=True,
+        validators=[RegexValidator(regex=r'^([a-zA-Z0-9\/\-\?\:\.\+ ]*)$', message='Field contains forbidden characters')])
 
     def __str__(self):
         return "Schedule(id=%s, period=%s, amount=%s, deposit_amount=%s, start_date=%s)" % (
