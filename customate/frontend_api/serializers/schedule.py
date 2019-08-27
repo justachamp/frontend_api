@@ -78,25 +78,31 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
         return value
 
     def validate_start_date(self, value):
+        return self.check_payment_date(value)
+
+    def validate_deposit_payment_date(self, value):
+        return self.check_payment_date(value)
+
+    def check_payment_date(self, payment_date):
         """
-        Make sure schedule start date not in the past.
-        If schedule starts today make sure that we are able to process first payment today.
-        :param name:
+        Make sure payment date not in the past.
+        If payments starts today make sure that we are able to process payment today.
+        :param payment_date:
         :return:
         """
         utcnow = arrow.utcnow()
         current_day_start, current_day_end = utcnow.span('day')
         ps_hour, ps_minute = PAYMENT_SYSTEM_CLOSING_TIME.split(':')
-        last_payment_time = utcnow.replace(hour=int(ps_hour), minute=int(ps_minute))
-        schedule_start_time = arrow.get(value).replace(hour=utcnow.hour, minute=utcnow.minute, second=utcnow.second)
-        if schedule_start_time < current_day_start:
-            raise ValidationError("Start date cannot be in the past")
-        elif last_payment_time < schedule_start_time < current_day_end:
+        ps_closing_time = utcnow.replace(hour=int(ps_hour), minute=int(ps_minute))
+        payment_time = arrow.get(payment_date).replace(hour=utcnow.hour, minute=utcnow.minute, second=utcnow.second)
+        if payment_time < current_day_start:
+            raise ValidationError("Payment date cannot be in the past")
+        elif ps_closing_time < payment_time < current_day_end:
             raise ValidationError(
                 "You cannot set today's date if the schedule is being created after %s UTC."
-                "Please, try choosing a date in the future." % last_payment_time.strftime('%H:%M')
+                "Please, try choosing a date in the future." % ps_closing_time.strftime('%H:%M')
             )
-        return value
+        return payment_date
 
     def check_specific_funding_source(self, res: OrderedDict, field_name: str):
         """
