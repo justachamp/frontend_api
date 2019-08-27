@@ -83,25 +83,16 @@ class FundingSourceSerializer(BaseFundingSourceSerializer):
                 sort_code=data["account"].get("sortCode"),
                 account_no=data["account"].get("accountNumber")
             ), personal_details=PersonalDetails(
-                first_name=user.first_name,
-                last_name=user.last_name,
-                middle_name=user.middle_name,
-                birth_date=user.birth_date,
-                gender=user.gender,
-                title=user.title,
-                mothers_maiden_name=user.mother_maiden_name,
-                country_of_birth=user.country_of_birth
+                first_name=data["payer"].get("firstName"),
+                last_name=data["payer"].get("lastName"),
             ), current_address=Address(
                 post_code=address["postcode"],
                 city=address["city"],
-                address_line_1= address.get("address_line_1") or address.get("address"),
+                address_line_1=address.get("address_line_1") or address.get("address"),
                 address_line_2=address.get("address_line_2"),
                 country=address["country"],
                 locality=address["locality"]
-            ), contact_details=ContactDetails(
-                mobile_phone=str(user.phone_number),
-                email=user.email
-            ))
+            ), customer_reference=user.email)
 
         if gbg_result.BandText != BAND_PASS:
             raise ValidationError("GBG validation failed")

@@ -68,7 +68,7 @@ def validate_banking_details(country: core.fields.Country,
                              banking_details: BankingDetails,
                              personal_details: PersonalDetails,
                              current_address: Address,
-                             contact_details: ContactDetails = None):
+                             customer_reference: str):
     """
     Does banking info validation using env-predefined GBG ID3global profile.
     Note: profile_id and validation rulesets must be configured on GBG side.
@@ -90,18 +90,13 @@ def validate_banking_details(country: core.fields.Country,
         }
     }
 
-    if contact_details:
-        input_data.update({
-            "ContactDetails": contact_details.gbg_serialization()
-        })
-
     logger.debug("Sending GBG input_data=%r" % input_data)
     res = GlobalAuthenticate_service.AuthenticateSP(
         ProfileIDVersion=get_profile(
             profile_id=environ["GBG_{}_BANK_VALIDATION_PROFILE_ID".format(country.value)],
             profile_version=environ.get("GBG_{}_BANK_VALIDATION_PROFILE_VERSION".format(country.value), 0)
         ),
-        CustomerReference=contact_details.email,
+        CustomerReference=customer_reference,
         InputData=input_data
     )
 
@@ -113,7 +108,8 @@ def validate_identity_details(country: core.fields.Country,
                               personal_details: PersonalDetails,
                               contact_details: ContactDetails,
                               current_address: Address,
-                              identity_document: IdentityDocument):
+                              identity_document: IdentityDocument,
+                              customer_reference: str):
     """
     GBG identity verification.
     Note: profile_id and validation rulesets must be configured on GBG side.
@@ -144,7 +140,7 @@ def validate_identity_details(country: core.fields.Country,
             profile_id=environ["GBG_{}_IDENTITY_VALIDATION_PROFILE_ID".format(country.value)],
             profile_version=environ.get("GBG_{}_IDENTITY_VALIDATION_PROFILE_VERSION".format(country.value), 0)
         ),
-        CustomerReference=contact_details.email,
+        CustomerReference=customer_reference,
         InputData=input_data
     )
 

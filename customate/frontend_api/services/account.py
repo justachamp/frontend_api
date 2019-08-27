@@ -252,7 +252,8 @@ class ProfileValidationService:
                     mobile_phone=str(user.phone_number),
                     email=user.email
                 ),
-                identity_document=ProfileValidationService.get_identity_document(address.country, account, user)
+                identity_document=ProfileValidationService.get_identity_document(address.country, account, user),
+                customer_reference=str(user.email)
             )
 
             # TODO: use "IncrementalVerification endpoint if we already have authentication_id
