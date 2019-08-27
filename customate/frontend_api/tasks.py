@@ -63,7 +63,7 @@ def make_payment(user_id: str, payment_account_id: str, schedule_id: str, curren
         ))
     except Exception as e:
         logger.error("Unable to create payment for schedule_id=%s: %r" % (schedule_id, format_exc()))
-        Schedule.objects.get(id=schedule_id).move_to_status(ScheduleStatus.aborted)
+        Schedule.objects.get(id=schedule_id).move_to_status(ScheduleStatus.overdue)
         return
 
 
