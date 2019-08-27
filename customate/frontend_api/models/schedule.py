@@ -35,7 +35,7 @@ class AbstractSchedule(Model):
     payee_recipient_name = models.CharField(max_length=254, default='')
     payee_recipient_email = models.CharField(max_length=254, default='')
     payee_iban = models.CharField(max_length=50, default='')
-    payee_type = EnumField(PayeeType)
+    payee_type = EnumField(PayeeType, max_length=50)
     funding_source_id = models.UUIDField()
     backup_funding_source_id = models.UUIDField(default=None, blank=True, null=True)
     period = EnumField(SchedulePeriod)
