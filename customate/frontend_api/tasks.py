@@ -222,7 +222,7 @@ def process_all_deposit_payments(scheduled_date):
                 schedule_id=str(s.id),
                 currency=str(s.currency.value),
                 payment_amount=int(s.deposit_amount),
-                additional_information=str(s.additional_information),
+                additional_information=str(s.deposit_additional_information),
                 payee_id=str(s.payee_id),
                 funding_source_id=str(s.funding_source_id)
             )

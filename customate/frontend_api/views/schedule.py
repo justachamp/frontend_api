@@ -121,7 +121,7 @@ class ScheduleViewSet(views.ModelViewSet):
                         schedule_id=str(schedule.id),
                         currency=str(schedule.currency.value),
                         payment_amount=int(schedule.deposit_amount),  # NOTE: deposit amount here!
-                        additional_information=str(schedule.additional_information),
+                        additional_information=str(schedule.deposit_additional_information),
                         payee_id=str(schedule.payee_id),
                         funding_source_id=str(schedule.funding_source_id)
                     )

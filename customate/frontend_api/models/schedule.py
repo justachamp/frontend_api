@@ -62,6 +62,13 @@ class AbstractSchedule(Model):
             self.id, self.period, self.payment_amount, self.deposit_amount, self.start_date
         )
 
+    @property
+    def deposit_additional_information(self):
+        if self.additional_information is not None and self.additional_information != '':
+            return f'Deposit for {self.additional_information}'
+        else:
+            return 'Deposit'
+
 
 class Schedule(AbstractSchedule):
     ACTIVE_SCHEDULE_STATUSES = [ScheduleStatus.open, ScheduleStatus.pending, ScheduleStatus.processing,
