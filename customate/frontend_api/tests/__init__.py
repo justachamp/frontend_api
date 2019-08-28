@@ -1,9 +1,9 @@
 from .test_schedule import ScheduleModelTest, PaymentApiClientTest
-#from .test_documents import LocalDocumentTestCase
+from .test_documents import TestS3Storage
 
 
 __all__ = [
 	ScheduleModelTest,
 	PaymentApiClientTest,
-#	LocalDocumentTestCase
+	TestS3Storage
 ]

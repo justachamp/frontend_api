@@ -105,12 +105,15 @@ class HasParticularDocumentPermission(permissions.BasePermission):
     Custom permission to allow handle documents.
     """
 
-    def has_get_or_post_permission(self, request) -> bool:
+    def has_post_permission(self, request) -> bool:
         """
-        Check permissions for getting from or posting document to particular schedule
+        Check permissions for posting document to particular schedule
         """
-        schedule_id = request.query_params.get("schedule_id")
-        schedule = get_object_or_404(Schedule, id=UUID(schedule_id))
+        schedule_id = request.query_params.get("schedule")
+        if not schedule_id:
+            logger.error("The 'schedule' parameter has not been passed %r" % traceback.format_exc())
+            raise ValidationError("The 'schedule' field is requred.")
+        schedule = get_object_or_404(Schedule, id=schedule_id)
         recipient = get_object_or_404(get_user_model(), email=schedule.payee_recipient_email)
         user = request.user 
         # Check if user from request is recipient or sender
@@ -124,15 +127,37 @@ class HasParticularDocumentPermission(permissions.BasePermission):
                              schedule.user == user])
         return False
 
+    def has_get_permission(self, request) -> bool:
+        """
+        Check permissions for getting document from particular schedule
+        """
+        document_id = request.query_params.get("document")
+        if not document_id:
+            logger.error("The 'document' parameter has not been passed %r" % traceback.format_exc())
+            raise ValidationError("The 'document' field is requred.")
+        document = get_object_or_404(Document, id=document_id)
+        schedule = document.schedule 
+        recipient = get_object_or_404(get_user_model(), email=schedule.payee_recipient_email)
+        user = request.user 
+        # Check if user from request is recipient or sender
+        if user.role == UserRole.owner:
+            return any([recipient == user, schedule.user == user])
+        # Check if subuser from request is subuser of recipient or sender
+        if user.role == UserRole.sub_user:
+            return getattr(user.account.permission, "manage_schedules") and \
+                        any([recipient == user.account.owner_account.user,
+                             schedule.user == user.account.owner_account.user,
+                             schedule.user == user])
+
     def has_delete_permission(self, request) -> bool:
         """
         Check if user able to delete document
         """
-        document_id = request.query_params.get("document_id")
+        document_id = request.query_params.get("document")
         if not document_id:
-            logger.error("The 'document_id' parameter has not passed %r" % traceback.format_exc())
-            raise ValidationError("The 'document_id' field is requred.")
-        document = get_object_or_404(Document, id=UUID(document_id))
+            logger.error("The 'document' parameter has not been passed %r" % traceback.format_exc())
+            raise ValidationError("The 'document' field is requred.")
+        document = get_object_or_404(Document, id=document_id)
         user = request.user 
         schedule_creator_account = document.schedule.user.account.owner_account if \
                                     hasattr(document.schedule.user.account, "owner_account") else \
@@ -148,8 +173,8 @@ class HasParticularDocumentPermission(permissions.BasePermission):
 
     def has_permission(self, request, view) -> Callable:
         methods = {
-            "get_s3_object": self.has_get_or_post_permission,
-            "post_s3_object": self.has_get_or_post_permission,
+            "get_s3_object": self.has_get_permission,
+            "post_s3_object": self.has_post_permission,
             "delete_s3_object": self.has_delete_permission
         }
         if request.method == "DELETE":
