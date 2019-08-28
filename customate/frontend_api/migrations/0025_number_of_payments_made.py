@@ -15,7 +15,7 @@ def update_number_of_payments_made(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('frontend_api', '0023_document_and_schedule_unique_pair'),
+        ('frontend_api', '0024_initialize_contact_info_once_verified_for_users'),
     ]
     # repeated joins
     joins = """
