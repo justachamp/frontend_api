@@ -60,19 +60,24 @@ class User(AbstractUser, Model):
         _('phone number verified'),
         default=False,
         help_text=_(
-            'Designates whether this company has only owner. '
-            'Unselect this to add ability to add shareholders.'
+            'Indicates whether the phone number has been verified'
         ),
     )
-
     email_verified = models.BooleanField(
         _('phone number verified'),
         default=False,
         help_text=_(
-            'Designates whether this company has only owner. '
-            'Unselect this to add ability to add shareholders.'
+            'Indicates whether the email has been verified'
         ),
     )
+    contact_info_once_verified = models.BooleanField(
+        _('contact info once verified'),
+        default=False,
+        help_text=_(
+            'Indicates whether the email and phone number has been ever verified'
+        ),
+    )
+
     address = models.OneToOneField(
         Address,
         on_delete=models.CASCADE,

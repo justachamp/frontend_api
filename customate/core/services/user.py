@@ -81,6 +81,9 @@ class UserService(object):
             elif attribute == 'phone_number':
                 user.phone_number_verified = True
 
+            if user.contact_verified:
+                user.contact_info_once_verified = True
+
             PaymentApiClient(user).assign_payment_account()
             user.save()
 
