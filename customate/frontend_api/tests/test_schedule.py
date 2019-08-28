@@ -15,6 +15,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+@skip("Waiting for mock DB support")
 class ScheduleModelTest(SimpleTestCase):
 
     def test_next_payment_date_closed_schedule(self):
