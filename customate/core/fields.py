@@ -245,10 +245,6 @@ class PaymentStatusType(Enum):
     def __repr__(self):
         return self.value
 
-    # @staticmethod
-    # def is_failed(status) -> bool:
-    #     return status is PaymentStatusType.FAILED or status is PaymentStatusType.REFUND
-
 
 class FeeType(Enum):
     STATIC = 'STATIC'

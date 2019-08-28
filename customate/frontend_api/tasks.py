@@ -124,6 +124,10 @@ def on_payment_change(payment_info: Dict):
         else:
             logger.error("Got DB exception(payment_id=%s): %r " % (payment_id, format_exc()))
 
+    # refresh actual count of payments for specific schedule
+    if payment_status is PaymentStatusType.SUCCESS:
+        schedule.refresh_number_of_payments_made()
+
     # update Schedule status
     schedule.update_status()
 
@@ -165,11 +169,13 @@ def make_overdue_payment(schedule_id: str):
         ))
         return
 
-    if schedule.status is not ScheduleStatus.overdue:
+    if schedule.status is not ScheduleStatus.processing:
         logger.error("Schedule(id=%s) expected status is not %s, got status=%s instead. Exiting" % (
-            schedule_id, ScheduleStatus.overdue, schedule.status
+            schedule_id, ScheduleStatus.processing, schedule.status
         ))
         return
+
+    #TODO: consider the case when LastSchedulePayments is empty (this means that no initial payments have ever been made)
 
     # Select all SchedulePayments which are last in chains and are not in SUCCESS status
     overdue_payments = LastSchedulePayments.objects.filter(

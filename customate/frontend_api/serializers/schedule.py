@@ -31,7 +31,8 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
     currency = EnumField(enum=Currency, required=True)
     period = EnumField(enum=SchedulePeriod, required=True)
     number_of_payments = IntegerField(required=True)
-    number_of_payments_left = IntegerField(required=False)
+    number_of_payments_left = IntegerField(required=False, read_only=True)
+    number_of_payments_made = IntegerField(required=False, read_only=True)
     start_date = DateField(required=True)
     payment_amount = IntegerField(required=True)
     fee_amount = IntegerField(default=0, required=False)
@@ -46,21 +47,23 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
     payee_type = EnumField(enum=PayeeType, required=False)
     funding_source_id = UUIDField(required=True)
     backup_funding_source_id = UUIDField(required=False)
-    total_paid_sum = IntegerField(default=0, required=False)
-    total_sum_to_pay = IntegerField(default=0, required=False)
+    total_paid_sum = IntegerField(default=0, required=False, read_only=True)
+    total_sum_to_pay = IntegerField(default=0, required=False, read_only=True)
 
     documents = SerializerField(resource=DocumentSerializer, many=True, required=False)
 
     class Meta:
         model = Schedule
         fields = (
-            'name', 'status', 'purpose', 'currency', 'period', 'number_of_payments', 'number_of_payments_left',
+            'name', 'status', 'purpose', 'currency', 'period', 'number_of_payments',
             'start_date', 'payment_amount', 'fee_amount', 'deposit_amount', 'deposit_payment_date',
             'additional_information', 'payee_id', 'funding_source_id', 'backup_funding_source_id', 'payee_title',
-            'total_paid_sum', 'total_sum_to_pay', 'payee_iban', 'payee_recipient_name', 'payee_recipient_email',
+            'payee_iban', 'payee_recipient_name', 'payee_recipient_email',
             'payee_type', 'documents',
             # we can use model properties as well
             'next_payment_date', 'payment_type',
+            'number_of_payments_left','number_of_payments_made',
+            'total_paid_sum', 'total_sum_to_pay'
         )
 
     def validate_name(self, value):
@@ -73,7 +76,7 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
         logger.info("Validate_name: %r, user=%r" % (value, request.user))
         entries_count = Schedule.objects.filter(name=value, user=request.user).count()
         if entries_count >= 1:
-            # raise ValidationError({"name": "Schedule with such name already exists"})
+            # NOTE: no need to provide {"fieldname": "error message"} inside magic validate_{fieldname} methods!
             raise ValidationError("Schedule with such name already exists")
         return value
 
@@ -169,11 +172,6 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
                         "backup_funding_source_id": "Backup funding source can not be the same as default"
                     })
                 self.check_specific_funding_source(res, field_name="backup_funding_source_id")
-
-            if int(res.get("number_of_payments")) < int(res.get("number_of_payments_left")):
-                raise ValidationError({
-                    "number_of_payments_left": "number_of_payments_left should be < number_of_payments"
-                })
 
         except (ValueError, TypeError):
             logger.error("Validation failed due to: %r" % format_exc())

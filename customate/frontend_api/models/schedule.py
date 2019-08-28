@@ -6,12 +6,11 @@ from dataclasses import dataclass
 from django.core.validators import RegexValidator
 from enumfields import EnumField
 from django.db import models
+from django.db.models import Sum
 from django.utils.translation import gettext_lazy as _
 from core.models import Model, User
 from core.fields import Currency, PaymentStatusType, FundingSourceType, PayeeType
-from rest_framework.serializers import ValidationError
-from frontend_api.fields import SchedulePurpose, SchedulePeriod, ScheduleStatus
-from frontend_api.fields import SchedulePaymentType, SchedulePaymentInitiator
+from frontend_api.fields import SchedulePurpose, SchedulePeriod, ScheduleStatus, SchedulePaymentType
 
 logger = logging.getLogger(__name__)
 
@@ -42,8 +41,8 @@ class AbstractSchedule(Model):
     number_of_payments = models.PositiveIntegerField(
         default=0, help_text=_("Initial number of payments in the current schedule set upon creation.")
     )
-    number_of_payments_left = models.PositiveIntegerField(
-        default=0, help_text=_("Number of payments left in the current schedule. Changes dynamically in time")
+    number_of_payments_made = models.PositiveIntegerField(
+        default=0, help_text=_("Number of payments made in the current schedule. Changes dynamically in time")
     )
     start_date = models.DateField()
     payment_amount = models.PositiveIntegerField()
@@ -55,7 +54,8 @@ class AbstractSchedule(Model):
     )
     deposit_payment_date = models.DateField(null=True)  # This should be strictly < start_date
     additional_information = models.CharField(max_length=250, blank=True, null=True,
-        validators=[RegexValidator(regex=r'^([a-zA-Z0-9\/\-\?\:\.\+ ]*)$', message='Field contains forbidden characters')])
+                                              validators=[RegexValidator(regex=r'^([a-zA-Z0-9\/\-\?\:\.\+ ]*)$',
+                                                                         message='Field contains forbidden characters')])
 
     def __str__(self):
         return "Schedule(id=%s, period=%s, amount=%s, deposit_amount=%s, start_date=%s)" % (
@@ -74,38 +74,42 @@ class Schedule(AbstractSchedule):
     ACTIVE_SCHEDULE_STATUSES = [ScheduleStatus.open, ScheduleStatus.pending, ScheduleStatus.processing,
                                 ScheduleStatus.overdue]
 
-    total_paid_sum = models.PositiveIntegerField(
-        default=0,
-        help_text=_("Total sum of all Schedule's paid payments")
-    )
-    total_sum_to_pay = models.PositiveIntegerField(
-        default=0,
-        help_text=_("Total sum that should be paid by this schedule")
-    )
-
-    def save(self, *args, **kwargs):
+    @property
+    def total_sum_to_pay(self) -> int:
         """
-        Pre-calculate some fields in this overridden method.
-        :param args:
-        :param kwargs:
+        Total sum that should be paid by this schedule
         :return:
         """
-        # this should be the same at the beginning
-        self.number_of_payments_left = self.number_of_payments
-        self._calculate_and_set_total_sum_to_pay()
-        super().save(*args, **kwargs)
+        return self.fee_amount + \
+            (self.deposit_amount if self.deposit_amount is not None else 0) + \
+            (self.payment_amount * (self.number_of_payments - self.number_of_payments_made)) - \
+            self.total_paid_sum
 
-    def _calculate_and_set_total_sum_to_pay(self):
-        self.total_sum_to_pay = self.fee_amount \
-                                + (self.deposit_amount if self.deposit_amount is not None else 0) \
-                                + (self.payment_amount * self.number_of_payments_left)
+    @property
+    def total_paid_sum(self) -> int:
+        """
+        Total sum of all Schedule's paid payments
+        :return:
+        """
+        res = LastSchedulePayments.objects.filter(
+            schedule_id=self.id,
+            payment_status__in=[PaymentStatusType.SUCCESS]
+        ).aggregate(Sum('original_amount'))
+        total = res.get('original_amount__sum')
+        return total if total else 0
 
     def is_cancelable(self):
         return self.status in [ScheduleStatus.open, ScheduleStatus.overdue]
 
-    def _did_we_make_first_payment(self):
-        # NOTE: don't think that we can rely on total_paid_sum field instead (considering long running transactions)
+    def _did_we_send_first_payment(self):
+        # return self.number_of_payments_made > 0 # we can't rely on this field here, since there is
+        # a case of long-running PENDING payments(days), which might corrupt our next_payment_date calculations
         return arrow.utcnow().datetime.date() > self.start_date
+
+    @property
+    def number_of_payments_left(self):
+        self.refresh_number_of_payments_made()
+        return self.number_of_payments - self.number_of_payments_made
 
     @property
     def next_payment_date(self):
@@ -119,7 +123,7 @@ class Schedule(AbstractSchedule):
 
         if not (self.status in [ScheduleStatus.open, ScheduleStatus.overdue] and self.number_of_payments_left != 0):
             res = None
-        elif self.period is SchedulePeriod.one_time or not self._did_we_make_first_payment():
+        elif self.period is SchedulePeriod.one_time or not self._did_we_send_first_payment():
             res = arrow.get(self.start_date)
         elif self.period is SchedulePeriod.weekly:
             res = arrow.get(self.start_date).replace(weeks=+1)
@@ -150,59 +154,78 @@ class Schedule(AbstractSchedule):
         return self.user.account.payment_account_id
 
     def move_to_status(self, status: ScheduleStatus):
+        old_status = self.status
         self.status = status
         self.save(update_fields=["status"])
+        logger.info("Updated Schedule(id=%s) status=%s(was=%s)" % (self.id, status, old_status))
+
+    def refresh_number_of_payments_made(self):
+        """
+        Update count of actual payments made in the DB
+        :return:
+        """
+        # get the list of last successfull payments
+        self.number_of_payments_made = LastSchedulePayments.objects.filter(
+            schedule_id=self.id,
+            payment_status__in=[PaymentStatusType.SUCCESS]
+        ).count()
+        self.save(update_fields=["number_of_payments_made"])
 
     def update_status(self) -> ScheduleStatus:
         """
         Update Schedule's status based on aggregated info about all underlying payments (see SchedulePayments model).
         This is in fact, state machine. We could only migrate from one specific state into another.
-        TODO: Lookup scheduler diagram by Oleg to better understand what statuses we should update based on what conditions
+
+        Possible Schedule statuses
+          'open', there are some future planned payments and all past payments are successful
+          'closed' there are NO future planned payments and all past payments are successful
+          'overdue', there are some past payments which were unsuccessful
+          'cancelled', regardless of underlying payments statuses schedule is cancelled by user
+          'processing', there is at least ONE payment whose status is 'PROCESSING'
 
         :return: new Schedule status
         :rtype: ScheduleStatus
         """
-        original_status = self.status
-        logger.info("Updating schedule(id=%s) status(%s)" % (self.id, self.status))
-        new_status = ScheduleStatus.open
+        logger.info("Updating schedule(id=%s) with status=%s" % (self.id, self.status))
 
-        # rewrite based on actual number of SchedulePayments with SUCCESS status
-        # if payment_status is PaymentStatusType.SUCCESS:
-        #     schedule.reduce_number_of_payments_left()
-        #     return
+        if self.status == ScheduleStatus.cancelled:
+            # ignore any status updates
+            logger.info("Leaving schedule(id=%s) with unchanged status=%s, since it is cancelled by user" % (
+                self.id, self.status
+            ))
+            return self.status
 
-        # Possible Schedule statuses
-        # 'open', there are some future planned payments and all past payments are successful
-        # 'closed' there are NO future planned payments and all past payments are successful
-        # 'overdue', there are some past payments which were unsuccessful
-        # 'cancelled', regardless of underlying payments statuses schedule is cancelled by user
-        # 'processing', there is at least ONE payment whose status is 'PROCESSING'
+        if self.status == ScheduleStatus.closed:
+            # ignore any status updates
+            logger.info("Leaving schedule(id=%s) with unchanged status=%s, since it is already closed" % (
+                self.id, self.status
+            ))
+            return self.status
 
-        # if self.status is ScheduleStatus.cancelled:
-        #     result = ScheduleStatus.cancelled
-        # elif PaymentStatusType.is_failed(payment_status):
-        #     # @NOTE: we don't have backup source for now, so this condition should be enough
-        #     result = ScheduleStatus.overdue
-        # elif payment_status is PaymentStatusType.SUCCESS and self.number_of_payments_left == 0:
-        #     result = ScheduleStatus.closed
-
-        # Select all LastSchedulePayments
-        schedule_payments = SchedulePayments.objects.filter(
+        # get the list of last payments
+        last_payments = LastSchedulePayments.objects.filter(
             schedule_id=self.id,
-            payment_status=PaymentStatusType.PROCESSING
-        )
+        ).order_by("created_at")  # type: list[LastSchedulePayments]
+        statuses = [lp.payment_status for lp in last_payments]  # type: List[LastSchedulePayments]
 
-        logger.info("Updated Schedule(id=%s) status=%s(was=%s)" % (self.id, new_status, original_status))
-        self.status = new_status
-        self.save(update_fields=["status"])
-        return new_status
+        if len(statuses) == 0:
+            # ignore any status updates
+            logger.info("Leaving schedule(id=%s) with unchanged status=%s, since there are no last payments made" % (
+                self.id, self.status
+            ))
+            return self.status
 
-    def reduce_number_of_payments_left(self):
-        if self.number_of_payments_left <= 0:
-            return
-        self.number_of_payments_left -= 1
-        logger.info("Reduced number_of_payments_left=%s (schedule_id=%s)" % (self.number_of_payments_left, self.id))
-        self.save(update_fields=["number_of_payments_left"])
+        if any([s in [PaymentStatusType.FAILED, PaymentStatusType.REFUND, PaymentStatusType.CANCELED] for s in
+                statuses]):
+            # mark schedule as overdue
+            self.move_to_status(ScheduleStatus.overdue)
+            return ScheduleStatus.overdue
+
+        if self.number_of_payments_left == 0:
+            self.move_to_status(ScheduleStatus.closed)
+            return ScheduleStatus.closed
+
+        return self.status
 
     @staticmethod
     def has_active_schedules_with_source(funding_source_id):

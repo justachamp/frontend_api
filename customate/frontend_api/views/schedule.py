@@ -94,8 +94,7 @@ class ScheduleViewSet(views.ModelViewSet):
                 payee_recipient_email=pd.recipient_email,
                 payee_iban=pd.iban,
                 payee_title=pd.title,
-                payee_type=pd.type,
-                number_of_payments_left=serializer.validated_data["number_of_payments"]
+                payee_type=pd.type
             )
 
             logger.info("Successfully created new schedule_id=%r" % schedule.id)
@@ -192,6 +191,7 @@ class ScheduleViewSet(views.ModelViewSet):
             schedule = Schedule.objects.get(id=schedule_id)
         except Exception as e:
             raise ValidationError("Unable to fetch schedule_id=%s " % schedule_id)
+        #TODO: do we need to check that schedule is indeed in 'overdue' status?
         schedule.move_to_status(ScheduleStatus.processing)
         logger.info("Submit make_overdue_payment(schedule_id=%s) task for processing" % schedule_id)
         make_overdue_payment.delay(

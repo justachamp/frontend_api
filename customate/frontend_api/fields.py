@@ -87,14 +87,3 @@ class SchedulePaymentType(Enum):
     class Labels:
         receive = 'internal'
         pay = 'external'
-
-
-class SchedulePaymentInitiator(Enum):
-    schedule = 'schedule'
-    backup = 'backup'
-    pay_overdue = 'pay_overdue'
-
-    class Labels:
-        schedule = 'schedule'
-        reserve = 'reserve'
-        pay_overdue = 'pay_overdue'

@@ -16,29 +16,6 @@ logger = logging.getLogger(__name__)
 
 
 class ScheduleModelTest(SimpleTestCase):
-    def test_calculate_and_set_total_sum_to_pay_single_payment(self):
-        schedule = Schedule(number_of_payments_left=1, payment_amount=100)
-        schedule._calculate_and_set_total_sum_to_pay()
-
-        self.assertEquals(100, schedule.total_sum_to_pay)
-
-    def test_calculate_and_set_total_sum_to_pay_several_payments(self):
-        schedule = Schedule(number_of_payments_left=12, payment_amount=100)
-        schedule._calculate_and_set_total_sum_to_pay()
-
-        self.assertEquals(1200, schedule.total_sum_to_pay)
-
-    def test_calculate_and_set_total_sum_to_pay_with_fee(self):
-        schedule = Schedule(fee_amount=20, number_of_payments_left=10, payment_amount=100)
-        schedule._calculate_and_set_total_sum_to_pay()
-
-        self.assertEquals(1020, schedule.total_sum_to_pay)
-
-    def test_calculate_and_set_total_sum_to_pay_with_fee_and_deposit(self):
-        schedule = Schedule(fee_amount=20, deposit_amount=55, number_of_payments_left=10, payment_amount=100)
-        schedule._calculate_and_set_total_sum_to_pay()
-
-        self.assertEquals(1075, schedule.total_sum_to_pay)
 
     def test_next_payment_date_closed_schedule(self):
         schedule = Schedule(period=SchedulePeriod.one_time, status=ScheduleStatus.closed, payment_amount=100)
@@ -47,70 +24,39 @@ class ScheduleModelTest(SimpleTestCase):
 
     def test_next_payment_date_one_time(self):
         schedule = Schedule(period=SchedulePeriod.one_time, start_date=arrow.utcnow().datetime.date(),
-                            status=ScheduleStatus.open, payment_amount=100, number_of_payments_left=1)
+                            status=ScheduleStatus.open, payment_amount=100, number_of_payments=1)
 
         self.assertEquals(schedule.start_date, schedule.next_payment_date)
 
-    def test_next_payment_date_one_time_all_payments_made(self):
-        schedule = Schedule(period=SchedulePeriod.one_time, start_date=arrow.utcnow().datetime.date(),
-                            status=ScheduleStatus.open, payment_amount=100, number_of_payments_left=0)
-
-        self.assertIsNone(schedule.next_payment_date)
-
     def test_next_payment_date_weekly_start_date_didnt_pass(self):
         schedule = Schedule(period=SchedulePeriod.weekly, start_date=arrow.utcnow().datetime.date(),
-                            status=ScheduleStatus.open, number_of_payments_left=10, payment_amount=100)
+                            status=ScheduleStatus.open, number_of_payments=10, payment_amount=100)
 
         self.assertEquals(schedule.start_date, schedule.next_payment_date)
 
     def test_next_payment_date_weekly_start_date_pass(self):
         schedule = Schedule(period=SchedulePeriod.weekly, start_date=arrow.get(2013, 5, 21).datetime.date(),
-                            status=ScheduleStatus.open, number_of_payments_left=10, payment_amount=100)
+                            status=ScheduleStatus.open, number_of_payments=10, payment_amount=100)
 
         self.assertEquals(arrow.get(2013, 5, 28).datetime.date(), schedule.next_payment_date)
 
     def test_next_payment_date_monthly(self):
         schedule = Schedule(period=SchedulePeriod.monthly, start_date=arrow.get(2013, 5, 21).datetime.date(),
-                            status=ScheduleStatus.open, number_of_payments_left=10, payment_amount=100)
+                            status=ScheduleStatus.open, number_of_payments=10, payment_amount=100)
 
         self.assertEquals(arrow.get(2013, 6, 21).datetime.date(), schedule.next_payment_date)
 
     def test_next_payment_date_quarterly(self):
         schedule = Schedule(period=SchedulePeriod.quarterly, start_date=arrow.get(2013, 5, 21).datetime.date(),
-                            status=ScheduleStatus.open, number_of_payments_left=10, payment_amount=100)
+                            status=ScheduleStatus.open, number_of_payments=10, payment_amount=100)
 
         self.assertEquals(arrow.get(2013, 9, 21).datetime.date(), schedule.next_payment_date)
 
     def test_next_payment_date_yearly(self):
         schedule = Schedule(period=SchedulePeriod.yearly, start_date=arrow.get(2013, 5, 21).datetime.date(),
-                            status=ScheduleStatus.open, number_of_payments_left=10, payment_amount=100)
+                            status=ScheduleStatus.open, number_of_payments=10, payment_amount=100)
 
         self.assertEquals(arrow.get(2014, 5, 21).datetime.date(), schedule.next_payment_date)
-
-    # def test_calculate_status_overdue_from_failed_payment(self):
-    #     schedule = Schedule(status=ScheduleStatus.open)
-    #
-    #     self.assertEquals(ScheduleStatus.overdue, schedule._calculate_status(PaymentStatusType.FAILED))
-    #
-    # def test_calculate_status_overdue_from_refund_payment(self):
-    #     schedule = Schedule(status=ScheduleStatus.open)
-    #
-    #     self.assertEquals(ScheduleStatus.overdue, schedule._calculate_status(PaymentStatusType.REFUND))
-    #
-    # def test_calculate_status_cancel_from_failed_payment(self):
-    #     schedule = Schedule(status=ScheduleStatus.cancelled)
-    #
-    #     self.assertEquals(ScheduleStatus.cancelled, schedule._calculate_status(PaymentStatusType.FAILED))
-    #
-    # def test_calculate_status_cancel_from_success_payment(self):
-    #     schedule = Schedule(status=ScheduleStatus.cancelled)
-    #
-    #     self.assertEquals(ScheduleStatus.cancelled, schedule._calculate_status(PaymentStatusType.SUCCESS))
-    #
-    # def test_calculate_status_closed_from_success_payment(self):
-    #     schedule = Schedule(status=ScheduleStatus.open, number_of_payments_left=0)
-    #
-    #     self.assertEquals(ScheduleStatus.closed, schedule._calculate_status(PaymentStatusType.SUCCESS))
 
 
 @skip("Waiting for mocks")
@@ -148,4 +94,3 @@ class PaymentApiClientTest(SimpleTestCase):
             self._client.create_payment(payment_details)
 
         self.assertEqual(e.exception.status_code, status_codes.HTTP_400_BAD_REQUEST)
-
