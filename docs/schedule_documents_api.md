@@ -183,29 +183,7 @@ X-Frame-Options: SAMEORIGIN
 
 ```
 ### Possible error responses
-```http
-HTTP/1.1 400 Bad Request
-Allow: GET, HEAD, OPTIONS
-Content-Length: 136
-Content-Type: application/vnd.api+json
-Date: Tue, 16 Jul 2019 23:41:13 GMT
-Server: WSGIServer/0.2 CPython/3.7.2
-Vary: Accept, Cookie, Origin
-X-Frame-Options: SAMEORIGIN
 
-{
-    "errors": [
-        {
-            "detail": "Dublicate file name. Please choose another one.",
-            "source": {
-                "pointer": "/data"
-            },
-            "status": "400"
-        }
-    ]
-}
-
-```
 ```http
 
 HTTP/1.1 403 Forbidden
