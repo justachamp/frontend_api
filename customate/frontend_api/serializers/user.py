@@ -117,10 +117,11 @@ class SubUserSerializer(BaseUserSerializer):
         If owner is blocked or banned
             so subuser should have the same status
         """
-        data = super().to_representation(instance)
         owner = instance.account.owner_account.user
         if owner.status in [UserStatus.blocked, UserStatus.banned]:
-            data["status"] = owner.status
+            instance.status = owner.status
+            instance.save()
+        data = super().to_representation(instance)
         return data
 
 
@@ -215,3 +216,4 @@ class UserSerializer(BaseUserSerializer):
         self_link_view_name='user-relationships',
         required=False
     )
+
