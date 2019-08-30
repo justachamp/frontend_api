@@ -160,7 +160,8 @@ class AdminUserSerializer(BaseUserSerializer):
 
     def to_representation(self, instance):
         """
-        If owner is blocked or banned so subuser should have the same status
+        If owner is blocked or banned
+            so subuser should have the same status
         """
         data = super().to_representation(instance)
         owner = instance.account.owner_account.user
