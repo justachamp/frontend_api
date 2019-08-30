@@ -112,6 +112,17 @@ class SubUserSerializer(BaseUserSerializer):
         permission.save()
         return user
 
+    def to_representation(self, instance):
+        """
+        If owner is blocked or banned
+            so subuser should have the same status
+        """
+        data = super().to_representation(instance)
+        owner = instance.account.owner_account.user
+        if owner.status in [UserStatus.blocked, UserStatus.banned]:
+            data["status"] = owner.status
+        return data
+
 
 class AdminUserSerializer(BaseUserSerializer):
     related_serializers = {
@@ -157,17 +168,6 @@ class AdminUserSerializer(BaseUserSerializer):
         permission = AdminUserPermission(account=account)
         permission.save()
         return user
-
-    def to_representation(self, instance):
-        """
-        If owner is blocked or banned
-            so subuser should have the same status
-        """
-        data = super().to_representation(instance)
-        owner = instance.account.owner_account.user
-        if owner.status in [UserStatus.blocked, UserStatus.banned]:
-            data["status"] = owner.status
-        return data
 
 
 class UserStatusSerializer(HyperlinkedModelSerializer):
