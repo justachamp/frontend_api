@@ -82,8 +82,7 @@ class Schedule(AbstractSchedule):
         """
         return self.fee_amount + \
             (self.deposit_amount if self.deposit_amount is not None else 0) + \
-            (self.payment_amount * (self.number_of_payments - self.number_of_payments_made)) - \
-            self.total_paid_sum
+            (self.payment_amount * self.number_of_payments)
 
     @property
     def total_paid_sum(self) -> int:
