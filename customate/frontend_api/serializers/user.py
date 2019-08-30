@@ -14,6 +14,7 @@ from frontend_api.models import (
     Address
 )
 from authentication.cognito.core import helpers
+from core.fields import UserRole, UserStatus
 
 from ..serializers import (
     ResourceRelatedField,
@@ -156,6 +157,16 @@ class AdminUserSerializer(BaseUserSerializer):
         permission = AdminUserPermission(account=account)
         permission.save()
         return user
+
+    def to_representation(self, instance):
+        """
+        If owner is blocked or banned so subuser should have the same status
+        """
+        data = super().to_representation(instance)
+        owner = instance.account.owner_account.user
+        if owner.status in [UserStatus.blocked, UserStatus.banned]:
+            data["status"] = owner.status
+        return data
 
 
 class UserStatusSerializer(HyperlinkedModelSerializer):

@@ -127,5 +127,5 @@ class ProfileSerializer(DomainService, BaseAuthUserSerializerMixin, Serializer):
         except GBGVerificationError as e:
             if not validated_data.get("ignore_gbg_exception", False):
                 raise e
-
         return instance
+
