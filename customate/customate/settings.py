@@ -366,9 +366,6 @@ CELERY_BROKER_URL = "amqp://{user}:{password}@{host}:{port}/{vhost}".format(
     vhost=environ.get('RABBITMQ_VHOST', '')
 )
 
-#CELERY_RESULT_BACKEND = "amqp"
-CELERY_TASK_RESULT_EXPIRES = 3600  # 1 hour, seconds
-
 # https://docs.celeryproject.org/en/latest/userguide/configuration.html#std:setting-task_acks_late
 CELERY_TASK_ACKS_LATE = True
 # Late ack means that the task messages will be acknowledged after the task has been executed,
@@ -401,8 +398,6 @@ CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
-CELERY_IGNORE_RESULT = True
-CELERY_STORE_ERRORS_EVEN_IF_IGNORED = True
 
 # This is for periodic execution of tasks
 # For more info: http://docs.celeryproject.org/en/latest/userguide/periodic-tasks.html#crontab-schedules
