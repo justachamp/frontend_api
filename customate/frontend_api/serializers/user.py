@@ -56,6 +56,20 @@ class BaseUserSerializer(HyperlinkedModelSerializer):
                   'birth_date', 'last_name', 'email', 'address', 'account', 'title', 'gender', 'country_of_birth',
                   'mother_maiden_name', 'passport_number', 'passport_date_expiry', 'passport_country_origin')
 
+    def to_representation(self, instance):
+        """
+        If owner is blocked or banned
+            so subuser should have the same status
+        """
+        data = super().to_representation(instance)
+        non_acive_statuses = [UserStatus.blocked, UserStatus.banned]
+        if instance.role == UserRole.sub_user:
+            owner = instance.account.owner_account.user
+            if owner.status in non_acive_statuses:
+                owners_status = UserStatusSerializer(owner).data
+                data["status"] = owners_status["status"]
+        return data
+
 
 class BaseUserResendInviteSerializer(HyperlinkedModelSerializer):
     email = EmailField(required=True)
@@ -111,18 +125,6 @@ class SubUserSerializer(BaseUserSerializer):
         permission = SubUserPermission(account=account)
         permission.save()
         return user
-
-    def to_representation(self, instance):
-        """
-        If owner is blocked or banned
-            so subuser should have the same status
-        """
-        owner = instance.account.owner_account.user
-        if owner.status in [UserStatus.blocked, UserStatus.banned]:
-            instance.status = owner.status
-            instance.save()
-        data = super().to_representation(instance)
-        return data
 
 
 class AdminUserSerializer(BaseUserSerializer):
