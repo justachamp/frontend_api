@@ -81,8 +81,8 @@ class Schedule(AbstractSchedule):
         :return:
         """
         return self.fee_amount + \
-            (self.deposit_amount if self.deposit_amount is not None else 0) + \
-            (self.payment_amount * self.number_of_payments)
+               (self.deposit_amount if self.deposit_amount is not None else 0) + \
+               (self.payment_amount * self.number_of_payments)
 
     @property
     def total_paid_sum(self) -> int:
@@ -206,6 +206,10 @@ class Schedule(AbstractSchedule):
             schedule_id=self.id,
         ).order_by("created_at")  # type: list[LastSchedulePayments]
         statuses = [lp.payment_status for lp in last_payments]  # type: List[LastSchedulePayments]
+        logger.info("Got the list of last payments(schedule_id=%s): %r" % (
+            self.id,
+            {lp.id: lp.payment_status for lp in last_payments}
+        ))
 
         if len(statuses) == 0:
             # ignore any status updates
@@ -219,6 +223,12 @@ class Schedule(AbstractSchedule):
             # mark schedule as overdue
             self.move_to_status(ScheduleStatus.overdue)
             return ScheduleStatus.overdue
+
+        if all([s in [PaymentStatusType.SUCCESS, PaymentStatusType.PENDING, PaymentStatusType.PROCESSING] for s in
+                statuses]) and self.number_of_payments_left != 0:
+            # mark schedule as open(default state)
+            self.move_to_status(ScheduleStatus.open)
+            return ScheduleStatus.open
 
         if self.number_of_payments_left == 0:
             self.move_to_status(ScheduleStatus.closed)
