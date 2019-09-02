@@ -35,7 +35,7 @@ class PhoneField(PhoneNumberField):
 
         # We don't allow to enter not-digits, so it's unlikely that there will be a phone number in not e164 format
         if result.as_e164 != value:
-            raise ValidationError('Oops, this phone number is not valid')
+            raise ValidationError('Enter a valid phone number')
         return value
 
 
