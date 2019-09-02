@@ -2,7 +2,7 @@ import logging
 
 from phonenumber_field.serializerfields import PhoneNumberField
 from rest_framework_json_api.serializers import (
-    HyperlinkedModelSerializer)
+    HyperlinkedModelSerializer, ValidationError)
 from core.fields import UserRole, UserStatus, UserTitle, Gender, Country
 from core.models import User
 from frontend_api.models import (
@@ -31,7 +31,11 @@ logger = logging.getLogger(__name__)
 
 class PhoneField(PhoneNumberField):
     def to_internal_value(self, value):
-        super().to_internal_value(value)  # Returns PhoneNumber instance, that couldn't be adapted to SQL parameter
+        result = super().to_internal_value(value)
+
+        # We don't allow to enter not-digits, so it's unlikely that there will be a phone number in not e164 format
+        if result.as_e164 != value:
+            raise ValidationError('Oops, this phone number is not valid')
         return value
 
 
