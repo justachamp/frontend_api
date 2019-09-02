@@ -95,7 +95,9 @@ class FundingSourceSerializer(BaseFundingSourceSerializer):
             ), customer_reference=user.email)
 
         if gbg_result.BandText != BAND_PASS:
-            raise ValidationError("GBG validation failed")
+            raise ValidationError("Sorry, please choose another bank account as we were unable to validate the "
+                                  "details of this bank account")
+
         return res
 
     # validate_{fieldname} also works
@@ -110,10 +112,14 @@ class FundingSourceSerializer(BaseFundingSourceSerializer):
         """
         logger.info("VALIDATE, res=%r" % res)
         try:
-            res = self.direct_debit_gbg_validation(res)
+            # res = self.direct_debit_gbg_validation(res)
+            pass
+        except ValidationError as e:
+            logger.info("Validation error was thrown: %r" % format_exc())
+            raise e
         except Exception as e:
-            logger.error("GBG crash: %r" % format_exc())
-            raise ValidationError("GBG validation failed")
+            logger.error("Crash: %r" % format_exc())
+            raise ValidationError("Funding source validation request is unsuccessful. Please, contact the support team.")
 
         # TODO: add other funding source types validation
         return res
