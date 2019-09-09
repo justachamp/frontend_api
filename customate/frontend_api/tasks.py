@@ -8,6 +8,7 @@ from celery import shared_task
 from django.core.paginator import Paginator
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.utils import IntegrityError
+from django.conf import settings
 from core.models import User
 from core.fields import Currency, PaymentStatusType
 from frontend_api.models import Schedule
@@ -16,6 +17,9 @@ from frontend_api.models.schedule import WeeklySchedule, MonthlySchedule, Quarte
 from frontend_api.models.schedule import SchedulePayments, LastSchedulePayments
 from frontend_api.core.client import PaymentApiClient, PaymentDetails
 from frontend_api.fields import SchedulePurpose, ScheduleStatus
+
+import boto3
+from botocore.exceptions import ClientError, EndpointConnectionError
 
 logger = logging.getLogger(__name__)
 PER_PAGE = 5
@@ -175,7 +179,7 @@ def make_overdue_payment(schedule_id: str):
         ))
         return
 
-    #TODO: consider the case when LastSchedulePayments is empty (this means that no initial payments have ever been made)
+    # TODO: consider the case when LastSchedulePayments is empty (this means that no initial payments have ever been made)
 
     # Select all SchedulePayments which are last in chains and are not in SUCCESS status
     overdue_payments = LastSchedulePayments.objects.filter(
@@ -381,3 +385,25 @@ def on_payee_change(payee_info: Dict):
     """
     pass
     # TODO: update all payee info that is stored in Django models
+
+
+@shared_task
+def send_notification_email(kwargs, message):
+    email_client = boto3.client('ses', aws_access_key_id=settings.AWS_ACCESS_KEY,
+                                aws_secret_access_key=settings.AWS_SECRET_KEY,
+                                region_name=settings.AWS_REGION_SES)
+    try:
+        email_client.send_email(**kwargs, **message)
+    except (ClientError, EndpointConnectionError):
+        logger.error("Error while sending email via boto3 with outcoming data: \n%s. %r" % (kwargs, format_exc()))
+
+
+@shared_task
+def send_notification_sms(kwargs):
+    sms_client = boto3.client('sns', aws_access_key_id=settings.AWS_ACCESS_KEY,
+                              aws_secret_access_key=settings.AWS_SECRET_KEY,
+                              region_name=settings.AWS_REGION_SNS)
+    try:
+        sms_client.publish(**kwargs)
+    except:
+        logger.error("Unable to send message via boto3 with outcoming data: \n%s. %r" % (kwargs, format_exc()))

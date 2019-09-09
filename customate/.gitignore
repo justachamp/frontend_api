@@ -2,3 +2,4 @@ logs/*
 .python-version
 env.sh
 aux/
+celerybeat-schedule

@@ -79,6 +79,9 @@ AWS_ACCESS_KEY = environ['AWS_ACCESS_KEY']
 AWS_SECRET_KEY = environ['AWS_SECRET_KEY']
 
 AWS_REGION = environ['AWS_REGION']
+AWS_REGION_SES = environ["AWS_REGION_SES"]
+AWS_REGION_SNS = environ["AWS_REGION_SNS"]
+AWS_SES_NOTIFICATIONS_GOCUSTOMATE_SENDER = environ["AWS_SES_NOTIFICATIONS_GOCUSTOMATE_SENDER"]
 
 COGNITO_ATTR_MAPPING = {
     'email': 'email',
@@ -263,7 +266,7 @@ ROOT_URLCONF = 'customate.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [path.join(BASE_DIR, "templates")],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
