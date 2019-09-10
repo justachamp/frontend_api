@@ -11,8 +11,8 @@ from frontend_api.models import (
     AdminUserPermission,
     SubUserPermission,
     UserAccount,
-    Address
-)
+    Address,
+    Schedule)
 from authentication.cognito.core import helpers
 from core.fields import UserRole, UserStatus
 
@@ -180,12 +180,16 @@ class AdminUserSerializer(BaseUserSerializer):
 class UserStatusSerializer(HyperlinkedModelSerializer):
     status = EnumField(enum=UserStatus, required=True)
 
-    def check_status(self, user):
+    def update_status(self, user):
         user.status = self.data['status']
         user.save()
 
         if user.status == UserStatus.banned or user.status == UserStatus.blocked:
             helpers.admin_sign_out({'username': user.email})
+
+        if user.status == UserStatus.banned:
+            logger.info(f"Closing banned user's ({user.id}) related schedules")
+            Schedule.close_user_schedules(user.id)
 
     class Meta:
         model = User

@@ -45,10 +45,12 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
     payee_recipient_email = CharField(required=False)
     payee_iban = CharField(required=False)
     payee_type = EnumField(enum=PayeeType, required=False)
-    funding_source_id = UUIDField(required=True)
+    funding_source_id = UUIDField(required=False)
     backup_funding_source_id = UUIDField(required=False)
     total_paid_sum = IntegerField(default=0, required=False, read_only=True)
     total_sum_to_pay = IntegerField(default=0, required=False, read_only=True)
+    origin_user_id = UUIDField(required=False)
+    recipient_user_id = UUIDField(required=False)
 
     documents = SerializerField(resource=DocumentSerializer, many=True, required=False)
 
@@ -59,7 +61,7 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
             'start_date', 'payment_amount', 'fee_amount', 'deposit_amount', 'deposit_payment_date',
             'additional_information', 'payee_id', 'funding_source_id', 'backup_funding_source_id', 'payee_title',
             'payee_iban', 'payee_recipient_name', 'payee_recipient_email',
-            'payee_type', 'documents',
+            'payee_type', 'documents', 'origin_user_id', 'recipient_user_id',
             # we can use model properties as well
             'next_payment_date', 'payment_type',
             'number_of_payments_left','number_of_payments_made',
@@ -74,7 +76,12 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
         """
         request = self.context.get('request')
         logger.info("Validate_name: %r, user=%r" % (value, request.user))
-        entries_count = Schedule.objects.filter(name=value, user=request.user).count()
+
+        target_account_ids = request.user.get_all_related_account_ids()
+        queryset = Schedule.objects.filter(name=value, origin_user__account__id__in=target_account_ids) \
+                   | Schedule.objects.filter(name=value, recipient_user__account__id__in=target_account_ids)
+
+        entries_count = queryset.count()
         if entries_count >= 1:
             # NOTE: no need to provide {"fieldname": "error message"} inside magic validate_{fieldname} methods!
             raise ValidationError("Schedule with such name already exists")
@@ -163,18 +170,33 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
             if int(res["fee_amount"]) < 0:
                 raise ValidationError({"payment_amount": "Fee amount should be positive number"})
 
-            # Verify first funding source
-            self.check_specific_funding_source(res, field_name="funding_source_id")
-            # Verify backup funding source
-            if res.get("backup_funding_source_id"):
-                if res["backup_funding_source_id"] == res["funding_source_id"]:
-                    raise ValidationError({
-                        "backup_funding_source_id": "Backup funding source can not be the same as default"
-                    })
-                self.check_specific_funding_source(res, field_name="backup_funding_source_id")
+            if res.get("purpose") == SchedulePurpose.pay:
+                # Verify first funding source
+                if res.get("funding_source_id") is None:
+                    raise ValidationError({"funding_source_id": "This field is required."})
+                self.check_specific_funding_source(res, field_name="funding_source_id")
+
+                # Verify backup funding source
+                if res.get("backup_funding_source_id"):
+                    if res["backup_funding_source_id"] == res["funding_source_id"]:
+                        raise ValidationError({
+                            "backup_funding_source_id": "Backup funding source can not be the same as default"
+                        })
+                    self.check_specific_funding_source(res, field_name="backup_funding_source_id")
 
         except (ValueError, TypeError):
             logger.error("Validation failed due to: %r" % format_exc())
             raise ValidationError("Schedule validation failed")
 
         return res
+
+
+class ScheduleAcceptanceSerializer(HyperlinkedModelSerializer):
+    funding_source_id = UUIDField(required=False)
+    backup_funding_source_id = UUIDField(required=False)
+
+    class Meta:
+        model = Schedule
+        fields = (
+            'funding_source_id', 'backup_funding_source_id'
+        )

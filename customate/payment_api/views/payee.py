@@ -51,7 +51,7 @@ class PayeeViewSet(ResourceViewSet):
             {'active__exact': 1},
             {'account__id__exact': {'method': 'check_payment_account_id'}},
             {'currency__not_in': 'DK'},
-            {'type__exact': 'BANK_ACCOUNT'}
+            {'type__in': 'BANK_ACCOUNT'}
         ]
 
     def get_serializer_class(self):

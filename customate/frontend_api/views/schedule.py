@@ -1,22 +1,26 @@
 import logging
 from traceback import format_exc
 
+from django.db import transaction
+from django.db.models import Q
 import arrow
+import celery
 from django.utils.functional import cached_property
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import action
 from rest_framework import status as status_codes
+from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.serializers import ValidationError
 
-import celery
+from customate.settings import CELERY_BEAT_SCHEDULE
+from core.models import User
 from core import views
 from core.fields import PayeeType
-from customate.settings import CELERY_BEAT_SCHEDULE
+from frontend_api.fields import ScheduleStatus, SchedulePurpose
 from frontend_api.tasks import make_overdue_payment, make_payment
 from frontend_api.core.client import PaymentApiClient
-from frontend_api.fields import ScheduleStatus
 from frontend_api.models import Schedule, Document
 from frontend_api.permissions import (
     HasParticularDocumentPermission,
@@ -27,7 +31,7 @@ from frontend_api.permissions import (
     IsActive,
     IsAccountVerified)
 
-from frontend_api.serializers.schedule import ScheduleSerializer
+from frontend_api.serializers.schedule import ScheduleSerializer, ScheduleAcceptanceSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -62,12 +66,9 @@ class ScheduleViewSet(views.ModelViewSet):
     }
 
     def get_queryset(self, *args, **kwargs):
-        account = self.request.user.account
-        owner_account = account.owner_account if self.request.user.is_subuser else account
-        target_account_ids = [owner_account.id] + list(
-            owner_account.sub_user_accounts.all().values_list('id', flat=True)
-        )
-        return Schedule.objects.all().filter(user__account__id__in=target_account_ids)
+        target_account_ids = self.request.user.get_all_related_account_ids()
+        return Schedule.objects.all().filter(Q(origin_user__account__id__in=target_account_ids)
+                                             | Q(recipient_user__account__id__in=target_account_ids))
 
     @cached_property
     def payment_client(self):
@@ -82,14 +83,30 @@ class ScheduleViewSet(views.ModelViewSet):
         """
         try:
             user = self.request.user
+            counterpart_user_id = self.request.data.get("counterpart_user_id", None)
+            counterpart_user = User.objects.get(id=counterpart_user_id) if counterpart_user_id is not None else None
+            purpose = serializer.validated_data["purpose"]
+            status = ScheduleStatus.pending if purpose == SchedulePurpose.receive else ScheduleStatus.open
+
+            if purpose == SchedulePurpose.pay:
+                origin_user = self.request.user
+                recipient_user = counterpart_user
+            else:
+                origin_user = counterpart_user
+                recipient_user = self.request.user
+
             pd = self.payment_client.get_payee_details(serializer.validated_data["payee_id"])
-            if pd.type == PayeeType.WALLET.value and pd.payment_account_id == str(user.account.payment_account_id):
+            if serializer.validated_data["purpose"] == SchedulePurpose.pay \
+                    and pd.type == PayeeType.WALLET.value \
+                    and pd.payment_account_id == str(user.account.payment_account_id):
                 raise ValidationError({
                     "payee_id": "Current user's payee cannot be used for creation 'pay funds' schedule"
                 })
 
             schedule = serializer.save(
-                user=user,
+                status=status,
+                origin_user=origin_user,
+                recipient_user=recipient_user,
                 payee_recipient_name=pd.recipient_name,
                 payee_recipient_email=pd.recipient_email,
                 payee_iban=pd.iban,
@@ -116,7 +133,7 @@ class ScheduleViewSet(views.ModelViewSet):
                     # initiate one-off deposit payment
                     make_payment.delay(
                         user_id=str(user.id),
-                        payment_account_id=str(schedule.payment_account_id),
+                        payment_account_id=str(schedule.origin_payment_account_id),
                         schedule_id=str(schedule.id),
                         currency=str(schedule.currency.value),
                         payment_amount=int(schedule.deposit_amount),  # NOTE: deposit amount here!
@@ -131,7 +148,7 @@ class ScheduleViewSet(views.ModelViewSet):
                     ))
                     make_payment.delay(
                         user_id=str(user.id),
-                        payment_account_id=str(schedule.payment_account_id),
+                        payment_account_id=str(schedule.origin_payment_account_id),
                         schedule_id=str(schedule.id),
                         currency=str(schedule.currency.value),
                         payment_amount=int(schedule.payment_amount),  # NOTE: regular amount
@@ -191,10 +208,40 @@ class ScheduleViewSet(views.ModelViewSet):
             schedule = Schedule.objects.get(id=schedule_id)
         except Exception as e:
             raise ValidationError("Unable to fetch schedule_id=%s " % schedule_id)
-        #TODO: do we need to check that schedule is indeed in 'overdue' status?
+        # TODO: do we need to check that schedule is indeed in 'overdue' status?
         schedule.move_to_status(ScheduleStatus.processing)
         logger.info("Submit make_overdue_payment(schedule_id=%s) task for processing" % schedule_id)
         make_overdue_payment.delay(
             schedule_id=schedule_id,
         )
         return Response(status=status_codes.HTTP_204_NO_CONTENT)
+
+    @transaction.atomic
+    def accept_schedule(self, request, *args, **kwargs):
+        schedule_id = kwargs.get('pk')
+        serializer = ScheduleAcceptanceSerializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            schedule = Schedule.objects.get(id=schedule_id)
+        except Exception:
+            raise NotFound(f'Schedule not found id={schedule_id}')
+
+        funding_source_id = serializer.validated_data.get("funding_source_id", None)
+        backup_funding_source_id = serializer.validated_data.get("backup_funding_source_id", None)
+        schedule.accept(funding_source_id, backup_funding_source_id)
+
+        return Response()
+
+    @transaction.atomic
+    def reject_schedule(self, request, *args, **kwargs):
+        schedule_id = kwargs.get('pk')
+
+        try:
+            schedule = Schedule.objects.get(id=schedule_id)
+        except Exception:
+            raise NotFound(f'Schedule not found {schedule_id}')
+
+        schedule.reject()
+
+        return Response()

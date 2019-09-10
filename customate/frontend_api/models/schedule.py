@@ -6,8 +6,10 @@ from dataclasses import dataclass
 from django.core.validators import RegexValidator
 from enumfields import EnumField
 from django.db import models
-from django.db.models import Sum
+from django.db.models import Sum, Q
 from django.utils.translation import gettext_lazy as _
+from rest_framework.exceptions import ValidationError
+
 from core.models import Model, User
 from core.fields import Currency, PaymentStatusType, FundingSourceType, PayeeType
 from frontend_api.fields import SchedulePurpose, SchedulePeriod, ScheduleStatus, SchedulePaymentType
@@ -22,10 +24,18 @@ class AbstractSchedule(Model):
 
     name = models.CharField(_('schedule name'), max_length=150)
     status = EnumField(ScheduleStatus)
-    user = models.ForeignKey(
+    origin_user = models.ForeignKey(
         User,
-        on_delete=models.CASCADE,
-        blank=False
+        on_delete=models.DO_NOTHING,
+        blank=False,
+        related_name='%(class)s_payed_by_me'
+    )  # type: User
+    recipient_user = models.ForeignKey(
+        User,
+        on_delete=models.DO_NOTHING,
+        blank=True,
+        null=True,
+        related_name='%(class)s_payed_to_me'
     )  # type: User
     purpose = EnumField(SchedulePurpose)
     currency = EnumField(Currency)
@@ -35,7 +45,7 @@ class AbstractSchedule(Model):
     payee_recipient_email = models.CharField(max_length=254, default='')
     payee_iban = models.CharField(max_length=50, default='')
     payee_type = EnumField(PayeeType, max_length=50)
-    funding_source_id = models.UUIDField()
+    funding_source_id = models.UUIDField(default=None, blank=True, null=True)
     backup_funding_source_id = models.UUIDField(default=None, blank=True, null=True)
     period = EnumField(SchedulePeriod)
     number_of_payments = models.PositiveIntegerField(
@@ -149,8 +159,12 @@ class Schedule(AbstractSchedule):
         return str(SchedulePaymentType.external.value)
 
     @property
-    def payment_account_id(self):
-        return self.user.account.payment_account_id
+    def origin_payment_account_id(self):
+        return self.origin_user.account.payment_account_id
+
+    @property
+    def recipient_payment_account_id(self):
+        return self.recipient_user.account.payment_account_id
 
     def move_to_status(self, status: ScheduleStatus):
         old_status = self.status
@@ -236,6 +250,24 @@ class Schedule(AbstractSchedule):
 
         return self.status
 
+    def accept(self, funding_source_id, backup_funding_source_id):
+        # accept schedules in 'PENDING' status only
+        if self.status != ScheduleStatus.pending:
+            raise ValidationError(f'Cannot accept schedule with current status (status={self.status})')
+
+        self.move_to_status(ScheduleStatus.open)
+
+        self.funding_source_id = funding_source_id
+        self.backup_funding_source_id = backup_funding_source_id
+        self.save(update_fields=["funding_source_id", "backup_funding_source_id"])
+
+    def reject(self):
+        # reject schedules in 'PENDING' status only
+        if self.status != ScheduleStatus.pending:
+            raise ValidationError(f'Cannot reject schedule with current status (status={self.status})')
+
+        self.move_to_status(ScheduleStatus.rejected)
+
     @staticmethod
     def has_active_schedules_with_source(funding_source_id):
         return Schedule.objects.filter(
@@ -249,6 +281,12 @@ class Schedule(AbstractSchedule):
             payee_id=payee_id,
             status__in=Schedule.ACTIVE_SCHEDULE_STATUSES
         ).exists()
+
+    @staticmethod
+    def close_user_schedules(user_id):
+        logger.info(f"Closing user's(id={user_id}) schedules")
+        Schedule.objects.filter(Q(recipient_user__id=user_id) | Q(origin_user__id=user_id)) \
+            .update(status=ScheduleStatus.closed)
 
 
 class OnetimeSchedule(AbstractSchedule):

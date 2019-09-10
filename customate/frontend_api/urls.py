@@ -142,6 +142,14 @@ urlpatterns = [
     re_path(r'^schedules/(?P<pk>[^/.]+)/pay_overdue/$',
             views.ScheduleViewSet.as_view({'post': 'pay_overdue'}),
             name='schedule-pay-overdue'),
+
+    re_path(r'^schedules/(?P<pk>[^/.]+)/acceptance/$',
+            views.ScheduleViewSet.as_view({'patch': 'accept_schedule'}),
+            name='schedule-accept'),
+
+    re_path(r'^schedules/(?P<pk>[^/.]+)/rejection/$',
+            views.ScheduleViewSet.as_view({'patch': 'reject_schedule'}),
+            name='schedule-reject'),
 ]
 
 

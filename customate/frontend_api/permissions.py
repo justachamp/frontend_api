@@ -114,17 +114,17 @@ class HasParticularDocumentPermission(permissions.BasePermission):
             logger.error("The 'schedule' parameter has not been passed %r" % traceback.format_exc())
             raise ValidationError("The 'schedule' field is requred.")
         schedule = get_object_or_404(Schedule, id=schedule_id)
-        recipient = get_object_or_404(get_user_model(), email=schedule.payee_recipient_email)
+        recipient = schedule.recipient_user
         user = request.user 
         # Check if user from request is recipient or sender
         if user.role == UserRole.owner:
-            return any([recipient == user, schedule.user == user])
+            return any([recipient == user, schedule.origin_user == user])
         # Check if subuser from request is subuser of recipient or sender
         if user.role == UserRole.sub_user:
             return getattr(user.account.permission, "manage_schedules") and \
                         any([recipient == user.account.owner_account.user,
-                             schedule.user == user.account.owner_account.user,
-                             schedule.user == user])
+                             schedule.origin_user == user.account.owner_account.user,
+                             schedule.origin_user == user])
         return False
 
     def has_get_permission(self, request) -> bool:
@@ -137,17 +137,17 @@ class HasParticularDocumentPermission(permissions.BasePermission):
             raise ValidationError("The 'document' field is requred.")
         document = get_object_or_404(Document, id=document_id)
         schedule = document.schedule 
-        recipient = get_object_or_404(get_user_model(), email=schedule.payee_recipient_email)
+        recipient = schedule.recipient_user
         user = request.user 
         # Check if user from request is recipient or sender
         if user.role == UserRole.owner:
-            return any([recipient == user, schedule.user == user])
+            return any([recipient == user, schedule.origin_user == user])
         # Check if subuser from request is subuser of recipient or sender
         if user.role == UserRole.sub_user:
             return getattr(user.account.permission, "manage_schedules") and \
                         any([recipient == user.account.owner_account.user,
-                             schedule.user == user.account.owner_account.user,
-                             schedule.user == user])
+                             schedule.origin_user == user.account.owner_account.user,
+                             schedule.origin_user == user])
 
     def has_delete_permission(self, request) -> bool:
         """
@@ -159,9 +159,9 @@ class HasParticularDocumentPermission(permissions.BasePermission):
             raise ValidationError("The 'document' field is requred.")
         document = get_object_or_404(Document, id=document_id)
         user = request.user 
-        schedule_creator_account = document.schedule.user.account.owner_account if \
-                                    hasattr(document.schedule.user.account, "owner_account") else \
-                                     document.schedule.user.account  
+        schedule_creator_account = document.schedule.origin_user.account.owner_account if \
+                                    hasattr(document.schedule.origin_user.account, "owner_account") else \
+                                     document.schedule.origin_user.account
         # If document has created by subuser and owner wants to remove it.
         if all([ document.user.role == UserRole.sub_user,   
                  user.role == UserRole.owner ]):    

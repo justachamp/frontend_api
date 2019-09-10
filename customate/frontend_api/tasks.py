@@ -99,9 +99,9 @@ def on_payment_change(payment_info: Dict):
         return
 
     try:
-        _ = User.objects.get(id=schedule.user_id)
+        _ = User.objects.get(id=schedule.origin_user_id)
     except ObjectDoesNotExist:
-        logger.error("Given user(id=%s) no longer exists, exiting" % schedule.user_id)
+        logger.error("Given user(id=%s) no longer exists, exiting" % schedule.origin_user_id)
         return
 
     try:
@@ -144,8 +144,8 @@ def on_payment_change(payment_info: Dict):
             payment_id, payment_status, schedule.backup_funding_source_id, funding_source_id
         ))
         make_payment.delay(
-            user_id=str(schedule.user_id),
-            payment_account_id=str(schedule.payment_account_id),
+            user_id=str(schedule.origin_user_id),
+            payment_account_id=str(schedule.origin_payment_account_id),
             schedule_id=str(schedule.id),
             currency=str(schedule.currency.value),
             payment_amount=amount,  # NOTE: use the same amount of original payment!
@@ -192,8 +192,8 @@ def make_overdue_payment(schedule_id: str):
             op.id, op.payment_id, op.parent_payment_id
         ))
         make_payment.delay(
-            user_id=str(schedule.user_id),
-            payment_account_id=str(schedule.payment_account_id),
+            user_id=str(schedule.origin_user_id),
+            payment_account_id=str(schedule.origin_payment_account_id),
             schedule_id=str(schedule_id),
             currency=str(schedule.currency.value),
             payment_amount=int(op.original_amount),  # NOTE: use original amount saved at the time of initial payment!
@@ -220,15 +220,15 @@ def process_all_deposit_payments(scheduled_date):
     for p in paginator.page_range:
         for s in paginator.page(p):
             s = s  # type: DepositsSchedule
-            logger.info("Submit deposit payment, schedule_id=%s, user_id=%s, "
-                        "payment_account_id=%s, deposit_payment_amount=%s, period=%s" % (
-                            s.id, s.user_id, s.payment_account_id, s.deposit_amount, s.period
+            logger.info("Submit deposit payment, schedule_id=%s, origin_user_id=%s, "
+                        "origin_payment_account_id=%s, deposit_payment_amount=%s, period=%s" % (
+                            s.id, s.origin_user_id, s.origin_payment_account_id, s.deposit_amount, s.period
                         ))
 
             # submit task for asynchronous processing to queue
             make_payment.delay(
-                user_id=str(s.user_id),
-                payment_account_id=str(s.payment_account_id),
+                user_id=str(s.origin_user_id),
+                payment_account_id=str(s.origin_payment_account_id),
                 schedule_id=str(s.id),
                 currency=str(s.currency.value),
                 payment_amount=int(s.deposit_amount),
@@ -244,15 +244,15 @@ def submit_scheduled_payment(s: Schedule):
     :param s:
     :return:
     """
-    logger.debug("Submit regular payment. schedule_id=%s, user_id=%s, payment_account_id=%s, "
-                 "payment_amount=%s, deposit_payment_amount=%s, period=%s" % (
-                     s.id, s.user_id, s.payment_account_id, s.payment_amount, s.deposit_amount, s.period
+    logger.debug("Submit regular payment. schedule_id=%s, origin_user_id=%s, payment_account_id=%s, "
+                 "origin_payment_amount=%s, deposit_payment_amount=%s, period=%s" % (
+                     s.id, s.origin_user_id, s.origin_payment_account_id, s.payment_amount, s.deposit_amount, s.period
                  ))
 
     # submit task for asynchronous processing to queue
     make_payment.delay(
-        user_id=str(s.user_id),
-        payment_account_id=str(s.payment_account_id),
+        user_id=str(s.origin_user_id),
+        payment_account_id=str(s.origin_payment_account_id),
         schedule_id=str(s.id),
         currency=str(s.currency.value),
         payment_amount=int(s.payment_amount),

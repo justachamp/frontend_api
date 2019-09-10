@@ -129,3 +129,11 @@ class User(AbstractUser, Model):
 
     def get_username(self):
         return self.email
+
+    def get_all_related_account_ids(self):
+        account = self.account
+        owner_account = account.owner_account if self.is_subuser else account
+
+        return [owner_account.id] + list(
+            owner_account.sub_user_accounts.all().values_list('id', flat=True)
+        )

@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 from rest_framework_json_api.serializers import ModelSerializer
-from rest_framework import serializers
-from django.contrib.auth import get_user_model
 
-from frontend_api.models import Document, Schedule
 
+from frontend_api.fields import SchedulePurpose
+from frontend_api.models import Document
 from core.fields import UserRole
 
 
@@ -22,9 +21,14 @@ class DocumentSerializer(ModelSerializer):
         Detects if user from request has permissions for removing document
         """
         user = self.context["request"].user
-        schedule_creator_account = instance.schedule.user.account.owner_account if \
-            hasattr(instance.schedule.user.account, "owner_account") else \
-            instance.schedule.user.account
+
+        schedule_creator_user = instance.schedule.origin_user if \
+            instance.schedule.purpose == SchedulePurpose.pay else \
+            instance.schedule.recipient_user
+        schedule_creator_account = schedule_creator_user.account.owner_account if \
+            hasattr(schedule_creator_user.account, "owner_account") else \
+            schedule_creator_user.account
+
         # If document has created by subuser and owner wants to remove it.
         if all([instance.user.role == UserRole.sub_user,
                 user.role == UserRole.owner]):

@@ -115,7 +115,7 @@ class UserViewSet(PatchRelatedMixin, views.ModelViewSet):
         except Exception as e:
             raise NotFound(f'Account not found {user_id}')
 
-        serializer.check_status(user)
+        serializer.update_status(user)
         return Response(serializer.data)
 
     def get_serializer_class(self):
