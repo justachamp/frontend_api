@@ -41,6 +41,7 @@ class PaymentAccountViewSet(ResourceViewSet):
     class Meta:
         external_resource_name = 'accounts'
         filters = [{'active__exact': 1}]
+        resource_suffix_name = None
 
     # ordering_fields = ('email',)
     #

@@ -1,6 +1,7 @@
 import logging
 
 from django.utils.functional import cached_property
+from rest_framework.exceptions import ValidationError
 from traceback import format_exc
 
 from customate import settings
@@ -52,6 +53,32 @@ class PaymentApiClient:
             payment_account_id = data.id
             user.account.payment_account_id = payment_account_id
             user.account.save()
+        return payment_account_id
+
+    def assign_payment_service_account(self, service_account_type):
+        user = self._user
+
+        if user and user.is_owner and not user.account.payment_account_id:
+            from payment_api.views import PaymentAccountViewSet
+            view = PaymentAccountViewSet()
+            view.Meta.resource_suffix_name = service_account_type
+
+            serializer = PaymentAccountSerializer(
+                data={
+                    'email': user.email,
+                    'full_name': user.get_full_name() or user.email,
+                    'original_account_id': user.account.id
+                },
+                context={'view': view}
+            )
+            serializer.is_valid(True)
+            data = serializer.save()
+            payment_account_id = data.id
+            user.account.payment_account_id = payment_account_id
+            user.account.save()
+        else:
+            raise ValidationError('Specified user is not account owner or already has related payment account')
+
         return payment_account_id
 
     def cancel_schedule_payments(self, schedule_id):
