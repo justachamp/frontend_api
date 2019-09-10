@@ -3,9 +3,10 @@ from django.db import transaction
 from core.fields import UserRole
 from enumfields import Enum
 
+from core.models import Address
 from frontend_api.core.client import PaymentApiClient
 from frontend_api.fields import AccountType
-from frontend_api.models import UserAccount
+from frontend_api.models import UserAccount, Company
 
 RESEND = 'RESEND'
 
@@ -27,6 +28,8 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('username', type=str, help='Indicates the username of user to be created'),
+        parser.add_argument('phone_number', type=str,
+                            help='Indicates the phone number of user to be created')
         parser.add_argument('account_type', type=str,
                             help='Indicates the service account\'s type ("fee", "tax" or "credit_card")')
 
@@ -41,8 +44,10 @@ class Command(BaseCommand):
 
     def get_user_data(self, data):
         username = data.get('username').lower()
+        phone_number = data.get('phone_number').lower()
         userdata = {
             'username': username,
+            'phone_number': phone_number,
             'email': username,
             'role': UserRole.owner.value,
             'first_name': data.get('first_name', ''),
@@ -65,6 +70,9 @@ class Command(BaseCommand):
 
         if not options.get('username'):
             raise CommandError('username argument does not exist')
+
+        if not options.get('phone_number'):
+            raise CommandError('phone_number argument does not exist')
 
         if not options.get('account_type'):
             raise CommandError('account_type argument does not exist')
@@ -91,9 +99,19 @@ class Command(BaseCommand):
                         user.cognito_id = invitation.id
                         user.role = UserRole[data.get('role')]
                         user.email_verified = True
+                        user_address = Address()
+                        user_address.save()
+
+                        user.address = user_address
                         user.save()
 
-                        account = UserAccount(user=user, account_type=AccountType.business)
+                        company_address = Address()
+                        company_address.save()
+                        company = Company()
+                        company.address = company_address
+                        company.save()
+
+                        account = UserAccount(user=user, account_type=AccountType.business, company=company)
                         account.save()
 
                         client = PaymentApiClient(user)
