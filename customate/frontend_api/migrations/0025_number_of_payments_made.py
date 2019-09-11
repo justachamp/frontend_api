@@ -9,8 +9,9 @@ def update_number_of_payments_made(apps, schema_editor):
     Update newly added field with defaults from corresponding schedule
     :return:
     """
-    for sh in Schedule.objects.all():  # type: Schedule
-        sh.refresh_number_of_payments_made()
+    if Schedule.objects.count() > 0:
+        for sh in Schedule.objects.all():  # type: Schedule
+            sh.refresh_number_of_payments_made()
 
 
 class Migration(migrations.Migration):
