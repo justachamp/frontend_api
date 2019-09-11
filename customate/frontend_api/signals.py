@@ -24,13 +24,13 @@ def transaction_failed(sender, instance, **kwargs) -> None:
         # Send email notification
         email_notificator = EmailNotifier(funds_sender_email=schedule.origin_user.email,
                                           payment_id=instance.payment_id,
-                                          amount=instance.amount,
+                                          amount=instance.original_amount,
                                           action=action)
         email_notificator.send_message()
         # Send sms notification
         sms_notification = SMSNotifier(funds_sender_phone=schedule.origin_user.phone_number,
                                        payment_id=instance.payment_id,
-                                       amount=instance.amount,
+                                       amount=instance.original_amount,
                                        action=action)
         sms_notification.send_message()
 
@@ -51,12 +51,12 @@ def balance_changed(sender, instance, **kwargs) -> None:
         # Send email notification
         email_notificator = EmailNotifier(funds_sender_email=schedule.recipient_user.email,
                                           funds_recipient_email=schedule.origin_user.email,
-                                          amount=instance.amount,
+                                          amount=instance.original_amount,
                                           action=action)
         email_notificator.send_message()
         # Send sms notification
         sms_notification = SMSNotifier(funds_sender_phone=schedule.origin_user.phone_number,
                                        funds_recipient_phone=schedule.recipient_user.phone_number,
-                                       amount=instance.amount,
+                                       amount=instance.original_amount,
                                        action=action)
         sms_notification.send_message()
