@@ -201,7 +201,7 @@ class ProfileValidationService:
             id_doc = IdentityCard(number=account.country_fields.get("tax_code"), country=country)
         elif country == Country.DK:  # Denmark
             id_doc = IdentityCard(number=account.country_fields.get("id_card_number"), country=country)
-        elif country == Country.SP:  # Spain
+        elif country == Country.ES:  # Spain
             id_doc = SpainIdentityDocument(tax_id_number=account.country_fields.get("tax_id"))
 
         return id_doc
@@ -266,7 +266,7 @@ class ProfileValidationService:
             account.save()
 
         except TransportError:
-            logger.error("GBG verification (user=%s, address=%s) transport exception: %r" % (user, address, format_exc()))
+            logger.error("GBG verification error (user=%s, address=%s) transport exception: %r" % (user, address, format_exc()))
             raise GBGVerificationError({"account": "KYC request is unsuccessful. Please, contact the support team."})
         except Exception as e:
-            logger.error("GBG verification (user=%s, address=%s) exception: %r" % (user, address, format_exc()))
+            logger.error("GBG verification error (user=%s, address=%s) exception: %r" % (user, address, format_exc()))
