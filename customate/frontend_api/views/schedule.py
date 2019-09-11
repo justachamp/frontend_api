@@ -125,7 +125,8 @@ class ScheduleViewSet(views.ModelViewSet):
             current_date = arrow.utcnow().datetime.date()
 
             if arrow.utcnow() > scheduler_start_time:
-                # service already started payment processing and missed first payment date which is now
+                # background celerybeatd service has already started payment processing
+                # and missed first payment date which is now, therefore we initiate payments here
                 if schedule.deposit_payment_date == current_date:
                     logger.info("Submitting deposit payment for schedule_id=%s, deposit_payment_date=%s" % (
                         schedule.id, schedule.deposit_payment_date

@@ -9,7 +9,7 @@ class Migration(migrations.Migration):
         ('core', '0008_auto_20190620_1840'),
     ]
     operations = [
-        migrations.RunSQL("DROP TABLE public.guardian_groupobjectpermission"),
-        migrations.RunSQL("DROP TABLE public.guardian_userobjectpermission")
+        migrations.RunSQL("DROP TABLE IF EXISTS public.guardian_groupobjectpermission"),
+        migrations.RunSQL("DROP TABLE IF EXISTS public.guardian_userobjectpermission")
 
     ]

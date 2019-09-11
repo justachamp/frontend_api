@@ -12,6 +12,7 @@ from django.conf import settings
 from core.models import User
 from core.fields import Currency, PaymentStatusType
 from frontend_api.models import Schedule
+from frontend_api.models.blacklist import BlacklistDate
 from frontend_api.models.schedule import OnetimeSchedule, DepositsSchedule, AbstractSchedule
 from frontend_api.models.schedule import WeeklySchedule, MonthlySchedule, QuarterlySchedule, YearlySchedule
 from frontend_api.models.schedule import SchedulePayments, LastSchedulePayments
@@ -23,6 +24,7 @@ from botocore.exceptions import ClientError, EndpointConnectionError
 
 logger = logging.getLogger(__name__)
 PER_PAGE = 5
+BLACKLISTED_DAYS_MAX_RETRY_COUNT = 10  # max number of retries to find next non-blacklisted day
 
 
 # NOTE: make sure we use only primitive types in @shared_task signatures, otherwise there will be a need to write our own
@@ -361,19 +363,43 @@ def initiate_daily_payments():
     """
 
     # get current date
-    now = arrow.utcnow().datetime
+    now = arrow.utcnow()
 
-    # TODO: skip weekends and custom blacklisted dates from DB
-    # TODO: implement Future-date lookups to check wether we should process them right now,
-    # because they are blacklisted and/or weekends
+    if BlacklistDate.contains(now):
+        logger.info("Skipping scheduler execution because '%s' is a special day" % now)
+        return
 
+    retry_count = 1
+    scheduled_date = now
+
+    while True:
+        if retry_count > BLACKLISTED_DAYS_MAX_RETRY_COUNT:
+            logger.info("We reached maximum verified dates count during processing. Stopping dates verification "
+                        "and payment processing.")
+            break
+
+        # During first iteration we will process schedules for today
+        process_all_payments_for_date(scheduled_date.datetime)
+
+        # Taking next day as scheduled date that should be verified and processed if necessary
+        scheduled_date = scheduled_date.shift(days=1)
+        # Check if specified date is not blacklisted, i.e. NOT weekend and/or special day
+        if not BlacklistDate.contains(scheduled_date):
+            # No need to continue because scheduler will be executed on "scheduled_date"
+            # and will process all schedules in "normal" way
+            break
+
+        retry_count += 1
+
+
+def process_all_payments_for_date(date):
     # process deposit payments first
-    process_all_deposit_payments(now)
-    process_all_one_time_payments(now)
-    process_all_weekly_payments(now)
-    process_all_monthly_payments(now)
-    process_all_quarterly_payments(now)
-    process_all_yearly_payments(now)
+    process_all_deposit_payments(date)
+    process_all_one_time_payments(date)
+    process_all_weekly_payments(date)
+    process_all_monthly_payments(date)
+    process_all_quarterly_payments(date)
+    process_all_yearly_payments(date)
 
 
 @shared_task

@@ -97,6 +97,12 @@ Make sure that every migration was successfull by running:
 $ ./manage.py showmigrations
 ```
 
+### Run tests
+*Note:* we are using "ltree" extension for some functionality, this extension is created in migration, but
+without [SUPERUSER privilege](https://stackoverflow.com/questions/16527806/cannot-create-extension-without-superuser-role) database user will not be able to create any extension, that's why you should grant this privilege before first test run. After that you can remove an extra permission from user.
+```
+./manage.py test --keepdb
+```
 
 ### Run Django web server
 

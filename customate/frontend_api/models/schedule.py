@@ -123,7 +123,6 @@ class Schedule(AbstractSchedule):
     @property
     def next_payment_date(self):
         """
-        TODO: Calculate next payment date, according to weekends and custom holidays in separate table (TBD)
         TODO2: Take into account last_payment_date (instead of start_date)
         :return:
         :rtype: datetime.date|None
@@ -302,6 +301,10 @@ class OnetimeSchedule(AbstractSchedule):
             super().__str__(), self.scheduled_date, self.payment_account_id
         )
 
+    @property
+    def origin_payment_account_id(self):
+        return self.payment_account_id
+
 
 class WeeklySchedule(AbstractSchedule):
     scheduled_date = models.DateField()  # specific date on which the payment should be initiated
@@ -315,6 +318,10 @@ class WeeklySchedule(AbstractSchedule):
         return "[%s, scheduled_date=%s, payment_account_id=%s]" % (
             super().__str__(), self.scheduled_date, self.payment_account_id
         )
+
+    @property
+    def origin_payment_account_id(self):
+        return self.payment_account_id
 
 
 class MonthlySchedule(AbstractSchedule):
@@ -330,6 +337,10 @@ class MonthlySchedule(AbstractSchedule):
             super().__str__(), self.scheduled_date, self.payment_account_id
         )
 
+    @property
+    def origin_payment_account_id(self):
+        return self.payment_account_id
+
 
 class QuarterlySchedule(AbstractSchedule):
     scheduled_date = models.DateField()  # specific date on which the payment should be initiated
@@ -344,6 +355,10 @@ class QuarterlySchedule(AbstractSchedule):
             super().__str__(), self.scheduled_date, self.payment_account_id
         )
 
+    @property
+    def origin_payment_account_id(self):
+        return self.payment_account_id
+
 
 class YearlySchedule(AbstractSchedule):
     scheduled_date = models.DateField()  # specific date on which the payment should be initiated
@@ -357,6 +372,10 @@ class YearlySchedule(AbstractSchedule):
         return "[%s, scheduled_date=%s, payment_account_id=%s]" % (
             super().__str__(), self.scheduled_date, self.payment_account_id
         )
+
+    @property
+    def origin_payment_account_id(self):
+        return self.payment_account_id
 
 
 class DepositsSchedule(AbstractSchedule):
@@ -374,6 +393,10 @@ class DepositsSchedule(AbstractSchedule):
         return "[%s, scheduled_date=%s, payment_account_id=%s]" % (
             super().__str__(), self.scheduled_date, self.payment_account_id
         )
+
+    @property
+    def origin_payment_account_id(self):
+        return self.payment_account_id
 
 
 class AbstractSchedulePayments(Model):
