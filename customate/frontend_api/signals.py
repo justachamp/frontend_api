@@ -57,6 +57,6 @@ def balance_changed(sender, instance, **kwargs) -> None:
         # Send sms notification
         sms_notification = SMSNotifier(funds_sender_phone=schedule.origin_user.phone_number.as_e164,
                                        funds_recipient_phone=schedule.recipient_user.phone_number.as_e164,
-                                       amount=instance.amount,
+                                       amount=instance.original_amount,
                                        action=action)
         sms_notification.send_message()
