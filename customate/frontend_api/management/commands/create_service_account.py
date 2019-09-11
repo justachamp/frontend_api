@@ -99,6 +99,7 @@ class Command(BaseCommand):
                         user.cognito_id = invitation.id
                         user.role = UserRole[data.get('role')]
                         user.email_verified = True
+                        user.phone_number_verified = True
                         user_address = Address()
                         user_address.save()
 
