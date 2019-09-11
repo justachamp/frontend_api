@@ -188,11 +188,11 @@ class SMSNotifier:
         # Send sms to funds sender
         senders_data = {"PhoneNumber": self.funds_sender_phone,
                         "Message": self.balance_changed_message_for_sender}
-        send_notification_sms.delay(senders_data)
+        send_notification_sms.delay(kwargs=senders_data)
         # Send sms to funds recipient
         recipients_data = {"PhoneNumber": self.funds_recipient_phone,
                            "Message": self.balance_changed_message_for_recipient}
-        send_notification_sms.delay(recipients_data)
+        send_notification_sms.delay(kwargs=recipients_data)
 
     def transaction_failed(self) -> None:
         """
@@ -201,7 +201,7 @@ class SMSNotifier:
         """
         senders_data = {"PhoneNumber": self.funds_sender_phone,
                         "Message": self.transaction_failed_message_for_sender}
-        send_notification_sms.delay(senders_data)
+        send_notification_sms.delay(kwargs=senders_data)
 
     def send_message(self) -> None:
         getattr(self, self.action)()
