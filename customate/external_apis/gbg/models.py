@@ -121,22 +121,22 @@ class Address(GBGData):
         GBG serialization
         :return:
         """
-        full_address = "{}, {}, {}, {}".format(
-            self.address_line_1,
-            self.address_line_2,
-            self.city,
-            self.locality
-        )
+        # full_address = "{}, {}, {}, {}".format(
+        #     self.address_line_1,
+        #     self.address_line_2,
+        #     self.city,
+        #     self.locality
+        # )
 
         res = {
             "Country": Address.get_full_country_name(self.country),
             "Street": "",
             "SubStreet": "",
-            "City": "",  # self.city,
+            "City": self.city,
             "SubCity": "",
-            "StateDistrict": "",  # self.locality,
+            "StateDistrict": "",
             "POBox": "",
-            "Region": "",  # self.locality,
+            "Region": self.locality,
             "Principality": "",
             "ZipPostcode": self.post_code,
             "DpsZipPlus": "",
@@ -146,9 +146,9 @@ class Address(GBGData):
             "Building": "",
             "SubBuilding": "",
             "Premise": "",
-            "AddressLine1": full_address,  # self.address_line_1,
-            "AddressLine2": "",  # self.address_line_2,
-            "AddressLine3": "",  # self.address_line_3,
+            "AddressLine1": self.address_line_1,
+            "AddressLine2": self.address_line_2,
+            "AddressLine3": self.address_line_3,
             "AddressLine4": "",
             "AddressLine5": "",
             "AddressLine6": "",
