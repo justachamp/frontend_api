@@ -121,7 +121,7 @@ class ScheduleViewSet(views.ModelViewSet):
                 full_date=arrow.utcnow().format("YYYY-MM-DD"),
                 hour=SCHEDULES_START_PROCESSING_TIME_HOUR,
                 minute=SCHEDULES_START_PROCESSING_TIME_MINUTE
-            ), ['YYYY-MM-DDTH:mm:ss'])
+            ), ['YYYY-MM-DDTH:mm:ss', 'YYYY-MM-DDTH:m:ss', 'YYYY-MM-DDTHH:m:ss'])
             current_date = arrow.utcnow().datetime.date()
 
             if arrow.utcnow() > scheduler_start_time:
