@@ -168,7 +168,7 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
                 raise ValidationError({"payment_amount": "Payment amount should be positive number"})
 
             if int(res["fee_amount"]) < 0:
-                raise ValidationError({"payment_amount": "Fee amount should be positive number"})
+                raise ValidationError({"fee_amount": "Fee amount should be positive number"})
 
             if res.get("purpose") == SchedulePurpose.pay:
                 # Verify first funding source
@@ -194,9 +194,29 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
 class ScheduleAcceptanceSerializer(HyperlinkedModelSerializer):
     funding_source_id = UUIDField(required=False)
     backup_funding_source_id = UUIDField(required=False)
+    fee_amount = IntegerField(default=0, required=False)
 
     class Meta:
         model = Schedule
         fields = (
-            'funding_source_id', 'backup_funding_source_id'
+            'funding_source_id', 'backup_funding_source_id', 'fee_amount'
         )
+
+    def validate(self, res: OrderedDict):
+        """
+        Apply custom validation on whole resource.
+        See more at: https://www.django-rest-framework.org/api-guide/serializers/#validation
+        :param res: Incoming data
+        :type res: OrderedDict
+        :return: validated res
+        :rtype: OrderedDict
+        """
+        logger.info("VALIDATE, res=%r" % res)
+
+        try:
+            if res.get("fee_amount") and int(res["fee_amount"]) < 0:
+                raise ValidationError({"fee_amount": "Fee amount should be positive number"})
+
+        except (ValueError, TypeError):
+            logger.error("Validation failed due to: %r" % format_exc())
+            raise ValidationError("Schedule validation failed")
