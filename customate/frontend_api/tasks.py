@@ -365,7 +365,7 @@ def initiate_daily_payments():
     # get current date
     now = arrow.utcnow()
 
-    if BlacklistDate.contains(now):
+    if BlacklistDate.contains(now.datetime.date()):
         logger.info("Skipping scheduler execution because '%s' is a special day" % now)
         return
 
