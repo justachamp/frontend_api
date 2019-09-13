@@ -3,7 +3,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 from core.fields import PaymentStatusType
-from frontend_api.models.schedule import SchedulePayments
+from frontend_api.models.schedule import SchedulePayments, Schedule
 
 from frontend_api.utils.notifiers import EmailNotifier, SMSNotifier
 

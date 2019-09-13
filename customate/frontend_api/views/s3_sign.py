@@ -19,7 +19,9 @@ from frontend_api.exceptions import ServiceUnavailable
 from frontend_api.permissions import (
     HasParticularDocumentPermission,
     IsActive,
-    SubUserManageSchedulesPermission)
+    IsOwnerOrReadOnly,
+    SubUserManageSchedulesPermission,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +33,10 @@ class PreSignedUrlView(APIView):
     permission_classes = (
         IsAuthenticated,
         IsActive,
-        HasParticularDocumentPermission)
+        IsOwnerOrReadOnly |
+        SubUserManageSchedulesPermission,
+        HasParticularDocumentPermission
+    )
 
     def __init__(self, *args, **kwargs):
         self.s3_client = boto3.client('s3', aws_access_key_id=settings.AWS_ACCESS_KEY,
@@ -64,17 +69,15 @@ class PreSignedUrlView(APIView):
         The method returns presigned url for further posting object to S3
         """
         schedule_id = request.query_params.get("schedule")
-        if not schedule_id:
-            logger.error("The 'schedule' parameter has not been passed %r" % traceback.format_exc())
-            raise ValidationError("The 'schedule' field is requred.")
-        schedule = get_object_or_404(Schedule, id=schedule_id)
-
-        # Create a new document.
-        # Need to validate filename and maximum documents limit 
         filename = request.query_params.get("filename")
-        document = Document.objects.create(schedule=schedule,
-                                           filename=filename,
-                                           user=request.user)
+        slug = request.query_params.get("slug")
+        schedule = get_object_or_404(Schedule, id=schedule_id) if schedule_id else None
+        kwargs = {"filename": filename, "slug": slug, "user": request.user}
+        if schedule:
+            kwargs.update({"schedule": schedule})
+        # Create a new document.
+        # Need to validate filename and maximum documents limit
+        document = Document.objects.create(**kwargs)
         # Request to aws
         try:
             response = self.s3_client.generate_presigned_post(
@@ -85,6 +88,7 @@ class PreSignedUrlView(APIView):
             logger.error("AWS S3 service is unavailable %r" % traceback.format_exc())
             raise ServiceUnavailable
         serializer = DocumentSerializer(document, context={"request": request})
+        response.update({"filename": serializer.data["filename"]})
         return {**serializer.data, "attributes": response}
 
     def delete_s3_object(self, request):

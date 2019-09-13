@@ -16,6 +16,7 @@ from frontend_api.models.blacklist import BlacklistDate
 from frontend_api.models.schedule import OnetimeSchedule, DepositsSchedule, AbstractSchedule
 from frontend_api.models.schedule import WeeklySchedule, MonthlySchedule, QuarterlySchedule, YearlySchedule
 from frontend_api.models.schedule import SchedulePayments, LastSchedulePayments
+from frontend_api.models.document import Document
 from frontend_api.core.client import PaymentApiClient, PaymentDetails
 from frontend_api.fields import SchedulePurpose, ScheduleStatus
 
@@ -433,3 +434,4 @@ def send_notification_sms(kwargs):
         sms_client.publish(**kwargs)
     except:
         logger.error("Unable to send message via boto3 with outcoming data: \n%s. %r" % (kwargs, format_exc()))
+

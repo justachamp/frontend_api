@@ -102,7 +102,7 @@ class ScheduleViewSet(views.ModelViewSet):
                 raise ValidationError({
                     "payee_id": "Current user's payee cannot be used for creation 'pay funds' schedule"
                 })
-
+            documents = serializer.validated_data.pop("documents", [])
             schedule = serializer.save(
                 status=status,
                 origin_user=origin_user,
@@ -113,8 +113,8 @@ class ScheduleViewSet(views.ModelViewSet):
                 payee_title=pd.title,
                 payee_type=pd.type
             )
-
             logger.info("Successfully created new schedule_id=%r" % schedule.id)
+            serializer.assign_uploaded_documents_to_schedule(documents)
 
             # Immediately create first payments
             scheduler_start_time = arrow.get("{full_date}T{hour}:{minute}:00".format(

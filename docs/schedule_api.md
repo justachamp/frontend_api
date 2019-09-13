@@ -23,7 +23,11 @@ Create ongoing payments in time based on previously setup contracts/agreements.
 * _payee_id_, required. UUID, identifies who should receive the money
 * _funding_source_id_, required. UUID, identifies the source of money (see Funding Source API)
 * _backup_funding_source_id_, optional. UUID, identifies the secondary source of money in case payment with the first one fails (see Funding Source API)
-
+* _documents_, optional. Array of objects:
+    * _slug_, String. Slug of uploaded filename
+    * _filename_, String. Name of uploaded file
+    * _id_, UUID. Identifier taken from server side
+    * _delete_, Boolean. The value taken from server side.
 
 
 ## Create new schedule
@@ -46,6 +50,14 @@ User-Agent: HTTPie/1.0.2
             "additional_information": "lkjdglkdjflgkjdfgdfg",
             "counterpart": "internal",
             "currency": "GBP",
+            "documents": [
+                {
+                    "slug": "test-file.pdf",
+                    "filename": "test file.pdf",
+                    "id": "cbeed2c7-66d6-41e1-9cce-da343801a588",
+                    "delete": true
+                }
+            ],
             "funding_source_id": "5c490878-b2ad-4ab6-99dd-6d2726c5bc97",
             "name": "My test schedule3",
             "number_of_payments": "10",
@@ -88,6 +100,14 @@ X-Frame-Options: SAMEORIGIN
             "currency": "GBP",
             "deposit_amount": null,
             "deposit_payment_date": null,
+            "documents": [
+                    {
+                        "slug": "test-file.pdf",
+                        "filename": "test file.pdf",
+                        "id": "cbeed2c7-66d6-41e1-9cce-da343801a588",
+                        "delete": true
+                }
+            ],
             "fee_amount": 0,
             "funding_source_id": "5c490878-b2ad-4ab6-99dd-6d2726c5bc97",
             "name": "My test schedule3",
@@ -267,6 +287,14 @@ X-Frame-Options: SAMEORIGIN
                 "fee_amount": 0,
                 "deposit_amount": 4400,
                 "deposit_payment_date": null,
+                "documents": [
+                    {
+                        "slug": ".test",
+                        "filename": "test",
+                        "id": "cbeed2c7-66d6-41e1-9cce-da343801a588",
+                        "delete": true
+                    }
+                ],
                 "additional_information": null,
                 "payee_id": "bf95de5f-f042-48c8-94c0-4c7d72a58a9c",
                 "funding_source_id": "c6fb27cf-9a02-4f7b-b667-b485aa623715",
@@ -293,6 +321,14 @@ X-Frame-Options: SAMEORIGIN
                 "fee_amount": 0,
                 "deposit_amount": null,
                 "deposit_payment_date": null,
+                "documents": [
+                    {
+                        "slug": ".test",
+                        "filename": "test",
+                        "id": "cbeed2c7-66d6-41e1-9cce-da343801a588",
+                        "delete": true
+                    }
+                ],
                 "additional_information": "bla bla bla",
                 "payee_id": "bf95de5f-f042-48c8-94c0-4c7d72a58a9c",
                 "funding_source_id": "c6fb27cf-9a02-4f7b-b667-b485aa623715",

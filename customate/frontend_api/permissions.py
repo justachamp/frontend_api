@@ -5,7 +5,6 @@ from typing import Callable
 import logging
 import traceback
 
-
 from rest_framework import permissions
 from django.shortcuts import get_object_or_404
 from django.contrib.auth import get_user_model
@@ -15,6 +14,7 @@ from authentication.cognito.serializers import CognitoAuthRetrieveSerializer
 from core.fields import UserRole, UserStatus
 
 from frontend_api.models import Schedule, Document
+from frontend_api.fields import ScheduleStatus
 
 logger = logging.getLogger(__name__)
 
@@ -46,12 +46,12 @@ class CheckFieldsCredentials(permissions.BasePermission):
 
         for field, skip_validate_credentials_func in view.credentials_required_fields.items():
             if self.check_field_in_request_data(request, field, data) \
-                    and (skip_validate_credentials_func is None or (callable(skip_validate_credentials_func) and not skip_validate_credentials_func(request))):
+                    and (skip_validate_credentials_func is None or (
+                    callable(skip_validate_credentials_func) and not skip_validate_credentials_func(request))):
                 return self.validate_credentials(request)
         request.data.pop("credentials", None)
 
         return True
-
 
     @staticmethod
     def validate_credentials(request):
@@ -94,6 +94,7 @@ class IsOwnerOrReadOnly(permissions.BasePermission):
     """
     Custom permission to only allow owners of an object to edit it.
     """
+
     def has_permission(self, request, view):
         if request.method in permissions.SAFE_METHODS:
             return True
@@ -110,21 +111,25 @@ class HasParticularDocumentPermission(permissions.BasePermission):
         Check permissions for posting document to particular schedule
         """
         schedule_id = request.query_params.get("schedule")
+        # The case where files handling happens on the 'create schedule' page.
         if not schedule_id:
-            logger.error("The 'schedule' parameter has not been passed %r" % traceback.format_exc())
-            raise ValidationError("The 'schedule' field is requred.")
+            return True
         schedule = get_object_or_404(Schedule, id=schedule_id)
         recipient = schedule.recipient_user
-        user = request.user 
+        user = request.user
+        # Check if schedule has status 'cancelled'
+        #    need to avoid documents handling for such schedules
+        if schedule.status == ScheduleStatus.cancelled:
+            return False
         # Check if user from request is recipient or sender
         if user.role == UserRole.owner:
             return any([recipient == user, schedule.origin_user == user])
         # Check if subuser from request is subuser of recipient or sender
         if user.role == UserRole.sub_user:
             return getattr(user.account.permission, "manage_schedules") and \
-                        any([recipient == user.account.owner_account.user,
-                             schedule.origin_user == user.account.owner_account.user,
-                             schedule.origin_user == user])
+                   any([recipient == user.account.owner_account.user,
+                        schedule.origin_user == user.account.owner_account.user,
+                        schedule.origin_user == user])
         return False
 
     def has_get_permission(self, request) -> bool:
@@ -136,18 +141,21 @@ class HasParticularDocumentPermission(permissions.BasePermission):
             logger.error("The 'document' parameter has not been passed %r" % traceback.format_exc())
             raise ValidationError("The 'document' field is requred.")
         document = get_object_or_404(Document, id=document_id)
-        schedule = document.schedule 
+        schedule = document.schedule
+        # The case where files handling happens on the 'create schedule' page.
+        if not schedule and document.user == request.user:
+            return True
         recipient = schedule.recipient_user
-        user = request.user 
+        user = request.user
         # Check if user from request is recipient or sender
         if user.role == UserRole.owner:
             return any([recipient == user, schedule.origin_user == user])
         # Check if subuser from request is subuser of recipient or sender
         if user.role == UserRole.sub_user:
             return getattr(user.account.permission, "manage_schedules") and \
-                        any([recipient == user.account.owner_account.user,
-                             schedule.origin_user == user.account.owner_account.user,
-                             schedule.origin_user == user])
+                   any([recipient == user.account.owner_account.user,
+                        schedule.origin_user == user.account.owner_account.user,
+                        schedule.origin_user == user])
 
     def has_delete_permission(self, request) -> bool:
         """
@@ -158,17 +166,25 @@ class HasParticularDocumentPermission(permissions.BasePermission):
             logger.error("The 'document' parameter has not been passed %r" % traceback.format_exc())
             raise ValidationError("The 'document' field is requred.")
         document = get_object_or_404(Document, id=document_id)
-        user = request.user 
+        if not document.schedule and document.user == request.user:
+            return True
+        user = request.user
+        # Check if schedule has status 'cancelled'
+        #    need to avoid documents handling for such schedules
+        schedule = document.schedule
+        if schedule:
+            if schedule.status == ScheduleStatus.cancelled:
+                return False
         schedule_creator_account = document.schedule.origin_user.account.owner_account if \
-                                    hasattr(document.schedule.origin_user.account, "owner_account") else \
-                                     document.schedule.origin_user.account
+            hasattr(document.schedule.origin_user.account, "owner_account") else \
+            document.schedule.origin_user.account
         # If document has created by subuser and owner wants to remove it.
-        if all([ document.user.role == UserRole.sub_user,   
-                 user.role == UserRole.owner ]):    
-                        # Check if schedule belongs to user from request
-            return all([schedule_creator_account == user.account,   
+        if all([document.user.role == UserRole.sub_user,
+                user.role == UserRole.owner]):
+            # Check if schedule belongs to user from request
+            return all([schedule_creator_account == user.account,
                         # And check if subuser is subuser of user from request
-                        user.account.sub_user_accounts.filter(user=document.user)])  
+                        user.account.sub_user_accounts.filter(user=document.user)])
         return user == document.user
 
     def has_permission(self, request, view) -> Callable:
@@ -191,6 +207,7 @@ class SubUserLoadFundsPermission(permissions.BasePermission):
     """
     Custom permission to only allow subusers of an object to edit it.
     """
+
     def has_permission(self, request, view):
         if request.user.role == UserRole.sub_user:
             return getattr(request.user.account.permission, "load_funds")
@@ -201,6 +218,7 @@ class SubUserManageFundingSourcesPermission(permissions.BasePermission):
     """
     Custom permission to only allow subusers of an object to edit it.
     """
+
     def has_permission(self, request, view):
         if request.user.role == UserRole.sub_user:
             return getattr(request.user.account.permission, "manage_funding_sources")
@@ -211,16 +229,18 @@ class SubUserManageSchedulesPermission(permissions.BasePermission):
     """
     Custom permission to only allow subusers of an object to edit it.
     """
+
     def has_permission(self, request, view):
-        if request.user.role == UserRole.sub_user:        
+        if request.user.role == UserRole.sub_user:
             return getattr(request.user.account.permission, "manage_schedules")
-        return False 
+        return False
 
 
 class SubUserManagePayeesPermission(permissions.BasePermission):
     """
     Custom permission to only allow subusers of an object to edit it.
     """
+
     def has_permission(self, request, view):
         if request.user.role == UserRole.sub_user:
             return getattr(request.user.account.permission, "manage_payees")
@@ -231,16 +251,18 @@ class IsSuperAdminOrReadOnly(permissions.BasePermission):
     """
     Custom permission to only allow super admins.
     """
+
     def has_permission(self, request, view):
         if request.method in permissions.SAFE_METHODS:
             return True
-        return request.user.is_superuser 
+        return request.user.is_superuser
 
 
 class IsRegularSubUserOrReadOnly(permissions.BasePermission):
     """
     Custom permission to only allow super admins.
     """
+
     def has_permission(self, request, view):
         if request.method in permissions.SAFE_METHODS:
             return True
@@ -251,16 +273,18 @@ class IsRegularAdminOrReadOnly(permissions.BasePermission):
     """
     Custom permission to only allow super admins.
     """
+
     def has_permission(self, request, view):
         if request.method in permissions.SAFE_METHODS:
             return True
-        return request.user.is_staff 
+        return request.user.is_staff
 
 
 class AdminUserTaxPermission(permissions.BasePermission):
     """
     Custom permission to only allow arbitrary admins.
     """
+
     def has_permission(self, request, view):
         if request.user.is_staff:
             return getattr(request.user.account.permission, "manage_tax")
@@ -270,6 +294,7 @@ class AdminUserFeePermission(permissions.BasePermission):
     """
     Custom permission to only allow arbitrary admins.
     """
+
     def has_permission(self, request, view):
         if request.user.is_staff:
             return getattr(request.user.account.permission, "manage_fee")
@@ -279,6 +304,7 @@ class IsActive(permissions.BasePermission):
     """
     Custom permission to restrict access for inactive users
     """
+
     def has_permission(self, request, view):
         if request.user.status in [UserStatus.inactive, UserStatus.banned, UserStatus.pending]:
             return False
@@ -289,6 +315,7 @@ class IsNotBlocked(permissions.BasePermission):
     """
     Custom permission to restrict access for blocked users
     """
+
     def has_permission(self, request, view):
         if request.method in permissions.SAFE_METHODS:
             return True
@@ -299,6 +326,7 @@ class IsBlockedUsersUpdateContactInfoRequest(permissions.BasePermission):
     """
     Custom permission to allow access for contact information's update for blocked user
     """
+
     def has_permission(self, request, view):
         if request.method in permissions.SAFE_METHODS:
             return True
@@ -316,6 +344,7 @@ class IsVerified(permissions.BasePermission):
     Custom permission to restrict access for unverified users
     Restricts outgoing transactions but allows GET OPTIONS HEAD methods
     """
+
     def has_permission(self, request, view):
         if request.method in permissions.SAFE_METHODS:
             return True
@@ -327,9 +356,9 @@ class IsAccountVerified(permissions.BasePermission):
     Custom permission to restrict access for users with unverified account or owner's account
     Restricts outgoing transactions but allows GET OPTIONS HEAD methods
     """
+
     def has_permission(self, request, view):
         if request.method in permissions.SAFE_METHODS:
             return True
         return request.user.account.is_verified \
                and (not request.user.is_subuser or request.user.is_owner_account_verified)
-

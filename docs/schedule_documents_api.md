@@ -141,7 +141,7 @@ X-Frame-Options: SAMEORIGIN
 ```
 ## Generate presigned url for posting file to S3
 ```http
-GET /api/v1/presigned-urls/?schedule=7e06b0da-5959-40bc-b583-464b721b3f77&method_name=post_s3_object&filename=file.pdf HTTP/1.1
+GET /api/v1/presigned-urls/?schedule=7e06b0da-5959-40bc-b583-464b721b3f77&method_name=post_s3_object&filename=file.pdf HTTP/1.1&slug=file.pdf
 ACCESSTOKEN: eyJraWQiOiJNZ2dVVnNzdjY2QUdmRkdZaEY4a1dJVUl0bFdFeFpwcnNKNm51WmZMazFRPSIsImFsZyI6IlJTMjU2In0.eyJzdWIiOiIzNjIzZWQxZS03MDM4LTQ1ZDctYjAzMS1lZmRiZWU5MTIzYjciLCJldmVudF9pZCI6ImFiMTkyZDk2LTllODQtNDRiYy05NTllLTEzNDcwNzI0YTUyYSIsInRva2VuX3VzZSI6ImFjY2VzcyIsInNjb3BlIjoiYXdzLmNvZ25pdG8uc2lnbmluLnVzZXIuYWRtaW4iLCJhdXRoX3RpbWUiOjE1NjMzMTY0NjEsImlzcyI6Imh0dHBzOlwvXC9jb2duaXRvLWlkcC5ldS13ZXN0LTIuYW1hem9uYXdzLmNvbVwvZXUtd2VzdC0yX2J6U2ZnQ3pYSiIsImV4cCI6MTU2MzMyMDA2MSwiaWF0IjoxNTYzMzE2NDYxLCJqdGkiOiI0NDkzZmMxMC00MzZmLTQxZmUtOWFkZi1lMTdkOGRiMGRjZDMiLCJjbGllbnRfaWQiOiIxdDkzYm5tajFsbTY0dWQyb3ZuaTExdmZrNiIsInVzZXJuYW1lIjoiMzYyM2VkMWUtNzAzOC00NWQ3LWIwMzEtZWZkYmVlOTEyM2I3In0.PWBX8uXhijDlJZZT7nNuw_v6uiI8_mWoBx4bOQED3_wpnVwKF1FYVr0qfjQlwv0Jdwhlut7h_GI__L2smv_junkinWmq2ieCYQ4C-n9Rvoe4yYFK4NmcxcXXN1jU0kHIkjiOP-sh1ra2CJCP1wC6S-n_z7S_9Wj-etVbmmCwNdx2JhnBiZfnmcu31tubXF_AIXr4ngpwlv1KuOabuZEHX-LL-hxaF2lJaZTUES-WG2Cx8faqWXmI-5DbNGwi0aCMAScOeMI-DMQZpoqcdXT_BGFjZTBqKXTZ6Qr_aQegS3xEDsqP99CyHDC1PfgrsSvG80uQ3ZP3kSzighBjSJfJWw
 Accept: application/json, */*
 Accept-Encoding: gzip, deflate
@@ -167,8 +167,10 @@ X-Frame-Options: SAMEORIGIN
         "id": "f013bcc7-4622-4086-98e9-4feb1b1c692c",
         "slug": "file.pdf",
         "delete": true,
+        "filename": "file.pdf",
         "presigned_data": {
             "url": "https://customate-dev-django.s3.amazonaws.com/",
+            "filename": "file.pdf",
             "fields": {
                 "key": "file.pdf",
                 "x-amz-algorithm": "AWS4-HMAC-SHA256",

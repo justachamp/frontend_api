@@ -12,6 +12,7 @@ from rest_framework.fields import DateField, IntegerField
 from core.fields import Currency, SerializerField, FundingSourceType, PayeeType
 from frontend_api.fields import ScheduleStatus, SchedulePeriod, SchedulePurpose
 from frontend_api.models.schedule import Schedule
+from frontend_api.models.document import Document
 from frontend_api.serializers.document import DocumentSerializer
 from frontend_api.core.client import PaymentApiClient
 
@@ -64,7 +65,7 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
             'payee_type', 'documents', 'origin_user_id', 'recipient_user_id',
             # we can use model properties as well
             'next_payment_date', 'payment_type',
-            'number_of_payments_left','number_of_payments_made',
+            'number_of_payments_left', 'number_of_payments_made',
             'total_paid_sum', 'total_sum_to_pay'
         )
 
@@ -189,6 +190,9 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
             raise ValidationError("Schedule validation failed")
 
         return res
+
+    def assign_uploaded_documents_to_schedule(self, documents):
+        Document.objects.filter(id__in=[item["id"] for item in documents]).update(schedule=self.instance)
 
 
 class ScheduleAcceptanceSerializer(HyperlinkedModelSerializer):
