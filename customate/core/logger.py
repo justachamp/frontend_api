@@ -5,6 +5,7 @@ import os
 import threading
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
+from uuid import uuid4
 
 import arrow
 from pythonjsonlogger import jsonlogger
@@ -126,6 +127,12 @@ class CustomateJsonFormatter(jsonlogger.JsonFormatter):
                 del(log_record[key])
 
 
+class RequestIdGenerator:
+    @staticmethod
+    def get() -> str:
+        return str(uuid4())
+
+
 def set_shared_extra(attributes: dict):
     for key, value in attributes.items():
         setattr(logging._shared_extra, key, value)
@@ -133,6 +140,17 @@ def set_shared_extra(attributes: dict):
 
 logging.set_shared_extra = set_shared_extra
 del set_shared_extra
+
+
+def init_shared_extra(request_id=None):
+    logging.set_shared_extra({
+        'requestId': request_id if request_id else RequestIdGenerator.get(),
+        'startProcessing': arrow.utcnow()
+    })
+
+
+logging.init_shared_extra = init_shared_extra
+del init_shared_extra
 
 
 def get_shared_extra() -> dict:

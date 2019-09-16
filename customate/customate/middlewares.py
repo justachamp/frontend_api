@@ -1,7 +1,4 @@
 import logging
-from uuid import uuid4
-
-import arrow
 
 
 class RequestDetailsLoggingMiddleware:
@@ -13,10 +10,7 @@ class RequestDetailsLoggingMiddleware:
     def __call__(self, request):
         # Code to be executed for each request before
         # the view (and later middleware) are called.
-        logging.set_shared_extra({
-            'requestId': str(uuid4()),
-            'startProcessing': arrow.utcnow()
-        })
+        logging.init_shared_extra()
 
         response = self.get_response(request)
 

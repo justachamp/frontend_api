@@ -9,6 +9,8 @@ from django.core.paginator import Paginator
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.utils import IntegrityError
 from django.conf import settings
+
+from core.logger import RequestIdGenerator
 from core.models import User
 from core.fields import Currency, PaymentStatusType
 from frontend_api.models import Schedule
@@ -35,7 +37,8 @@ BLACKLISTED_DAYS_MAX_RETRY_COUNT = 10  # max number of retries to find next non-
 
 @shared_task
 def make_payment(user_id: str, payment_account_id: str, schedule_id: str, currency: str, payment_amount: int,
-                 additional_information: str, payee_id: str, funding_source_id: str, parent_payment_id=None):
+                 additional_information: str, payee_id: str, funding_source_id: str, parent_payment_id=None,
+                 request_id=None):
     """
     Calls payment API to initiate a payment.
 
@@ -48,12 +51,14 @@ def make_payment(user_id: str, payment_account_id: str, schedule_id: str, curren
     :param payee_id:
     :param funding_source_id:
     :param parent_payment_id: Parent payment to make sure we could trace retry-payment chains
+    :param request_id: Unique processing request's id.
     :return:
     """
+    logging.init_shared_extra(request_id)
     logger.info("make payment: user_id=%s, payment_account_id=%s, schedule_id=%s, currency=%s, payment_amount=%s, "
-                "additional_information=%s, payee_id=%s, funding_source_id=%s, parent_payment_id=%s" % (
+                "additional_information=%s, payee_id=%s, funding_source_id=%s, parent_payment_id=%s, request_id=%s" % (
                     user_id, payment_account_id, schedule_id, currency, payment_amount,
-                    additional_information, payee_id, funding_source_id, parent_payment_id
+                    additional_information, payee_id, funding_source_id, parent_payment_id, request_id
                 ))
 
     try:
@@ -87,7 +92,9 @@ def on_payment_change(payment_info: Dict):
     funding_source_id = payment_info.get("funding_source_id")
     payment_status = PaymentStatusType(payment_info.get('status'))
     amount = int(payment_info.get("amount"))
+    request_id = payment_info.get("request_id", RequestIdGenerator.get())
 
+    logging.init_shared_extra(request_id)
     logger.info("on_payment_change (payment_id=%s), payment_info=%r" % (payment_id, payment_info))
 
     if schedule_id is None:
@@ -155,18 +162,23 @@ def on_payment_change(payment_info: Dict):
             additional_information=str(schedule.additional_information),
             payee_id=str(schedule.payee_id),
             funding_source_id=str(schedule.backup_funding_source_id),  # NOTE: This time, use backup funding source!
-            parent_payment_id=payment_id  # NOTE: specify originating payment, to be able to track payment chains
+            parent_payment_id=payment_id,  # NOTE: specify originating payment, to be able to track payment chains
+            request_id=request_id
         )
         return
 
 
 @shared_task
-def make_overdue_payment(schedule_id: str):
+def make_overdue_payment(schedule_id: str, request_id=None):
     """
     Tries to make follow-up payments based on last failed list of payments for specific schedule.
     :param schedule_id:
+    :param request_id: Unique processing request's id
     :return:
     """
+    request_id = request_id if request_id else RequestIdGenerator.get()
+    logging.init_shared_extra(request_id)
+
     logger.info("make_overdue_payment(schedule_id=%s)" % schedule_id)
     try:
         schedule = Schedule.objects.get(id=schedule_id)  # type: Schedule
@@ -203,7 +215,8 @@ def make_overdue_payment(schedule_id: str):
             additional_information=str(schedule.additional_information),
             payee_id=str(schedule.payee_id),
             funding_source_id=str(schedule.funding_source_id),  # NOTE: always retry using primary FS
-            parent_payment_id=str(op.payment_id)  # NOTE: keep payment chain in order!
+            parent_payment_id=str(op.payment_id),  # NOTE: keep payment chain in order!
+            request_id=request_id
         )
 
 
@@ -213,6 +226,9 @@ def process_all_deposit_payments(scheduled_date):
     :param scheduled_date:
     :return:
     """
+    request_id = RequestIdGenerator.get()
+    logging.init_shared_extra(request_id)
+
     # make sure we always keep consistent order, otherwise we'll get unpredictable results
     payments = DepositsSchedule.objects.filter(
         scheduled_date=scheduled_date,
@@ -237,14 +253,16 @@ def process_all_deposit_payments(scheduled_date):
                 payment_amount=int(s.deposit_amount),
                 additional_information=str(s.deposit_additional_information),
                 payee_id=str(s.payee_id),
-                funding_source_id=str(s.funding_source_id)
+                funding_source_id=str(s.funding_source_id),
+                request_id=request_id
             )
 
 
-def submit_scheduled_payment(s: Schedule):
+def submit_scheduled_payment(s: Schedule, request_id=None):
     """
     A common method to submit payments for execution
     :param s:
+    :param request_id: Unique processing request's id
     :return:
     """
     logger.debug("Submit regular payment. schedule_id=%s, origin_user_id=%s, payment_account_id=%s, "
@@ -261,7 +279,8 @@ def submit_scheduled_payment(s: Schedule):
         payment_amount=int(s.payment_amount),
         additional_information=str(s.additional_information),
         payee_id=str(s.payee_id),
-        funding_source_id=str(s.funding_source_id)
+        funding_source_id=str(s.funding_source_id),
+        request_id=request_id
     )
 
 
@@ -271,6 +290,9 @@ def process_all_one_time_payments(scheduled_date):
     :param scheduled_date:
     :return:
     """
+    request_id = RequestIdGenerator.get()
+    logging.init_shared_extra(request_id)
+
     # make sure we always keep consistent order, otherwise we'll get unpredictable results
     payments = OnetimeSchedule.objects.filter(
         scheduled_date=scheduled_date,
@@ -280,7 +302,7 @@ def process_all_one_time_payments(scheduled_date):
     paginator = Paginator(payments, PER_PAGE)
     for p in paginator.page_range:
         for s in paginator.page(p):
-            submit_scheduled_payment(s)
+            submit_scheduled_payment(s, request_id)
 
 
 def process_all_weekly_payments(scheduled_date):
@@ -289,6 +311,9 @@ def process_all_weekly_payments(scheduled_date):
     :param scheduled_date:
     :return:
     """
+    request_id = RequestIdGenerator.get()
+    logging.init_shared_extra(request_id)
+
     # make sure we always keep consistent order, otherwise we'll get unpredictable results
     payments = WeeklySchedule.objects.filter(
         scheduled_date=scheduled_date,
@@ -298,7 +323,7 @@ def process_all_weekly_payments(scheduled_date):
     paginator = Paginator(payments, PER_PAGE)
     for p in paginator.page_range:
         for s in paginator.page(p):
-            submit_scheduled_payment(s)
+            submit_scheduled_payment(s, request_id)
 
 
 def process_all_monthly_payments(scheduled_date):
@@ -307,6 +332,9 @@ def process_all_monthly_payments(scheduled_date):
     :param scheduled_date:
     :return:
     """
+    request_id = RequestIdGenerator.get()
+    logging.init_shared_extra(request_id)
+
     # make sure we always keep consistent order, otherwise we'll get unpredictable results
     payments = MonthlySchedule.objects.filter(
         scheduled_date=scheduled_date,
@@ -316,7 +344,7 @@ def process_all_monthly_payments(scheduled_date):
     paginator = Paginator(payments, PER_PAGE)
     for p in paginator.page_range:
         for s in paginator.page(p):
-            submit_scheduled_payment(s)
+            submit_scheduled_payment(s, request_id)
 
 
 def process_all_quarterly_payments(scheduled_date):
@@ -325,6 +353,9 @@ def process_all_quarterly_payments(scheduled_date):
     :param scheduled_date:
     :return:
     """
+    request_id = RequestIdGenerator.get()
+    logging.init_shared_extra(request_id)
+
     # make sure we always keep consistent order, otherwise we'll get unpredictable results
     payments = QuarterlySchedule.objects.filter(
         scheduled_date=scheduled_date,
@@ -334,7 +365,7 @@ def process_all_quarterly_payments(scheduled_date):
     paginator = Paginator(payments, PER_PAGE)
     for p in paginator.page_range:
         for s in paginator.page(p):
-            submit_scheduled_payment(s)
+            submit_scheduled_payment(s, request_id)
 
 
 def process_all_yearly_payments(scheduled_date):
@@ -343,6 +374,9 @@ def process_all_yearly_payments(scheduled_date):
     :param scheduled_date:
     :return:
     """
+    request_id = RequestIdGenerator.get()
+    logging.init_shared_extra(request_id)
+
     # make sure we always keep consistent order, otherwise we'll get unpredictable results
     payments = YearlySchedule.objects.filter(
         scheduled_date=scheduled_date,
@@ -352,7 +386,7 @@ def process_all_yearly_payments(scheduled_date):
     paginator = Paginator(payments, PER_PAGE)
     for p in paginator.page_range:
         for s in paginator.page(p):
-            submit_scheduled_payment(s)
+            submit_scheduled_payment(s, request_id)
 
 
 @shared_task
@@ -362,6 +396,7 @@ def initiate_daily_payments():
 
     :return:
     """
+    logging.init_shared_extra()
 
     # get current date
     now = arrow.utcnow()
