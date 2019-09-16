@@ -72,39 +72,39 @@ class DepositsScheduleModelTest(TestCase):
         schedule = Schedule(period=SchedulePeriod.one_time, status=ScheduleStatus.open, payment_amount=100,
                             purpose=SchedulePurpose.pay, currency=Currency.GBP, payee_id=str(uuid4()),
                             payee_type=PayeeType.WALLET, start_date=arrow.utcnow().datetime.date(),
-                            user_id=DepositsScheduleModelTest.user.id,
+                            origin_user_id=DepositsScheduleModelTest.user.id,
                             deposit_amount=100, deposit_payment_date=deposit_payment_date.datetime.date(),
                             funding_source_id=str(uuid4()), funding_source_type=FundingSourceType.WALLET)
         schedule.save()
 
         deposit_schedule = DepositsSchedule.objects.get(pk=schedule.id)
-        self.assertEqual(deposit_payment_date.datetime.date(), deposit_schedule.scheduled_date.date())
+        self.assertEqual(deposit_payment_date.datetime.date(), deposit_schedule.scheduled_date)
 
     def test_scheduled_date_with_credit_card_funding_source_delay(self):
         deposit_payment_date = arrow.get(2019, 9, 1)
         schedule = Schedule(period=SchedulePeriod.one_time, status=ScheduleStatus.open, payment_amount=100,
                             purpose=SchedulePurpose.pay, currency=Currency.GBP, payee_id=str(uuid4()),
                             payee_type=PayeeType.WALLET, start_date=arrow.utcnow().datetime.date(),
-                            user_id=DepositsScheduleModelTest.user.id,
+                            origin_user_id=DepositsScheduleModelTest.user.id,
                             deposit_amount=100, deposit_payment_date=deposit_payment_date.datetime.date(),
                             funding_source_id=str(uuid4()), funding_source_type=FundingSourceType.CREDIT_CARD)
         schedule.save()
 
         deposit_schedule = DepositsSchedule.objects.get(pk=schedule.id)
-        self.assertEqual(deposit_payment_date.shift(days=-7).datetime.date(), deposit_schedule.scheduled_date.date())
+        self.assertEqual(deposit_payment_date.shift(days=-7).datetime.date(), deposit_schedule.scheduled_date)
 
     def test_scheduled_date_with_direct_debit_funding_source_delay(self):
         deposit_payment_date = arrow.get(2019, 9, 1)
         schedule = Schedule(period=SchedulePeriod.one_time, status=ScheduleStatus.open, payment_amount=100,
                             purpose=SchedulePurpose.pay, currency=Currency.GBP, payee_id=str(uuid4()),
                             payee_type=PayeeType.WALLET, start_date=arrow.utcnow().datetime.date(),
-                            user_id=DepositsScheduleModelTest.user.id,
+                            origin_user_id=DepositsScheduleModelTest.user.id,
                             deposit_amount=100, deposit_payment_date=deposit_payment_date.datetime.date(),
                             funding_source_id=str(uuid4()), funding_source_type=FundingSourceType.DIRECT_DEBIT)
         schedule.save()
 
         deposit_schedule = DepositsSchedule.objects.get(pk=schedule.id)
-        self.assertEqual(deposit_payment_date.shift(days=-7).datetime.date(), deposit_schedule.scheduled_date.date())
+        self.assertEqual(deposit_payment_date.shift(days=-7).datetime.date(), deposit_schedule.scheduled_date)
 
 
 class OnetimeScheduleModelTest(TestCase):
@@ -119,36 +119,36 @@ class OnetimeScheduleModelTest(TestCase):
         schedule = Schedule(period=SchedulePeriod.one_time, status=ScheduleStatus.open, payment_amount=100,
                             purpose=SchedulePurpose.pay, currency=Currency.GBP, payee_id=str(uuid4()),
                             payee_type=PayeeType.WALLET, start_date=start_date.datetime.date(),
-                            user_id=OnetimeScheduleModelTest.user.id,
+                            origin_user_id=OnetimeScheduleModelTest.user.id,
                             funding_source_id=str(uuid4()), funding_source_type=FundingSourceType.WALLET)
         schedule.save()
 
         onetime_schedule = OnetimeSchedule.objects.get(pk=schedule.id)
-        self.assertEqual(start_date.datetime.date(), onetime_schedule.scheduled_date.date())
+        self.assertEqual(start_date.datetime.date(), onetime_schedule.scheduled_date)
 
     def test_scheduled_date_with_credit_card_funding_source_delay(self):
         start_date = arrow.get(2019, 9, 1)
         schedule = Schedule(period=SchedulePeriod.one_time, status=ScheduleStatus.open, payment_amount=100,
                             purpose=SchedulePurpose.pay, currency=Currency.GBP, payee_id=str(uuid4()),
                             payee_type=PayeeType.WALLET, start_date=start_date.datetime.date(),
-                            user_id=OnetimeScheduleModelTest.user.id,
+                            origin_user_id=OnetimeScheduleModelTest.user.id,
                             funding_source_id=str(uuid4()), funding_source_type=FundingSourceType.CREDIT_CARD)
         schedule.save()
 
         onetime_schedule = OnetimeSchedule.objects.get(pk=schedule.id)
-        self.assertEqual(start_date.shift(days=-7).datetime.date(), onetime_schedule.scheduled_date.date())
+        self.assertEqual(start_date.shift(days=-7).datetime.date(), onetime_schedule.scheduled_date)
 
     def test_scheduled_date_with_direct_debit_funding_source_delay(self):
         start_date = arrow.get(2019, 9, 1)
         schedule = Schedule(period=SchedulePeriod.one_time, status=ScheduleStatus.open, payment_amount=100,
                             purpose=SchedulePurpose.pay, currency=Currency.GBP, payee_id=str(uuid4()),
                             payee_type=PayeeType.WALLET, start_date=start_date.datetime.date(),
-                            user_id=OnetimeScheduleModelTest.user.id,
+                            origin_user_id=OnetimeScheduleModelTest.user.id,
                             funding_source_id=str(uuid4()), funding_source_type=FundingSourceType.DIRECT_DEBIT)
         schedule.save()
 
         onetime_schedule = OnetimeSchedule.objects.get(pk=schedule.id)
-        self.assertEqual(start_date.shift(days=-7).datetime.date(), onetime_schedule.scheduled_date.date())
+        self.assertEqual(start_date.shift(days=-7).datetime.date(), onetime_schedule.scheduled_date)
 
 
 class WeeklyScheduleModelTest(TestCase):
@@ -163,7 +163,7 @@ class WeeklyScheduleModelTest(TestCase):
         schedule = Schedule(period=SchedulePeriod.weekly, status=ScheduleStatus.open, payment_amount=100,
                             purpose=SchedulePurpose.pay, currency=Currency.GBP, payee_id=str(uuid4()),
                             payee_type=PayeeType.WALLET, start_date=start_date.datetime.date(),
-                            user_id=WeeklyScheduleModelTest.user.id, number_of_payments=1,
+                            origin_user_id=WeeklyScheduleModelTest.user.id, number_of_payments=1,
                             funding_source_id=str(uuid4()), funding_source_type=FundingSourceType.WALLET)
         schedule.save()
 
@@ -176,7 +176,7 @@ class WeeklyScheduleModelTest(TestCase):
         schedule = Schedule(period=SchedulePeriod.weekly, status=ScheduleStatus.open, payment_amount=100,
                             purpose=SchedulePurpose.pay, currency=Currency.GBP, payee_id=str(uuid4()),
                             payee_type=PayeeType.WALLET, start_date=start_date.datetime.date(),
-                            user_id=WeeklyScheduleModelTest.user.id, number_of_payments=1,
+                            origin_user_id=WeeklyScheduleModelTest.user.id, number_of_payments=1,
                             funding_source_id=str(uuid4()), funding_source_type=FundingSourceType.CREDIT_CARD)
         schedule.save()
 
@@ -189,7 +189,7 @@ class WeeklyScheduleModelTest(TestCase):
         schedule = Schedule(period=SchedulePeriod.weekly, status=ScheduleStatus.open, payment_amount=100,
                             purpose=SchedulePurpose.pay, currency=Currency.GBP, payee_id=str(uuid4()),
                             payee_type=PayeeType.WALLET, start_date=start_date.datetime.date(),
-                            user_id=WeeklyScheduleModelTest.user.id, number_of_payments=1,
+                            origin_user_id=WeeklyScheduleModelTest.user.id, number_of_payments=1,
                             funding_source_id=str(uuid4()), funding_source_type=FundingSourceType.DIRECT_DEBIT)
         schedule.save()
 
