@@ -17,8 +17,9 @@ def fill_in_schedules_funding_source_type(apps, schema_editor):
         c.execute("SELECT DISTINCT(funding_source_id) FROM frontend_api_schedule WHERE funding_source_type IS NULL")
         for funding_source_id in c.fetchall():
             fd = payment_client.get_funding_source_details(funding_source_id[0])
-            c.execute("UPDATE frontend_api_schedule SET funding_source_type = '%s' WHERE funding_source_id = '%s'"
-                      % (fd.type, funding_source_id[0]))
+            if funding_source_id[0] is not None:
+                c.execute("UPDATE frontend_api_schedule SET funding_source_type = '%s' WHERE funding_source_id = '%s'"
+                          % (fd.type, funding_source_id[0]))
 
 
 class Migration(migrations.Migration):
