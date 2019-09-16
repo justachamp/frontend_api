@@ -14,7 +14,7 @@ def fill_in_schedules_funding_source_type(apps, schema_editor):
     """
     payment_client = PaymentApiClient(None)
     with connection.cursor() as c:
-        c.execute("DELETE frontend_api_schedule WHERE funding_source_id IS NULL")
+        c.execute("DELETE FROM frontend_api_schedule WHERE funding_source_id IS NULL")
         c.execute("SELECT DISTINCT(funding_source_id) FROM frontend_api_schedule WHERE funding_source_type IS NULL")
         for funding_source_id in c.fetchall():
             fd = payment_client.get_funding_source_details(funding_source_id[0])
