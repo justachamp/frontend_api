@@ -99,6 +99,7 @@ COGNITO_CREATE_UNKNOWN_USERS = True
 # see more at https://lincolnloop.com/blog/django-logging-right-way/
 LOGGING_CONFIG = None
 LOGLEVEL = environ.get('LOGLEVEL', 'debug' if DEBUG else 'info').upper()
+LOGFILEPATH = environ.get('LOGFILEPATH', 'app.log')
 
 logging.config.dictConfig({
     'version': 1,
@@ -134,11 +135,10 @@ logging.config.dictConfig({
         },
 
         'rotating_file': {
-            'class': 'logging.handlers.RotatingFileHandler',
+            'class': 'core.logger.BetterRotatingFileHandler',
             'formatter': 'customate.json.formatter',
-            'filename': 'test.log',
+            'filename': LOGFILEPATH,
             'maxBytes': 1024 * 1024 * 10,  # 10 MB
-            'backupCount': 10,
         },
 
         'django.server': DEFAULT_LOGGING['handlers']['django.server'],

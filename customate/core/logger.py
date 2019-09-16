@@ -1,6 +1,10 @@
+import copy
+import errno
 import logging
+import os
 import threading
 from datetime import datetime
+from logging.handlers import RotatingFileHandler
 
 import arrow
 from pythonjsonlogger import jsonlogger
@@ -58,19 +62,38 @@ class CustomateLogger(logging.Logger):
             # Based on required format we need to make sure that any extra information is placed in "data" section.
             extra = {'data': extra}
 
-        if logging._shared_extra is not None:
-            shared_extra = vars(logging._shared_extra)
-            if len(shared_extra) > 0:
-                # Map all shared_extra params to root level of extra
-                extra = {} if extra is None else extra
-                extra = {**extra, **shared_extra}
-
         return super(CustomateLogger, self).makeRecord(name, level, fn, lno, msg, args, exc_info, func, extra, sinfo)
+
+
+class BetterRotatingFileHandler(RotatingFileHandler):
+    def _open(self):
+        self._ensure_dir(os.path.dirname(self.baseFilename))
+        return logging.handlers.RotatingFileHandler._open(self)
+
+    def _ensure_dir(self, path):
+        # type: (AnyStr) -> None
+        """os.path.makedirs without EEXIST."""
+        try:
+            os.makedirs(path)
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise
 
 
 class CustomateJsonFormatter(jsonlogger.JsonFormatter):
     def add_fields(self, log_record, record, message_dict):
         super(CustomateJsonFormatter, self).add_fields(log_record, record, message_dict)
+
+        # Map all shared_extra params to root level
+        # @NOTE: we cannot map shared_extra in CustomateLogger, because not all loggers are CustomateLogger,
+        # so there is a risk to lost this information in log record
+        shared_extra = logging.get_shared_extra()
+        if len(shared_extra) > 0:
+            current_data = log_record.get('data', {})
+            shared_extra = copy.deepcopy(shared_extra)
+            shared_extra = {**shared_extra, **current_data}
+            log_record.update(shared_extra)
+
         if not log_record.get('dateCreated'):
             now = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f')
             log_record['dateCreated'] = now
@@ -80,9 +103,9 @@ class CustomateJsonFormatter(jsonlogger.JsonFormatter):
         else:
             log_record['logLevel'] = record.levelname
 
-        if hasattr(record, 'startProcessing') and not log_record.get('duration'):
+        if log_record.get('startProcessing') and not log_record.get('duration'):
+            log_record['duration'] = int((arrow.utcnow() - log_record.get('startProcessing')).microseconds / 1000)
             del(log_record['startProcessing'])
-            log_record['duration'] = int((arrow.utcnow() - record.startProcessing).microseconds / 1000)
 
         log_record['app'] = {
             'name': GENERAL_APP_NAME,
