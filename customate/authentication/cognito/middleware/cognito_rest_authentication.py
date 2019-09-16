@@ -1,3 +1,4 @@
+from django.contrib.auth.models import AnonymousUser
 from rest_framework.authentication import BaseAuthentication
 from authentication.cognito.middleware import helpers
 
@@ -19,5 +20,11 @@ class AwsRestAuthentication(BaseAuthentication):
         # TODO: Potentially create a mixin for views overriding the .finalise_response method to ensure if we
         # end up with a new access token as part of this process, we are able to set it in the response
         # Need some way of setting a new access token or refresh token in the final response
+        logging.set_shared_extra({
+            'customer': {
+                'userId': user.id if user is not None else None,
+                'accountId': user.get_root_account() if user is not None and not isinstance(user, AnonymousUser) else None
+            }
+        })
 
         return user, (access_token, id_token, refresh_token)

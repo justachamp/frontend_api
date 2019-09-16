@@ -88,3 +88,4 @@ zeep==3.3.1
 colorlog==4.0.2
 arrow==0.13.1
 celery==4.3.0
+python-json-logger==0.1.11

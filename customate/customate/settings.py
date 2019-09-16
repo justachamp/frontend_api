@@ -28,6 +28,8 @@ BASE_DIR = path.dirname(path.dirname(path.abspath(__file__)))
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'c3rq#fr$u-5d1qsq@qfkyr=he@)9r7)wj1yl_14*bir3z_1hj^'
 
+GENERAL_APP_NAME = 'frontend_api'
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = bool(int(environ.get("DEBUG", 0)))
 
@@ -65,6 +67,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # 'authentication.cognito.middleware.cognito_django_middleware.AwsDjangoMiddleware'
+    'customate.middlewares.RequestDetailsLoggingMiddleware',
 ]
 
 AUTHENTICATION_BACKENDS = [
@@ -107,6 +110,10 @@ logging.config.dictConfig({
             'datefmt': "%y%m%d %H:%M:%S",
         },
 
+        'customate.json.formatter': {
+            'class': 'core.logger.CustomateJsonFormatter'
+        },
+
         'colorlog': {
             'class': 'colorlog.ColoredFormatter',
             'format': '%(log_color)s[%(asctime)s %(levelname)s %(pathname)s:%(lineno)s|%(name)s] %(message)s',
@@ -126,6 +133,14 @@ logging.config.dictConfig({
             'formatter': 'colorlog' if supports_color() else 'console',
         },
 
+        'rotating_file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'formatter': 'customate.json.formatter',
+            'filename': 'test.log',
+            'maxBytes': 1024 * 1024 * 10,  # 10 MB
+            'backupCount': 10,
+        },
+
         'django.server': DEFAULT_LOGGING['handlers']['django.server'],
 
     },
@@ -142,7 +157,7 @@ logging.config.dictConfig({
         },
 
         'django.request': {
-            'handlers': ['console'],
+            'handlers': ['console', 'rotating_file'],
             'level': LOGLEVEL,
             'propagate': False,
         },
@@ -157,6 +172,13 @@ logging.config.dictConfig({
         'customate': {
             'level': LOGLEVEL,
             'handlers': ['console'],
+            # required to avoid double logging with root logger
+            'propagate': False,
+        },
+
+        'frontend_api': {
+            'level': LOGLEVEL,
+            'handlers': ['console', 'rotating_file'],
             # required to avoid double logging with root logger
             'propagate': False,
         },
