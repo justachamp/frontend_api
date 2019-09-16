@@ -14,6 +14,15 @@ logger = logging.getLogger(__name__)
 
 
 class Session(DefaultSession):
+    def __init__(self, *args, **kwargs) -> None:
+        request_kwargs = {'headers': self._generate_request_headers()}
+        super().__init__(request_kwargs=request_kwargs, *args, **kwargs)
+
+    def _generate_request_headers(self):
+        return {
+            'Request-Id': logging.get_shared_extra_param('requestId')
+        }
+
     def _get_sync(self, resource_type: str,
                   resource_id_or_filter: 'Union[Modifier, str]' = None) -> 'Document':
         resource_id, filter_ = self._resource_type_and_filter(resource_id_or_filter)

@@ -147,3 +147,11 @@ def get_shared_extra() -> dict:
 
 logging.get_shared_extra = get_shared_extra
 del get_shared_extra
+
+
+def get_shared_extra_param(key: str):
+    return logging.get_shared_extra().get(key, None)
+
+
+logging.get_shared_extra_param = get_shared_extra_param
+del get_shared_extra_param
