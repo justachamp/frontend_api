@@ -27,9 +27,9 @@ class Migration(migrations.Migration):
     # repeated joins
     joins = """
          inner join "core_user" as "t3" 
-           on ("t3"."id" = "t1"."user_id")
+           on ("t3"."id" = "t1"."origin_user_id")
          inner join "frontend_api_account" as "t4" 
-           on ("t4"."user_id" = "t1"."user_id")
+           on ("t4"."user_id" = "t1"."origin_user_id")
          left join "frontend_api_subuseraccount" as "t5"
            on ("t5".account_ptr_id = "t4".id)
          inner join "frontend_api_useraccount" as "t6"
