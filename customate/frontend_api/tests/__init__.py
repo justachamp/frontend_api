@@ -1,4 +1,5 @@
-from .test_schedule import ScheduleModelTest, PaymentApiClientTest
+from .test_client import PaymentApiClientTest
+from .test_schedule import ScheduleModelTest
 from .test_documents import TestS3Storage
 from .test_notifications import TestEmailNotifier, TestSmsNotifier
 

@@ -45,8 +45,13 @@ class AbstractSchedule(Model):
     payee_recipient_email = models.CharField(max_length=254, default='')
     payee_iban = models.CharField(max_length=50, default='')
     payee_type = EnumField(PayeeType, max_length=50)
+
     funding_source_id = models.UUIDField(default=None, blank=True, null=True)
+    funding_source_type = EnumField(FundingSourceType, max_length=50)
+
     backup_funding_source_id = models.UUIDField(default=None, blank=True, null=True)
+    backup_funding_source_type = EnumField(FundingSourceType, max_length=50, default=None, blank=True, null=True)
+
     period = EnumField(SchedulePeriod)
     number_of_payments = models.PositiveIntegerField(
         default=0, help_text=_("Initial number of payments in the current schedule set upon creation.")

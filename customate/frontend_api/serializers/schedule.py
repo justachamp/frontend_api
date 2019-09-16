@@ -46,8 +46,10 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
     payee_recipient_email = CharField(required=False)
     payee_iban = CharField(required=False)
     payee_type = EnumField(enum=PayeeType, required=False)
-    funding_source_id = UUIDField(required=False)
+    funding_source_id = UUIDField(required=True)
+    funding_source_type = EnumField(enum=FundingSourceType, required=False)
     backup_funding_source_id = UUIDField(required=False)
+    backup_funding_source_type = EnumField(enum=FundingSourceType, required=False)
     total_paid_sum = IntegerField(default=0, required=False, read_only=True)
     total_sum_to_pay = IntegerField(default=0, required=False, read_only=True)
     origin_user_id = UUIDField(required=False)
@@ -63,6 +65,7 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
             'additional_information', 'payee_id', 'funding_source_id', 'backup_funding_source_id', 'payee_title',
             'payee_iban', 'payee_recipient_name', 'payee_recipient_email',
             'payee_type', 'documents', 'origin_user_id', 'recipient_user_id',
+            'funding_source_type', 'backup_funding_source_type',
             # we can use model properties as well
             'next_payment_date', 'payment_type',
             'number_of_payments_left', 'number_of_payments_made',

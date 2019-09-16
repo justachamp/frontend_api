@@ -14,10 +14,10 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.serializers import ValidationError
 
-from customate.settings import CELERY_BEAT_SCHEDULE
 from core.models import User
 from core import views
-from core.fields import PayeeType
+from core.fields import PayeeType, FundingSourceType
+from customate.settings import CELERY_BEAT_SCHEDULE
 from frontend_api.fields import ScheduleStatus, SchedulePurpose
 from frontend_api.tasks import make_overdue_payment, make_payment
 from frontend_api.core.client import PaymentApiClient
@@ -102,6 +102,19 @@ class ScheduleViewSet(views.ModelViewSet):
                 raise ValidationError({
                     "payee_id": "Current user's payee cannot be used for creation 'pay funds' schedule"
                 })
+
+            # NOTE: force backup funding source to be of 'WALLET' type only,
+            # otherwise we can't process DD/CC payments in a timely manner: they require 7day gap to be made in advance
+            fd = self.payment_client.get_funding_source_details(serializer.validated_data["funding_source_id"])
+            backup_funding_source_id = serializer.validated_data.get("backup_funding_source_id")
+            if backup_funding_source_id:
+                fd_backup = self.payment_client.get_funding_source_details(backup_funding_source_id)
+                # NOTE: we do not support backup_funding_source type other than 'WALLET'
+                if fd_backup.type is not FundingSourceType.WALLET:
+                    raise ValidationError({
+                        "backup_funding_source_id": "Backup funding source is not of type %s" % FundingSourceType.WALLET
+                    })
+
             documents = serializer.validated_data.pop("documents", [])
             schedule = serializer.save(
                 status=status,
@@ -111,7 +124,9 @@ class ScheduleViewSet(views.ModelViewSet):
                 payee_recipient_email=pd.recipient_email,
                 payee_iban=pd.iban,
                 payee_title=pd.title,
-                payee_type=pd.type
+                payee_type=pd.type,
+                funding_source_type=fd.type,
+                backup_funding_source_type=fd_backup.type if backup_funding_source_id else None
             )
             logger.info("Successfully created new schedule_id=%r" % schedule.id)
             serializer.assign_uploaded_documents_to_schedule(documents)
