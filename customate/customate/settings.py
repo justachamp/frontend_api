@@ -176,7 +176,28 @@ logging.config.dictConfig({
             'propagate': False,
         },
 
+        'authentication': {
+            'level': LOGLEVEL,
+            'handlers': ['console', 'rotating_file'],
+            # required to avoid double logging with root logger
+            'propagate': False,
+        },
+
+        'external_apis': {
+            'level': LOGLEVEL,
+            'handlers': ['console', 'rotating_file'],
+            # required to avoid double logging with root logger
+            'propagate': False,
+        },
+
         'frontend_api': {
+            'level': LOGLEVEL,
+            'handlers': ['console', 'rotating_file'],
+            # required to avoid double logging with root logger
+            'propagate': False,
+        },
+
+        'payment_api': {
             'level': LOGLEVEL,
             'handlers': ['console', 'rotating_file'],
             # required to avoid double logging with root logger
