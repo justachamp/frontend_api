@@ -227,3 +227,4 @@ class ScheduleAcceptanceSerializer(HyperlinkedModelSerializer):
         except (ValueError, TypeError):
             logger.error("Validation failed due to: %r" % format_exc())
             raise ValidationError("Schedule validation failed")
+        return res
