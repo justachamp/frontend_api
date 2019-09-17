@@ -1,4 +1,5 @@
 from traceback import format_exc
+from typing import List, Tuple
 
 from django.utils.functional import cached_property
 from rest_framework.exceptions import ValidationError
@@ -7,6 +8,7 @@ import logging
 
 # Get an instance of a logger
 from jsonapi_client.exceptions import DocumentError
+from jsonapi_client.common import error_from_response, HttpStatus
 
 from payment_api.core.resource.mixins import ResourceMappingMixin, JsonApiErrorParser
 
@@ -68,6 +70,33 @@ class Session(DefaultSession):
     def _ext_fetch_by_url(self, url: str) -> 'Document':
         logger.info(f'fetch_by_url: {url}')
         return super()._ext_fetch_by_url(url)
+
+    def http_request(self, http_method: str, url: str, send_json: dict,
+                     expected_statuses: List[str]=None) -> Tuple[int, dict, str]:
+        """
+        Internal use.
+        Method to make PATCH/POST requests to server using requests library.
+        """
+        self.assert_sync()
+        import requests
+        logger.debug('%s request: %s', http_method.upper(), send_json)
+        expected_statuses = expected_statuses or HttpStatus.ALL_OK
+
+        self._request_kwargs["headers"].update({'Content-Type': 'application/vnd.api+json'})
+        response = requests.request(http_method, url, json=send_json,
+                                    **self._request_kwargs)
+
+        if response.status_code not in expected_statuses:
+            raise DocumentError(f'Could not {http_method.upper()} '
+                                f'({response.status_code}): '
+                                f'{error_from_response(response)}',
+                                errors={'status_code': response.status_code},
+                                response=response,
+                                json_data=send_json)
+
+        return response.status_code, response.json() \
+            if response.content \
+            else {}, response.headers.get('Location')
 
 
 class Client(ResourceMappingMixin, JsonApiErrorParser):
