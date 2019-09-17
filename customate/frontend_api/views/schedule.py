@@ -105,7 +105,7 @@ class ScheduleViewSet(views.ModelViewSet):
 
             # NOTE: force backup funding source to be of 'WALLET' type only,
             # otherwise we can't process DD/CC payments in a timely manner: they require 7day gap to be made in advance
-            fd = self.payment_client.get_funding_source_details(serializer.validated_data["funding_source_id"])
+            fd = self.payment_client.get_funding_source_details(serializer.validated_data.get("funding_source_id"))
             backup_funding_source_id = serializer.validated_data.get("backup_funding_source_id")
             if backup_funding_source_id:
                 fd_backup = self.payment_client.get_funding_source_details(backup_funding_source_id)
@@ -125,7 +125,7 @@ class ScheduleViewSet(views.ModelViewSet):
                 payee_iban=pd.iban,
                 payee_title=pd.title,
                 payee_type=pd.type,
-                funding_source_type=fd.type,
+                funding_source_type=fd.type if fd else fd,
                 backup_funding_source_type=fd_backup.type if backup_funding_source_id else None
             )
             logger.info("Successfully created new schedule_id=%r" % schedule.id)
