@@ -133,6 +133,10 @@ class RequestIdGenerator:
         return str(uuid4())
 
 
+# TODO: rewrite 'shared_extra' stuff based on custom filters
+# https://opensource.com/article/17/9/python-logging#Adding%20further%20context
+# REASON: this is more explicit, than adding non-standard magic methods to `logging`
+
 def set_shared_extra(attributes: dict):
     for key, value in attributes.items():
         setattr(logging._shared_extra, key, value)

@@ -404,6 +404,7 @@ class DepositsSchedule(AbstractSchedule):
         return self.payment_account_id
 
 
+
 class AbstractSchedulePayments(Model):
     """
     Special model to hold relationships between every payment made within specific Schedule

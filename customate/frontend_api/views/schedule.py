@@ -1,10 +1,10 @@
 import logging
 from traceback import format_exc
-
-from django.db import transaction
-from django.db.models import Q
 import arrow
 import celery
+from django.db.models import Q
+from django.core.exceptions import ObjectDoesNotExist
+from django.db import transaction
 from django.utils.functional import cached_property
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import action
@@ -16,12 +16,19 @@ from rest_framework.serializers import ValidationError
 
 from core.models import User
 from core import views
+from core.exceptions import ConflictError
 from core.fields import PayeeType, FundingSourceType
 from customate.settings import CELERY_BEAT_SCHEDULE
+
 from frontend_api.fields import ScheduleStatus, SchedulePurpose
 from frontend_api.tasks import make_overdue_payment, make_payment
 from frontend_api.core.client import PaymentApiClient
 from frontend_api.models import Schedule, Document
+from frontend_api.models.schedule import DepositsSchedule
+from frontend_api.models.schedule import OnetimeSchedule, WeeklySchedule, MonthlySchedule, QuarterlySchedule, \
+    YearlySchedule
+from frontend_api.models.schedule import SchedulePeriod
+
 from frontend_api.permissions import (
     HasParticularDocumentPermission,
     IsOwnerOrReadOnly,
@@ -36,8 +43,6 @@ from frontend_api.serializers.schedule import ScheduleSerializer, ScheduleAccept
 logger = logging.getLogger(__name__)
 
 SCHEDULES_START_PROCESSING_TIME = CELERY_BEAT_SCHEDULE["once_per_day"]["schedule"]  # type: celery.schedules.crontab
-SCHEDULES_START_PROCESSING_TIME_HOUR = int(list(SCHEDULES_START_PROCESSING_TIME.hour)[0])
-SCHEDULES_START_PROCESSING_TIME_MINUTE = int(list(SCHEDULES_START_PROCESSING_TIME.minute)[0])
 
 
 class ScheduleViewSet(views.ModelViewSet):
@@ -74,6 +79,7 @@ class ScheduleViewSet(views.ModelViewSet):
     def payment_client(self):
         return PaymentApiClient(self.request.user)
 
+    @transaction.atomic
     def perform_create(self, serializer):
         """
         Create new Schedule / HTTP CREATE
@@ -132,11 +138,7 @@ class ScheduleViewSet(views.ModelViewSet):
             serializer.assign_uploaded_documents_to_schedule(documents)
 
             # Immediately create first payments
-            scheduler_start_time = arrow.get("{full_date}T{hour}:{minute}:00".format(
-                full_date=arrow.utcnow().format("YYYY-MM-DD"),
-                hour=SCHEDULES_START_PROCESSING_TIME_HOUR,
-                minute=SCHEDULES_START_PROCESSING_TIME_MINUTE
-            ), ['YYYY-MM-DDTH:mm:ss', 'YYYY-MM-DDTH:m:ss', 'YYYY-MM-DDTHH:m:ss'])
+            scheduler_start_time = self.get_scheduler_start_time()
             current_date = arrow.utcnow().datetime.date()
 
             if arrow.utcnow() > scheduler_start_time:
@@ -179,6 +181,111 @@ class ScheduleViewSet(views.ModelViewSet):
             logger.error("Unable to save Schedule=%r, due to %r" % (serializer.validated_data, format_exc()))
             raise ValidationError("Unable to save schedule")
 
+    @staticmethod
+    def get_scheduler_start_time():
+        st_hour = int(list(SCHEDULES_START_PROCESSING_TIME.hour)[0])
+        st_minute = int(list(SCHEDULES_START_PROCESSING_TIME.minute)[0])
+        return arrow.get("{full_date}T{hour}:{minute}:00".format(
+            full_date=arrow.utcnow().format("YYYY-MM-DD"),
+            hour=st_hour,
+            minute=st_minute
+        ), ['YYYY-MM-DDTH:mm:ss', 'YYYY-MM-DDTH:m:ss', 'YYYY-MM-DDTHH:m:ss'])
+
+    @transaction.atomic
+    def perform_update(self, serializer):
+        """
+        Update Schedule / HTTP PATCH
+
+        :param serializer:
+        :return:
+        """
+        original_funding_source_type = serializer.instance.funding_source_type
+        new_instance = serializer.save()
+
+        if self._can_changes_cause_late_payments(original_funding_source_type, serializer):
+            process_late_payments = bool(int(self.request.query_params.get("process_late_payments", 0)))
+            if not process_late_payments and not self._have_time_for_payments_processing(new_instance):
+                raise ConflictError(f'Cannot update schedule. '
+                                    f'There are related late payments that should be processed ({new_instance.id})')
+
+            self._process_potential_late_payments(new_instance)
+
+    def _can_changes_cause_late_payments(self, original_funding_source_type, schedule):
+        return original_funding_source_type != schedule.funding_source_type \
+               and schedule.funding_source_type != FundingSourceType.WALLET
+
+    def _have_time_for_payments_processing(self, schedule):
+        return self._have_time_for_deposit_payment_processing(schedule.id) \
+               and self._have_time_for_regular_payment_processing(schedule.id, schedule.period)
+
+    def _process_potential_late_payments(self, schedule):
+        user = self.request.user
+        # We intentionally will send execution_date in past, so that these payments fail
+        execution_date = arrow.utcnow().replace(years=-1).datetime
+
+        if not self._have_time_for_deposit_payment_processing(schedule.id):
+            make_payment.delay(
+                user_id=str(user.id),
+                payment_account_id=str(schedule.payment_account_id),
+                schedule_id=str(schedule.id),
+                currency=str(schedule.currency.value),
+                payment_amount=int(schedule.deposit_amount),
+                additional_information=str(schedule.deposit_additional_information),
+                payee_id=str(schedule.payee_id),
+                funding_source_id=str(schedule.funding_source_id),
+                execution_date=execution_date
+            )
+
+        if not self._have_time_for_regular_payment_processing(schedule.id, schedule.period):
+            make_payment.delay(
+                user_id=str(user.id),
+                payment_account_id=str(schedule.payment_account_id),
+                schedule_id=str(schedule.id),
+                currency=str(schedule.currency.value),
+                payment_amount=int(schedule.payment_amount),
+                additional_information=str(schedule.additional_information),
+                payee_id=str(schedule.payee_id),
+                funding_source_id=str(schedule.funding_source_id),
+                execution_date=execution_date
+            )
+
+    def _have_time_for_deposit_payment_processing(self, schedule_id):
+        try:
+            deposit_payment = DepositsSchedule.objects.get(
+                id=schedule_id,
+                status=ScheduleStatus.open,
+                scheduled_date__gt=self._get_nearest_acceptable_scheduler_date()
+            )
+
+            return arrow.get(deposit_payment.scheduled_date).datetime.date() > arrow.utcnow().datetime.date()
+        except ObjectDoesNotExist:
+            return True
+
+    def _have_time_for_regular_payment_processing(self, schedule_id, period):
+        try:
+            schedule_cls_by_period = {
+                SchedulePeriod.one_time: OnetimeSchedule,
+                SchedulePeriod.weekly: WeeklySchedule,
+                SchedulePeriod.monthly: MonthlySchedule,
+                SchedulePeriod.quarterly: QuarterlySchedule,
+                SchedulePeriod.yearly: YearlySchedule
+            }
+
+            nearest_payment = schedule_cls_by_period.get(period).objects.filter(
+                id=schedule_id,
+                status=ScheduleStatus.open,
+                scheduled_date__gt=self._get_nearest_acceptable_scheduler_date()
+            ).order_by("scheduled_date").first()
+
+            return arrow.get(nearest_payment.scheduled_date).datetime.date() > arrow.utcnow().datetime.date()
+        except ObjectDoesNotExist:
+            return True
+
+    def _get_nearest_acceptable_scheduler_date(self):
+        scheduler_start_time = self.get_scheduler_start_time()
+        return arrow.utcnow().datetime.date() if arrow.utcnow() < scheduler_start_time \
+            else arrow.utcnow().replace(days=+1).datetime.date()
+
     def perform_destroy(self, schedule: Schedule):
         """
         Handle HTTP DELETE here.
@@ -209,8 +316,7 @@ class ScheduleViewSet(views.ModelViewSet):
         document.delete()
         return Response(None, status=204)
 
-    # TODO perform_edit
-
+    @transaction.atomic
     def pay_overdue(self, request, *args, **kwargs):
         """
         Tries to initiate the sequence of overdue payments initiated by client.
@@ -259,5 +365,4 @@ class ScheduleViewSet(views.ModelViewSet):
             raise NotFound(f'Schedule not found {schedule_id}')
 
         schedule.reject()
-
         return Response()

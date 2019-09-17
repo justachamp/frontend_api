@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 
 from django.utils.functional import cached_property
 from rest_framework.exceptions import ValidationError
@@ -117,7 +118,8 @@ class PaymentApiClient:
                 'data': {
                     'amount': p.amount,
                     'description': p.description,
-                    'parentPaymentId': str(p.parent_payment_id) if p.parent_payment_id else None
+                    'parentPaymentId': str(p.parent_payment_id) if p.parent_payment_id else None,
+                    'executionDate': datetime.timestamp(p.execution_date) if p.execution_date else None
                 },
                 'payment_account': {'id': str(p.payment_account_id), 'type': 'payment_accounts'},
                 'origin': {'id': str(p.funding_source_id), 'type': 'funding_sources'},

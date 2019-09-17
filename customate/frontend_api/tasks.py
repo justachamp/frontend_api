@@ -15,10 +15,9 @@ from core.models import User
 from core.fields import Currency, PaymentStatusType
 from frontend_api.models import Schedule
 from frontend_api.models.blacklist import BlacklistDate
-from frontend_api.models.schedule import OnetimeSchedule, DepositsSchedule, AbstractSchedule
+from frontend_api.models.schedule import OnetimeSchedule, DepositsSchedule
 from frontend_api.models.schedule import WeeklySchedule, MonthlySchedule, QuarterlySchedule, YearlySchedule
 from frontend_api.models.schedule import SchedulePayments, LastSchedulePayments
-from frontend_api.models.document import Document
 from frontend_api.core.client import PaymentApiClient, PaymentDetails
 from frontend_api.fields import SchedulePurpose, ScheduleStatus
 
@@ -38,7 +37,7 @@ BLACKLISTED_DAYS_MAX_RETRY_COUNT = 10  # max number of retries to find next non-
 @shared_task
 def make_payment(user_id: str, payment_account_id: str, schedule_id: str, currency: str, payment_amount: int,
                  additional_information: str, payee_id: str, funding_source_id: str, parent_payment_id=None,
-                 request_id=None):
+                 execution_date=None, request_id=None):
     """
     Calls payment API to initiate a payment.
 
@@ -51,14 +50,17 @@ def make_payment(user_id: str, payment_account_id: str, schedule_id: str, curren
     :param payee_id:
     :param funding_source_id:
     :param parent_payment_id: Parent payment to make sure we could trace retry-payment chains
+    :param execution_date: When payment should be executed
     :param request_id: Unique processing request's id.
     :return:
     """
     logging.init_shared_extra(request_id)
     logger.info("make payment: user_id=%s, payment_account_id=%s, schedule_id=%s, currency=%s, payment_amount=%s, "
-                "additional_information=%s, payee_id=%s, funding_source_id=%s, parent_payment_id=%s, request_id=%s" % (
+                "additional_information=%s, payee_id=%s, funding_source_id=%s, parent_payment_id=%s, " \
+                "execution_date=%s, request_id=%s" % (
                     user_id, payment_account_id, schedule_id, currency, payment_amount,
-                    additional_information, payee_id, funding_source_id, parent_payment_id, request_id
+                    additional_information, payee_id, funding_source_id, parent_payment_id,
+                    execution_date, request_id
                 ))
 
     try:
@@ -71,7 +73,8 @@ def make_payment(user_id: str, payment_account_id: str, schedule_id: str, curren
             description=additional_information,
             payee_id=UUID(payee_id),
             funding_source_id=UUID(funding_source_id),
-            parent_payment_id=UUID(parent_payment_id) if parent_payment_id else None
+            parent_payment_id=UUID(parent_payment_id) if parent_payment_id else None,
+            execution_date=execution_date
         ))
     except Exception as e:
         logger.error("Unable to create payment for schedule_id=%s: %r" % (schedule_id, format_exc()))

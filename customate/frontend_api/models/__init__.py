@@ -246,6 +246,7 @@ class PaymentDetails:
     payee_id: UUID
     funding_source_id: UUID
     parent_payment_id: UUID
+    execution_date: datetime
 
 
 __all__ = [
