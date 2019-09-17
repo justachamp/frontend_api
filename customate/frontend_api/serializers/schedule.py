@@ -46,7 +46,7 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
     payee_recipient_email = CharField(required=False)
     payee_iban = CharField(required=False)
     payee_type = EnumField(enum=PayeeType, required=False)
-    funding_source_id = UUIDField(required=True)
+    funding_source_id = UUIDField(required=False)
     funding_source_type = EnumField(enum=FundingSourceType, required=False)
     backup_funding_source_id = UUIDField(required=False)
     backup_funding_source_type = EnumField(enum=FundingSourceType, required=False)

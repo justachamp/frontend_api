@@ -16,9 +16,9 @@ logger = logging.getLogger(__name__)
 
 
 class Session(DefaultSession):
-    def __init__(self, *args, **kwargs) -> None:
-        request_kwargs = {'headers': self._generate_request_headers()}
-        super().__init__(request_kwargs=request_kwargs, *args, **kwargs)
+    # def __init__(self, *args, **kwargs) -> None:
+    #     request_kwargs = {'headers': self._generate_request_headers()}
+    #     super().__init__(request_kwargs=request_kwargs, *args, **kwargs)
 
     def _generate_request_headers(self):
         return {
