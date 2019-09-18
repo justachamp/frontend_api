@@ -199,7 +199,7 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
 
 
 class ScheduleAcceptanceSerializer(HyperlinkedModelSerializer):
-    funding_source_id = UUIDField(required=False)
+    funding_source_id = UUIDField(required=True)
     backup_funding_source_id = UUIDField(required=False)
     fee_amount = IntegerField(default=0, required=False)
 

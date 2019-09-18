@@ -109,17 +109,8 @@ class ScheduleViewSet(views.ModelViewSet):
                     "payee_id": "Current user's payee cannot be used for creation 'pay funds' schedule"
                 })
 
-            # NOTE: force backup funding source to be of 'WALLET' type only,
-            # otherwise we can't process DD/CC payments in a timely manner: they require 7day gap to be made in advance
-            fd = self.payment_client.get_funding_source_details(serializer.validated_data.get("funding_source_id"))
-            backup_funding_source_id = serializer.validated_data.get("backup_funding_source_id")
-            if backup_funding_source_id:
-                fd_backup = self.payment_client.get_funding_source_details(backup_funding_source_id)
-                # NOTE: we do not support backup_funding_source type other than 'WALLET'
-                if fd_backup.type is not FundingSourceType.WALLET:
-                    raise ValidationError({
-                        "backup_funding_source_id": "Backup funding source is not of type %s" % FundingSourceType.WALLET
-                    })
+            funding_source_type = self._get_and_validate_funding_source_type(serializer.validated_data.get("funding_source_id"))
+            backup_funding_source_type = self._get_and_validate_backup_funding_source_type(serializer.validated_data.get("backup_funding_source_id"))
 
             documents = serializer.validated_data.pop("documents", [])
             schedule = serializer.save(
@@ -131,8 +122,8 @@ class ScheduleViewSet(views.ModelViewSet):
                 payee_iban=pd.iban,
                 payee_title=pd.title,
                 payee_type=pd.type,
-                funding_source_type=fd.type if fd else fd,
-                backup_funding_source_type=fd_backup.type if backup_funding_source_id else None
+                funding_source_type=funding_source_type,
+                backup_funding_source_type=backup_funding_source_type
             )
             logger.info("Successfully created new schedule_id=%r" % schedule.id)
             serializer.assign_uploaded_documents_to_schedule(documents)
@@ -180,6 +171,33 @@ class ScheduleViewSet(views.ModelViewSet):
         except Exception as e:
             logger.error("Unable to save Schedule=%r, due to %r" % (serializer.validated_data, format_exc()))
             raise ValidationError("Unable to save schedule")
+
+    def _get_and_validate_funding_source_type(self, funding_source_id):
+        if funding_source_id:
+            fd = self.payment_client.get_funding_source_details(funding_source_id)
+            if fd and fd.type is not None:
+                return fd.type
+            else:
+                raise ValidationError({
+                    "funding_source_type": "This field is required"
+                })
+
+    def _get_and_validate_backup_funding_source_type(self, backup_funding_source_id):
+        # NOTE: force backup funding source to be of 'WALLET' type only,
+        # otherwise we can't process DD/CC payments in a timely manner: they require 7day gap to be made in advance
+        if backup_funding_source_id:
+            fd_backup = self.payment_client.get_funding_source_details(backup_funding_source_id)
+            # NOTE: we do not support backup_funding_source type other than 'WALLET'
+            if not fd_backup:
+                raise ValidationError({
+                    "backup_funding_source_type": "This field is required"
+                })
+            elif fd_backup.type is not FundingSourceType.WALLET:
+                raise ValidationError({
+                    "backup_funding_source_id": "Backup funding source is not of type %s" % FundingSourceType.WALLET
+                })
+            else:
+                return fd_backup.type
 
     @staticmethod
     def get_scheduler_start_time():
@@ -349,9 +367,14 @@ class ScheduleViewSet(views.ModelViewSet):
         except Exception:
             raise NotFound(f'Schedule not found id={schedule_id}')
 
+        fee_amount = serializer.validated_data.get("fee_amount", None)
         funding_source_id = serializer.validated_data.get("funding_source_id", None)
         backup_funding_source_id = serializer.validated_data.get("backup_funding_source_id", None)
-        schedule.accept(funding_source_id, backup_funding_source_id)
+        funding_source_type = self._get_and_validate_funding_source_type(funding_source_id)
+        backup_funding_source_type = self._get_and_validate_backup_funding_source_type(backup_funding_source_id)
+
+        schedule.accept(fee_amount, funding_source_id, funding_source_type,
+                        backup_funding_source_id, backup_funding_source_type)
 
         return Response()
 

@@ -254,16 +254,21 @@ class Schedule(AbstractSchedule):
 
         return self.status
 
-    def accept(self, funding_source_id, backup_funding_source_id):
+    def accept(self, fee_amount, funding_source_id, funding_source_type, backup_funding_source_id,
+               backup_funding_source_type):
         # accept schedules in 'PENDING' status only
         if self.status != ScheduleStatus.pending:
             raise ValidationError(f'Cannot accept schedule with current status (status={self.status})')
 
         self.move_to_status(ScheduleStatus.open)
 
+        self.fee_amount = fee_amount
         self.funding_source_id = funding_source_id
+        self.funding_source_type = funding_source_type
         self.backup_funding_source_id = backup_funding_source_id
-        self.save(update_fields=["funding_source_id", "backup_funding_source_id"])
+        self.backup_funding_source_type = backup_funding_source_type
+        self.save(update_fields=["fee_amount", "funding_source_id", "funding_source_type",
+                                 "backup_funding_source_id", "backup_funding_source_type"])
 
     def reject(self):
         # reject schedules in 'PENDING' status only
