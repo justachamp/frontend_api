@@ -129,7 +129,7 @@ class ScheduleViewSet(views.ModelViewSet):
             serializer.assign_uploaded_documents_to_schedule(documents)
 
             # Immediately create first payments
-            scheduler_start_time = self.get_scheduler_start_time()
+            scheduler_start_time = Schedule.get_celery_processing_time()
             current_date = arrow.utcnow().datetime.date()
 
             if arrow.utcnow() > scheduler_start_time:
@@ -300,7 +300,7 @@ class ScheduleViewSet(views.ModelViewSet):
             return True
 
     def _get_nearest_acceptable_scheduler_date(self):
-        scheduler_start_time = self.get_scheduler_start_time()
+        scheduler_start_time = Schedule.get_celery_processing_time()
         return arrow.utcnow().datetime.date() if arrow.utcnow() < scheduler_start_time \
             else arrow.utcnow().replace(days=+1).datetime.date()
 
