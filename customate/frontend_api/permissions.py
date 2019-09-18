@@ -103,7 +103,7 @@ class IsOwnerOrReadOnly(permissions.BasePermission):
 
 class HasParticularDocumentPermission(permissions.BasePermission):
     """
-    Custom permission to allow handle documents.
+    Custom permission to allow documents handling
     """
 
     def has_post_permission(self, request) -> bool:
@@ -114,16 +114,22 @@ class HasParticularDocumentPermission(permissions.BasePermission):
         # The case where files handling happens on the 'create schedule' page.
         if not schedule_id:
             return True
+
         schedule = get_object_or_404(Schedule, id=schedule_id)
         recipient = schedule.recipient_user
         user = request.user
+        # Check if recipient or sender have common account with user from request (or user's subusers)
+        related_account_ids = user.get_all_related_account_ids()
+
         # Check if schedule has status 'cancelled'
         #    need to avoid documents handling for such schedules
         if schedule.status == ScheduleStatus.cancelled:
             return False
-        # Check if user from request is recipient or sender
+
         if user.role == UserRole.owner:
-            return any([recipient == user, schedule.origin_user == user])
+            return (recipient and recipient.account.id in related_account_ids) \
+                   or schedule.origin_user.account.id in related_account_ids
+
         # Check if subuser from request is subuser of recipient or sender
         if user.role == UserRole.sub_user:
             return getattr(user.account.permission, "manage_schedules") and \
