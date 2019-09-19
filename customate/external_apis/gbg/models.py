@@ -130,7 +130,7 @@ class Address(GBGData):
 
         res = {
             "Country": Address.get_full_country_name(self.country),
-            "Street": "",
+            "Street": self.address_line_1,  # NOTE: this is usually street name (but what if not??)
             "SubStreet": "",
             "City": self.city,
             "SubCity": "",
