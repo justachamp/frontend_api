@@ -53,6 +53,7 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
     total_paid_sum = IntegerField(default=0, required=False, read_only=True)
     total_sum_to_pay = IntegerField(default=0, required=False, read_only=True)
     origin_user_id = UUIDField(required=False)
+    origin_payment_account_id = UUIDField(required=False, read_only=True)
     recipient_user_id = UUIDField(required=False)
 
     documents = SerializerField(resource=DocumentSerializer, many=True, required=False)
@@ -69,7 +70,8 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
             # we can use model properties as well
             'next_payment_date', 'payment_type',
             'number_of_payments_left', 'number_of_payments_made',
-            'total_paid_sum', 'total_sum_to_pay'
+            'total_paid_sum', 'total_sum_to_pay',
+            'origin_payment_account_id'
         )
 
     def validate_name(self, value):
