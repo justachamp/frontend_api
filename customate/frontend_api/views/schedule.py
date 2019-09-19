@@ -281,7 +281,7 @@ class ScheduleViewSet(views.ModelViewSet):
                 scheduled_date__gt=self._get_nearest_acceptable_scheduler_date()
             )
 
-            return arrow.get(deposit_payment.scheduled_date).datetime.date() > arrow.utcnow().datetime.date()
+            return deposit_payment is None or arrow.get(deposit_payment.scheduled_date).datetime.date() > arrow.utcnow().datetime.date()
         except ObjectDoesNotExist:
             return True
 
@@ -301,7 +301,7 @@ class ScheduleViewSet(views.ModelViewSet):
                 scheduled_date__gt=self._get_nearest_acceptable_scheduler_date()
             ).order_by("scheduled_date").first()
 
-            return arrow.get(nearest_payment.scheduled_date).datetime.date() > arrow.utcnow().datetime.date()
+            return nearest_payment is None or arrow.get(nearest_payment.scheduled_date).datetime.date() > arrow.utcnow().datetime.date()
         except ObjectDoesNotExist:
             return True
 
