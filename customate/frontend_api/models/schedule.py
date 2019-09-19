@@ -150,7 +150,7 @@ class Schedule(AbstractSchedule):
         """
         res = None
 
-        if not (self.status in [ScheduleStatus.open, ScheduleStatus.overdue] and self.number_of_payments_left != 0):
+        if not (self.status in [ScheduleStatus.open, ScheduleStatus.overdue, ScheduleStatus.processing] and self.number_of_payments_left != 0):
             res = None
         elif self.period is SchedulePeriod.one_time or not self._did_we_send_first_payment():
             res = arrow.get(self.start_date)
