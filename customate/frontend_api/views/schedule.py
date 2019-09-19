@@ -192,7 +192,7 @@ class ScheduleViewSet(views.ModelViewSet):
                 raise ValidationError({
                     "backup_funding_source_type": "This field is required"
                 })
-            elif fd_backup.type is not FundingSourceType.WALLET.value:
+            elif fd_backup.type != FundingSourceType.WALLET.value:
                 raise ValidationError({
                     "backup_funding_source_id": "Backup funding source is not of type %s" % FundingSourceType.WALLET
                 })
@@ -301,7 +301,10 @@ class ScheduleViewSet(views.ModelViewSet):
                 scheduled_date__gt=self._get_nearest_acceptable_scheduler_date()
             ).order_by("scheduled_date").first()
 
-            return nearest_payment is None or arrow.get(nearest_payment.scheduled_date).datetime.date() > arrow.utcnow().datetime.date()
+            if nearest_payment is not None:
+                return arrow.get(nearest_payment.scheduled_date).datetime.date() > arrow.utcnow().datetime.date()
+            else:
+                return True
         except ObjectDoesNotExist:
             return True
 
