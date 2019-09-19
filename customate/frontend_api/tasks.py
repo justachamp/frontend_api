@@ -90,6 +90,7 @@ def on_payment_change(payment_info: Dict):
     :return:
     """
     payment_id = payment_info.get("payment_id")
+    account_id = payment_info.get("account_id")
     parent_payment_id = payment_info.get("parent_payment_id")
     schedule_id = payment_info.get("schedule_id")
     funding_source_id = payment_info.get("funding_source_id")
@@ -109,6 +110,13 @@ def on_payment_change(payment_info: Dict):
         schedule = Schedule.objects.get(id=schedule_id)  # type: Schedule
     except ObjectDoesNotExist:
         logger.error("Given schedule(id=%s) no longer exists, exiting" % schedule_id)
+        return
+
+    # We set "scheduleId" for payments which created with link to origin user *and* for "incoming" payments
+    # which are created for recipient user, but processing such events for recipient's payment could lead to confusion
+    # and break our logic with "number_of_payment_*" fields
+    if schedule.origin_user.account.payment_account_id != account_id:
+        logger.info("Skipping payment_id=%s processing as it is not related to schedule\'s payer" % payment_id)
         return
 
     try:
