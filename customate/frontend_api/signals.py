@@ -28,7 +28,9 @@ def transaction_failed(sender, instance, **kwargs) -> None:
                                           action=action)
         email_notificator.send_message()
         # Send sms notification
-        sms_notification = SMSNotifier(funds_sender_phone=schedule.origin_user.phone_number,
+        sender_phone = schedule.origin_user.phone_number if isinstance(schedule.origin_user.phone_number, str)\
+            else schedule.origin_user.phone_number.as_e164
+        sms_notification = SMSNotifier(funds_sender_phone=sender_phone,
                                        payment_id=instance.payment_id,
                                        amount=instance.original_amount,
                                        action=action)
@@ -55,8 +57,13 @@ def balance_changed(sender, instance, **kwargs) -> None:
                                           action=action)
         email_notificator.send_message()
         # Send sms notification
-        sms_notification = SMSNotifier(funds_sender_phone=schedule.origin_user.phone_number,
-                                       funds_recipient_phone=schedule.recipient_user.phone_number,
+        sender_phone = schedule.origin_user.phone_number if isinstance(schedule.origin_user.phone_number, str)\
+            else schedule.origin_user.phone_number.as_e164
+        recipient_phone = schedule.recipient_user.phone_number if isinstance(schedule.recipient_user.phone_number, str)\
+            else schedule.recipient_user.phone_number.as_e164
+
+        sms_notification = SMSNotifier(funds_sender_phone=sender_phone,
+                                       funds_recipient_phone=recipient_phone,
                                        amount=instance.original_amount,
                                        action=action)
         sms_notification.send_message()
