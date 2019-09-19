@@ -115,7 +115,7 @@ def on_payment_change(payment_info: Dict):
     # We set "scheduleId" for payments which created with link to origin user *and* for "incoming" payments
     # which are created for recipient user, but processing such events for recipient's payment could lead to confusion
     # and break our logic with "number_of_payment_*" fields
-    if schedule.origin_user.account.payment_account_id != account_id:
+    if str(schedule.origin_user.account.payment_account_id) != account_id:
         logger.info("Skipping payment_id=%s processing as it is not related to schedule\'s payer" % payment_id)
         return
 
