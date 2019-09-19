@@ -199,16 +199,6 @@ class ScheduleViewSet(views.ModelViewSet):
             else:
                 return fd_backup.type
 
-    @staticmethod
-    def get_scheduler_start_time():
-        st_hour = int(list(SCHEDULES_START_PROCESSING_TIME.hour)[0])
-        st_minute = int(list(SCHEDULES_START_PROCESSING_TIME.minute)[0])
-        return arrow.get("{full_date}T{hour}:{minute}:00".format(
-            full_date=arrow.utcnow().format("YYYY-MM-DD"),
-            hour=st_hour,
-            minute=st_minute
-        ), ['YYYY-MM-DDTH:mm:ss', 'YYYY-MM-DDTH:m:ss', 'YYYY-MM-DDTHH:m:ss'])
-
     @transaction.atomic
     def perform_update(self, serializer):
         """
@@ -230,7 +220,7 @@ class ScheduleViewSet(views.ModelViewSet):
 
         if self._can_changes_cause_late_payments(original_funding_source_type, new_instance):
             process_late_payments = bool(int(self.request.query_params.get("process_late_payments", 0)))
-            if not process_late_payments and not self._have_time_for_payments_processing(new_instance):
+            if not process_late_payments and not new_instance.have_time_for_payments_processing():
                 raise ConflictError(f'Cannot update schedule. '
                                     f'There are related late payments that should be processed ({new_instance.id})')
 
@@ -240,16 +230,12 @@ class ScheduleViewSet(views.ModelViewSet):
         return original_funding_source_type != schedule.funding_source_type \
                and schedule.funding_source_type != FundingSourceType.WALLET
 
-    def _have_time_for_payments_processing(self, schedule):
-        return self._have_time_for_deposit_payment_processing(schedule.id) \
-               and self._have_time_for_regular_payment_processing(schedule.id, schedule.period)
-
     def _process_potential_late_payments(self, schedule):
         user = self.request.user
         # We intentionally will send execution_date in past, so that these payments fail
         execution_date = arrow.utcnow().replace(years=-1).datetime
 
-        if not self._have_time_for_deposit_payment_processing(schedule.id):
+        if not schedule.have_time_for_deposit_payment_processing():
             make_payment.delay(
                 user_id=str(user.id),
                 payment_account_id=str(schedule.payment_account_id),
@@ -262,7 +248,7 @@ class ScheduleViewSet(views.ModelViewSet):
                 execution_date=execution_date
             )
 
-        if not self._have_time_for_regular_payment_processing(schedule.id, schedule.period):
+        if not schedule.have_time_for_regular_payment_processing():
             make_payment.delay(
                 user_id=str(user.id),
                 payment_account_id=str(schedule.payment_account_id),
@@ -274,46 +260,6 @@ class ScheduleViewSet(views.ModelViewSet):
                 funding_source_id=str(schedule.funding_source_id),
                 execution_date=execution_date
             )
-
-    def _have_time_for_deposit_payment_processing(self, schedule_id):
-        try:
-            deposit_payment = DepositsSchedule.objects.get(
-                id=schedule_id,
-                status=ScheduleStatus.open,
-                scheduled_date__gt=self._get_nearest_acceptable_scheduler_date()
-            )
-
-            return deposit_payment is None or arrow.get(deposit_payment.scheduled_date).datetime.date() > arrow.utcnow().datetime.date()
-        except ObjectDoesNotExist:
-            return True
-
-    def _have_time_for_regular_payment_processing(self, schedule_id, period):
-        try:
-            schedule_cls_by_period = {
-                SchedulePeriod.one_time: OnetimeSchedule,
-                SchedulePeriod.weekly: WeeklySchedule,
-                SchedulePeriod.monthly: MonthlySchedule,
-                SchedulePeriod.quarterly: QuarterlySchedule,
-                SchedulePeriod.yearly: YearlySchedule
-            }
-
-            nearest_payment = schedule_cls_by_period.get(period).objects.filter(
-                id=schedule_id,
-                status=ScheduleStatus.open,
-                scheduled_date__gt=self._get_nearest_acceptable_scheduler_date()
-            ).order_by("scheduled_date").first()
-
-            if nearest_payment is not None:
-                return arrow.get(nearest_payment.scheduled_date).datetime.date() > arrow.utcnow().datetime.date()
-            else:
-                return True
-        except ObjectDoesNotExist:
-            return True
-
-    def _get_nearest_acceptable_scheduler_date(self):
-        scheduler_start_time = Schedule.get_celery_processing_time()
-        return arrow.utcnow().datetime.date() if arrow.utcnow() < scheduler_start_time \
-            else arrow.utcnow().replace(days=+1).datetime.date()
 
     def perform_destroy(self, schedule: Schedule):
         """

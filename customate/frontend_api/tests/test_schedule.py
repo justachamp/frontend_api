@@ -7,14 +7,14 @@ from django.test import SimpleTestCase, TestCase
 from rest_framework.exceptions import ValidationError
 from rest_framework import status as status_codes
 
-from core.fields import FundingSourceType, Currency, PayeeType
+from core.fields import FundingSourceType, Currency, PayeeType, PaymentStatusType
 from core.models import User
 from frontend_api.core.client import PaymentApiClient, PaymentDetails
 from frontend_api.fields import SchedulePeriod, ScheduleStatus, SchedulePurpose, AccountType
 from frontend_api.models import Schedule, UserAccount
 
 
-from frontend_api.models.schedule import DepositsSchedule, OnetimeSchedule, WeeklySchedule
+from frontend_api.models.schedule import DepositsSchedule, OnetimeSchedule, WeeklySchedule, SchedulePayments
 
 logger = logging.getLogger(__name__)
 
@@ -23,12 +23,13 @@ class ScheduleModelTest(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.user = User.objects.create_user('test_user')
+        UserAccount(account_type=AccountType.personal, user=cls.user).save()
 
     @staticmethod
     def _get_test_schedule_model():
         return Schedule(start_date=arrow.utcnow().datetime.date(), payment_amount=100, purpose=SchedulePurpose.receive,
                         status=ScheduleStatus.open, currency=Currency.EUR, payee_id=uuid4(), payee_type=PayeeType.WALLET,
-                        number_of_payments=10, origin_user_id=ScheduleModelTest.user.id,
+                        number_of_payments=10, funding_source_id=uuid4(), origin_user_id=ScheduleModelTest.user.id,
                         recipient_user_id=ScheduleModelTest.user.id)
 
     def test_next_payment_date_closed_schedule(self):
@@ -89,6 +90,169 @@ class ScheduleModelTest(TestCase):
 
         self.assertEquals(arrow.get(2014, 5, 21).datetime.date(), schedule.next_payment_date)
 
+    def test_have_time_for_deposit_payment_processing_no_deposit(self):
+        schedule = self._get_test_schedule_model()
+        schedule.period = SchedulePeriod.weekly
+        schedule.funding_source_type = FundingSourceType.CREDIT_CARD
+        schedule.save()
+
+        self.assertTrue(schedule.have_time_for_deposit_payment_processing())
+
+    def test_have_time_for_deposit_payment_processing__deposit_in_future(self):
+        schedule = self._get_test_schedule_model()
+        schedule.period = SchedulePeriod.weekly
+        schedule.deposit_payment_date = arrow.utcnow().shift(days=10).datetime.date()
+        schedule.funding_source_type = FundingSourceType.CREDIT_CARD
+        schedule.save()
+
+        self.assertFalse(schedule.have_time_for_regular_payment_processing())
+
+    @skip("Waiting for CS-672")
+    def test_have_time_for_deposit_payment_processing__deposit_in_past(self):
+        pass
+
+    @skip("Waiting for CS-672")
+    def test_have_time_for_deposit_payment_processing__deposit_was_executed_in_past(self):
+        pass
+
+    def test_have_time_for_regular_payment_processing__weekly_execution_date_in_future(self):
+        schedule = self._get_test_schedule_model()
+        schedule.start_date = arrow.utcnow().shift(days=10).datetime.date()
+        schedule.period = SchedulePeriod.weekly
+        schedule.funding_source_type = FundingSourceType.CREDIT_CARD
+        schedule.save()
+
+        self.assertTrue(schedule.have_time_for_regular_payment_processing())
+
+    """
+        We made first, weekly payment today and changed funding source to CREDIT_CARD: 
+        there is NO time for nearest payment
+    """
+    def test_have_time_for_regular_payment_processing__weekly_execution_date_today_have_no_time(self):
+        schedule = self._get_test_schedule_model()
+        schedule.period = SchedulePeriod.weekly
+        schedule.funding_source_type = FundingSourceType.CREDIT_CARD
+        schedule.save()
+
+        SchedulePayments(
+            schedule_id=schedule.id,
+            payment_id=str(uuid4()),
+            funding_source_id=schedule.funding_source_id,
+            parent_payment_id=None,
+            payment_status=PaymentStatusType.PROCESSING,
+            original_amount=schedule.payment_amount
+        ).save()
+
+        self.assertFalse(schedule.have_time_for_regular_payment_processing())
+
+    """
+        We made first, weekly payment yesterday and changed funding source to CREDIT_CARD: 
+        there is NO time for nearest payment
+    """
+    def test_have_time_for_regular_payment_processing__weekly_execution_date_in_past_have_no_time(self):
+        schedule = self._get_test_schedule_model()
+        schedule.start_date = arrow.utcnow().shift(days=-1).datetime.date()
+        schedule.period = SchedulePeriod.weekly
+        schedule.funding_source_type = FundingSourceType.CREDIT_CARD
+        schedule.save()
+
+        SchedulePayments(
+            schedule_id=schedule.id,
+            payment_id=str(uuid4()),
+            funding_source_id=schedule.funding_source_id,
+            parent_payment_id=None,
+            payment_status=PaymentStatusType.PROCESSING,
+            original_amount=schedule.payment_amount
+        ).save()
+
+        self.assertFalse(schedule.have_time_for_regular_payment_processing())
+
+    """
+        We made first, monthly payment today and changed funding source to CREDIT_CARD: 
+        there is time for nearest payment
+    """
+    def test_have_time_for_regular_payment_processing__monthly_execution_date_today_have_time(self):
+        schedule = self._get_test_schedule_model()
+        schedule.period = SchedulePeriod.monthly
+        schedule.funding_source_type = FundingSourceType.CREDIT_CARD
+        schedule.save()
+
+        SchedulePayments(
+            schedule_id=schedule.id,
+            payment_id=str(uuid4()),
+            funding_source_id=schedule.funding_source_id,
+            parent_payment_id=None,
+            payment_status=PaymentStatusType.PROCESSING,
+            original_amount=schedule.payment_amount
+        ).save()
+
+        self.assertTrue(schedule.have_time_for_regular_payment_processing())
+
+    """
+        We made first, monthly payment 10 days ago and changed funding source to CREDIT_CARD: 
+        there is time for nearest payment
+    """
+    def test_have_time_for_regular_payment_processing__monthly_execution_date_in_past_have_time(self):
+        schedule = self._get_test_schedule_model()
+        schedule.start_date = arrow.utcnow().shift(days=-10).datetime.date()
+        schedule.period = SchedulePeriod.monthly
+        schedule.funding_source_type = FundingSourceType.CREDIT_CARD
+        schedule.save()
+
+        SchedulePayments(
+            schedule_id=schedule.id,
+            payment_id=str(uuid4()),
+            funding_source_id=schedule.funding_source_id,
+            parent_payment_id=None,
+            payment_status=PaymentStatusType.PROCESSING,
+            original_amount=schedule.payment_amount
+        ).save()
+
+        self.assertTrue(schedule.have_time_for_regular_payment_processing())
+
+    """
+        We made first, monthly payment 28 days ago and changed funding source to CREDIT_CARD: 
+        there is NO time for nearest payment
+    """
+    def test_have_time_for_regular_payment_processing__monthly_execution_date_in_past_have_no_time(self):
+        schedule = self._get_test_schedule_model()
+        schedule.start_date = arrow.utcnow().shift(days=-28).datetime.date()
+        schedule.period = SchedulePeriod.monthly
+        schedule.funding_source_type = FundingSourceType.CREDIT_CARD
+        schedule.save()
+
+        SchedulePayments(
+            schedule_id=schedule.id,
+            payment_id=str(uuid4()),
+            funding_source_id=schedule.funding_source_id,
+            parent_payment_id=None,
+            payment_status=PaymentStatusType.PROCESSING,
+            original_amount=schedule.payment_amount
+        ).save()
+
+        self.assertFalse(schedule.have_time_for_regular_payment_processing())
+
+    """
+        We made first, monthly payment 10 days ago, payment canceled. We changed funding source to CREDIT_CARD: 
+        there is time for nearest payment (we ignore canceled payment, it will be processed by "pay overdue")
+    """
+    def test_have_time_for_regular_payment_processing__monthly_execution_date_in_past_with_failed_payment(self):
+        schedule = self._get_test_schedule_model()
+        schedule.start_date = arrow.utcnow().shift(days=-10).datetime.date()
+        schedule.period = SchedulePeriod.monthly
+        schedule.funding_source_type = FundingSourceType.CREDIT_CARD
+        schedule.save()
+
+        SchedulePayments(
+            schedule_id=schedule.id,
+            payment_id=str(uuid4()),
+            funding_source_id=schedule.funding_source_id,
+            parent_payment_id=None,
+            payment_status=PaymentStatusType.CANCELED,
+            original_amount=schedule.payment_amount
+        ).save()
+
+        self.assertTrue(schedule.have_time_for_regular_payment_processing())
 
 @skip("Waiting for mocks")
 class PaymentApiClientTest(SimpleTestCase):

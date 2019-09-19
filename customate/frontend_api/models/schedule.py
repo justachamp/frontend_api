@@ -3,6 +3,7 @@ import datetime
 import arrow
 from dataclasses import dataclass
 
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.validators import RegexValidator
 from enumfields import EnumField
 from django.db import models
@@ -14,6 +15,7 @@ from core.models import Model, User
 from core.fields import Currency, PaymentStatusType, FundingSourceType, PayeeType
 from frontend_api.fields import SchedulePurpose, SchedulePeriod, ScheduleStatus, SchedulePaymentType
 from customate.settings import CELERY_BEAT_SCHEDULE
+from frontend_api.models.blacklist import BlacklistDate
 
 logger = logging.getLogger(__name__)
 
@@ -131,6 +133,13 @@ class Schedule(AbstractSchedule):
     def number_of_payments_left(self):
         self.refresh_number_of_payments_made()
         return self.number_of_payments - self.number_of_payments_made
+
+    @property
+    def number_of_sent_regular_payments(self):
+        return LastSchedulePayments.objects.filter(
+                schedule_id=self.id,
+                parent_payment_id=None
+            ).count()
 
     @property
     def next_payment_date(self):
@@ -313,6 +322,66 @@ class Schedule(AbstractSchedule):
             hour=st_hour,
             minute=st_minute
         ), ['YYYY-MM-DDTH:mm:ss', 'YYYY-MM-DDTH:m:ss', 'YYYY-MM-DDTHH:m:ss'])
+
+    def have_time_for_payments_processing(self):
+        return self.have_time_for_deposit_payment_processing() and self.have_time_for_regular_payment_processing()
+
+    def have_time_for_deposit_payment_processing(self):
+        if self.deposit_payment_date is None:
+            return True
+
+        deposit_payment = DepositsSchedule.objects.get(
+            pk=self.id,
+            status=ScheduleStatus.open.value
+        )
+
+        # @TODO: There is no way (for now) to find out if we already have paid deposit, returning True for now
+        # CS-672
+        # arrow.get(deposit_payment.scheduled_date).datetime.date() >= self._get_nearest_acceptable_scheduler_date()
+        return True
+
+    def have_time_for_regular_payment_processing(self):
+        try:
+            if self.number_of_sent_regular_payments == self.number_of_payments:
+                return True
+
+            schedule_cls_by_period = {
+                SchedulePeriod.one_time: OnetimeSchedule,
+                SchedulePeriod.weekly: WeeklySchedule,
+                SchedulePeriod.monthly: MonthlySchedule,
+                SchedulePeriod.quarterly: QuarterlySchedule,
+                SchedulePeriod.yearly: YearlySchedule
+            }
+
+            # Selecting nearest scheduled date for regular payments, by skipping dates for which
+            # we already sent payments
+            from_index = self.number_of_sent_regular_payments
+            to_index = from_index + 1
+            nearest_payment = schedule_cls_by_period.get(self.period).objects.filter(
+                id=self.id,
+                status=ScheduleStatus.open,
+            ).order_by("scheduled_date").all()[from_index:to_index].first()
+
+            return nearest_payment is not None \
+                   and arrow.get(nearest_payment.scheduled_date).datetime.date() >= self._get_nearest_acceptable_scheduler_date()
+        except ObjectDoesNotExist:
+            return False
+
+    def _get_nearest_acceptable_scheduler_date(self):
+        scheduler_start_time = Schedule.get_celery_processing_time()
+        retry_count = 1
+
+        while True:
+            from frontend_api.tasks import BLACKLISTED_DAYS_MAX_RETRY_COUNT
+            if retry_count > BLACKLISTED_DAYS_MAX_RETRY_COUNT:
+                break
+
+            if BlacklistDate.contains(scheduler_start_time.datetime.date()) or scheduler_start_time < arrow.utcnow():
+                scheduler_start_time = scheduler_start_time.shift(days=1)
+            else:
+                break
+
+        return scheduler_start_time.datetime.date()
 
 
 class OnetimeSchedule(AbstractSchedule):
