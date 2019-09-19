@@ -221,10 +221,12 @@ class ScheduleViewSet(views.ModelViewSet):
         funding_source_type = self._get_and_validate_funding_source_type(serializer.validated_data.get("funding_source_id"))
         backup_funding_source_type = self._get_and_validate_backup_funding_source_type(serializer.validated_data.get("backup_funding_source_id"))
 
+        documents = serializer.validated_data.pop("documents", [])
         new_instance = serializer.save(
             funding_source_type=funding_source_type,
             backup_funding_source_type=backup_funding_source_type
         )
+        serializer.assign_uploaded_documents_to_schedule(documents)
 
         if self._can_changes_cause_late_payments(original_funding_source_type, new_instance):
             process_late_payments = bool(int(self.request.query_params.get("process_late_payments", 0)))
