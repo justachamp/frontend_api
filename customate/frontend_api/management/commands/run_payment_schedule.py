@@ -26,17 +26,17 @@ class Command(BaseCommand):
         self.stdout.write("Fetching schedule_id=%s" % schedule_id)
         s = Schedule.objects.get(pk=schedule_id)
 
-        self.stdout.write("Submitting regular payment: origin_user_id=%s, payment_account_id=%s, currency=%s, "
+        self.stdout.write("Submitting regular payment: origin_user.id=%s, payment_account_id=%s, currency=%s, "
                           "payment_amount=%s, additional_information=%s, payee_id=%s, funding_source_id=%s" % (
-                              str(s.origin_user_id), str(s.user.account.payment_account_id), str(s.currency.value), int(s.payment_amount),
+                              str(s.origin_user.id), str(s.origin_user.account.payment_account_id), str(s.currency.value), int(s.payment_amount),
                               str(s.additional_information),
                               str(s.payee_id), str(s.funding_source_id)
                           ))
 
         make_payment.delay(
             schedule_id=str(s.id),
-            user_id=str(s.origin_user_id),
-            payment_account_id=str(s.user.account.payment_account_id),
+            user_id=str(s.origin_user.id),
+            payment_account_id=str(s.origin_user.account.payment_account_id),
             currency=str(s.currency.value),
             payment_amount=int(s.payment_amount),
             additional_information=str(s.additional_information),
