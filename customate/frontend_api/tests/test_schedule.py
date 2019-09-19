@@ -19,47 +19,73 @@ from frontend_api.models.schedule import DepositsSchedule, OnetimeSchedule, Week
 logger = logging.getLogger(__name__)
 
 
-@skip("Waiting for mock DB support")
-class ScheduleModelTest(SimpleTestCase):
+class ScheduleModelTest(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = User.objects.create_user('test_user')
+
+    @staticmethod
+    def _get_test_schedule_model():
+        return Schedule(start_date=arrow.utcnow().datetime.date(), payment_amount=100, purpose=SchedulePurpose.receive,
+                        status=ScheduleStatus.open, currency=Currency.EUR, payee_id=uuid4(), payee_type=PayeeType.WALLET,
+                        number_of_payments=10, origin_user_id=ScheduleModelTest.user.id,
+                        recipient_user_id=ScheduleModelTest.user.id)
 
     def test_next_payment_date_closed_schedule(self):
-        schedule = Schedule(period=SchedulePeriod.one_time, status=ScheduleStatus.closed, payment_amount=100)
+        schedule = self._get_test_schedule_model()
+        schedule.period = SchedulePeriod.one_time
+        schedule.status = ScheduleStatus.closed
+        schedule.number_of_payments = 1
+        schedule.save()
 
         self.assertIsNone(schedule.next_payment_date)
 
     def test_next_payment_date_one_time(self):
-        schedule = Schedule(period=SchedulePeriod.one_time, start_date=arrow.utcnow().datetime.date(),
-                            status=ScheduleStatus.open, payment_amount=100, number_of_payments=1)
+        schedule = self._get_test_schedule_model()
+        schedule.period = SchedulePeriod.one_time
+        schedule.number_of_payments = 1
+        schedule.save()
 
         self.assertEquals(schedule.start_date, schedule.next_payment_date)
 
-    def test_next_payment_date_weekly_start_date_didnt_pass(self):
-        schedule = Schedule(period=SchedulePeriod.weekly, start_date=arrow.utcnow().datetime.date(),
-                            status=ScheduleStatus.open, number_of_payments=10, payment_amount=100)
+    def test_next_payment_date_weekly_start_date_is_current_date(self):
+        current_datetime = arrow.utcnow()
+        schedule = self._get_test_schedule_model()
+        schedule.start_date = current_datetime.datetime.date()
+        schedule.period = SchedulePeriod.weekly
+        schedule.save()
 
-        self.assertEquals(schedule.start_date, schedule.next_payment_date)
+        self.assertEquals(current_datetime.shift(weeks=1).datetime.date(), schedule.next_payment_date)
 
     def test_next_payment_date_weekly_start_date_pass(self):
-        schedule = Schedule(period=SchedulePeriod.weekly, start_date=arrow.get(2013, 5, 21).datetime.date(),
-                            status=ScheduleStatus.open, number_of_payments=10, payment_amount=100)
+        schedule = self._get_test_schedule_model()
+        schedule.start_date = arrow.get(2013, 5, 21).datetime.date()
+        schedule.period = SchedulePeriod.weekly
+        schedule.save()
 
         self.assertEquals(arrow.get(2013, 5, 28).datetime.date(), schedule.next_payment_date)
 
     def test_next_payment_date_monthly(self):
-        schedule = Schedule(period=SchedulePeriod.monthly, start_date=arrow.get(2013, 5, 21).datetime.date(),
-                            status=ScheduleStatus.open, number_of_payments=10, payment_amount=100)
+        schedule = self._get_test_schedule_model()
+        schedule.start_date = arrow.get(2013, 5, 21).datetime.date()
+        schedule.period = SchedulePeriod.monthly
+        schedule.save()
 
         self.assertEquals(arrow.get(2013, 6, 21).datetime.date(), schedule.next_payment_date)
 
     def test_next_payment_date_quarterly(self):
-        schedule = Schedule(period=SchedulePeriod.quarterly, start_date=arrow.get(2013, 5, 21).datetime.date(),
-                            status=ScheduleStatus.open, number_of_payments=10, payment_amount=100)
+        schedule = self._get_test_schedule_model()
+        schedule.start_date = arrow.get(2013, 5, 21).datetime.date()
+        schedule.period = SchedulePeriod.quarterly
+        schedule.save()
 
         self.assertEquals(arrow.get(2013, 9, 21).datetime.date(), schedule.next_payment_date)
 
     def test_next_payment_date_yearly(self):
-        schedule = Schedule(period=SchedulePeriod.yearly, start_date=arrow.get(2013, 5, 21).datetime.date(),
-                            status=ScheduleStatus.open, number_of_payments=10, payment_amount=100)
+        schedule = self._get_test_schedule_model()
+        schedule.start_date = arrow.get(2013, 5, 21).datetime.date()
+        schedule.period = SchedulePeriod.yearly
+        schedule.save()
 
         self.assertEquals(arrow.get(2014, 5, 21).datetime.date(), schedule.next_payment_date)
 

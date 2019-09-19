@@ -13,8 +13,11 @@ from rest_framework.exceptions import ValidationError
 from core.models import Model, User
 from core.fields import Currency, PaymentStatusType, FundingSourceType, PayeeType
 from frontend_api.fields import SchedulePurpose, SchedulePeriod, ScheduleStatus, SchedulePaymentType
+from customate.settings import CELERY_BEAT_SCHEDULE
 
 logger = logging.getLogger(__name__)
+
+SCHEDULES_START_PROCESSING_TIME = CELERY_BEAT_SCHEDULE["once_per_day"]["schedule"]  # type: celery.schedules.crontab
 
 
 class AbstractSchedule(Model):
@@ -47,7 +50,7 @@ class AbstractSchedule(Model):
     payee_type = EnumField(PayeeType, max_length=50)
 
     funding_source_id = models.UUIDField(default=None, blank=True, null=True)
-    funding_source_type = EnumField(FundingSourceType, max_length=50)
+    funding_source_type = EnumField(FundingSourceType, max_length=50, default=None, blank=True, null=True)
 
     backup_funding_source_id = models.UUIDField(default=None, blank=True, null=True)
     backup_funding_source_type = EnumField(FundingSourceType, max_length=50, default=None, blank=True, null=True)
@@ -118,7 +121,11 @@ class Schedule(AbstractSchedule):
     def _did_we_send_first_payment(self):
         # return self.number_of_payments_made > 0 # we can't rely on this field here, since there is
         # a case of long-running PENDING payments(days), which might corrupt our next_payment_date calculations
-        return arrow.utcnow().datetime.date() > self.start_date
+
+        # We cannot just compare dates and ignore time. If start_date is current date
+        # then scheduler's start time is important fact
+        return arrow.utcnow().datetime.date() > self.start_date \
+                or (arrow.utcnow().datetime.date() == self.start_date and arrow.utcnow() > self.get_celery_processing_time())
 
     @property
     def number_of_payments_left(self):
@@ -296,6 +303,16 @@ class Schedule(AbstractSchedule):
         logger.info(f"Closing user's(id={user_id}) schedules")
         Schedule.objects.filter(Q(recipient_user__id=user_id) | Q(origin_user__id=user_id)) \
             .update(status=ScheduleStatus.closed)
+
+    @staticmethod
+    def get_celery_processing_time():
+        st_hour = int(list(SCHEDULES_START_PROCESSING_TIME.hour)[0])
+        st_minute = int(list(SCHEDULES_START_PROCESSING_TIME.minute)[0])
+        return arrow.get("{full_date}T{hour}:{minute}:00".format(
+            full_date=arrow.utcnow().format("YYYY-MM-DD"),
+            hour=st_hour,
+            minute=st_minute
+        ), ['YYYY-MM-DDTH:mm:ss', 'YYYY-MM-DDTH:m:ss', 'YYYY-MM-DDTHH:m:ss'])
 
 
 class OnetimeSchedule(AbstractSchedule):
