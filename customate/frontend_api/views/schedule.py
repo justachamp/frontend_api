@@ -192,7 +192,7 @@ class ScheduleViewSet(views.ModelViewSet):
                 raise ValidationError({
                     "backup_funding_source_type": "This field is required"
                 })
-            elif fd_backup.type is not FundingSourceType.WALLET:
+            elif fd_backup.type is not FundingSourceType.WALLET.value:
                 raise ValidationError({
                     "backup_funding_source_id": "Backup funding source is not of type %s" % FundingSourceType.WALLET
                 })
