@@ -48,7 +48,7 @@ class PreSignedUrlView(APIView):
         """
         The method returns presigned url for further sharing file
         """
-        document_id = request.query_params.get("document")
+        document_id = request.query_params.get("document_id")
         if not document_id:
             logger.error("The 'document' parameter has not been passed %r" % traceback.format_exc())
             raise ValidationError("The 'document' field is requred.")
@@ -68,7 +68,7 @@ class PreSignedUrlView(APIView):
         """
         The method returns presigned url for further posting object to S3
         """
-        schedule_id = request.query_params.get("schedule")
+        schedule_id = request.query_params.get("schedule_id")
         filename = request.query_params.get("filename")
         slug = request.query_params.get("slug")
         schedule = get_object_or_404(Schedule, id=schedule_id) if schedule_id else None
@@ -95,7 +95,7 @@ class PreSignedUrlView(APIView):
         """
         The method returns presigned url for further sharing file
         """
-        document_id = request.query_params.get("document")
+        document_id = request.query_params.get("document_id")
         if not document_id:
             logger.error("The 'document' parameter has not been passed %r" % traceback.format_exc())
             raise ValidationError("The 'document' field is requred.")

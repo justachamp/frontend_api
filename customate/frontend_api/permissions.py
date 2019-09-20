@@ -110,7 +110,7 @@ class HasParticularDocumentPermission(permissions.BasePermission):
         """
         Check permissions for posting document to particular schedule
         """
-        schedule_id = request.query_params.get("schedule")
+        schedule_id = request.query_params.get("schedule_id")
         # The case where files handling happens on the 'create schedule' page.
         if not schedule_id:
             return True
@@ -142,10 +142,10 @@ class HasParticularDocumentPermission(permissions.BasePermission):
         """
         Check permissions for getting document from particular schedule
         """
-        document_id = request.query_params.get("document")
+        document_id = request.query_params.get("document_id")
         if not document_id:
-            logger.error("The 'document' parameter has not been passed %r" % traceback.format_exc())
-            raise ValidationError("The 'document' field is requred.")
+            logger.error("The 'document_id' parameter has not been passed %r" % traceback.format_exc())
+            raise ValidationError("The 'document_id' field is requred.")
         document = get_object_or_404(Document, id=document_id)
         schedule = document.schedule
         # The case where files handling happens on the 'create schedule' page.
@@ -167,10 +167,10 @@ class HasParticularDocumentPermission(permissions.BasePermission):
         """
         Check if user able to delete document
         """
-        document_id = request.query_params.get("document")
+        document_id = request.query_params.get("document_id")
         if not document_id:
-            logger.error("The 'document' parameter has not been passed %r" % traceback.format_exc())
-            raise ValidationError("The 'document' field is requred.")
+            logger.error("The 'document_id' parameter has not been passed %r" % traceback.format_exc())
+            raise ValidationError("The 'document_id' field is requred.")
         document = get_object_or_404(Document, id=document_id)
         if not document.schedule and document.user == request.user:
             return True
