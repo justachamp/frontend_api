@@ -218,7 +218,7 @@ class ScheduleViewSet(views.ModelViewSet):
         serializer.assign_uploaded_documents_to_schedule(documents)
 
         if self._can_changes_cause_late_payments(original_funding_source_type, new_instance):
-            process_late_payments = self.request.query_params.get("process_late_payments", 'false') == 'true'
+            process_late_payments = bool(int(self.request.query_params.get("process_late_payments", 0)))
             if not process_late_payments and not new_instance.have_time_for_payments_processing():
                 raise ConflictError(f'Cannot update schedule. '
                                     f'There are related late payments that should be processed ({new_instance.id})')
@@ -237,7 +237,7 @@ class ScheduleViewSet(views.ModelViewSet):
         if not schedule.have_time_for_deposit_payment_processing():
             make_payment.delay(
                 user_id=str(user.id),
-                payment_account_id=str(schedule.payment_account_id),
+                payment_account_id=str(user.payment_account_id),
                 schedule_id=str(schedule.id),
                 currency=str(schedule.currency.value),
                 payment_amount=int(schedule.deposit_amount),
@@ -250,7 +250,7 @@ class ScheduleViewSet(views.ModelViewSet):
         if not schedule.have_time_for_regular_payment_processing():
             make_payment.delay(
                 user_id=str(user.id),
-                payment_account_id=str(schedule.payment_account_id),
+                payment_account_id=str(user.payment_account_id),
                 schedule_id=str(schedule.id),
                 currency=str(schedule.currency.value),
                 payment_amount=int(schedule.payment_amount),

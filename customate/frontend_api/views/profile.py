@@ -60,8 +60,8 @@ class ProfileView(DomainService, APIView):
         data = request.data
         self.service = request.user, data
         profile = self.service.profile
-        skip_gbg = request.query_params.get("skip_gbg", 'false') == 'true'
-        ignore_gbg_exception = request.query_params.get("ignore_gbg_exception", 'true') == 'true'
+        skip_gbg = bool(int(request.query_params.get("skip_gbg", 0)))
+        ignore_gbg_exception = bool(int(request.query_params.get("ignore_gbg_exception", 1)))
 
         serializer = ProfileSerializer(
             instance=self.service.profile,
