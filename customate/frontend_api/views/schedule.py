@@ -237,7 +237,7 @@ class ScheduleViewSet(views.ModelViewSet):
         if not schedule.have_time_for_deposit_payment_processing():
             make_payment.delay(
                 user_id=str(user.id),
-                payment_account_id=str(user.payment_account_id),
+                payment_account_id=str(user.account.payment_account_id),
                 schedule_id=str(schedule.id),
                 currency=str(schedule.currency.value),
                 payment_amount=int(schedule.deposit_amount),
@@ -250,7 +250,7 @@ class ScheduleViewSet(views.ModelViewSet):
         if not schedule.have_time_for_regular_payment_processing():
             make_payment.delay(
                 user_id=str(user.id),
-                payment_account_id=str(user.payment_account_id),
+                payment_account_id=str(user.account.payment_account_id),
                 schedule_id=str(schedule.id),
                 currency=str(schedule.currency.value),
                 payment_amount=int(schedule.payment_amount),
