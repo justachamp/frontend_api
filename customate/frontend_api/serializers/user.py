@@ -58,7 +58,8 @@ class BaseUserSerializer(HyperlinkedModelSerializer):
         fields = ('url', 'role', 'status', 'username', 'first_name', 'last_name', 'middle_name', 'phone_number',
                   'phone_number_verified', 'email_verified', 'contact_info_once_verified', 'is_verified', 'is_superuser',
                   'birth_date', 'last_name', 'email', 'address', 'account', 'title', 'gender', 'country_of_birth',
-                  'mother_maiden_name', 'passport_number', 'passport_date_expiry', 'passport_country_origin')
+                  'mother_maiden_name', 'passport_number', 'passport_date_expiry', 'passport_country_origin',
+                  'notify_by_email', 'notify_by_phone')
 
     def to_representation(self, instance):
         """

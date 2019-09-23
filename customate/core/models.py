@@ -56,6 +56,9 @@ class User(AbstractUser, Model):
     passport_date_expiry = models.DateField(_('day of birth'), blank=True, null=True)
     passport_country_origin = EnumField(Country, max_length=2, blank=True, null=True)
 
+    notify_by_email = models.BooleanField(default=True)
+    notify_by_phone = models.BooleanField(default=False)
+
     phone_number_verified = models.BooleanField(
         _('phone number verified'),
         default=False,

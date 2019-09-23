@@ -6,7 +6,7 @@ class FrontendApiConfig(AppConfig):
     verbose_name = 'frontend api'
 
     def ready(self):
-        import frontend_api.signals
+        import frontend_api.models.schedule.signals
 
 
 

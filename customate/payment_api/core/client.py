@@ -72,7 +72,7 @@ class Session(DefaultSession):
         return super()._ext_fetch_by_url(url)
 
     def http_request(self, http_method: str, url: str, send_json: dict,
-                     expected_statuses: List[str]=None) -> Tuple[int, dict, str]:
+                     expected_statuses: List[str] = None) -> Tuple[int, dict, str]:
         """
         Internal use.
         Method to make PATCH/POST requests to server using requests library.

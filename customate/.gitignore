@@ -3,3 +3,4 @@ logs/*
 env.sh
 aux/
 celerybeat-schedule
+app.log

@@ -13,6 +13,7 @@ from frontend_api.serializers import (
     UserAddressSerializer,
     AccountSerializer
 )
+from phonenumber_field.modelfields import PhoneNumberField
 
 import logging
 
@@ -53,6 +54,8 @@ class BaseAuthUserSerializerMixin(AuthSerializerMixin):
         return value
 
     def _validate_phone_number(self, data, value):
+        if isinstance(value, PhoneNumberField):
+            value = value.as_e164
         return self._validate_attribute_verification('phone_number', 'phone_number_verified', value, data)
 
     def _validate_email(self, data, value):
