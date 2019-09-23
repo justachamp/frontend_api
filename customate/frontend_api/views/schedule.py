@@ -3,7 +3,6 @@ from traceback import format_exc
 import arrow
 import celery
 from django.db.models import Q
-from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.utils.functional import cached_property
 from django.shortcuts import get_object_or_404
@@ -219,7 +218,7 @@ class ScheduleViewSet(views.ModelViewSet):
         serializer.assign_uploaded_documents_to_schedule(documents)
 
         if self._can_changes_cause_late_payments(original_funding_source_type, new_instance):
-            process_late_payments = bool(int(self.request.query_params.get("process_late_payments", 0)))
+            process_late_payments = self.request.query_params.get("process_late_payments", 'false') == 'true'
             if not process_late_payments and not new_instance.have_time_for_payments_processing():
                 raise ConflictError(f'Cannot update schedule. '
                                     f'There are related late payments that should be processed ({new_instance.id})')
