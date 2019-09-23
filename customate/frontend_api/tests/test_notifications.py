@@ -34,16 +34,16 @@ class TestEmailNotifier(SimpleTestCase):
                     'Html': {
                         'Charset': 'UTF-8',
                         'Data': render_to_string(
-                                "notifications/email_senders_balance_updated.html",
-                                context={"header": "Dummy template", "data": "Test info block."}
+                            "notifications/email_senders_balance_updated.html",
+                            context={"header": "Dummy template", "data": "Test info block."}
                         ),
                     },
                 },
                 'Subject': {
                     'Charset': "UTF-8",
                     'Data': "Gocustomate test notification.",
-                    },
-                }
+                },
+            }
         }
         response = self.client.send_email(**message, **data)
         self.assertEqual(200, response["ResponseMetadata"].get("HTTPStatusCode"))
