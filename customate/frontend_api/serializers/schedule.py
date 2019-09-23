@@ -84,8 +84,12 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
         logger.info("Validate_name: %r, user=%r" % (value, request.user))
 
         target_account_ids = request.user.get_all_related_account_ids()
-        queryset = Schedule.objects.filter(name=value, origin_user__account__id__in=target_account_ids) \
-                   | Schedule.objects.filter(name=value, recipient_user__account__id__in=target_account_ids)
+        if self.instance:
+            queryset = Schedule.objects.filter(name=value, origin_user__account__id__in=target_account_ids).exclude(id=self.instance.id) \
+                       | Schedule.objects.filter(name=value, recipient_user__account__id__in=target_account_ids).exclude(id=self.instance.id)
+        else:
+            queryset = Schedule.objects.filter(name=value, origin_user__account__id__in=target_account_ids) \
+                       | Schedule.objects.filter(name=value, recipient_user__account__id__in=target_account_ids)
 
         entries_count = queryset.count()
         if entries_count >= 1:
