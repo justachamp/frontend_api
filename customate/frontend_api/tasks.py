@@ -74,7 +74,7 @@ def make_payment(user_id: str, payment_account_id: str, schedule_id: str, curren
             payee_id=UUID(payee_id),
             funding_source_id=UUID(funding_source_id),
             parent_payment_id=UUID(parent_payment_id) if parent_payment_id else None,
-            execution_date=execution_date
+            execution_date=arrow.get(execution_date).datetime if execution_date else None
         ))
     except Exception as e:
         logger.error("Unable to create payment for schedule_id=%s: %r" % (schedule_id, format_exc()))
