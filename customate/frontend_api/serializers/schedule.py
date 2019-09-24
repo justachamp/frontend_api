@@ -36,8 +36,9 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
     number_of_payments_made = IntegerField(required=False, read_only=True)
     start_date = DateField(required=True)
     payment_amount = IntegerField(required=True)
-    fee_amount = IntegerField(default=0, required=False)
+    payment_fee_amount = IntegerField(default=0, required=False)
     deposit_amount = IntegerField(required=False)
+    deposit_fee_amount = IntegerField(default=0, required=False)
     deposit_payment_date = DateField(required=False)
     additional_information = CharField(required=False)
     payee_id = UUIDField(required=True)
@@ -52,6 +53,7 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
     backup_funding_source_type = EnumField(enum=FundingSourceType, required=False)
     total_paid_sum = IntegerField(default=0, required=False, read_only=True)
     total_sum_to_pay = IntegerField(default=0, required=False, read_only=True)
+    total_fee_amount = IntegerField(default=0, required=False, read_only=True)
     origin_user_id = UUIDField(required=False)
     origin_payment_account_id = UUIDField(required=False, read_only=True)
     recipient_user_id = UUIDField(required=False)
@@ -62,15 +64,15 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
         model = Schedule
         fields = (
             'name', 'status', 'purpose', 'currency', 'period', 'number_of_payments',
-            'start_date', 'payment_amount', 'fee_amount', 'deposit_amount', 'deposit_payment_date',
-            'additional_information', 'payee_id', 'funding_source_id', 'backup_funding_source_id', 'payee_title',
-            'payee_iban', 'payee_recipient_name', 'payee_recipient_email',
+            'start_date', 'payment_amount', 'payment_fee_amount', 'deposit_amount', 'deposit_fee_amount',
+            'deposit_payment_date', 'additional_information', 'payee_id', 'funding_source_id',
+            'backup_funding_source_id', 'payee_title', 'payee_iban', 'payee_recipient_name', 'payee_recipient_email',
             'payee_type', 'documents', 'origin_user_id', 'recipient_user_id',
             'funding_source_type', 'backup_funding_source_type',
             # we can use model properties as well
             'next_payment_date', 'payment_type',
             'number_of_payments_left', 'number_of_payments_made',
-            'total_paid_sum', 'total_sum_to_pay',
+            'total_paid_sum', 'total_sum_to_pay', 'total_fee_amount',
             'origin_payment_account_id'
         )
 
@@ -177,8 +179,11 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
             if int(res["payment_amount"]) < 0:
                 raise ValidationError({"payment_amount": "Payment amount should be positive number"})
 
-            if int(res["fee_amount"]) < 0:
-                raise ValidationError({"fee_amount": "Fee amount should be positive number"})
+            if int(res["payment_fee_amount"]) < 0:
+                raise ValidationError({"payment_fee_amount": "Payment fee amount should be positive number"})
+
+            if int(res["deposit_fee_amount"]) < 0:
+                raise ValidationError({"deposit_fee_amount": "Deposit fee amount should be positive number"})
 
             if res.get("purpose") == SchedulePurpose.pay:
                 # Verify first funding source
@@ -207,12 +212,13 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
 class ScheduleAcceptanceSerializer(HyperlinkedModelSerializer):
     funding_source_id = UUIDField(required=True)
     backup_funding_source_id = UUIDField(required=False)
-    fee_amount = IntegerField(default=0, required=False)
+    payment_fee_amount = IntegerField(default=0, required=False)
+    deposit_fee_amount = IntegerField(default=0, required=False)
 
     class Meta:
         model = Schedule
         fields = (
-            'funding_source_id', 'backup_funding_source_id', 'fee_amount'
+            'funding_source_id', 'backup_funding_source_id', 'payment_fee_amount', 'deposit_fee_amount'
         )
 
     def validate(self, res: OrderedDict):
@@ -227,8 +233,11 @@ class ScheduleAcceptanceSerializer(HyperlinkedModelSerializer):
         logger.info("VALIDATE, res=%r" % res)
 
         try:
-            if res.get("fee_amount") and int(res["fee_amount"]) < 0:
-                raise ValidationError({"fee_amount": "Fee amount should be positive number"})
+            if res.get("payment_fee_amount") and int(res["payment_fee_amount"]) < 0:
+                raise ValidationError({"payment_fee_amount": "Payment fee amount should be positive number"})
+
+            if res.get("deposit_fee_amount") and int(res["deposit_fee_amount"]) < 0:
+                raise ValidationError({"deposit_fee_amount": "Deposit fee amount should be positive number"})
 
         except (ValueError, TypeError):
             logger.error("Validation failed due to: %r" % format_exc())

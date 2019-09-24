@@ -323,13 +323,15 @@ class ScheduleViewSet(views.ModelViewSet):
         except Exception:
             raise NotFound(f'Schedule not found id={schedule_id}')
 
-        fee_amount = serializer.validated_data.get("fee_amount", None)
+        payment_fee_amount = serializer.validated_data.get("payment_fee_amount", None)
+        deposit_fee_amount = serializer.validated_data.get("deposit_fee_amount", None)
         funding_source_id = serializer.validated_data.get("funding_source_id", None)
         backup_funding_source_id = serializer.validated_data.get("backup_funding_source_id", None)
         funding_source_type = self._get_and_validate_funding_source_type(funding_source_id)
         backup_funding_source_type = self._get_and_validate_backup_funding_source_type(backup_funding_source_id)
 
-        schedule.accept(fee_amount, funding_source_id, funding_source_type,
+        schedule.accept(payment_fee_amount, deposit_fee_amount,
+                        funding_source_id, funding_source_type,
                         backup_funding_source_id, backup_funding_source_type)
 
         return Response()

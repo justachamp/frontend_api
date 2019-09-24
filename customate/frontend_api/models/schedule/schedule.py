@@ -66,11 +66,14 @@ class AbstractSchedule(Model):
     )
     start_date = models.DateField()
     payment_amount = models.PositiveIntegerField()
-    fee_amount = models.PositiveIntegerField(
-        default=0, help_text=_("Approximate fee amount for all payments (including deposit) in schedule")
+    payment_fee_amount = models.PositiveIntegerField(
+        default=0, help_text=_("Approximate fee amount for regular payment in schedule")
     )
     deposit_amount = models.PositiveIntegerField(
         null=True, help_text=_("Initial payment independent of the rest of scheduled payments")
+    )
+    deposit_fee_amount = models.PositiveIntegerField(
+        default=0, help_text=_("Approximate fee amount for deposit payment in schedule")
     )
     deposit_payment_date = models.DateField(null=True)  # This should be strictly < start_date
     additional_information = models.CharField(max_length=250, blank=True, null=True,
@@ -100,7 +103,7 @@ class Schedule(AbstractSchedule):
         Total sum that should be paid by this schedule
         :return:
         """
-        return self.fee_amount + \
+        return self.total_fee_amount +\
                (self.deposit_amount if self.deposit_amount is not None else 0) + \
                (self.payment_amount * self.number_of_payments)
 
@@ -116,6 +119,10 @@ class Schedule(AbstractSchedule):
         ).aggregate(Sum('original_amount'))
         total = res.get('original_amount__sum')
         return total if total else 0
+
+    @property
+    def total_fee_amount(self) -> int:
+        return (self.payment_fee_amount * self.number_of_payments) + self.deposit_fee_amount
 
     def is_cancelable(self):
         return self.status in [ScheduleStatus.open, ScheduleStatus.overdue]
@@ -270,20 +277,21 @@ class Schedule(AbstractSchedule):
 
         return self.status
 
-    def accept(self, fee_amount, funding_source_id, funding_source_type, backup_funding_source_id,
-               backup_funding_source_type):
+    def accept(self, payment_fee_amount, deposit_fee_amount, funding_source_id, funding_source_type,
+               backup_funding_source_id, backup_funding_source_type):
         # accept schedules in 'PENDING' status only
         if self.status != ScheduleStatus.pending:
             raise ValidationError(f'Cannot accept schedule with current status (status={self.status})')
 
         self.move_to_status(ScheduleStatus.open)
 
-        self.fee_amount = fee_amount
+        self.payment_fee_amount = payment_fee_amount
+        self.deposit_fee_amount = deposit_fee_amount
         self.funding_source_id = funding_source_id
         self.funding_source_type = funding_source_type
         self.backup_funding_source_id = backup_funding_source_id
         self.backup_funding_source_type = backup_funding_source_type
-        self.save(update_fields=["fee_amount", "funding_source_id", "funding_source_type",
+        self.save(update_fields=["payment_fee_amount", "deposit_fee_amount", "funding_source_id", "funding_source_type",
                                  "backup_funding_source_id", "backup_funding_source_type"])
 
     def reject(self):
