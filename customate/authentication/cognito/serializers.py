@@ -308,7 +308,11 @@ class CognitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
                 return self._retrieve_auth_challenge(validated_data, result)
 
         except Exception as ex:
-            logger.error("retrieve general: %s" % traceback.format_exc())
+            if isinstance(ex, CognitoException):
+                logger.info("Cognito exception occured (retrieve): %s" % traceback.format_exc())
+            else:
+                logger.error("retrieve general: %s" % traceback.format_exc())
+
             s = CognitoAuthRetrieveMessageSerializer(data={'message': str(ex)})
             s.is_valid(True)
             
@@ -329,7 +333,7 @@ class CognitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
             return status == status_codes.HTTP_200_OK
 
         except CognitoException as ex:
-            logger.error("Cognito exception occured: %s" % traceback.format_exc())
+            logger.error("Cognito exception occured (check_password): %s" % traceback.format_exc())
             raise serializers.ValidationError(ex)
         except Exception as ex:
             logger.error("Something went wrong %s" % traceback.format_exc())
