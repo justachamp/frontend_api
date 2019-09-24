@@ -62,8 +62,8 @@ class Identity:
 
     def sign_up(self, username, password, account_type, user_attributes, validation_data=None):
         try:
-            logger.error(username)
-            logger.error(user_attributes)
+            logger.info(username)
+            logger.info(user_attributes)
 
             secret_hash = utils.get_cognito_secret_hash(username)
             params = {"ClientId": constants.CLIENT_ID,
@@ -78,17 +78,17 @@ class Identity:
 
             user_params = utils.cognito_to_dict(user_attributes, settings.COGNITO_ATTR_MAPPING)
             cognito_user = self.client.sign_up(**params)
-            logger.error(f'cognito user {cognito_user}')
-            logger.error(f'user_params {user_params}')
+            logger.info(f'cognito user {cognito_user}')
+            logger.info(f'user_params {user_params}')
             self.user_service.create_user(username, account_type, cognito_user['UserSub'])
             return cognito_user
 
         except ParamValidationError as ex:
-            logger.error(f'BOTOCORE_EXCEPTIONS {ex}')
+            logger.info(f'BOTOCORE_EXCEPTIONS {ex}')
             raise CognitoException.create_from_boto_exception(ex)
 
         except constants.AWS_EXCEPTIONS as ex:
-            logger.error(f'AWS_EXCEPTIONS {ex}')
+            logger.info(f'AWS_EXCEPTIONS {ex}')
             raise CognitoException.create_from_exception(ex)
 
         except Exception as ex:
@@ -136,7 +136,7 @@ class Identity:
                                             AuthParameters=auth_parameters)
 
         except constants.AWS_EXCEPTIONS as ex:
-            logger.error(f'AWS_EXCEPTIONS {ex}')
+            logger.info(f'AWS_EXCEPTIONS {ex}')
             raise CognitoException.create_from_exception(ex)
 
         except Exception as ex:
@@ -164,7 +164,7 @@ class Identity:
                                             AuthParameters=auth_parameters)
 
         except constants.AWS_EXCEPTIONS as ex:
-            logger.error(f'AWS_EXCEPTIONS {ex}')
+            logger.info(f'AWS_EXCEPTIONS {ex}')
             raise CognitoException.create_from_exception(ex)
 
         except Exception as ex:
@@ -175,7 +175,7 @@ class Identity:
         try:
             return self.client.global_sign_out(AccessToken=access_token)
         except constants.AWS_EXCEPTIONS as ex:
-            logger.error(f'AWS_EXCEPTIONS {ex}')
+            logger.info(f'AWS_EXCEPTIONS {ex}')
             raise CognitoException.create_from_exception(ex)
 
         except Exception as ex:
@@ -189,7 +189,7 @@ class Identity:
                 Username=username
             )
         except constants.AWS_EXCEPTIONS as ex:
-            logger.error(f'AWS_EXCEPTIONS {ex}')
+            logger.info(f'AWS_EXCEPTIONS {ex}')
             raise CognitoException.create_from_exception(ex)
 
         except Exception as ex:
@@ -208,7 +208,7 @@ class Identity:
 
             return result
         except constants.AWS_EXCEPTIONS as ex:
-            logger.error(f'AWS_EXCEPTIONS {ex}')
+            logger.info(f'AWS_EXCEPTIONS {ex}')
             raise CognitoException.create_from_exception(ex)
 
         except Exception as ex:
@@ -228,7 +228,7 @@ class Identity:
 
             return result
         except constants.AWS_EXCEPTIONS as ex:
-            logger.error(f'AWS_EXCEPTIONS {ex}')
+            logger.info(f'AWS_EXCEPTIONS {ex}')
             raise CognitoException.create_from_exception(ex)
 
         except Exception as ex:
@@ -273,11 +273,11 @@ class Identity:
 
             return self.client.respond_to_auth_challenge(**params)
         except ParamValidationError as ex:
-            logger.error(f'BOTOCORE_EXCEPTIONS {ex}')
+            logger.info(f'BOTOCORE_EXCEPTIONS {ex}')
             raise CognitoException.create_from_boto_exception(ex)
 
         except constants.AWS_EXCEPTIONS as ex:
-            logger.error(f'AWS_EXCEPTIONS {ex}')
+            logger.info(f'AWS_EXCEPTIONS {ex}')
             raise CognitoException.create_from_exception(ex)
 
         except Exception as ex:
@@ -357,8 +357,8 @@ class Identity:
 
     def admin_create_user(self, username, user_attributes, password=None, action=None, delivery=None, validation_data=None):
         try:
-            logger.error(username)
-            logger.error(user_attributes)
+            logger.info(username)
+            logger.info(user_attributes)
 
             params = {
                 'UserPoolId': constants.POOL_ID,
@@ -378,17 +378,17 @@ class Identity:
 
             user_params = utils.cognito_to_dict(user_attributes, settings.COGNITO_ATTR_MAPPING)
             cognito_user = self.client.admin_create_user(**params)
-            logger.error(f'cognito user params {params}')
-            logger.error(f'cognito user {cognito_user}')
-            logger.error(f'user_params {user_params}')
+            logger.info(f'cognito user params {params}')
+            logger.info(f'cognito user {cognito_user}')
+            logger.info(f'user_params {user_params}')
             return cognito_user.get('User')
 
         except ParamValidationError as ex:
-            logger.error(f'BOTOCORE_EXCEPTIONS {ex}')
+            logger.info(f'BOTOCORE_EXCEPTIONS {ex}')
             raise CognitoException.create_from_boto_exception(ex)
 
         except constants.AWS_EXCEPTIONS as ex:
-            logger.error(f'AWS_EXCEPTIONS {ex}')
+            logger.info(f'AWS_EXCEPTIONS {ex}')
             raise CognitoException.create_from_exception(ex)
 
         except Exception as ex:
