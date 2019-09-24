@@ -1,4 +1,5 @@
 from django.db import transaction
+from phonenumber_field.phonenumber import PhoneNumber
 from rest_framework_json_api.serializers import Serializer
 
 from authentication.cognito.core.mixins import AuthSerializerMixin
@@ -54,7 +55,7 @@ class BaseAuthUserSerializerMixin(AuthSerializerMixin):
         return value
 
     def _validate_phone_number(self, data, value):
-        if isinstance(value, PhoneNumberField):
+        if isinstance(value, PhoneNumberField) or isinstance(value, PhoneNumber):
             value = value.as_e164
         return self._validate_attribute_verification('phone_number', 'phone_number_verified', value, data)
 
