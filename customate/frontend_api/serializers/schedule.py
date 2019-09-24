@@ -182,7 +182,7 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
             if int(res["payment_fee_amount"]) < 0:
                 raise ValidationError({"payment_fee_amount": "Payment fee amount should be positive number"})
 
-            if int(res["deposit_fee_amount"]) < 0:
+            if res.get("deposit_fee_amount") and int(res["deposit_fee_amount"]) < 0:
                 raise ValidationError({"deposit_fee_amount": "Deposit fee amount should be positive number"})
 
             if res.get("purpose") == SchedulePurpose.pay:
