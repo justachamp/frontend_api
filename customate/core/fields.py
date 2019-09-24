@@ -11,6 +11,7 @@ from customate.settings import COUNTRIES_AVAILABLE
 
 logger = logging.getLogger(__name__)
 
+MAX_RETURNED_BLACKLIST_DATES = 10
 
 class TimestampField(serializers.DateTimeField):
     """
@@ -1671,6 +1672,9 @@ class Dataset(object):
 
     @staticmethod
     def all():
+        from frontend_api.models.blacklist import BlacklistDate
+        import arrow
+
         return {
             'titles': [title.label for title in UserTitle],
             'genders': [gender.label for gender in Gender],
@@ -1683,7 +1687,10 @@ class Dataset(object):
                 'iso': country.value,
                 'name': country.label,
                 'phoneCode': CountryDialCode[country.value].value
-            } for country in Country]
+            } for country in Country],
+            'blacklistDates': [blacklist_date.date for blacklist_date in BlacklistDate.objects
+                .filter(is_active=True, date__gte=arrow.utcnow().datetime.date())
+                .order_by("date")][:MAX_RETURNED_BLACKLIST_DATES]
         }
 
     @staticmethod
