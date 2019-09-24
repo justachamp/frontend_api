@@ -11,6 +11,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from authentication.cognito import utils
 from authentication.cognito.core import constants, service, helpers
+from authentication.cognito.exceptions import TokenIssue
 from authentication.cognito.utils import PublicKey
 from rest_framework.exceptions import AuthenticationFailed
 
@@ -105,7 +106,7 @@ def get_tokens(access_token, id_token=None, refresh_token=None, propagate_error=
     try:
         if not access_token:
             # Need to have this to authenticate, error out
-            raise Exception("No valid Access token were found in the request")
+            raise TokenIssue("No valid Access token were found in the request")
 
         new_access_token, new_id_token, new_refresh_token = validate_token(access_token, id_token, refresh_token)
         logger.info(f'new_access_token: {new_access_token} new_refresh_token: {new_refresh_token}')
@@ -140,8 +141,14 @@ def get_tokens(access_token, id_token=None, refresh_token=None, propagate_error=
         return user, new_access_token, new_id_token, new_refresh_token
 
     except AuthenticationFailed as ex:
-        logger.error(f'{ex!r}')
+        logger.info(f'{ex!r}')
         raise ex
+
+    except TokenIssue as ex:
+        logger.info(f'{ex!r}')
+        if propagate_error:
+            raise ex
+        return AnonymousUser(), None, None, None
 
     except Exception as ex:
         logger.error(f'{ex!r}')
