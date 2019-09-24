@@ -46,7 +46,7 @@ will produce:
     "accountId": "65717684-0101-4800-8dcd-d14d11d6ea11"
   },
   "dateCreated": "2019-09-12T14:28:32.482646",
-  "logLevel": "INFO",
+  "level": "INFO",
   "duration": 292,
   "app": {
     "name": "frontend_api",
@@ -99,10 +99,10 @@ class CustomateJsonFormatter(jsonlogger.JsonFormatter):
             now = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f')
             log_record['dateCreated'] = now
 
-        if log_record.get('logLevel'):
-            log_record['logLevel'] = log_record['level'].upper()
+        if log_record.get('level'):
+            log_record['level'] = log_record['level'].upper()
         else:
-            log_record['logLevel'] = record.levelname
+            log_record['level'] = record.levelname
 
         if log_record.get('startProcessing') and not log_record.get('duration'):
             log_record['duration'] = int((arrow.utcnow() - log_record.get('startProcessing')).microseconds / 1000)
@@ -117,7 +117,7 @@ class CustomateJsonFormatter(jsonlogger.JsonFormatter):
 
     # We move some unexpected parameters (like request, status_code, exc_info, stack_info) to "data" section
     def _move_unexpected_params_to_data(self, log_record):
-        top_level_attributes = ['dateCreated', 'logLevel', 'duration', 'message', 'requestId', 'customer', 'app', 'data']
+        top_level_attributes = ['dateCreated', 'level', 'duration', 'message', 'requestId', 'customer', 'app', 'data']
         for key, _ in log_record.copy().items():
             if key not in top_level_attributes:
                 if not log_record.get('data'):
