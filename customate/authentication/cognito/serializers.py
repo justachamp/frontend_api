@@ -333,7 +333,7 @@ class CognitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
             return status == status_codes.HTTP_200_OK
 
         except CognitoException as ex:
-            logger.error("Cognito exception occured (check_password): %s" % traceback.format_exc())
+            logger.info("Cognito exception occured (check_password): %s" % traceback.format_exc())
             raise serializers.ValidationError(ex)
         except Exception as ex:
             logger.error("Something went wrong %s" % traceback.format_exc())
