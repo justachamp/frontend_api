@@ -62,7 +62,7 @@ class Session(DefaultSession):
                 check_data_format(data)
 
         if isinstance(json_data, dict) and json_data.get('errors'):
-            logger.error("Payment API errors: %r" % json_data.get('errors'))
+            logger.info("Payment API errors: %r" % json_data.get('errors'))
 
         doc = super().read(json_data, url, no_cache=False)
         return doc
@@ -159,7 +159,7 @@ class Client(ResourceMappingMixin, JsonApiErrorParser):
             return instance
 
         except DocumentError as ex:
-            logger.error("PaymentClient.update thrown an exception: %r " % format_exc())
+            logger.info("PaymentClient.update caught a document error: %r " % format_exc())
             data = self._parse_document_error(ex)
             if data:
                 raise ValidationError(data)
@@ -174,7 +174,7 @@ class Client(ResourceMappingMixin, JsonApiErrorParser):
             logger.debug(instance)
             return instance
         except DocumentError as ex:
-            logger.error("PaymentClient.create thrown an exception: %r " % format_exc())
+            logger.info("PaymentClient.create caught a document error: %r " % format_exc())
             data = self._parse_document_error(ex)
             if data:
                 raise ValidationError(data)
@@ -197,7 +197,7 @@ class Client(ResourceMappingMixin, JsonApiErrorParser):
             instance.delete()
             instance.commit()
         except DocumentError as ex:
-            logger.error("PaymentClient.delete thrown an exception: %r " % format_exc())
+            logger.info("PaymentClient.delete caught a document error: %r " % format_exc())
             data = self._parse_document_error(ex)
             if data:
                 raise ValidationError(data)
