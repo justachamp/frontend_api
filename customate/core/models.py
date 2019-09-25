@@ -5,12 +5,25 @@ from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
-from phonenumber_field.modelfields import PhoneNumberField
+from phonenumber_field.modelfields import PhoneNumberField, PhoneNumberDescriptor
 from enumfields import EnumField
 
 from core.fields import UserStatus, UserRole, UserTitle, Gender, Country
 
 USER_MIN_AGE = 18
+
+
+class CustomPhoneNumberDescriptor(PhoneNumberDescriptor):
+
+    def __get__(self, instance, owner):
+        value = super().__get__(instance, owner)
+        if isinstance(value, str):
+            return value
+        return value.as_e164
+
+
+class CustomPhoneNumberField(PhoneNumberField):
+    descriptor_class = CustomPhoneNumberDescriptor
 
 
 class Model(models.Model):
@@ -46,7 +59,7 @@ class User(AbstractUser, Model):
     role = EnumField(UserRole, max_length=10, null=True)
     middle_name = models.CharField(_('first name'), max_length=30, blank=True)
     birth_date = models.DateField(_('day of birth'), blank=True, null=True)  # type: date
-    phone_number = PhoneNumberField(blank=True)
+    phone_number = CustomPhoneNumberField(blank=True)
 
     title = EnumField(UserTitle, max_length=10, blank=True, null=True)
     gender = EnumField(Gender, max_length=10, blank=True, null=True)

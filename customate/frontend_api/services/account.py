@@ -5,6 +5,7 @@ import arrow
 from django.utils.functional import cached_property
 from rest_framework.exceptions import ValidationError
 from phonenumbers.phonenumberutil import region_code_for_country_code
+import phonenumbers
 from zeep.exceptions import TransportError
 
 from core.fields import Dataset, Country
@@ -30,6 +31,7 @@ IMMUTABLE_USER_FIELDS_IF_VERIFIED = (
     'country_of_birth',
     'mother_maiden_name',
 )
+
 
 # TODO: Refactor 'service' classes to remove them at all (move logic to Views/Models as appropriate)
 
@@ -112,7 +114,8 @@ class ProfileValidationService:
     @property
     def phone_country(self):
         phone_number = self.profile.user.phone_number
-        country_code = region_code_for_country_code(phone_number.country_code) if phone_number else None
+        country_code = region_code_for_country_code(phonenumbers.parse(phone_number).country_code) \
+            if phone_number else None
         return country_code
 
     @cached_property
@@ -266,7 +269,8 @@ class ProfileValidationService:
             account.save()
 
         except TransportError:
-            logger.error("GBG verification error (user=%s, address=%s) transport exception: %r" % (user, address, format_exc()))
+            logger.error(
+                "GBG verification error (user=%s, address=%s) transport exception: %r" % (user, address, format_exc()))
             raise GBGVerificationError({"account": "KYC request is unsuccessful. Please, contact the support team."})
         except Exception as e:
             logger.error("GBG verification error (user=%s, address=%s) exception: %r" % (user, address, format_exc()))
