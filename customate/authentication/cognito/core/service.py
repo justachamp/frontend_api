@@ -25,9 +25,9 @@ COGNITO_OPERATION_EXCEPTIONS = {
 }
 
 
-class CognitoException(Exception):
+class CognitoIdentityException(Exception):
     def __init__(self, message, status):
-        super(CognitoException, self).__init__(message)
+        super(CognitoIdentityException, self).__init__(message)
 
         self.status = status
 
@@ -37,12 +37,14 @@ class CognitoException(Exception):
         if hasattr(ex, 'operation_name'):
             msg = COGNITO_OPERATION_EXCEPTIONS.get(ex.operation_name, {}).get(msg, msg)
 
+        from authentication.cognito.core.base import CognitoException
         return CognitoException(msg, ex.response['ResponseMetadata']['HTTPStatusCode'])
 
     @staticmethod
     def create_from_boto_exception(ex):
         msg = ex.kwargs.get('report') if hasattr(ex, 'kwargs') and type(ex.kwargs) is dict else None
         if msg:
+            from authentication.cognito.core.base import CognitoException
             return CognitoException(msg, status.HTTP_400_BAD_REQUEST)
         raise ex
 
@@ -85,11 +87,11 @@ class Identity:
 
         except ParamValidationError as ex:
             logger.info(f'BOTOCORE_EXCEPTIONS {ex}')
-            raise CognitoException.create_from_boto_exception(ex)
+            raise CognitoIdentityException.create_from_boto_exception(ex)
 
         except constants.AWS_EXCEPTIONS as ex:
             logger.info(f'AWS_EXCEPTIONS {ex}')
-            raise CognitoException.create_from_exception(ex)
+            raise CognitoIdentityException.create_from_exception(ex)
 
         except Exception as ex:
             logger.error(f'sign_up general {ex}')
@@ -137,7 +139,7 @@ class Identity:
 
         except constants.AWS_EXCEPTIONS as ex:
             logger.info(f'AWS_EXCEPTIONS {ex}')
-            raise CognitoException.create_from_exception(ex)
+            raise CognitoIdentityException.create_from_exception(ex)
 
         except Exception as ex:
             logger.error(f'initiate_auth general {ex}')
@@ -165,7 +167,7 @@ class Identity:
 
         except constants.AWS_EXCEPTIONS as ex:
             logger.info(f'AWS_EXCEPTIONS {ex}')
-            raise CognitoException.create_from_exception(ex)
+            raise CognitoIdentityException.create_from_exception(ex)
 
         except Exception as ex:
             logger.error(f'refresh_session general {ex}')
@@ -176,7 +178,7 @@ class Identity:
             return self.client.global_sign_out(AccessToken=access_token)
         except constants.AWS_EXCEPTIONS as ex:
             logger.info(f'AWS_EXCEPTIONS {ex}')
-            raise CognitoException.create_from_exception(ex)
+            raise CognitoIdentityException.create_from_exception(ex)
 
         except Exception as ex:
             logger.error(f'sign_out general {ex}')
@@ -190,7 +192,7 @@ class Identity:
             )
         except constants.AWS_EXCEPTIONS as ex:
             logger.info(f'AWS_EXCEPTIONS {ex}')
-            raise CognitoException.create_from_exception(ex)
+            raise CognitoIdentityException.create_from_exception(ex)
 
         except Exception as ex:
             logger.error(f'admin_sign_out general {ex}')
@@ -209,7 +211,7 @@ class Identity:
             return result
         except constants.AWS_EXCEPTIONS as ex:
             logger.info(f'AWS_EXCEPTIONS {ex}')
-            raise CognitoException.create_from_exception(ex)
+            raise CognitoIdentityException.create_from_exception(ex)
 
         except Exception as ex:
             logger.error(f'verification_code general {ex}')
@@ -229,7 +231,7 @@ class Identity:
             return result
         except constants.AWS_EXCEPTIONS as ex:
             logger.info(f'AWS_EXCEPTIONS {ex}')
-            raise CognitoException.create_from_exception(ex)
+            raise CognitoIdentityException.create_from_exception(ex)
 
         except Exception as ex:
             logger.error(f'verify_attribute general {ex}')
@@ -274,11 +276,11 @@ class Identity:
             return self.client.respond_to_auth_challenge(**params)
         except ParamValidationError as ex:
             logger.info(f'BOTOCORE_EXCEPTIONS {ex}')
-            raise CognitoException.create_from_boto_exception(ex)
+            raise CognitoIdentityException.create_from_boto_exception(ex)
 
         except constants.AWS_EXCEPTIONS as ex:
             logger.info(f'AWS_EXCEPTIONS {ex}')
-            raise CognitoException.create_from_exception(ex)
+            raise CognitoIdentityException.create_from_exception(ex)
 
         except Exception as ex:
             logger.error(f'respond_to_auth_challenge general {ex}')
@@ -298,7 +300,7 @@ class Identity:
         try:
             return self.client.forgot_password(**params)
         except constants.AWS_EXCEPTIONS as ex:
-            raise CognitoException.create_from_exception(ex)
+            raise CognitoIdentityException.create_from_exception(ex)
 
     def change_password(self, previous, proposed, access_token):
         params = {
@@ -311,7 +313,7 @@ class Identity:
             data = self.client.change_password(**params)
             return data
         except constants.AWS_EXCEPTIONS as ex:
-            raise CognitoException.create_from_exception(ex)
+            raise CognitoIdentityException.create_from_exception(ex)
 
     def restore_password(self, username, code, password):
         secret_hash = utils.get_cognito_secret_hash(username)
@@ -330,7 +332,7 @@ class Identity:
             data = self.client.confirm_forgot_password(**params)
             return data
         except constants.AWS_EXCEPTIONS as ex:
-            raise CognitoException.create_from_exception(ex)
+            raise CognitoIdentityException.create_from_exception(ex)
 
     def get_user(self, access_token):
         params = {
@@ -341,7 +343,7 @@ class Identity:
             data = self.client.get_user(**params)
             return data
         except constants.AWS_EXCEPTIONS as ex:
-            raise CognitoException.create_from_exception(ex)
+            raise CognitoIdentityException.create_from_exception(ex)
 
     def admin_get_user(self, username):
         params = {
@@ -353,7 +355,7 @@ class Identity:
             data = self.client.admin_get_user(**params)
             return data
         except constants.AWS_EXCEPTIONS as ex:
-            raise CognitoException.create_from_exception(ex)
+            raise CognitoIdentityException.create_from_exception(ex)
 
     def admin_create_user(self, username, user_attributes, password=None, action=None, delivery=None, validation_data=None):
         try:
@@ -385,11 +387,11 @@ class Identity:
 
         except ParamValidationError as ex:
             logger.info(f'BOTOCORE_EXCEPTIONS {ex}')
-            raise CognitoException.create_from_boto_exception(ex)
+            raise CognitoIdentityException.create_from_boto_exception(ex)
 
         except constants.AWS_EXCEPTIONS as ex:
             logger.info(f'AWS_EXCEPTIONS {ex}')
-            raise CognitoException.create_from_exception(ex)
+            raise CognitoIdentityException.create_from_exception(ex)
 
         except Exception as ex:
             logger.error(f'admin_create_user general {ex}')
@@ -406,7 +408,7 @@ class Identity:
             data = self.client.set_user_mfa_preference(**params)
             return data
         except constants.AWS_EXCEPTIONS as ex:
-            raise CognitoException.create_from_exception(ex)
+            raise CognitoIdentityException.create_from_exception(ex)
 
     def admin_disable_user(self):
         pass
@@ -425,7 +427,7 @@ class Identity:
             data = self.client.admin_update_user_attributes(**params)
             return data
         except constants.AWS_EXCEPTIONS as ex:
-            raise CognitoException.create_from_exception(ex)
+            raise CognitoIdentityException.create_from_exception(ex)
 
     def resend_confirmation_code(self):
         pass

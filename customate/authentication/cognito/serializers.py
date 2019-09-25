@@ -311,7 +311,7 @@ class CognitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
             if isinstance(ex, CognitoException):
                 logger.info("Cognito exception occured (retrieve): %s" % traceback.format_exc())
             else:
-                logger.error("retrieve general: %s -> %s" % (ex.__class__.__name__, traceback.format_exc()))
+                logger.error("Something went wrong (retrieve): %s -> %s" % (ex.__class__.__name__, traceback.format_exc()))
 
             s = CognitoAuthRetrieveMessageSerializer(data={'message': str(ex)})
             s.is_valid(True)
