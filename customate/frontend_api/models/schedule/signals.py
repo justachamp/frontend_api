@@ -53,16 +53,13 @@ def get_funds_senders_phones(schedule: Schedule) -> list:
     sender = schedule.origin_user  # funds sender
     senders_phone_number = sender.phone_number
     if sender.is_owner and sender.notify_by_phone:
-        return [senders_phone_number if isinstance(senders_phone_number, str) and senders_phone_number
-                else senders_phone_number.as_e164]
+        phones = [senders_phone_number if isinstance(senders_phone_number, str) else senders_phone_number.as_e164]
     # If funds sender is subuser, owner should be notified as well
     if sender.is_subuser:
         owner = sender.account.owner_account.user
-        phones = [user.phone_number if isinstance(user.phone_number, str) and user.phone_number
-                  else user.phone_number.as_e164
+        phones = [user.phone_number if isinstance(user.phone_number, str) else user.phone_number.as_e164
                   for user in [sender, owner] if user.notify_by_phone]
-        return phones
-    return []
+    return [item for item in phones if item]
 
 
 def get_funds_recipients_phones(schedule: Schedule) -> list:
@@ -76,15 +73,14 @@ def get_funds_recipients_phones(schedule: Schedule) -> list:
     if not recipient:
         return []
     if recipient.is_owner and recipient.notify_by_phone:
-        return [recipient.phone_number if isinstance(recipient.phone_number, str)
+        phones = [recipient.phone_number if isinstance(recipient.phone_number, str)
                 else recipient.phone_number.as_e164]
     # If recipient is subuser owner should be notified as well
     if recipient.is_subuser:
         owner = recipient.account.owner_account.user
         phones = [user.phone_number if isinstance(user.phone_number, str) else user.phone_number.as_e164
                   for user in [recipient, owner] if user.notify_by_phone]
-        return phones
-    return []
+    return [item for item in phones if item]
 
 
 def get_ses_email_payload(tpl_filename: str, tpl_context: Dict, subject=None):
