@@ -252,7 +252,10 @@ class CognitoAuthChallengeSerializer(serializers.Serializer, UserServiceMixin):
             return Identity(id=user.id, **validated_data)
 
         except Exception as ex:
-            logger.error("Something went wrong (auth_challenge): %s -> %s" % (ex.__class__.__name__, traceback.format_exc()))
+            if isinstance(ex, CognitoException):
+                logger.info("Cognito exception occurred (auth_challenge): %s" % traceback.format_exc())
+            else:
+                logger.error("Something went wrong (auth_challenge): %s -> %s" % (ex.__class__.__name__, traceback.format_exc()))
             raise Unauthorized(ex)
 
 
@@ -409,7 +412,10 @@ class CognitoInviteUserSerializer(serializers.Serializer, BaseAuthValidationMixi
 
             return Invitation(id=user.get('Username'), **validated_data)
         except Exception as ex:
-            logger.error("Something went wrong (invite): %s -> %s" % (ex.__class__.__name__, traceback.format_exc()))
+            if isinstance(ex, CognitoException):
+                logger.info("Cognito exception occurred (invite): %s" % traceback.format_exc())
+            else:
+                logger.error("Something went wrong (invite): %s -> %s" % (ex.__class__.__name__, traceback.format_exc()))
             raise Unauthorized(ex)
 
 
@@ -435,7 +441,10 @@ class CognitoAuthSerializer(BaseAuthValidationMixin, CognitoAuthRetrieveSerializ
             serializer = CognitoAuthRetrieveSerializer()
             return serializer.retrieve(validated_data)
         except Exception as ex:
-            logger.error("Something went wrong (create): %s -> %s" % (ex.__class__.__name__, traceback.format_exc()))
+            if isinstance(ex, CognitoException):
+                logger.info("Cognito exception occurred (create): %s" % traceback.format_exc())
+            else:
+                logger.error("Something went wrong (create): %s -> %s" % (ex.__class__.__name__, traceback.format_exc()))
             raise Unauthorized(ex)
 
     def validate_user_status(self, username):
