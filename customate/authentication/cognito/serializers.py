@@ -101,7 +101,10 @@ class CognitoAuthVerificationSerializer(serializers.Serializer):
             validated_data['destination'] = response.get('Destination')
             return Verification(**validated_data)
         except Exception as ex:
-            logger.error("Something went wrong (verification_code): %s -> %s" % (ex.__class__.__name__, traceback.format_exc()))
+            if isinstance(ex, CognitoException):
+                logger.info("Cognito exception occurred (verification_code): %s" % traceback.format_exc())
+            else:
+                logger.error("Something went wrong (verification_code): %s -> %s" % (ex.__class__.__name__, traceback.format_exc()))
             raise Unauthorized(ex)
 
 
@@ -125,7 +128,10 @@ class CognitoAuthAttributeVerifySerializer(serializers.Serializer, AuthSerialize
 
             return status_codes.HTTP_204_NO_CONTENT if status == status_codes.HTTP_200_OK else status
         except Exception as ex:
-            logger.error("Something went wrong (verify_attribute): %s -> %s" % (ex.__class__.__name__, traceback.format_exc()))
+            if isinstance(ex, CognitoException):
+                logger.info("Cognito exception occurred (verify_attribute): %s" % traceback.format_exc())
+            else:
+                logger.error("Something went wrong (verify_attribute): %s -> %s" % (ex.__class__.__name__, traceback.format_exc()))
             raise Unauthorized(ex)
 
 
@@ -145,7 +151,10 @@ class CognitoAuthForgotPasswordSerializer(serializers.Serializer):
             }
             return Verification(**attributes)
         except Exception as ex:
-            logger.error("Something went wrong (forgot_password): %s -> %s" % (ex.__class__.__name__, traceback.format_exc()))
+            if isinstance(ex, CognitoException):
+                logger.info("Cognito exception occurred (forgot_password): %s" % traceback.format_exc())
+            else:
+                logger.error("Something went wrong (forgot_password): %s -> %s" % (ex.__class__.__name__, traceback.format_exc()))
             raise Unauthorized(ex)
 
 
@@ -162,7 +171,10 @@ class CognitoAuthPasswordRestoreSerializer(serializers.Serializer):
             status = data.get('ResponseMetadata').get('HTTPStatusCode')
             return status_codes.HTTP_204_NO_CONTENT if status == status_codes.HTTP_200_OK else status
         except Exception as ex:
-            logger.error("Something went wrong (restore_password): %s -> %s" % (ex.__class__.__name__, traceback.format_exc()))
+            if isinstance(ex, CognitoException):
+                logger.info("Cognito exception occurred (restore_password): %s" % traceback.format_exc())
+            else:
+                logger.error("Something went wrong (restore_password): %s -> %s" % (ex.__class__.__name__, traceback.format_exc()))
             raise Unauthorized(ex)
 
 
@@ -179,7 +191,10 @@ class CognitoAuthChangePasswordSerializer(serializers.Serializer):
             status = data.get('ResponseMetadata').get('HTTPStatusCode')
             return status_codes.HTTP_204_NO_CONTENT if status == status_codes.HTTP_200_OK else status
         except Exception as ex:
-            logger.error("Something went wrong (change_password): %s -> %s" % (ex.__class__.__name__, traceback.format_exc()))
+            if isinstance(ex, CognitoException):
+                logger.info("Cognito exception occurred (change_password): %s" % traceback.format_exc())
+            else:
+                logger.error("Something went wrong (change_password): %s -> %s" % (ex.__class__.__name__, traceback.format_exc()))
             raise Unauthorized(ex)
 
 
@@ -192,7 +207,10 @@ class CognitoSignOutSerializer(serializers.Serializer):
         try:
             return helpers.sign_out(validated_data)
         except Exception as ex:
-            logger.error("Something went wrong (sign_out): %s -> %s" % (ex.__class__.__name__, traceback.format_exc()))
+            if isinstance(ex, CognitoException):
+                logger.info("Cognito exception occurred (sign_out): %s" % traceback.format_exc())
+            else:
+                logger.error("Something went wrong (sign_out): %s -> %s" % (ex.__class__.__name__, traceback.format_exc()))
             raise Unauthorized(ex)
 
 
@@ -309,7 +327,7 @@ class CognitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
 
         except Exception as ex:
             if isinstance(ex, CognitoException):
-                logger.info("Cognito exception occured (retrieve): %s" % traceback.format_exc())
+                logger.info("Cognito exception occurred (retrieve): %s" % traceback.format_exc())
             else:
                 logger.error("Something went wrong (retrieve): %s -> %s" % (ex.__class__.__name__, traceback.format_exc()))
 
