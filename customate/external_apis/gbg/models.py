@@ -1,14 +1,25 @@
+from collections import defaultdict
+import logging
+from traceback import format_exc
 from enum import Enum
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import datetime
 from core.fields import Country
 
+from external_apis.loqate.service import find_address, retrieve_address
+
+logger = logging.getLogger(__name__)
+
 
 def filter_empty_values(res):
     if not isinstance(res, dict):
         return res
     return {k: v for k, v in res.items() if v is not None and v != ''}
+
+
+class NonMatchingPostalCode(Exception):
+    pass
 
 
 class GBGData(ABC):
@@ -99,7 +110,7 @@ class Address(GBGData):
     address_line_2: str = ""
     address_line_3: str = ""
     locality: str = ""
-    country: str = "United Kingdom"
+    country: str = "GB"
 
     @staticmethod
     def get_full_country_name(cc_name):
@@ -116,25 +127,46 @@ class Address(GBGData):
             return Country[cc_name].label
         return cc_name
 
-    def gbg_serialization(self):
+    def gbg_serialization(self, enable_expanded=False):
         """
         GBG serialization
         :return:
         """
-        # full_address = "{}, {}, {}, {}".format(
-        #     self.address_line_1,
-        #     self.address_line_2,
-        #     self.city,
-        #     self.locality
-        # )
+
+        expanded_address = None
+
+        if enable_expanded:
+            # try to expand address details via Loqate service
+            full_address = "{}, {}, {}, {}".format(
+                self.address_line_1,
+                self.address_line_2,
+                self.city,
+                self.locality
+            )
+
+            try:
+                suggested_addresses = find_address(params={
+                    'text': full_address,
+                    'limit': 1,
+                    'country': self.country,  # 2-letter ISO code
+                    'origin': self.country  # 2-letter ISO code
+                })
+                a_details = suggested_addresses[0]
+                expanded_address = retrieve_address(params={"Id": a_details["Id"]})[0]
+                # it is highly probable that this is incorrect match
+                if self.post_code != expanded_address["PostalCode"]:
+                    raise NonMatchingPostalCode()
+                expanded_address = defaultdict(str, expanded_address)  # make sure missing keys won't break follow-up
+            except Exception:
+                logger.info("Failed to expand address(%s) using Loqate due to: %r" % (full_address, format_exc()))
 
         res = {
             "Country": Address.get_full_country_name(self.country),
-            "Street": self.address_line_1,  # NOTE: this is usually street name (but what if not??)
-            "SubStreet": "",
+            "Street": expanded_address['Street'] if expanded_address else self.address_line_1,
+            "SubStreet": expanded_address['SecondaryStreet'] if expanded_address else "",
             "City": self.city,
             "SubCity": "",
-            "StateDistrict": "",
+            "StateDistrict": expanded_address['District'] if expanded_address else "",
             "POBox": "",
             "Region": self.locality,
             "Principality": "",
@@ -143,12 +175,14 @@ class Address(GBGData):
             "CedexMailsort": "",
             "Department": "",
             "Company": "",
-            "Building": "",
+            "Building": expanded_address['BuildingNumber'] if expanded_address else "",
             "SubBuilding": "",
-            "Premise": "",
-            "AddressLine1": self.address_line_1,
-            "AddressLine2": self.address_line_2,
-            "AddressLine3": self.address_line_3,
+            # this seems to be very important in GBG address validation (usually contains StreetName + b. number)
+            "Premise": self.address_line_1,
+            # following commented out as it will break GBG address validation and cause 'Refer' instead of 'Pass'
+            "AddressLine1": "",  # self.address_line_1,
+            "AddressLine2": "",  # self.address_line_2,
+            "AddressLine3": "",  # self.address_line_3,
             "AddressLine4": "",
             "AddressLine5": "",
             "AddressLine6": "",
