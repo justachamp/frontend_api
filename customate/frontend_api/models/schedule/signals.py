@@ -50,16 +50,15 @@ def get_funds_senders_phones(schedule: Schedule) -> list:
     Returns list with funds senders phone numbers
     :return: list
     """
+    phones = []
     sender = schedule.origin_user  # funds sender
-    senders_phone_number = sender.phone_number
-    if sender.is_owner and sender.notify_by_phone:
-        phones = [senders_phone_number if isinstance(senders_phone_number, str) else senders_phone_number.as_e164]
+    if sender.is_owner and sender.notify_by_phone and sender.phone_number:
+        phones.append(sender.phone_number)
     # If funds sender is subuser, owner should be notified as well
     if sender.is_subuser:
         owner = sender.account.owner_account.user
-        phones = [user.phone_number if isinstance(user.phone_number, str) else user.phone_number.as_e164
-                  for user in [sender, owner] if user.notify_by_phone]
-    return [item for item in phones if item]
+        phones.extend([user.phone_number for user in [sender, owner] if user.notify_by_phone and user.phone_number])
+    return phones
 
 
 def get_funds_recipients_phones(schedule: Schedule) -> list:
@@ -67,20 +66,19 @@ def get_funds_recipients_phones(schedule: Schedule) -> list:
     Returns list with funds recipients phone numbers
     :return: list
     """
+    phones = []
     recipient = schedule.recipient_user  # funds recipient
     # If recipient is external user we cann't notify him by sms
     #   because we don't store his phone number.
     if not recipient:
-        return []
-    if recipient.is_owner and recipient.notify_by_phone:
-        phones = [recipient.phone_number if isinstance(recipient.phone_number, str)
-                else recipient.phone_number.as_e164]
+        return phones
+    if recipient.is_owner and recipient.notify_by_phone and recipient.phone_number:
+        phones.append(recipient.phone_number)
     # If recipient is subuser owner should be notified as well
     if recipient.is_subuser:
         owner = recipient.account.owner_account.user
-        phones = [user.phone_number if isinstance(user.phone_number, str) else user.phone_number.as_e164
-                  for user in [recipient, owner] if user.notify_by_phone]
-    return [item for item in phones if item]
+        phones.extend([user.phone_number for user in [recipient, owner] if user.notify_by_phone and user.phone_number])
+    return phones
 
 
 def get_ses_email_payload(tpl_filename: str, tpl_context: Dict, subject=None):
