@@ -5,7 +5,6 @@ from rest_framework_json_api.serializers import Serializer
 from authentication.cognito.core.mixins import AuthSerializerMixin
 from frontend_api.exceptions import GBGVerificationError
 from frontend_api.services.account import ProfileValidationService
-from rest_framework.exceptions import ValidationError
 
 from core.fields import SerializerField
 from frontend_api.serializers import (
@@ -117,13 +116,6 @@ class ProfileSerializer(DomainService, BaseAuthUserSerializerMixin, Serializer):
 
     @transaction.atomic
     def update(self, instance, validated_data):
-
-        # Deny ability to allow sms notifications if phone number is not verified.
-        validated_user_fields = validated_data.get("user", {})
-        if not instance.user.phone_number_verified \
-                and validated_user_fields.get("notify_by_phone"):
-            raise ValidationError("Please, verify your phone number first.")
-
         def update_model(model, data):
             for (key, val) in data.items():
                 setattr(model, key, val)
