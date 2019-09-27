@@ -108,6 +108,8 @@ class PaymentApiClient:
     @staticmethod
     def create_payment(p: PaymentDetails):
         from payment_api.views.payment import MakePaymentViewSet
+        logger.info(f"Creating payment from payment details (schedule_id={p.schedule_id}, "
+                    f"funding_source_id={p.funding_source_id})")
 
         view = MakePaymentViewSet()
         serializer = MakingPaymentSerializer(

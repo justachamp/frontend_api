@@ -189,8 +189,8 @@ def make_overdue_payment(schedule_id: str, request_id=None):
     """
     request_id = request_id if request_id else RequestIdGenerator.get()
     logging.init_shared_extra(request_id)
-
     logger.info("make_overdue_payment(schedule_id=%s)" % schedule_id)
+
     try:
         schedule = Schedule.objects.get(id=schedule_id)  # type: Schedule
     except Exception as e:
@@ -239,6 +239,7 @@ def process_all_deposit_payments(scheduled_date):
     """
     request_id = RequestIdGenerator.get()
     logging.init_shared_extra(request_id)
+    logger.info(f"Process all deposit payments for date: {scheduled_date}")
 
     # make sure we always keep consistent order, otherwise we'll get unpredictable results
     payments = DepositsSchedule.objects.filter(
@@ -302,6 +303,7 @@ def process_all_one_time_payments(scheduled_date):
     """
     request_id = RequestIdGenerator.get()
     logging.init_shared_extra(request_id)
+    logger.info(f"Process all one time payments for date: {scheduled_date}")
 
     # make sure we always keep consistent order, otherwise we'll get unpredictable results
     payments = OnetimeSchedule.objects.filter(
@@ -322,6 +324,7 @@ def process_all_weekly_payments(scheduled_date):
     """
     request_id = RequestIdGenerator.get()
     logging.init_shared_extra(request_id)
+    logger.info(f"Process all weekly payments for date: {scheduled_date}")
 
     # make sure we always keep consistent order, otherwise we'll get unpredictable results
     payments = WeeklySchedule.objects.filter(
@@ -342,6 +345,7 @@ def process_all_monthly_payments(scheduled_date):
     """
     request_id = RequestIdGenerator.get()
     logging.init_shared_extra(request_id)
+    logger.info(f"Process all monthly payments for date: {scheduled_date}")
 
     # make sure we always keep consistent order, otherwise we'll get unpredictable results
     payments = MonthlySchedule.objects.filter(
@@ -362,6 +366,7 @@ def process_all_quarterly_payments(scheduled_date):
     """
     request_id = RequestIdGenerator.get()
     logging.init_shared_extra(request_id)
+    logger.info(f"Process all quarterly payments for date: {scheduled_date}")
 
     # make sure we always keep consistent order, otherwise we'll get unpredictable results
     payments = QuarterlySchedule.objects.filter(
@@ -382,6 +387,7 @@ def process_all_yearly_payments(scheduled_date):
     """
     request_id = RequestIdGenerator.get()
     logging.init_shared_extra(request_id)
+    logger.info(f"Process all yearly payments for date: {scheduled_date}")
 
     # make sure we always keep consistent order, otherwise we'll get unpredictable results
     payments = YearlySchedule.objects.filter(
@@ -406,6 +412,7 @@ def initiate_daily_payments():
     # get current date
     now = arrow.utcnow()
 
+    logger.info(f"Starting daily ({now}) payments processing...")
     if BlacklistDate.contains(now.datetime.date()):
         logger.info("Skipping scheduler execution because '%s' is a special day" % now)
         return
@@ -424,6 +431,8 @@ def initiate_daily_payments():
 
         # Taking next day as scheduled date that should be verified and processed if necessary
         scheduled_date = scheduled_date.shift(days=1)
+        logger.info(f"Finished with processing all payments, check if next date ({scheduled_date}) "
+                    f"is blacklisted (retry_count={retry_count})")
         # Check if specified date is not blacklisted, i.e. NOT weekend and/or special day
         if not BlacklistDate.contains(scheduled_date):
             # No need to continue because scheduler will be executed on "scheduled_date"
@@ -434,6 +443,7 @@ def initiate_daily_payments():
 
 
 def process_all_payments_for_date(date):
+    logger.info(f"Process all payments for date: {date}")
     # process deposit payments first
     process_all_deposit_payments(date)
     process_all_one_time_payments(date)
