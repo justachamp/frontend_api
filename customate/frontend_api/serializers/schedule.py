@@ -8,6 +8,7 @@ from customate.settings import PAYMENT_SYSTEM_CLOSING_TIME
 from rest_framework.serializers import ValidationError
 from rest_framework_json_api.serializers import HyperlinkedModelSerializer
 from rest_framework.fields import DateField, IntegerField
+from django.utils.functional import cached_property
 
 from core.fields import Currency, SerializerField, FundingSourceType, PayeeType
 from frontend_api.fields import ScheduleStatus, SchedulePeriod, SchedulePurpose
@@ -25,7 +26,70 @@ from frontend_api.serializers import (
 logger = logging.getLogger(__name__)
 
 
-class ScheduleSerializer(HyperlinkedModelSerializer):
+class BaseScheduleSerializer(HyperlinkedModelSerializer):
+    @cached_property
+    def payment_client(self):
+        return PaymentApiClient(self.context.get('request').user)
+
+    def _initialize_additional_schedule_fields(self, data):
+        if data.get('payee_id'):
+            pd = self.payment_client.get_payee_details(data.get('payee_id'))
+            if pd:
+                current_user = self.context.get('request').user
+                if data["purpose"] == SchedulePurpose.pay \
+                        and pd.type == PayeeType.WALLET.value \
+                        and pd.payment_account_id == str(current_user.account.payment_account_id):
+                    raise ValidationError({
+                        "payee_id": "Current user's payee cannot be used for creation 'pay funds' schedule"
+                    })
+
+                data.update({
+                    'payee_recipient_name': pd.recipient_name,
+                    'payee_recipient_email': pd.recipient_email,
+                    'payee_iban': pd.iban,
+                    'payee_title': pd.title,
+                    'payee_type': pd.type
+                })
+
+        if data.get('funding_source_id'):
+            data.update({
+                'funding_source_type': self._get_and_validate_funding_source_type(data.get("funding_source_id"))
+            })
+
+        if data.get('backup_funding_source_id'):
+            data.update({
+                'backup_funding_source_type': self._get_and_validate_backup_funding_source_type(data.get("backup_funding_source_id"))
+            })
+
+    def _get_and_validate_funding_source_type(self, funding_source_id):
+        if funding_source_id:
+            fd = self.payment_client.get_funding_source_details(funding_source_id)
+            if fd and fd.type is not None:
+                return fd.type
+            else:
+                raise ValidationError({
+                    "funding_source_type": "This field is required"
+                })
+
+    def _get_and_validate_backup_funding_source_type(self, backup_funding_source_id):
+        # NOTE: force backup funding source to be of 'WALLET' type only,
+        # otherwise we can't process DD/CC payments in a timely manner: they require 7day gap to be made in advance
+        if backup_funding_source_id:
+            fd_backup = self.payment_client.get_funding_source_details(backup_funding_source_id)
+            # NOTE: we do not support backup_funding_source type other than 'WALLET'
+            if not fd_backup:
+                raise ValidationError({
+                    "backup_funding_source_type": "This field is required"
+                })
+            elif fd_backup.type != FundingSourceType.WALLET.value:
+                raise ValidationError({
+                    "backup_funding_source_id": "Backup funding source is not of type %s" % FundingSourceType.WALLET
+                })
+            else:
+                return fd_backup.type
+
+
+class ScheduleSerializer(BaseScheduleSerializer):
     name = CharField(required=True)
     status = EnumField(enum=ScheduleStatus, default=ScheduleStatus.open, required=False)
     purpose = EnumField(enum=SchedulePurpose, required=True)
@@ -99,13 +163,7 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
             raise ValidationError("Schedule with such name already exists")
         return value
 
-    def validate_start_date(self, value):
-        return self.check_payment_date(value)
-
-    def validate_deposit_payment_date(self, value):
-        return self.check_payment_date(value)
-
-    def check_payment_date(self, payment_date):
+    def _check_payment_date(self, payment_date, funding_source_type, payee_type):
         """
         Make sure payment date not in the past.
         If payments starts today make sure that we are able to process payment today.
@@ -114,16 +172,20 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
         """
         utcnow = arrow.utcnow()
         current_day_start, current_day_end = utcnow.span('day')
-        ps_hour, ps_minute = PAYMENT_SYSTEM_CLOSING_TIME.split(':')
-        ps_closing_time = utcnow.replace(hour=int(ps_hour), minute=int(ps_minute))
         payment_time = arrow.get(payment_date).replace(hour=utcnow.hour, minute=utcnow.minute, second=utcnow.second)
         if payment_time < current_day_start:
             raise ValidationError("Payment date cannot be in the past")
-        elif ps_closing_time < payment_time < current_day_end:
-            raise ValidationError(
-                "You cannot set today's date if the schedule is being created after %s UTC."
-                "Please, try choosing a date in the future." % ps_closing_time.strftime('%H:%M')
-            )
+        else:
+            # Payment API's closing time restriction can be ignored if we send money between wallets
+            if funding_source_type != FundingSourceType.WALLET or payee_type != PayeeType.WALLET:
+                ps_hour, ps_minute = PAYMENT_SYSTEM_CLOSING_TIME.split(':')
+                ps_closing_time = utcnow.replace(hour=int(ps_hour), minute=int(ps_minute))
+                if ps_closing_time < payment_time < current_day_end:
+                    raise ValidationError(
+                        "You cannot set today's date if the schedule is being created after %s UTC."
+                        "Please, try choosing a date in the future." % ps_closing_time.strftime('%H:%M')
+                    )
+
         return payment_date
 
     def check_specific_funding_source(self, res: OrderedDict, field_name: str):
@@ -134,9 +196,8 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
         :return:
         """
         user = self.context.get('request').user
-        payment_client = PaymentApiClient(user)
 
-        fs = payment_client.get_funding_source_details(res[field_name])
+        fs = self.payment_client.get_funding_source_details(res[field_name])
         if fs.payment_account_id != str(user.account.payment_account_id):
             raise ValidationError({
                 field_name: "Invalid funding source payment account"
@@ -149,6 +210,10 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
             })
 
         return
+
+    def to_internal_value(self, data):
+        self._initialize_additional_schedule_fields(data)
+        return super().to_internal_value(data)
 
     # validate_{fieldname} also works
     def validate(self, res: OrderedDict):
@@ -163,11 +228,16 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
         logger.info("VALIDATE, res=%r" % res)
 
         try:
+            if res.get('start_date'):
+                self._check_payment_date(res["start_date"], res.get('funding_source_type'), res.get('payee_type'))
+
             if res.get("deposit_payment_date"):
                 if res["deposit_payment_date"] > res["start_date"]:
                     raise ValidationError({
                         "deposit_payment_date": "Deposit payment date must come prior to start date"
                     })
+
+                self._check_payment_date(res["deposit_payment_date"], res.get('funding_source_type'), res.get('payee_type'))
 
                 deposit_amount = res.get("deposit_amount")
                 if deposit_amount is None:
@@ -209,17 +279,24 @@ class ScheduleSerializer(HyperlinkedModelSerializer):
         Document.objects.filter(id__in=[item["id"] for item in documents]).update(schedule=self.instance)
 
 
-class ScheduleAcceptanceSerializer(HyperlinkedModelSerializer):
+class ScheduleAcceptanceSerializer(BaseScheduleSerializer):
     funding_source_id = UUIDField(required=True)
+    funding_source_type = EnumField(enum=FundingSourceType, required=False)
     backup_funding_source_id = UUIDField(required=False)
+    backup_funding_source_type = EnumField(enum=FundingSourceType, required=False)
     payment_fee_amount = IntegerField(default=0, required=False)
     deposit_fee_amount = IntegerField(default=0, required=False)
 
     class Meta:
         model = Schedule
         fields = (
-            'funding_source_id', 'backup_funding_source_id', 'payment_fee_amount', 'deposit_fee_amount'
+            'funding_source_id', 'funding_source_type', 'backup_funding_source_id', 'backup_funding_source_type',
+            'payment_fee_amount', 'deposit_fee_amount'
         )
+
+    def to_internal_value(self, data):
+        self._initialize_additional_schedule_fields(data)
+        return super().to_internal_value(data)
 
     def validate(self, res: OrderedDict):
         """

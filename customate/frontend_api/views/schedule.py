@@ -23,10 +23,6 @@ from frontend_api.fields import ScheduleStatus, SchedulePurpose
 from frontend_api.tasks import make_overdue_payment, make_payment
 from frontend_api.core.client import PaymentApiClient
 from frontend_api.models import Schedule, Document
-from frontend_api.models.schedule import DepositsSchedule
-from frontend_api.models.schedule import OnetimeSchedule, WeeklySchedule, MonthlySchedule, QuarterlySchedule, \
-    YearlySchedule
-from frontend_api.models.schedule import SchedulePeriod
 
 from frontend_api.permissions import (
     HasParticularDocumentPermission,
@@ -100,29 +96,11 @@ class ScheduleViewSet(views.ModelViewSet):
                 origin_user = counterpart_user
                 recipient_user = self.request.user
 
-            pd = self.payment_client.get_payee_details(serializer.validated_data["payee_id"])
-            if serializer.validated_data["purpose"] == SchedulePurpose.pay \
-                    and pd.type == PayeeType.WALLET.value \
-                    and pd.payment_account_id == str(user.account.payment_account_id):
-                raise ValidationError({
-                    "payee_id": "Current user's payee cannot be used for creation 'pay funds' schedule"
-                })
-
-            funding_source_type = self._get_and_validate_funding_source_type(serializer.validated_data.get("funding_source_id"))
-            backup_funding_source_type = self._get_and_validate_backup_funding_source_type(serializer.validated_data.get("backup_funding_source_id"))
-
             documents = serializer.validated_data.pop("documents", [])
             schedule = serializer.save(
                 status=status,
                 origin_user=origin_user,
-                recipient_user=recipient_user,
-                payee_recipient_name=pd.recipient_name,
-                payee_recipient_email=pd.recipient_email,
-                payee_iban=pd.iban,
-                payee_title=pd.title,
-                payee_type=pd.type,
-                funding_source_type=funding_source_type,
-                backup_funding_source_type=backup_funding_source_type
+                recipient_user=recipient_user
             )
             logger.info("Successfully created new schedule_id=%r" % schedule.id)
             serializer.assign_uploaded_documents_to_schedule(documents)
@@ -171,33 +149,6 @@ class ScheduleViewSet(views.ModelViewSet):
             logger.error("Unable to save Schedule=%r, due to %r" % (serializer.validated_data, format_exc()))
             raise ValidationError("Unable to save schedule")
 
-    def _get_and_validate_funding_source_type(self, funding_source_id):
-        if funding_source_id:
-            fd = self.payment_client.get_funding_source_details(funding_source_id)
-            if fd and fd.type is not None:
-                return fd.type
-            else:
-                raise ValidationError({
-                    "funding_source_type": "This field is required"
-                })
-
-    def _get_and_validate_backup_funding_source_type(self, backup_funding_source_id):
-        # NOTE: force backup funding source to be of 'WALLET' type only,
-        # otherwise we can't process DD/CC payments in a timely manner: they require 7day gap to be made in advance
-        if backup_funding_source_id:
-            fd_backup = self.payment_client.get_funding_source_details(backup_funding_source_id)
-            # NOTE: we do not support backup_funding_source type other than 'WALLET'
-            if not fd_backup:
-                raise ValidationError({
-                    "backup_funding_source_type": "This field is required"
-                })
-            elif fd_backup.type != FundingSourceType.WALLET.value:
-                raise ValidationError({
-                    "backup_funding_source_id": "Backup funding source is not of type %s" % FundingSourceType.WALLET
-                })
-            else:
-                return fd_backup.type
-
     @transaction.atomic
     def perform_update(self, serializer):
         """
@@ -207,14 +158,8 @@ class ScheduleViewSet(views.ModelViewSet):
         :return:
         """
         original_funding_source_type = serializer.instance.funding_source_type
-        funding_source_type = self._get_and_validate_funding_source_type(serializer.validated_data.get("funding_source_id"))
-        backup_funding_source_type = self._get_and_validate_backup_funding_source_type(serializer.validated_data.get("backup_funding_source_id"))
-
         documents = serializer.validated_data.pop("documents", [])
-        new_instance = serializer.save(
-            funding_source_type=funding_source_type,
-            backup_funding_source_type=backup_funding_source_type
-        )
+        new_instance = serializer.save()
         serializer.assign_uploaded_documents_to_schedule(documents)
 
         if self._can_changes_cause_late_payments(original_funding_source_type, new_instance):
@@ -327,8 +272,8 @@ class ScheduleViewSet(views.ModelViewSet):
         deposit_fee_amount = serializer.validated_data.get("deposit_fee_amount", None)
         funding_source_id = serializer.validated_data.get("funding_source_id", None)
         backup_funding_source_id = serializer.validated_data.get("backup_funding_source_id", None)
-        funding_source_type = self._get_and_validate_funding_source_type(funding_source_id)
-        backup_funding_source_type = self._get_and_validate_backup_funding_source_type(backup_funding_source_id)
+        funding_source_type = serializer.validated_data.get("funding_source_type", None)
+        backup_funding_source_type = serializer.validated_data.get("backup_funding_source_type", None)
 
         schedule.accept(payment_fee_amount, deposit_fee_amount,
                         funding_source_id, funding_source_type,
