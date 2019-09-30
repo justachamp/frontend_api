@@ -82,6 +82,14 @@ class PaymentApiClient:
 
         return payment_account_id
 
+    def deactivate_account(self, account_id):
+        try:
+            logger.info("Deactivating account=%s" % account_id)
+            self.client.delete('accounts', account_id)
+        except Exception as e:
+            logger.error("Account deactivation thrown an exception: %r" % format_exc())
+            raise e
+
     def cancel_schedule_payments(self, schedule_id):
         try:
             logger.info("Cancelling payments for schedule_id=%r" % schedule_id)

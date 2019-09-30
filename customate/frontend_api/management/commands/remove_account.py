@@ -42,14 +42,14 @@ class Command(BaseCommand):
             related_user_ids = []
             cursor.execute("SELECT user_id FROM frontend_api_account WHERE id = ANY(%s)", params=[related_account_ids])
             for user_id in cursor.fetchall():
-                related_user_ids.append(user_id)
+                related_user_ids.append(user_id[0])
 
             payment_account_ids = []
             cursor.execute("SELECT payment_account_id FROM frontend_api_useraccount "
                            "WHERE payment_account_id IS NOT NULL AND account_ptr_id = ANY(%s)",
                            params=[related_account_ids])
             for payment_account_id in cursor.fetchall():
-                payment_account_ids.append(payment_account_id)
+                payment_account_ids.append(payment_account_id[0])
             self.stdout.write(f'Affected payment account ids: {payment_account_ids}')
 
             self.stdout.write(f'Starting accounts removing process...')
@@ -75,5 +75,11 @@ class Command(BaseCommand):
             cursor.execute("DELETE FROM core_user_user_permissions WHERE user_id = ANY(%s)", params=[related_user_ids])
             cursor.execute("DELETE FROM core_user_groups WHERE user_id = ANY(%s)", params=[related_user_ids])
             cursor.execute("DELETE FROM core_user WHERE id = ANY(%s)", params=[related_user_ids])
+
+            # Deactivate (not REMOVE) payment account (we do this in the end, to be sure that queries pass)
+            from frontend_api.core.client import PaymentApiClient
+            payment_client = PaymentApiClient(user)
+            for account_id in payment_account_ids:
+                payment_client.deactivate_account(account_id)
 
             self.stdout.write(f'Done')
