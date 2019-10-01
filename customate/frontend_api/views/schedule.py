@@ -125,7 +125,8 @@ class ScheduleViewSet(views.ModelViewSet):
                         payment_amount=int(schedule.deposit_amount),  # NOTE: deposit amount here!
                         additional_information=str(schedule.deposit_additional_information),
                         payee_id=str(schedule.payee_id),
-                        funding_source_id=str(schedule.funding_source_id)
+                        funding_source_id=str(schedule.funding_source_id),
+                        is_deposit=True
                     )
 
                 if schedule.start_date == current_date:

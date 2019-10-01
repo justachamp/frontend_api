@@ -51,6 +51,7 @@ def make_payment(user_id: str, payment_account_id: str, schedule_id: str, curren
     :param parent_payment_id: Parent payment to make sure we could trace retry-payment chains
     :param execution_date: When payment should be executed
     :param request_id: Unique processing request's id.
+    :param is_deposit: Indicates whether this payment is deposit
     :return:
     """
     logging.init_shared_extra(request_id)
@@ -72,7 +73,8 @@ def make_payment(user_id: str, payment_account_id: str, schedule_id: str, curren
             funding_source_id=funding_source_id,
             parent_payment_id=parent_payment_id,
             payment_status=PaymentStatusType.PENDING,
-            original_amount=payment_amount
+            original_amount=payment_amount,
+            is_deposit=is_deposit
         )
         schedule_payment.save()
 
