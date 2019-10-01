@@ -1,13 +1,12 @@
 from __future__ import absolute_import, unicode_literals
-from typing import Dict, Callable
+from typing import Dict
 from traceback import format_exc
 import arrow
 import logging
-from uuid import UUID
+from uuid import UUID, uuid4
 from celery import shared_task
 from django.core.paginator import Paginator
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.utils import IntegrityError
 from django.conf import settings
 
 from core.logger import RequestIdGenerator
@@ -19,7 +18,7 @@ from frontend_api.models.schedule import OnetimeSchedule, DepositsSchedule
 from frontend_api.models.schedule import WeeklySchedule, MonthlySchedule, QuarterlySchedule, YearlySchedule
 from frontend_api.models.schedule import SchedulePayments, LastSchedulePayments
 from frontend_api.core.client import PaymentApiClient, PaymentDetails
-from frontend_api.fields import SchedulePurpose, ScheduleStatus
+from frontend_api.fields import ScheduleStatus
 
 import boto3
 from botocore.exceptions import ClientError, EndpointConnectionError
@@ -37,7 +36,7 @@ BLACKLISTED_DAYS_MAX_RETRY_COUNT = 10  # max number of retries to find next non-
 @shared_task
 def make_payment(user_id: str, payment_account_id: str, schedule_id: str, currency: str, payment_amount: int,
                  additional_information: str, payee_id: str, funding_source_id: str, parent_payment_id=None,
-                 execution_date=None, request_id=None):
+                 execution_date=None, request_id=None, is_deposit=False):
     """
     Calls payment API to initiate a payment.
 
@@ -63,8 +62,22 @@ def make_payment(user_id: str, payment_account_id: str, schedule_id: str, curren
                     execution_date, request_id
                 ))
 
+    payment_id = uuid4()
+    schedule_payment = None
+
     try:
+        schedule_payment = SchedulePayments(
+            schedule_id=schedule_id,
+            payment_id=payment_id,
+            funding_source_id=funding_source_id,
+            parent_payment_id=parent_payment_id,
+            payment_status=PaymentStatusType.PENDING,
+            original_amount=payment_amount
+        )
+        schedule_payment.save()
+
         PaymentApiClient.create_payment(p=PaymentDetails(
+            id=payment_id,
             user_id=UUID(user_id),
             payment_account_id=UUID(payment_account_id),
             schedule_id=UUID(schedule_id),
@@ -76,10 +89,16 @@ def make_payment(user_id: str, payment_account_id: str, schedule_id: str, curren
             parent_payment_id=UUID(parent_payment_id) if parent_payment_id else None,
             execution_date=arrow.get(execution_date).datetime if execution_date else None
         ))
-    except Exception as e:
-        logger.error("Unable to create payment for schedule_id=%s: %r" % (schedule_id, format_exc()))
-        Schedule.objects.get(id=schedule_id).move_to_status(ScheduleStatus.overdue)
-        return
+    except Exception:
+        logger.error("Unable to create payment for schedule(%s) due to unknown error: %r. Marking payment(%s) as failed"
+                     " and moving schedule to overdue state" % (schedule_id, format_exc(), payment_id))
+        if schedule_payment:
+            # We don't check or run payment with backup source here, because we have a severe problem that probably
+            # will prevent next payment's successful execution
+            schedule_payment.update(payment_status=PaymentStatusType.FAILED)
+
+        Schedule.objects.get(id=schedule_id)\
+            .move_to_status(ScheduleStatus.overdue)
 
 
 @shared_task
@@ -91,7 +110,6 @@ def on_payment_change(payment_info: Dict):
     """
     payment_id = payment_info.get("payment_id")
     account_id = payment_info.get("account_id")
-    parent_payment_id = payment_info.get("parent_payment_id")
     schedule_id = payment_info.get("schedule_id")
     funding_source_id = payment_info.get("funding_source_id")
     payment_status = PaymentStatusType(payment_info.get('status'))
@@ -125,29 +143,9 @@ def on_payment_change(payment_info: Dict):
         logger.error("Given user(id=%s) no longer exists, exiting" % schedule.origin_user_id)
         return
 
-    try:
-        # Save/update payment info into DB here, by avoiding duplicates using DB constraint on (schedule_id, payment_id)
-        schedule_payment = SchedulePayments(
-            schedule_id=schedule_id,
-            payment_id=payment_id,
-            funding_source_id=funding_source_id,
-            parent_payment_id=parent_payment_id,
-            payment_status=payment_status,
-            original_amount=amount
-        )
-        schedule_payment.save()
-        logger.info("Created new SchedulePayment(payment_id=%s, schedule_id=%s)" % (payment_id, schedule_id))
-
-    except IntegrityError as e:
-        if "frontend_api_schedulepayments_payment_id_schedule_id" in str(e):
-            logger.info("SchedulePayment(payment_id=%s, schedule_id=%s) record already exists, updating status only" % (
-                payment_id, schedule_id
-            ))
-            schedule_payment = SchedulePayments.objects.get(schedule_id=schedule_id, payment_id=payment_id)
-            schedule_payment.payment_status = payment_status
-            schedule_payment.save(update_fields=['payment_status'])
-        else:
-            logger.error("Got DB exception(payment_id=%s): %r " % (payment_id, format_exc()))
+    schedule_payment = SchedulePayments.objects.get(schedule_id=schedule_id, payment_id=payment_id)
+    schedule_payment.payment_status = payment_status
+    schedule_payment.save(update_fields=['payment_status'])
 
     # refresh actual count of payments for specific schedule
     if payment_status is PaymentStatusType.SUCCESS:
@@ -265,7 +263,8 @@ def process_all_deposit_payments(scheduled_date):
                 additional_information=str(s.deposit_additional_information),
                 payee_id=str(s.payee_id),
                 funding_source_id=str(s.funding_source_id),
-                request_id=request_id
+                request_id=request_id,
+                is_deposit=True
             )
 
 

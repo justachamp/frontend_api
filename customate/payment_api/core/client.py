@@ -1,18 +1,38 @@
 from traceback import format_exc
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 from django.utils.functional import cached_property
+from jsonapi_client.resourceobject import ResourceObject
 from rest_framework.exceptions import ValidationError
 from jsonapi_client import Session as DefaultSession, Modifier
 import logging
 
 # Get an instance of a logger
 from jsonapi_client.exceptions import DocumentError
-from jsonapi_client.common import error_from_response, HttpStatus
+from jsonapi_client.common import jsonify_attribute_name, error_from_response, HttpStatus, HttpMethod
+import collections
 
 from payment_api.core.resource.mixins import ResourceMappingMixin, JsonApiErrorParser
 
 logger = logging.getLogger(__name__)
+
+
+class ResourceObjectWithCustomId(ResourceObject):
+    def __init__(self, session: 'Session', data: Union[dict, list]) -> None:
+        self._force_create = False
+        super().__init__(session, data)
+
+    def force_create(self):
+        """
+        Parent class defines whether resource should be created only by empty "id" field, it's not an option because
+        we may want to set custom id for new resource, this kind of scenario is handled with help of "_force_create"
+        field
+        """
+        self._force_create = True
+
+    @property
+    def _http_method(self):
+        return HttpMethod.PATCH if self.id and not self._force_create else HttpMethod.POST
 
 
 class Session(DefaultSession):
@@ -98,6 +118,56 @@ class Session(DefaultSession):
             if response.content \
             else {}, response.headers.get('Location')
 
+    # The only difference from parent's method is that we return ResourceObjectWithCustomId object, that provides
+    # possibility to provide custom id to resource
+    def create(self, _type: str, fields: dict=None, **more_fields) -> 'ResourceObject':
+        """
+        Create a new ResourceObject of model _type. This requires that schema is defined
+        for model.
+
+        If you have field names that have underscores, you can pass those fields
+        in fields dictionary.
+
+        """
+        from jsonapi_client.objects import RESOURCE_TYPES
+
+        if fields is None:
+            fields = {}
+
+        attrs: dict = {}
+        rels: dict = {}
+        schema = self.schema.schema_for_model(_type)
+        more_fields.update(fields)
+
+        for key, value in more_fields.items():
+            if key not in fields:
+                key = jsonify_attribute_name(key)
+            props = schema['properties'].get(key, {})
+            if 'relation' in props:
+                res_types = props['resource']
+                if isinstance(value, RESOURCE_TYPES + (str,)):
+                    value = self._value_to_dict(value, res_types)
+                elif isinstance(value, collections.Iterable):
+                    value = [self._value_to_dict(id_, res_types) for id_ in value]
+                rels[key] = {'data': value}
+            else:
+                key = key.split('.')
+                a = attrs
+                for k in key[:-1]:
+                    a_ = a[k] = a.get(k, {})
+                    a = a_
+
+                a[key[-1]] = value
+
+        data = {'type': _type,
+                'id': None,
+                'attributes': attrs,
+                'relationships': rels,
+                }
+
+        res = ResourceObjectWithCustomId(self, data)
+        return res
+
 
 class Client(ResourceMappingMixin, JsonApiErrorParser):
     _base_url = None
@@ -137,6 +207,11 @@ class Client(ResourceMappingMixin, JsonApiErrorParser):
     def request_kwargs(self, request_kwargs):
         self.client._request_kwargs = request_kwargs
 
+    def _apply_resource_id(self, instance, attributes):
+        if attributes.get('id') and instance.id is None:
+            instance.id = attributes.get('id')
+            del(attributes['id'])
+
     def _apply_resource_attributes(self, instance, attributes):
         relationships = instance._relationships.keys()
         embedded_resources = self.embedded_resources
@@ -169,8 +244,12 @@ class Client(ResourceMappingMixin, JsonApiErrorParser):
     def create(self, resource_name, attributes):
         try:
             instance = self.client.create(resource_name)
+            self._apply_resource_id(instance, attributes)
             self._apply_resource_attributes(instance, attributes)
+
+            instance.force_create()
             instance.commit(custom_url=self.get_post_url(instance))
+
             logger.debug(instance)
             return instance
         except DocumentError as ex:

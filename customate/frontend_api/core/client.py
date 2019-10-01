@@ -9,7 +9,7 @@ from customate import settings
 from frontend_api.models import PayeeDetails, FundingSourceDetails, PaymentDetails
 from payment_api.core.client import Client
 from payment_api.serializers import PaymentAccountSerializer
-from payment_api.serializers.payment import ForcePaymentSerializer, MakingPaymentSerializer
+from payment_api.serializers.payment import ForcePaymentSerializer, MakePaymentSerializer
 from payment_api.services.payee import PayeeRequestResourceService
 from payment_api.services.source import FundingSourceRequestResourceService
 
@@ -120,8 +120,9 @@ class PaymentApiClient:
                     f"funding_source_id={p.funding_source_id})")
 
         view = MakePaymentViewSet()
-        serializer = MakingPaymentSerializer(
+        serializer = MakePaymentSerializer(
             data={
+                'id': str(p.id),
                 'user_id': str(p.user_id),
                 'schedule_id': str(p.schedule_id),
                 'currency': p.currency.name,

@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from payment_api.serializers import (
     UUIDField,
     CharField,
@@ -22,7 +24,8 @@ class LoadFundsSerializer(ResourceSerializer):
         'recipient': 'payment_api.serializers.PayeeSerializer',
     }
 
-    id = UUIDField(read_only=True)
+    # @NOTE: Cannot use just uuid as default value (issue with JSON serialization)
+    id = UUIDField(default=lambda: str(uuid4()))
     schedule_id = UUIDField(source='scheduleId', required=False)
     creation_date = TimestampField(read_only=True, source='creationDate')
     currency = EnumField(enum=Currency, primitive_value=True)
@@ -69,20 +72,18 @@ class LoadFundsSerializer(ResourceSerializer):
         external_resource_name = 'payments'
 
 
-class MakingPaymentSerializer(ResourceSerializer):
+class MakePaymentSerializer(ResourceSerializer):
     included_serializers = {
         'payment_account': 'payment_api.serializers.PaymentAccountSerializer',
         'origin': 'payment_api.serializers.FundingSourceSerializer',
         'recipient': 'payment_api.serializers.PayeeSerializer',
     }
 
-    id = UUIDField(read_only=True)
-    # @NOTE: doesn't work with UUIDField
+    id = CharField(default=lambda: str(uuid4()))  # @NOTE: doesn't work with UUIDField
     status = EnumField(enum=PaymentStatusType, primitive_value=True, read_only=True)
-    schedule_id = CharField(source='scheduleId', required=True)
+    schedule_id = CharField(source='scheduleId', required=True)  # @NOTE: doesn't work with UUIDField
     currency = EnumField(enum=Currency, primitive_value=True)
-    #scenario = EnumField(enum=PaymentScenario, primitive_value=True)
-    user_id = CharField(source='userId', required=True)
+    user_id = CharField(source='userId', required=True)  # @NOTE: doesn't work with UUIDField
     data = JSONField(required=True)
 
     payment_account = ExternalResourceRelatedField(

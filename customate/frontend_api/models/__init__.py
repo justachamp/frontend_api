@@ -236,6 +236,7 @@ from .document import Document
 
 @dataclass
 class PaymentDetails:
+    id: UUID
     user_id: UUID
     payment_account_id: UUID
     schedule_id: UUID

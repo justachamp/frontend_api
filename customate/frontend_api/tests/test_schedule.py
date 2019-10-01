@@ -32,6 +32,17 @@ class ScheduleModelTest(TestCase):
                         number_of_payments=10, funding_source_id=uuid4(), origin_user_id=ScheduleModelTest.user.id,
                         recipient_user_id=ScheduleModelTest.user.id)
 
+    @staticmethod
+    def _get_test_schedulepayment_model(schedule: Schedule, payment_status: PaymentStatusType):
+        return SchedulePayments(
+            schedule_id=schedule.id,
+            payment_id=uuid4(),
+            funding_source_id=schedule.funding_source_id,
+            parent_payment_id=None,
+            payment_status=payment_status,
+            original_amount=schedule.payment_amount
+        )
+
     def test_next_payment_date_closed_schedule(self):
         schedule = self._get_test_schedule_model()
         schedule.period = SchedulePeriod.one_time
@@ -105,15 +116,36 @@ class ScheduleModelTest(TestCase):
         schedule.funding_source_type = FundingSourceType.CREDIT_CARD
         schedule.save()
 
-        self.assertFalse(schedule.have_time_for_regular_payment_processing())
+        self.assertTrue(schedule.have_time_for_deposit_payment_processing())
 
-    @skip("Waiting for CS-672")
+    """
+        We changed funding source to CREDIT_CARD: 
+        there is NO time for deposit payment 
+    """
     def test_have_time_for_deposit_payment_processing__deposit_in_past(self):
-        pass
+        schedule = self._get_test_schedule_model()
+        schedule.period = SchedulePeriod.weekly
+        schedule.deposit_payment_date = arrow.utcnow().shift(days=4).datetime.date()
+        schedule.funding_source_type = FundingSourceType.CREDIT_CARD
+        schedule.save()
 
-    @skip("Waiting for CS-672")
+        self.assertFalse(schedule.have_time_for_deposit_payment_processing())
+
+    """
+        We changed funding source to CREDIT_CARD, but deposit payment was already executed in past 
+    """
     def test_have_time_for_deposit_payment_processing__deposit_was_executed_in_past(self):
-        pass
+        schedule = self._get_test_schedule_model()
+        schedule.period = SchedulePeriod.weekly
+        schedule.deposit_payment_date = arrow.utcnow().shift(days=-10).datetime.date()
+        schedule.funding_source_type = FundingSourceType.CREDIT_CARD
+        schedule.save()
+
+        schedule_payment = self._get_test_schedulepayment_model(schedule, PaymentStatusType.SUCCESS)
+        schedule_payment.is_deposit = True
+        schedule_payment.save()
+
+        self.assertTrue(schedule.have_time_for_deposit_payment_processing())
 
     def test_have_time_for_regular_payment_processing__weekly_execution_date_in_future(self):
         schedule = self._get_test_schedule_model()
@@ -121,6 +153,8 @@ class ScheduleModelTest(TestCase):
         schedule.period = SchedulePeriod.weekly
         schedule.funding_source_type = FundingSourceType.CREDIT_CARD
         schedule.save()
+
+        self._get_test_schedulepayment_model(schedule, PaymentStatusType.SUCCESS).save()
 
         self.assertTrue(schedule.have_time_for_regular_payment_processing())
 
@@ -134,14 +168,7 @@ class ScheduleModelTest(TestCase):
         schedule.funding_source_type = FundingSourceType.CREDIT_CARD
         schedule.save()
 
-        SchedulePayments(
-            schedule_id=schedule.id,
-            payment_id=str(uuid4()),
-            funding_source_id=schedule.funding_source_id,
-            parent_payment_id=None,
-            payment_status=PaymentStatusType.PROCESSING,
-            original_amount=schedule.payment_amount
-        ).save()
+        self._get_test_schedulepayment_model(schedule, PaymentStatusType.PROCESSING).save()
 
         self.assertFalse(schedule.have_time_for_regular_payment_processing())
 
@@ -156,14 +183,7 @@ class ScheduleModelTest(TestCase):
         schedule.funding_source_type = FundingSourceType.CREDIT_CARD
         schedule.save()
 
-        SchedulePayments(
-            schedule_id=schedule.id,
-            payment_id=str(uuid4()),
-            funding_source_id=schedule.funding_source_id,
-            parent_payment_id=None,
-            payment_status=PaymentStatusType.PROCESSING,
-            original_amount=schedule.payment_amount
-        ).save()
+        self._get_test_schedulepayment_model(schedule, PaymentStatusType.PROCESSING).save()
 
         self.assertFalse(schedule.have_time_for_regular_payment_processing())
 
@@ -177,14 +197,7 @@ class ScheduleModelTest(TestCase):
         schedule.funding_source_type = FundingSourceType.CREDIT_CARD
         schedule.save()
 
-        SchedulePayments(
-            schedule_id=schedule.id,
-            payment_id=str(uuid4()),
-            funding_source_id=schedule.funding_source_id,
-            parent_payment_id=None,
-            payment_status=PaymentStatusType.PROCESSING,
-            original_amount=schedule.payment_amount
-        ).save()
+        self._get_test_schedulepayment_model(schedule, PaymentStatusType.PROCESSING).save()
 
         self.assertTrue(schedule.have_time_for_regular_payment_processing())
 
@@ -199,14 +212,7 @@ class ScheduleModelTest(TestCase):
         schedule.funding_source_type = FundingSourceType.CREDIT_CARD
         schedule.save()
 
-        SchedulePayments(
-            schedule_id=schedule.id,
-            payment_id=str(uuid4()),
-            funding_source_id=schedule.funding_source_id,
-            parent_payment_id=None,
-            payment_status=PaymentStatusType.PROCESSING,
-            original_amount=schedule.payment_amount
-        ).save()
+        self._get_test_schedulepayment_model(schedule, PaymentStatusType.PROCESSING).save()
 
         self.assertTrue(schedule.have_time_for_regular_payment_processing())
 
@@ -221,14 +227,23 @@ class ScheduleModelTest(TestCase):
         schedule.funding_source_type = FundingSourceType.CREDIT_CARD
         schedule.save()
 
-        SchedulePayments(
-            schedule_id=schedule.id,
-            payment_id=str(uuid4()),
-            funding_source_id=schedule.funding_source_id,
-            parent_payment_id=None,
-            payment_status=PaymentStatusType.PROCESSING,
-            original_amount=schedule.payment_amount
-        ).save()
+        self._get_test_schedulepayment_model(schedule, PaymentStatusType.PROCESSING).save()
+
+        self.assertFalse(schedule.have_time_for_regular_payment_processing())
+
+    """
+        We made two monthly payments 2 months and 3 days ago and changed funding source to CREDIT_CARD: 
+        there is NO time for nearest payment
+    """
+    def test_have_time_for_regular_payment_processing__monthly_execution_date_in_past_have_no_time_for_third_payment(self):
+        schedule = self._get_test_schedule_model()
+        schedule.start_date = arrow.utcnow().shift(months=-2, days=-3).datetime.date()
+        schedule.period = SchedulePeriod.monthly
+        schedule.funding_source_type = FundingSourceType.CREDIT_CARD
+        schedule.save()
+
+        self._get_test_schedulepayment_model(schedule, PaymentStatusType.SUCCESS).save()
+        self._get_test_schedulepayment_model(schedule, PaymentStatusType.PROCESSING).save()
 
         self.assertFalse(schedule.have_time_for_regular_payment_processing())
 
@@ -243,16 +258,10 @@ class ScheduleModelTest(TestCase):
         schedule.funding_source_type = FundingSourceType.CREDIT_CARD
         schedule.save()
 
-        SchedulePayments(
-            schedule_id=schedule.id,
-            payment_id=str(uuid4()),
-            funding_source_id=schedule.funding_source_id,
-            parent_payment_id=None,
-            payment_status=PaymentStatusType.CANCELED,
-            original_amount=schedule.payment_amount
-        ).save()
+        self._get_test_schedulepayment_model(schedule, PaymentStatusType.CANCELED).save()
 
         self.assertTrue(schedule.have_time_for_regular_payment_processing())
+
 
 @skip("Waiting for mocks")
 class PaymentApiClientTest(SimpleTestCase):
@@ -275,6 +284,7 @@ class PaymentApiClientTest(SimpleTestCase):
 
     def test_create_payment(self):
         payment_details = PaymentDetails(
+            id=uuid4(),
             user_id=uuid4(),
             payment_account_id=uuid4(),
             schedule_id=uuid4(),

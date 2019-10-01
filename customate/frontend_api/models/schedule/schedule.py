@@ -338,15 +338,19 @@ class Schedule(AbstractSchedule):
         if self.deposit_payment_date is None:
             return True
 
+        have_made_deposit_payment = LastSchedulePayments.objects.filter(
+            schedule_id=self.id,
+            is_deposit=True
+        ).exists()
+
+        if have_made_deposit_payment:
+            return True
+
         deposit_payment = DepositsSchedule.objects.get(
             pk=self.id,
             status=ScheduleStatus.open.value
         )
-
-        # @TODO: There is no way (for now) to find out if we already have paid deposit, returning True for now
-        # CS-672
-        # arrow.get(deposit_payment.scheduled_date).datetime.date() >= self._get_nearest_acceptable_scheduler_date()
-        return True
+        return arrow.get(deposit_payment.scheduled_date).datetime.date() >= self._get_nearest_acceptable_scheduler_date()
 
     def have_time_for_regular_payment_processing(self):
         try:
@@ -530,6 +534,10 @@ class AbstractSchedulePayments(Model):
         help_text=_("Original payment amount for retry operations"),
         null=False,
         default=0
+    )
+    is_deposit = models.BooleanField(
+        default=False,
+        help_text=_('Indicates whether this payment is deposit'),
     )
 
 

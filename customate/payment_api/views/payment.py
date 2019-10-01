@@ -9,7 +9,7 @@ from frontend_api.permissions import (
     IsActive,
     IsNotBlocked,
     IsAccountVerified)
-from payment_api.serializers.payment import MakingPaymentSerializer
+from payment_api.serializers.payment import MakePaymentSerializer
 from payment_api.views import (
     InclusionFilter,
     OrderingFilter,
@@ -58,7 +58,7 @@ class PaymentViewSet(ResourceViewSet):
 class MakePaymentViewSet(ResourceViewSet):
     resource_name = 'payments'
     allowed_methods = ['post']
-    serializer_class = MakingPaymentSerializer
+    serializer_class = MakePaymentSerializer
     permission_classes = (IsAuthenticated,
                           IsActive,
                           IsNotBlocked,
