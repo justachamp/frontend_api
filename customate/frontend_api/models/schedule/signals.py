@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from typing import Dict
+import logging
 
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -9,6 +10,8 @@ from core.fields import PaymentStatusType
 
 from .schedule import SchedulePayments, Schedule
 from frontend_api.tasks import send_notification_email, send_notification_sms
+
+logger = logging.getLogger(__name__)
 
 
 def get_funds_senders_emails(schedule: Schedule) -> list:
@@ -131,10 +134,14 @@ def transaction_failed(sender, instance, **kwargs) -> None:
 
         # Extract funds senders and send sms notifications about failed transaction
         funds_senders_phones = get_funds_senders_phones(schedule=instance.schedule)
+        logger.info("Transaction failed. \nSchedule id: %s. \nSenders phones: %s" %
+                    (instance.schedule.id, ", ".join(funds_senders_phones)))
         for phone_number in funds_senders_phones:
+            logger.info("Send sms to %s" % phone_number)
             message = 'Transaction has failed.'
             # Pass flow control to celery task
             send_notification_sms.delay(to_phone_number=phone_number, message=message)
+
 
 
 @receiver(post_save, sender=SchedulePayments)
