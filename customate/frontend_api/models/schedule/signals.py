@@ -125,7 +125,10 @@ def transaction_failed(sender, instance, **kwargs) -> None:
     if instance.payment_status == PaymentStatusType.FAILED:
         # Extract funds senders and send email notifications about failed transaction
         funds_senders_emails = get_funds_senders_emails(schedule=instance.schedule)
+        logger.info("Transaction failed. \nSchedule id: %s. Senders emails: %s" %
+                    (instance.schedule.id, ", ".join(funds_senders_emails)))
         for email in funds_senders_emails:
+            logger.info("Send email to %s: " % email)
             context = {'original_amount': instance.original_amount, 'payment_id': instance.payment_id}
             message = get_ses_email_payload(tpl_filename='notifications/email_transaction_failed.html',
                                             tpl_context=context)
