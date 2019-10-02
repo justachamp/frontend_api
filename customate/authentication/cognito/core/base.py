@@ -44,8 +44,8 @@ class CognitoUser(CognitoClient):
             return kwargs
 
     def sign_up(self, username, password, user_attributes, validation_data=None):
-        logger.info(username)
-        logger.info(user_attributes)
+        logger.debug(username)
+        logger.debug(user_attributes)
         secret_hash = utils.get_cognito_secret_hash(username)
         params = {"ClientId": constants.CLIENT_ID,
                   "Username": username, "Password": password,
@@ -59,8 +59,8 @@ class CognitoUser(CognitoClient):
 
         user_params = utils.cognito_to_dict(user_attributes, settings.COGNITO_ATTR_MAPPING)
         cognito_user = CognitoClient.client.sign_up(**params)
-        logger.info(f'cognito user {cognito_user}')
-        logger.info(f'user_params {user_params}')
+        logger.debug(f'cognito user {cognito_user}')
+        logger.debug(f'user_params {user_params}')
         user = self.user_class.objects.create(
             username=username, email=username, cognito_id=cognito_user['UserSub']
             # first_name=user_params.get('given_name'), last_name=user_params.get('family_name')

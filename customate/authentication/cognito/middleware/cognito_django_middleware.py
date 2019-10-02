@@ -12,13 +12,13 @@ logger = logging.getLogger(__name__)
 class AwsDjangoMiddleware:
 
     def __call__(self, request):
-        logger.info('call AwsDjangoMiddleware')
+        logger.debug('call AwsDjangoMiddleware')
 
         # Get the user and a new token if required
         user, token, id_token, refresh_token = helpers.process_request(request)
 
         request.user = user
-        logger.info(f'AwsDjangoMiddleware {user}')
+        logger.debug(f'AwsDjangoMiddleware {user}')
         response = self.get_response(request)
 
         if token:

@@ -64,8 +64,8 @@ class Identity:
 
     def sign_up(self, username, password, account_type, user_attributes, validation_data=None):
         try:
-            logger.info(username)
-            logger.info(user_attributes)
+            logger.debug(username)
+            logger.debug(user_attributes)
 
             secret_hash = utils.get_cognito_secret_hash(username)
             params = {"ClientId": constants.CLIENT_ID,
@@ -80,21 +80,21 @@ class Identity:
 
             user_params = utils.cognito_to_dict(user_attributes, settings.COGNITO_ATTR_MAPPING)
             cognito_user = self.client.sign_up(**params)
-            logger.info(f'cognito user {cognito_user}')
-            logger.info(f'user_params {user_params}')
+            logger.debug(f'cognito user {cognito_user}')
+            logger.debug(f'user_params {user_params}')
             self.user_service.create_user(username, account_type, cognito_user['UserSub'])
             return cognito_user
 
         except ParamValidationError as ex:
-            logger.info(f'BOTOCORE_EXCEPTIONS {ex}')
+            logger.debug(f'BOTOCORE_EXCEPTIONS {ex}')
             raise CognitoIdentityException.create_from_boto_exception(ex)
 
         except constants.AWS_EXCEPTIONS as ex:
-            logger.info(f'AWS_EXCEPTIONS {ex}')
+            logger.debug(f'AWS_EXCEPTIONS {ex}')
             raise CognitoIdentityException.create_from_exception(ex)
 
         except Exception as ex:
-            logger.error(f'sign_up general {ex}')
+            logger.error(f'Sign up process caught an exception: {ex}')
             raise Exception(ex)
 
     @staticmethod
@@ -138,11 +138,11 @@ class Identity:
                                             AuthParameters=auth_parameters)
 
         except constants.AWS_EXCEPTIONS as ex:
-            logger.info(f'AWS_EXCEPTIONS {ex}')
+            logger.debug(f'AWS_EXCEPTIONS {ex}')
             raise CognitoIdentityException.create_from_exception(ex)
 
         except Exception as ex:
-            logger.error(f'initiate_auth general {ex}')
+            logger.error(f'Identity auth initiation process caught an exception: {ex}')
             raise Exception(ex)
 
     def refresh_session(self, username, auth_flow, refresh_token=None):
@@ -166,22 +166,22 @@ class Identity:
                                             AuthParameters=auth_parameters)
 
         except constants.AWS_EXCEPTIONS as ex:
-            logger.info(f'AWS_EXCEPTIONS {ex}')
+            logger.debug(f'AWS_EXCEPTIONS {ex}')
             raise CognitoIdentityException.create_from_exception(ex)
 
         except Exception as ex:
-            logger.error(f'refresh_session general {ex}')
+            logger.error(f'Refresh session process caught an exception: {ex}')
             raise Exception(ex)
 
     def sign_out(self, access_token):
         try:
             return self.client.global_sign_out(AccessToken=access_token)
         except constants.AWS_EXCEPTIONS as ex:
-            logger.info(f'AWS_EXCEPTIONS {ex}')
+            logger.debug(f'AWS_EXCEPTIONS {ex}')
             raise CognitoIdentityException.create_from_exception(ex)
 
         except Exception as ex:
-            logger.error(f'sign_out general {ex}')
+            logger.error(f'Sign out process caught an exception: {ex}')
             raise Exception(ex)
 
     def admin_sign_out(self, username):
@@ -191,11 +191,11 @@ class Identity:
                 Username=username
             )
         except constants.AWS_EXCEPTIONS as ex:
-            logger.info(f'AWS_EXCEPTIONS {ex}')
+            logger.debug(f'AWS_EXCEPTIONS {ex}')
             raise CognitoIdentityException.create_from_exception(ex)
 
         except Exception as ex:
-            logger.error(f'admin_sign_out general {ex}')
+            logger.error(f'Admin sign out process caught an exception: {ex}')
             raise Exception(ex)
 
     def verification_code(self, attribute_name, access_token):
@@ -210,11 +210,11 @@ class Identity:
 
             return result
         except constants.AWS_EXCEPTIONS as ex:
-            logger.info(f'AWS_EXCEPTIONS {ex}')
+            logger.debug(f'AWS_EXCEPTIONS {ex}')
             raise CognitoIdentityException.create_from_exception(ex)
 
         except Exception as ex:
-            logger.error(f'verification_code general {ex}')
+            logger.error(f'Receiving verification code process caught an exception: {ex}')
             raise Exception(ex)
 
     def verify_attribute(self, attribute_name, access_token, code):
@@ -230,11 +230,11 @@ class Identity:
 
             return result
         except constants.AWS_EXCEPTIONS as ex:
-            logger.info(f'AWS_EXCEPTIONS {ex}')
+            logger.debug(f'AWS_EXCEPTIONS {ex}')
             raise CognitoIdentityException.create_from_exception(ex)
 
         except Exception as ex:
-            logger.error(f'verify_attribute general {ex}')
+            logger.error(f'Identity attribute verification process caught an exception: {ex}')
             raise Exception(ex)
 
     @staticmethod
@@ -275,15 +275,15 @@ class Identity:
 
             return self.client.respond_to_auth_challenge(**params)
         except ParamValidationError as ex:
-            logger.info(f'BOTOCORE_EXCEPTIONS {ex}')
+            logger.debug(f'BOTOCORE_EXCEPTIONS {ex}')
             raise CognitoIdentityException.create_from_boto_exception(ex)
 
         except constants.AWS_EXCEPTIONS as ex:
-            logger.info(f'AWS_EXCEPTIONS {ex}')
+            logger.debug(f'AWS_EXCEPTIONS {ex}')
             raise CognitoIdentityException.create_from_exception(ex)
 
         except Exception as ex:
-            logger.error(f'respond_to_auth_challenge general {ex}')
+            logger.error(f'Responding to auth challenge process caught an exception: {ex}')
             raise Exception(ex)
 
     def forgot_password(self, username):
@@ -359,8 +359,8 @@ class Identity:
 
     def admin_create_user(self, username, user_attributes, password=None, action=None, delivery=None, validation_data=None):
         try:
-            logger.info(username)
-            logger.info(user_attributes)
+            logger.debug(username)
+            logger.debug(user_attributes)
 
             params = {
                 'UserPoolId': constants.POOL_ID,
@@ -380,21 +380,21 @@ class Identity:
 
             user_params = utils.cognito_to_dict(user_attributes, settings.COGNITO_ATTR_MAPPING)
             cognito_user = self.client.admin_create_user(**params)
-            logger.info(f'cognito user params {params}')
-            logger.info(f'cognito user {cognito_user}')
-            logger.info(f'user_params {user_params}')
+            logger.debug(f'cognito user params {params}')
+            logger.debug(f'cognito user {cognito_user}')
+            logger.debug(f'user_params {user_params}')
             return cognito_user.get('User')
 
         except ParamValidationError as ex:
-            logger.info(f'BOTOCORE_EXCEPTIONS {ex}')
+            logger.debug(f'BOTOCORE_EXCEPTIONS {ex}')
             raise CognitoIdentityException.create_from_boto_exception(ex)
 
         except constants.AWS_EXCEPTIONS as ex:
-            logger.info(f'AWS_EXCEPTIONS {ex}')
+            logger.debug(f'AWS_EXCEPTIONS {ex}')
             raise CognitoIdentityException.create_from_exception(ex)
 
         except Exception as ex:
-            logger.error(f'admin_create_user general {ex}')
+            logger.error(f'Creating user by admin process caught an exception: {ex}')
             raise Exception(ex)
 
     def set_user_mfa_preference(self, enable, access_token):

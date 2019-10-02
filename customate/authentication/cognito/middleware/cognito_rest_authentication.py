@@ -14,7 +14,7 @@ class AwsRestAuthentication(BaseAuthentication):
     def authenticate(self, request):
         # This is where we will extract information about the incoming access token from the user,
         # and decide whether or not they are authenticated
-        logger.info("Invoking AwsRestAuthentication")
+        logger.debug("Invoking AwsRestAuthentication")
 
         user, access_token, id_token, refresh_token = helpers.process_request(request, False)
         # TODO: Potentially create a mixin for views overriding the .finalise_response method to ensure if we
