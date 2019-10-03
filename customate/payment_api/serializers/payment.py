@@ -1,4 +1,5 @@
 from uuid import uuid4
+from django.contrib.auth import get_user_model
 
 from payment_api.serializers import (
     UUIDField,
@@ -14,6 +15,10 @@ from payment_api.serializers import (
     ResourceSerializer,
     ExternalResourceRelatedField
 )
+from frontend_api.models.schedule import signals
+from frontend_api import tasks
+from core.fields import PaymentStatusType
+
 
 
 class LoadFundsSerializer(ResourceSerializer):
@@ -65,6 +70,56 @@ class LoadFundsSerializer(ResourceSerializer):
     def validate(self, attrs):
         self.service.prepare_funds(attrs)
         return attrs
+
+    def notify_users_about_status(self, status: str, sender_id: str, recipient_email: str, amount: int):
+        funds_recipient = get_user_model().objects.get(email=recipient_email)
+        funds_sender = get_user_model().objects.get(id=sender_id)
+
+        funds_recipients_emails = signals.get_funds_recipients_emails(funds_recipient=funds_recipient)
+        funds_senders_emails = signals.get_funds_senders_emails(funds_sender=funds_sender)
+        funds_recipients_phones = signals.get_funds_recipients_phones(funds_recipient=funds_recipient)
+        funds_senders_phones = signals.get_funds_senders_phones(funds_sender=funds_sender)
+
+        # Handle "FAILED transaction" case
+        if status == PaymentStatusType.FAILED.value:
+            for email in funds_senders_emails:
+                context = {'original_amount': amount / 100}
+                message = signals.get_ses_email_payload(tpl_filename='notifications/email_transaction_failed.html',
+                                                        tpl_context=context)
+                tasks.send_notification_email.delay(to_address=email, message=message)
+            for phone_number in funds_senders_phones:
+                message = "Transaction failed."
+                tasks.send_notification_sms.delay(to_phone_number=phone_number, message=message)
+
+        # Handle "SUCCESS transaction" case
+        if status == PaymentStatusType.SUCCESS.value:
+            # Notify funds senders
+            # Because sender and recipient might be the same user, remove him from senders notifications
+            for email in [item for item in funds_senders_emails if item not in funds_recipients_emails]:
+                context = {'original_amount': amount / 100}
+                message = signals.get_ses_email_payload(tpl_filename='notifications/email_senders_balance_updated.html',
+                                                        tpl_context=context)
+                tasks.send_notification_email.delay(to_address=email, message=message)
+            for phone_number in [item for item in funds_senders_phones if item not in funds_recipients_phones]:
+                message = 'Your balance has changed.'
+                tasks.send_notification_sms.delay(to_phone_number=phone_number, message=message)
+            # Notify funds recipients
+            for email in funds_recipients_emails:
+                context = {'original_amount': amount / 100}
+                message = signals.get_ses_email_payload(tpl_filename='notifications/email_recipients_balance_updated.html',
+                                                        tpl_context=context)
+                tasks.send_notification_email.delay(to_address=email, message=message)
+            for phone_number in funds_recipients_phones:
+                message = 'Your balance has changed.'
+                tasks.send_notification_sms.delay(to_phone_number=phone_number, message=message)
+
+
+    def create(self, validated_data):
+        payment = super().create(validated_data)
+        self.notify_users_about_status(status=payment.status, sender_id=payment.userId,
+                                       recipient_email=payment.recipient.data["recipient"]["email"],
+                                       amount=validated_data["data"]["amount"])
+        return payment
 
     class Meta(ResourceMeta):
         service = 'payment_api.services.FundsRequestResourceService'
