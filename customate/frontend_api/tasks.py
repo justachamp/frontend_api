@@ -8,6 +8,7 @@ from celery import shared_task
 from django.core.paginator import Paginator
 from django.core.exceptions import ObjectDoesNotExist
 from django.conf import settings
+from django.core.paginator import Paginator
 
 from core.logger import RequestIdGenerator
 from core.models import User
@@ -423,8 +424,8 @@ def initiate_daily_payments():
 
     while True:
         if retry_count > BLACKLISTED_DAYS_MAX_RETRY_COUNT:
-            logger.info("We reached maximum verified dates count during processing. Stopping dates verification "
-                        "and payment processing.")
+            logger.info("Reached maximum BLACKLISTED_DAYS_MAX_RETRY_COUNT=%s. Stopping dates verification "
+                        "and payment processing." % BLACKLISTED_DAYS_MAX_RETRY_COUNT)
             break
 
         # During first iteration we will process schedules for today
@@ -494,3 +495,28 @@ def send_notification_sms(to_phone_number, message):
     except:
         logger.error("Unable to send message via boto3 with outcoming data: \n%s. %r" % (kwargs, format_exc()))
 
+
+@shared_task
+def process_unaccepted_schedules():
+    """
+    Make sure we change schedules status to rejected
+        if this schedule was not accepted by payer before deposit_payment_date (if not None) or start_date
+    :return:
+    """
+    now = arrow.utcnow()
+    opened_receive_funds_schedules = Schedule.objects.filter(purpose=SchedulePurpose.receive,
+                                                             status=ScheduleStatus.open)
+    # Filter opened receive funds schedules by deposit_payment_date (if not None) or start_date
+    schedules_with_deposit_payment_date = opened_receive_funds_schedules.filter(
+        deposit_payment_date__isnull=False).filter(
+        deposit_payment_date__lt=now.datetime)
+    schedules_without_deposit_payment_date = opened_receive_funds_schedules.filter(
+        deposit_payment_date__isnull=True,
+        start_date__lt=now.datetime)
+    unaccepted_schedules = schedules_with_deposit_payment_date | schedules_without_deposit_payment_date
+
+    paginator = Paginator(unaccepted_schedules, PER_PAGE)
+    for page in paginator.page_range:
+        # Update statuses via .move_to_status()
+        # WARN: potential generation of 1-N SQL UPDATE command here
+        map(lambda schedule: schedule.move_to_status(ScheduleStatus.rejected), paginator.page(page).object_list)

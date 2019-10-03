@@ -448,15 +448,19 @@ CELERY_TIMEZONE = 'UTC'
 # This is for periodic execution of tasks
 # For more info: http://docs.celeryproject.org/en/latest/userguide/periodic-tasks.html#crontab-schedules
 CELERY_BEAT_SCHEDULE = {
-    # 'one_per_minute': {
-    #     'task': 'frontend_api.tasks.every_minute_test',
-    #     'schedule': crontab(minute='*/1'),
-    #     'args': ('one_per_hour', False, None)
-    # },
+     #'one_per_minute': {
+     #    'task': 'frontend_api.tasks.process_unaccepted_schedules',
+     #    'schedule': crontab(minute='*/1'),
+     #    'args': ('one_per_hour', False, None)
+     #},
 
     'once_per_day': {
         'task': 'frontend_api.tasks.initiate_daily_payments',
         # Even though bank day is not opened, we initiate payments in the night
+        'schedule': crontab(hour='00', minute="01")  # 00:01 UTC every day
+    },
+    'once_per_day_update_statuses_of_unaccepted_schedules': {
+        'task': 'frontend_api.tasks.process_unaccepted_schedules',
         'schedule': crontab(hour='00', minute="01")  # 00:01 UTC every day
     },
 }
