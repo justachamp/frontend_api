@@ -16,7 +16,7 @@ from rest_framework.serializers import ValidationError
 from core.models import User
 from core import views
 from core.exceptions import ConflictError
-from core.fields import PayeeType, FundingSourceType
+from core.fields import FundingSourceType
 from customate.settings import CELERY_BEAT_SCHEDULE
 
 from frontend_api.fields import ScheduleStatus, SchedulePurpose
@@ -33,7 +33,7 @@ from frontend_api.permissions import (
     IsActive,
     IsAccountVerified)
 
-from frontend_api.serializers.schedule import ScheduleSerializer, ScheduleAcceptanceSerializer
+from frontend_api.serializers.schedule import ScheduleSerializer, ScheduleAcceptanceSerializer, UpdateScheduleSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -65,10 +65,13 @@ class ScheduleViewSet(views.ModelViewSet):
         'currency': ('iexact', 'in'),
     }
 
+    def get_serializer_class(self):
+        return UpdateScheduleSerializer if self.request.method == 'PATCH' else ScheduleSerializer
+
     def get_queryset(self, *args, **kwargs):
         target_account_ids = self.request.user.get_all_related_account_ids()
-        return Schedule.objects.all().filter(Q(origin_user__account__id__in=target_account_ids)
-                                             | Q(recipient_user__account__id__in=target_account_ids))
+        return Schedule.objects.filter(Q(origin_user__account__id__in=target_account_ids)
+                                       | Q(recipient_user__account__id__in=target_account_ids))
 
     @cached_property
     def payment_client(self):
@@ -261,13 +264,14 @@ class ScheduleViewSet(views.ModelViewSet):
     @transaction.atomic
     def accept_schedule(self, request, *args, **kwargs):
         schedule_id = kwargs.get('pk')
-        serializer = ScheduleAcceptanceSerializer(data=request.data, context={'request': request})
-        serializer.is_valid(raise_exception=True)
 
         try:
             schedule = Schedule.objects.get(id=schedule_id)
         except Exception:
             raise NotFound(f'Schedule not found id={schedule_id}')
+
+        serializer = ScheduleAcceptanceSerializer(instance=schedule, data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
 
         payment_fee_amount = serializer.validated_data.get("payment_fee_amount", None)
         deposit_fee_amount = serializer.validated_data.get("deposit_fee_amount", None)

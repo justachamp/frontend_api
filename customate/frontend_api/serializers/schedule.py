@@ -12,6 +12,7 @@ from django.utils.functional import cached_property
 
 from core.fields import Currency, SerializerField, FundingSourceType, PayeeType
 from frontend_api.fields import ScheduleStatus, SchedulePeriod, SchedulePurpose
+from frontend_api.models import FundingSourceDetails
 from frontend_api.models.schedule import Schedule
 from frontend_api.models.document import Document
 from frontend_api.serializers.document import DocumentSerializer
@@ -31,7 +32,12 @@ class BaseScheduleSerializer(HyperlinkedModelSerializer):
     def payment_client(self):
         return PaymentApiClient(self.context.get('request').user)
 
-    def _initialize_additional_schedule_fields(self, data):
+    def initialize_and_validate_payee_related_fields(self, data):
+        """
+        We will try to receive some additional information (iban, title etc.) about payee from Payment API,
+        and initialize appropriate fields in schedule's data
+        :param data: dict of incoming fields from HTTP request
+        """
         if data.get('payee_id'):
             pd = self.payment_client.get_payee_details(data.get('payee_id'))
             if pd:
@@ -51,42 +57,72 @@ class BaseScheduleSerializer(HyperlinkedModelSerializer):
                     'payee_type': pd.type
                 })
 
+    def initialize_and_validate_funding_source_related_fields(self, data):
+        """
+        We will try to receive funding source's types from Payment API, and initialize appropriate fields in
+        schedule's data
+        :param data: dict of incoming fields from HTTP request
+        """
         if data.get('funding_source_id'):
+            fs_details = self.payment_client.get_funding_source_details(data.get('funding_source_id'))
+            self._check_specific_funding_source(data, fs_details, 'funding_source_id')
+
             data.update({
-                'funding_source_type': self._get_and_validate_funding_source_type(data.get("funding_source_id"))
+                'funding_source_type': self._get_and_validate_funding_source_type(fs_details)
             })
 
         if data.get('backup_funding_source_id'):
+            fs_details = self.payment_client.get_funding_source_details(data.get('backup_funding_source_id'))
+            self._check_specific_funding_source(data, fs_details, 'backup_funding_source_id')
+
             data.update({
-                'backup_funding_source_type': self._get_and_validate_backup_funding_source_type(data.get("backup_funding_source_id"))
+                'backup_funding_source_type': self._get_and_validate_backup_funding_source_type(fs_details)
             })
 
-    def _get_and_validate_funding_source_type(self, funding_source_id):
-        if funding_source_id:
-            fd = self.payment_client.get_funding_source_details(funding_source_id)
-            if fd and fd.type is not None:
-                return fd.type
-            else:
-                raise ValidationError({
-                    "funding_source_type": "This field is required"
-                })
+    def _get_and_validate_funding_source_type(self, fs_details: FundingSourceDetails):
+        if fs_details and fs_details.type is not None:
+            return fs_details.type
+        else:
+            raise ValidationError({
+                "funding_source_type": "This field is required"
+            })
 
-    def _get_and_validate_backup_funding_source_type(self, backup_funding_source_id):
+    def _get_and_validate_backup_funding_source_type(self, fs_details: FundingSourceDetails):
         # NOTE: force backup funding source to be of 'WALLET' type only,
-        # otherwise we can't process DD/CC payments in a timely manner: they require 7day gap to be made in advance
-        if backup_funding_source_id:
-            fd_backup = self.payment_client.get_funding_source_details(backup_funding_source_id)
-            # NOTE: we do not support backup_funding_source type other than 'WALLET'
-            if not fd_backup:
-                raise ValidationError({
-                    "backup_funding_source_type": "This field is required"
-                })
-            elif fd_backup.type != FundingSourceType.WALLET.value:
-                raise ValidationError({
-                    "backup_funding_source_id": "Backup funding source is not of type %s" % FundingSourceType.WALLET
-                })
-            else:
-                return fd_backup.type
+        # otherwise we can't process DD/CC payments in a timely manner: they require 7 day gap to be made in advance
+        if not fs_details:
+            raise ValidationError({
+                "backup_funding_source_type": "This field is required"
+            })
+        elif fs_details.type != FundingSourceType.WALLET.value:
+            raise ValidationError({
+                "backup_funding_source_id": "Backup funding source is not of type %s" % FundingSourceType.WALLET
+            })
+        else:
+            return fs_details.type
+
+    def _check_specific_funding_source(self, res: OrderedDict, fs_details: FundingSourceDetails, field_name: str):
+        """
+        :param res: dict of incoming fields from HTTP request
+        :param fs_details: funding source details, received from Payment API
+        :param field_name: (funding_source_id, backup_funding_source_id)
+        """
+        user = self.context.get('request').user
+
+        if fs_details.payment_account_id != str(user.account.payment_account_id):
+            raise ValidationError({
+                field_name: "Invalid funding source payment account"
+            })
+
+        # @NOTE: we allow payments from credit card that have different currency
+        if fs_details.type != FundingSourceType.CREDIT_CARD.value \
+                and fs_details.currency != res.get("currency", self.instance.currency.value if self.instance else None):
+            raise ValidationError({
+                field_name: "Funding source currency should be the same as schedule currency"
+            })
+
+    def assign_uploaded_documents_to_schedule(self, documents):
+        Document.objects.filter(id__in=[item["id"] for item in documents]).update(schedule=self.instance)
 
 
 class ScheduleSerializer(BaseScheduleSerializer):
@@ -150,12 +186,8 @@ class ScheduleSerializer(BaseScheduleSerializer):
         logger.info("Validate_name: %r, user=%r" % (value, request.user))
 
         target_account_ids = request.user.get_all_related_account_ids()
-        if self.instance:
-            queryset = Schedule.objects.filter(name=value, origin_user__account__id__in=target_account_ids).exclude(id=self.instance.id) \
-                       | Schedule.objects.filter(name=value, recipient_user__account__id__in=target_account_ids).exclude(id=self.instance.id)
-        else:
-            queryset = Schedule.objects.filter(name=value, origin_user__account__id__in=target_account_ids) \
-                       | Schedule.objects.filter(name=value, recipient_user__account__id__in=target_account_ids)
+        queryset = Schedule.objects.filter(name=value, origin_user__account__id__in=target_account_ids) \
+                   | Schedule.objects.filter(name=value, recipient_user__account__id__in=target_account_ids)
 
         entries_count = queryset.count()
         if entries_count >= 1:
@@ -188,31 +220,12 @@ class ScheduleSerializer(BaseScheduleSerializer):
 
         return payment_date
 
-    def check_specific_funding_source(self, res: OrderedDict, field_name: str):
-        """
-        Calls payment-api and verifies that funding sources are correct.
-        :param res: dict of incoming fields from HTTP request
-        :param field_name: (funding_source_id, backup_funding_source_id)
-        :return:
-        """
-        user = self.context.get('request').user
-
-        fs = self.payment_client.get_funding_source_details(res[field_name])
-        if fs.payment_account_id != str(user.account.payment_account_id):
-            raise ValidationError({
-                field_name: "Invalid funding source payment account"
-            })
-
-        # @NOTE: we allow payments from credit card that have different currency
-        if fs.type != FundingSourceType.CREDIT_CARD.value and fs.currency != res["currency"].value:
-            raise ValidationError({
-                field_name: "Funding source currency should be the same as schedule currency"
-            })
-
-        return
-
     def to_internal_value(self, data):
-        self._initialize_additional_schedule_fields(data)
+        # This is one of two places where we can perform some kind of pre-initialisation for data (before it will be
+        # sent to validation)
+        self.initialize_and_validate_payee_related_fields(data)
+        self.initialize_and_validate_funding_source_related_fields(data)
+
         return super().to_internal_value(data)
 
     # validate_{fieldname} also works
@@ -259,15 +272,12 @@ class ScheduleSerializer(BaseScheduleSerializer):
                 # Verify first funding source
                 if res.get("funding_source_id") is None:
                     raise ValidationError({"funding_source_id": "This field is required."})
-                self.check_specific_funding_source(res, field_name="funding_source_id")
 
                 # Verify backup funding source
-                if res.get("backup_funding_source_id"):
-                    if res["backup_funding_source_id"] == res["funding_source_id"]:
-                        raise ValidationError({
-                            "backup_funding_source_id": "Backup funding source can not be the same as default"
-                        })
-                    self.check_specific_funding_source(res, field_name="backup_funding_source_id")
+                if res.get("backup_funding_source_id") and res["backup_funding_source_id"] == res["funding_source_id"]:
+                    raise ValidationError({
+                        "backup_funding_source_id": "Backup funding source can not be the same as default"
+                    })
 
         except (ValueError, TypeError):
             logger.error("Validation failed due to: %r" % format_exc())
@@ -275,8 +285,102 @@ class ScheduleSerializer(BaseScheduleSerializer):
 
         return res
 
-    def assign_uploaded_documents_to_schedule(self, documents):
-        Document.objects.filter(id__in=[item["id"] for item in documents]).update(schedule=self.instance)
+
+class UpdateScheduleSerializer(BaseScheduleSerializer):
+    name = CharField(required=True)
+    number_of_payments = IntegerField(required=True)
+    payment_amount = IntegerField(required=True)
+    payment_fee_amount = IntegerField(default=0, required=False)
+    deposit_amount = IntegerField(required=False)
+    deposit_fee_amount = IntegerField(default=0, required=False)
+    additional_information = CharField(required=False)
+    funding_source_id = UUIDField(required=True)
+    funding_source_type = EnumField(enum=FundingSourceType, required=False)
+    backup_funding_source_id = UUIDField(required=False)
+    backup_funding_source_type = EnumField(enum=FundingSourceType, required=False)
+    documents = SerializerField(resource=DocumentSerializer, many=True, required=False)
+
+    class Meta:
+        model = Schedule
+        fields = (
+            'name', 'number_of_payments', 'payment_amount', 'payment_fee_amount', 'deposit_amount',
+            'deposit_fee_amount', 'additional_information', 'funding_source_id', 'backup_funding_source_id',
+            'documents', 'funding_source_type', 'backup_funding_source_type'
+        )
+
+    def validate_name(self, value):
+        """
+        Make sure we avoid duplicate names for the same user.
+        :param name:
+        :return:
+        """
+        request = self.context.get('request')
+        logger.info("Validate_name: %r, user=%r" % (value, request.user))
+
+        # Searching for duplicate by name (but excluding current schedule from selection)
+        target_account_ids = request.user.get_all_related_account_ids()
+        queryset = Schedule.objects.filter(name=value, origin_user__account__id__in=target_account_ids).exclude(id=self.instance.id) \
+                   | Schedule.objects.filter(name=value, recipient_user__account__id__in=target_account_ids).exclude(id=self.instance.id)
+
+        entries_count = queryset.count()
+        if entries_count >= 1:
+            raise ValidationError("Schedule with such name already exists")
+        return value
+
+    def to_internal_value(self, data):
+        # This is one of two places where we can perform some kind of pre-initialisation for data (before it will be
+        # sent to validation)
+        self.initialize_and_validate_payee_related_fields(data)
+        self.initialize_and_validate_funding_source_related_fields(data)
+
+        return super().to_internal_value(data)
+
+    def validate(self, res: OrderedDict):
+        """
+        Apply custom validation on whole resource.
+        See more at: https://www.django-rest-framework.org/api-guide/serializers/#validation
+        :param res: Incoming data
+        :type res: OrderedDict
+        :return: validated res
+        :rtype: OrderedDict
+        """
+        logger.info("Validating data for schedule's update (data=%r)" % res)
+
+        try:
+            current_user = self.context.get('request').user
+
+            if current_user != self.instance.origin_user:
+                raise ValidationError({"origin_user": "Only payer can update schedule"})
+
+            if int(res["payment_amount"]) < 0:
+                raise ValidationError({"payment_amount": "Payment amount should be positive number"})
+
+            if int(res["payment_fee_amount"]) < 0:
+                raise ValidationError({"payment_fee_amount": "Payment fee amount should be positive number"})
+
+            if res.get("deposit_amount"):
+                if int(res["deposit_amount"]) < 0:
+                    raise ValidationError({"deposit_fee_amount": "Deposit amount should be positive number"})
+
+                if int(res["deposit_amount"]) != self.instance.deposit_amount:
+                    raise ValidationError({"deposit_amount": "Deposit amount cannot be updated"})
+
+            if res.get("deposit_fee_amount") and int(res["deposit_fee_amount"]) < 0:
+                raise ValidationError({"deposit_fee_amount": "Deposit fee amount should be positive number"})
+
+            if res.get("backup_funding_source_id") and res["backup_funding_source_id"] == res["funding_source_id"]:
+                raise ValidationError({
+                    "backup_funding_source_id": "Backup funding source can not be the same as default"
+                })
+
+            if self.instance.purpose == SchedulePurpose.receive and int(res["payment_amount"]) != self.instance.payment_amount:
+                raise ValidationError({"payment_amount": "Payment amount cannot be updated"})
+
+        except (ValueError, TypeError):
+            logger.error("Validation failed during update operation, due to: %r" % format_exc())
+            raise ValidationError("Schedule validation failed")
+
+        return res
 
 
 class ScheduleAcceptanceSerializer(BaseScheduleSerializer):
@@ -295,7 +399,11 @@ class ScheduleAcceptanceSerializer(BaseScheduleSerializer):
         )
 
     def to_internal_value(self, data):
-        self._initialize_additional_schedule_fields(data)
+        # This is one of two places where we can perform some kind of pre-initialisation for data (before it will be
+        # sent to validation)
+        self.initialize_and_validate_payee_related_fields(data)
+        self.initialize_and_validate_funding_source_related_fields(data)
+
         return super().to_internal_value(data)
 
     def validate(self, res: OrderedDict):
@@ -307,7 +415,7 @@ class ScheduleAcceptanceSerializer(BaseScheduleSerializer):
         :return: validated res
         :rtype: OrderedDict
         """
-        logger.info("VALIDATE, res=%r" % res)
+        logger.info("Validating data for schedule's update (data=%r)" % res)
 
         try:
             if res.get("payment_fee_amount") and int(res["payment_fee_amount"]) < 0:
