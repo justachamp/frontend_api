@@ -256,4 +256,4 @@ def call_balance_changed(sender, instance, **kwargs) -> None:
     :return:
     """
     if instance.payment_status == PaymentStatusType.SUCCESS:
-        balance_changed(schedule=instance)
+        balance_changed(schedule=instance.schedule)
