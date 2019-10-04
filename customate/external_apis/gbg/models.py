@@ -290,6 +290,7 @@ class Address(GBGData):
                 expanded_address = retrieve_address(params={"Id": a_details["Id"]})[0]
                 # it is highly probable that this is incorrect match
                 if self.post_code != expanded_address["PostalCode"]:
+                    expanded_address = None
                     raise NonMatchingPostalCode()
                 expanded_address = defaultdict(str, expanded_address)  # make sure missing keys won't break follow-up
             except Exception:
