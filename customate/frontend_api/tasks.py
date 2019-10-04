@@ -19,7 +19,7 @@ from frontend_api.models.schedule import OnetimeSchedule, DepositsSchedule
 from frontend_api.models.schedule import WeeklySchedule, MonthlySchedule, QuarterlySchedule, YearlySchedule
 from frontend_api.models.schedule import SchedulePayments, LastSchedulePayments
 from frontend_api.core.client import PaymentApiClient, PaymentDetails
-from frontend_api.fields import ScheduleStatus
+from frontend_api.fields import ScheduleStatus, SchedulePurpose
 
 import boto3
 from botocore.exceptions import ClientError, EndpointConnectionError
