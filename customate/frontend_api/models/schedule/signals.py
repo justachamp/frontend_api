@@ -169,7 +169,7 @@ def transaction_failed(schedule):
     actual_balance = get_actual_balance(user=funds_sender, schedule=schedule)
     schedule_details = get_schedule_details(user=funds_sender, schedule=schedule)
     funds_senders_emails = get_funds_senders_emails(funds_sender=funds_sender)
-    logger.info("Transaction failed. \nSchedule id: %s. Senders emails: %s" %
+    logger.info("Transaction failed. Schedule id: %s. Senders emails: %s" %
                 (schedule.id, ", ".join(funds_senders_emails)))
     for email in funds_senders_emails:
         logger.info("Send email to %s: " % email)
@@ -181,7 +181,7 @@ def transaction_failed(schedule):
 
     # Extract funds senders and send sms notifications about failed transaction
     funds_senders_phones = get_funds_senders_phones(funds_sender=funds_sender)
-    logger.info("Transaction failed. \nSchedule id: %s. \nSenders phones: %s" %
+    logger.info("Transaction failed. Schedule id: %s. Senders phones: %s" %
                 (schedule.id, ", ".join(funds_senders_phones)))
     for phone_number in funds_senders_phones:
         logger.info("Send sms to %s" % phone_number)
@@ -195,7 +195,10 @@ def balance_changed(schedule):
     senders_actual_balance = get_actual_balance(user=funds_sender, schedule=schedule)
     schedule_details = get_schedule_details(user=funds_sender, schedule=schedule)
     funds_senders_emails = get_funds_senders_emails(funds_sender=funds_sender)
+    logger.info("Successful transaction. Schedule id: %s. Senders emails: %s" %
+                (schedule.id, ", ".join(funds_senders_emails)))
     for email in funds_senders_emails:
+        logger.error("Send email to: %s" % email)
         email_context_for_senders = {"actual_balance": senders_actual_balance, **schedule_details}
         message = get_ses_email_payload(tpl_filename='notifications/email_senders_balance_updated.html',
                                         tpl_context=email_context_for_senders)
@@ -204,7 +207,10 @@ def balance_changed(schedule):
 
     # Extract funds senders and send sms notifications about failed transaction
     funds_senders_phones = get_funds_senders_phones(funds_sender=funds_sender)
+    logger.info("Successful transaction. Schedule id: %s. Senders phones: %s" %
+                (schedule.id, ", ".join(funds_senders_phones)))
     for phone_number in funds_senders_phones:
+        logger.error("Send sms to: %s" % phone_number)
         message = 'Transaction has failed.'
         # Pass flow control to celery task
         send_notification_sms.delay(to_phone_number=phone_number, message=message)
@@ -215,7 +221,10 @@ def balance_changed(schedule):
     recipients_actual_balance = get_actual_balance(user=funds_recipient, schedule=schedule)
     # Extract funds recipients and send email notifications about changes in balance
     funds_recipients_emails = get_funds_recipients_emails(funds_recipient=funds_recipient)
+    logger.info("Successful transaction. Schedule id: %s. Recipients emails: %s" %
+                (schedule.id, ", ".join(funds_recipients_emails)))
     for email in funds_recipients_emails:
+        logger.error("Send email to: %s" % email)
         email_context_for_recipients = {"actual_balance": recipients_actual_balance, **schedule_details}
         message = get_ses_email_payload(tpl_filename='notifications/email_recipients_balance_updated.html',
                                         tpl_context=email_context_for_recipients)
@@ -224,7 +233,10 @@ def balance_changed(schedule):
 
     # Extract funds recipients and send sms notifications about failed transaction
     funds_recipients_phones = get_funds_recipients_phones(funds_recipient=funds_recipient)
+    logger.info("Successful transaction. Schedule id: %s. Recipients phones: %s" %
+                (schedule.id, ", ".join(funds_recipients_phones)))
     for phone_number in funds_recipients_phones:
+        logger.error("Send sms to: %s" % phone_number)
         message = 'Your balance has changed.'
         # Pass flow control to celery task
         send_notification_sms.delay(to_phone_number=phone_number, message=message)
