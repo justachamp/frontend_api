@@ -1,3 +1,4 @@
+from typing import Dict
 from collections import defaultdict
 import logging
 from traceback import format_exc
@@ -8,6 +9,12 @@ import datetime
 from core.fields import Country
 
 from external_apis.loqate.service import find_address, retrieve_address
+
+FREE_ADDRESS_FORMAT_COUNTRIES = [
+    Country.GB,
+    Country.ES,
+    Country.AR
+]
 
 logger = logging.getLogger(__name__)
 
@@ -102,6 +109,54 @@ class PersonalDetails(GBGData):
 
 @dataclass(frozen=True)
 class Address(GBGData):
+    """
+    GBG distinguish between 2 types of address formats: Fixed / Free.
+
+    A "fixed" format address could read like this
+        • Sub-Building/Flat
+        • Building Name
+        • Building Number
+        • Sub-Street
+        • Street
+        • Sub-City
+        • City
+        • State/District
+        • Region
+        • ZIP/Postcode
+        • Country
+
+    Example:
+        • Flat 123
+        • 11
+        • Beamish Road
+        • Appleton
+        • Warrington
+        • Cheshire
+        • WA4 5RJ
+
+    A "free" format address could read like this
+        • Address Line 1
+        • Address Line 2
+        • Address Line 3
+        • Address Line 4
+        • Address Line 5
+        • Address Line 6
+        • Address Line 7
+        • Address Line 8
+
+    Example:
+        • Flat 123
+        • 11 Beamish Road
+        • Appleton
+        • Warrington
+        • Cheshire
+        • WA4 5RJ
+
+    In general we recommend that your addresses follow a fixed format for all countries, with the exception of:
+        • Spain
+        • UK
+        • Argentina
+    """
     post_code: str
     city: str
     address_line_1: str
@@ -126,6 +181,86 @@ class Address(GBGData):
         if len(cc_name) == 2 and cc_name.upper() in [e.value for e in Country]:
             return Country[cc_name].label
         return cc_name
+
+    def generate_fixed_address(self, expanded_address) -> Dict or None:
+        """
+        Generate address in "fixed" format
+        :param expanded_address:
+        :return:
+        """
+        if not expanded_address:
+            return None
+
+        return {
+            "Country": Address.get_full_country_name(self.country),
+            "Street": expanded_address['Street'],
+            "SubStreet": expanded_address['SecondaryStreet'],
+            "City": expanded_address['City'],
+            "SubCity": "",
+            "StateDistrict": expanded_address['District'],
+            "POBox": "",
+            "Region": expanded_address["Province"],
+            "Principality": "",
+            "ZipPostcode": expanded_address['PostalCode'],
+            "DpsZipPlus": "",
+            "CedexMailsort": "",
+            "Department": "",
+            "Company": "",
+            "Building": expanded_address['BuildingNumber'],
+            "SubBuilding": "",
+            "Premise": "",
+            "AddressLine1": "",
+            "AddressLine2": "",
+            "AddressLine3": "",
+            "AddressLine4": "",
+            "AddressLine5": "",
+            "AddressLine6": "",
+            "AddressLine7": "",
+            "AddressLine8": "",
+            "FirstYearOfResidence": None,  # int
+            "LastYearOfResidence": None,  # int
+            "FirstMonthOfResidence": None,  # int
+            "LastMonthOfResidence": None  # int
+        }
+
+    def generate_free_address(self, expanded_address) -> Dict or None:
+        """
+
+        :param expanded_address:
+        :return:
+        """
+
+        return {
+            "Country": Address.get_full_country_name(self.country),
+            "Street": "",
+            "SubStreet": "",
+            "City": "",
+            "SubCity": "",
+            "StateDistrict": "",
+            "POBox": "",
+            "Region": "",
+            "Principality": "",
+            "ZipPostcode": "",
+            "DpsZipPlus": "",
+            "CedexMailsort": "",
+            "Department": "",
+            "Company": "",
+            "Building": "",
+            "SubBuilding": "",
+            "Premise": "",
+            "AddressLine1": self.address_line_1,
+            "AddressLine2": self.address_line_2,
+            "AddressLine3": self.address_line_3,
+            "AddressLine4": self.city,
+            "AddressLine5": self.locality,
+            "AddressLine6": self.post_code,
+            "AddressLine7": "",
+            "AddressLine8": "",
+            "FirstYearOfResidence": None,  # int
+            "LastYearOfResidence": None,  # int
+            "FirstMonthOfResidence": None,  # int
+            "LastMonthOfResidence": None  # int
+        }
 
     def gbg_serialization(self, enable_expanded=False):
         """
@@ -160,39 +295,11 @@ class Address(GBGData):
             except Exception:
                 logger.info("Failed to expand address(%s) using Loqate due to: %r" % (full_address, format_exc()))
 
-        res = {
-            "Country": Address.get_full_country_name(self.country),
-            "Street": expanded_address['Street'] if expanded_address else self.address_line_1,
-            "SubStreet": expanded_address['SecondaryStreet'] if expanded_address else "",
-            "City": self.city,
-            "SubCity": "",
-            "StateDistrict": expanded_address['District'] if expanded_address else "",
-            "POBox": "",
-            "Region": self.locality,
-            "Principality": "",
-            "ZipPostcode": self.post_code,
-            "DpsZipPlus": "",
-            "CedexMailsort": "",
-            "Department": "",
-            "Company": "",
-            "Building": expanded_address['BuildingNumber'] if expanded_address else "",
-            "SubBuilding": "",
-            # this seems to be very important in GBG address validation (usually contains StreetName + b. number)
-            "Premise": self.address_line_1,
-            # following commented out as it will break GBG address validation and cause 'Refer' instead of 'Pass'
-            "AddressLine1": "",  # self.address_line_1,
-            "AddressLine2": "",  # self.address_line_2,
-            "AddressLine3": "",  # self.address_line_3,
-            "AddressLine4": "",
-            "AddressLine5": "",
-            "AddressLine6": "",
-            "AddressLine7": "",
-            "AddressLine8": "",
-            "FirstYearOfResidence": None,  # int
-            "LastYearOfResidence": None,  # int
-            "FirstMonthOfResidence": None,  # int
-            "LastMonthOfResidence": None  # int
-        }
+        res = self.generate_free_address(expanded_address) if Country(self.country) in FREE_ADDRESS_FORMAT_COUNTRIES \
+            else self.generate_fixed_address(expanded_address)
+
+        if res is None:
+            res = self.generate_free_address(expanded_address)
 
         # cleanup empty and None fields
         return filter_empty_values(res)

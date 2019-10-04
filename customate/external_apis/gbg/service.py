@@ -124,7 +124,7 @@ def validate_identity_details(country: core.fields.Country,
             'PersonalDetails': personal_details.gbg_serialization()
         },
         'Addresses': {
-            'CurrentAddress': current_address.gbg_serialization()
+            'CurrentAddress': current_address.gbg_serialization(enable_expanded=True)
         },
         "ContactDetails": contact_details.gbg_serialization(),
     }
