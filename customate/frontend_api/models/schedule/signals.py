@@ -128,12 +128,7 @@ def get_actual_balance(user: User, schedule: Schedule) -> int or None:
     :param schedule:
     :return:
     """
-    if user and not isinstance(user, str):
-        payment_api_client = Client(base_url=settings.PAYMENT_API_URL)
-        queryset = ResourceQueryset('accounts', payment_api_client, 'get')
-        resource = queryset.one(user.account.payment_account_id, map_attributes=True)
-        wallet = [w for w in resource.wallets if w.currency == schedule.currency.value][0]
-        return wallet.balance
+    return 0
 
 
 def get_ses_email_payload(tpl_filename: str, tpl_context: Dict, subject=None):
