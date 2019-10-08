@@ -349,11 +349,6 @@ class UpdateScheduleSerializer(BaseScheduleSerializer):
         logger.info("Validating data for schedule's update (data=%r)" % res)
 
         try:
-            current_user = self.context.get('request').user
-
-            if current_user != self.instance.origin_user:
-                raise ValidationError({"origin_user": "Only payer can update schedule"})
-
             if int(res["payment_amount"]) < 0:
                 raise ValidationError({"payment_amount": "Payment amount should be positive number"})
 

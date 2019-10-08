@@ -368,3 +368,18 @@ class IsAccountVerified(permissions.BasePermission):
             return True
         return request.user.account.is_verified \
                and (not request.user.is_subuser or request.user.is_owner_account_verified)
+
+
+class HasParticularSchedulePermission(permissions.BasePermission):
+    """
+    Custom permission for verifying if current user is payer or is subuser of schedules owner.
+        Appropriate rights of subuser verified by preceded 'SubUserManageSchedulesPermission'
+        permission class.
+    """
+    def has_object_permission(self, request, view, obj):
+        if request.method == "PATCH":
+            return self.has_patch_permission(request, obj)
+        return True
+
+    def has_patch_permission(self, request, obj):
+        return request.user.account.id in obj.origin_user.get_all_related_account_ids()

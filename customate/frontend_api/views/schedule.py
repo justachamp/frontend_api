@@ -31,7 +31,8 @@ from frontend_api.permissions import (
     SubUserManageSchedulesPermission,
     IsNotBlocked,
     IsActive,
-    IsAccountVerified)
+    IsAccountVerified,
+    HasParticularSchedulePermission )
 
 from frontend_api.serializers.schedule import ScheduleSerializer, ScheduleAcceptanceSerializer, UpdateScheduleSerializer
 
@@ -49,7 +50,8 @@ class ScheduleViewSet(views.ModelViewSet):
                           IsAccountVerified,
                           IsSuperAdminOrReadOnly |
                           IsOwnerOrReadOnly |
-                          SubUserManageSchedulesPermission)
+                          SubUserManageSchedulesPermission,
+                          HasParticularSchedulePermission )
 
     # Example: /api/v1/schedules/?page[number]=1&filter[currency.iexact]=EUR&filter[name.icontains]=test&sort=-status
     ordering_fields = ('id', 'name', 'status')
@@ -72,6 +74,7 @@ class ScheduleViewSet(views.ModelViewSet):
         target_account_ids = self.request.user.get_all_related_account_ids()
         return Schedule.objects.filter(Q(origin_user__account__id__in=target_account_ids)
                                        | Q(recipient_user__account__id__in=target_account_ids))
+
 
     @cached_property
     def payment_client(self):
