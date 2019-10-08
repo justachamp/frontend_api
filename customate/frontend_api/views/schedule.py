@@ -243,15 +243,19 @@ class ScheduleViewSet(views.ModelViewSet):
         return Response(None, status=204)
 
     @transaction.atomic
-    def pay_overdue(self, request, *args, **kwargs):
+    @action(methods=['POST'], detail=True, permission_classes=(IsAuthenticated, IsActive, IsNotBlocked,
+                                                               IsAccountVerified, IsSuperAdminOrReadOnly | IsOwnerOrReadOnly | SubUserManageSchedulesPermission,
+                                                               HasParticularSchedulePermission)
+            )
+    def pay_overdue(self, request, pk=None):
         """
         Tries to initiate the sequence of overdue payments initiated by client.
         :param request:
-        :param args:
-        :param kwargs:
+        :param pk:
         :return:
         """
-        schedule_id = kwargs.get('pk')
+        schedule_id = pk
+
         try:
             schedule = Schedule.objects.get(id=schedule_id)
         except Exception as e:
@@ -270,8 +274,18 @@ class ScheduleViewSet(views.ModelViewSet):
         return Response(status=status_codes.HTTP_204_NO_CONTENT)
 
     @transaction.atomic
-    def accept_schedule(self, request, *args, **kwargs):
-        schedule_id = kwargs.get('pk')
+    @action(methods=['PATCH'], detail=True, permission_classes=(IsAuthenticated, IsActive, IsNotBlocked,
+                                                                IsAccountVerified, IsSuperAdminOrReadOnly | IsOwnerOrReadOnly | SubUserManageSchedulesPermission,
+                                                                HasParticularSchedulePermission)
+            )
+    def acceptance(self, request, pk=None):
+        """
+        Used to accept "receive funds" schedule by payer.
+        :param request:
+        :param pk:
+        :return:
+        """
+        schedule_id = pk
 
         try:
             schedule = Schedule.objects.get(id=schedule_id)
@@ -295,8 +309,18 @@ class ScheduleViewSet(views.ModelViewSet):
         return Response()
 
     @transaction.atomic
-    def reject_schedule(self, request, *args, **kwargs):
-        schedule_id = kwargs.get('pk')
+    @action(methods=['PATCH'], detail=True, permission_classes=(IsAuthenticated, IsActive, IsNotBlocked,
+                                                                IsAccountVerified, IsSuperAdminOrReadOnly | IsOwnerOrReadOnly | SubUserManageSchedulesPermission,
+                                                                HasParticularSchedulePermission)
+            )
+    def rejection(self, request, pk=None):
+        """
+        Used to reject "receive funds" schedule by payer.
+        :param request:
+        :param pk:
+        :return:
+        """
+        schedule_id = pk
 
         try:
             schedule = Schedule.objects.get(id=schedule_id)

@@ -1,12 +1,4 @@
-
-
-
-# urlpatterns = [
-#     path('', views.index, name='index'),
-# ]
-
 from django.urls import include, path, re_path
-from rest_framework.urlpatterns import format_suffix_patterns
 from frontend_api import views
 from frontend_api.router import urlpatterns as frontend_api
 from django.conf.urls import url
@@ -71,11 +63,6 @@ urlpatterns = [
             view=views.SubUserAccountRelationshipView.as_view(),
             name='sub-user-account-relationships'
             ),
-
-# url(r'^sub_user_accounts/(?P<pk>[^/.]+)/$',
-#         views.SubUserAccountViewSet.as_view({'get': 'retrieve'}),
-#         name='subuseraccount-detail'),
-
     re_path(r'^sub_user_permissions/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
             views.SubUserPermissionViewSet.as_view({'get': 'retrieve_related', 'patch': 'patch_related'}),
             name='sub-user-permission-related'),
@@ -89,16 +76,10 @@ urlpatterns = [
     re_path(r'^admin_user_accounts/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
             views.AdminUserAccountViewSet.as_view({'get': 'retrieve_related', 'patch': 'patch_related'}),
             name='admin-user-account-related'),
-
     re_path(r'^admin_user_accounts/(?P<pk>[^/.]+)/relationships/(?P<related_field>[^/.]+)$',
             view=views.AdminUserAccountRelationshipView.as_view(),
             name='admin-user-account-relationships'
             ),
-
-# url(r'^admin_user_accounts/(?P<pk>[^/.]+)/$',
-#         views.AdminUserAccountViewSet.as_view({'get': 'retrieve'}),
-#         name='adminuseraccount-detail'),
-
     re_path(r'^admin_user_permissions/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
             views.AdminUserPermissionViewSet.as_view({'get': 'retrieve_related', 'patch': 'patch_related'}),
             name='admin-user-permission-related'),
@@ -125,32 +106,7 @@ urlpatterns = [
             view=views.AddressRelationshipView.as_view(),
             name='address-relationships'
             ),
-    #re_path(r'^schedules/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
-    #        views.ScheduleViewSet.as_view({'get': 'retrieve_related'}),
-    #        name='schedule-related'),
     path('presigned-urls/', view=views.PreSignedUrlView.as_view(), name="presigned-urls"),
 
     path('profiles/<pk>/', view=views.ProfileView.as_view(), name='profiles'),
-
-
-
-    # re_path(r'^profiles/(?P<pk>[^/.]+)$',
-    #         view=views.ProfileView.as_view(),
-    #         name='profiles'
-    #         )
-
-    re_path(r'^schedules/(?P<pk>[^/.]+)/pay_overdue/$',
-            views.ScheduleViewSet.as_view({'post': 'pay_overdue'}),
-            name='schedule-pay-overdue'),
-
-    re_path(r'^schedules/(?P<pk>[^/.]+)/acceptance/$',
-            views.ScheduleViewSet.as_view({'patch': 'accept_schedule'}),
-            name='schedule-accept'),
-
-    re_path(r'^schedules/(?P<pk>[^/.]+)/rejection/$',
-            views.ScheduleViewSet.as_view({'patch': 'reject_schedule'}),
-            name='schedule-reject'),
 ]
-
-
-# urlpatterns = format_suffix_patterns(urlpatterns)
