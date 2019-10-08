@@ -99,9 +99,7 @@ def make_payment(user_id: str, payment_account_id: str, schedule_id: str, curren
             # We don't check or run payment with backup source here, because we have a severe problem that probably
             # will prevent next payment's successful execution
             schedule_payment.update(payment_status=PaymentStatusType.FAILED)
-
-        Schedule.objects.get(id=schedule_id)\
-            .move_to_status(ScheduleStatus.overdue)
+        Schedule.objects.get(id=schedule_id).overdue = True
 
 
 @shared_task
@@ -200,13 +198,16 @@ def make_overdue_payment(schedule_id: str, request_id=None):
         ))
         return
 
-    if schedule.status is not ScheduleStatus.processing:
-        logger.error("Schedule(id=%s) expected status is not %s, got status=%s instead. Exiting" % (
-            schedule_id, ScheduleStatus.processing, schedule.status
-        ))
+    if schedule.processing:
+        logger.error("Schedule(id=%s) is already in processing state, skipping overdue handling" % schedule_id)
         return
 
+    # block from multiple overdue events
+    # (for example, accidentally clicking multiple times a 'pay overdue' button)
+    schedule.processing = True
+
     # TODO: consider the case when LastSchedulePayments is empty (this means that no initial payments have ever been made)
+    # See details here: https://customate.atlassian.net/browse/CS-576
 
     # Select all SchedulePayments which are last in chains and are not in SUCCESS status
     overdue_payments = LastSchedulePayments.objects.filter(
@@ -230,6 +231,8 @@ def make_overdue_payment(schedule_id: str, request_id=None):
             parent_payment_id=str(op.payment_id),  # NOTE: keep payment chain in order!
             request_id=request_id
         )
+        # TODO: setting schedule.processing in .update_status() is not very reliable, we may need to use celery chord/group here
+        # see more here: https://docs.celeryproject.org/en/latest/userguide/canvas.html
 
 
 def process_all_deposit_payments(scheduled_date):
@@ -245,7 +248,7 @@ def process_all_deposit_payments(scheduled_date):
     # make sure we always keep consistent order, otherwise we'll get unpredictable results
     payments = DepositsSchedule.objects.filter(
         scheduled_date=scheduled_date,
-        status=ScheduleStatus.open
+        status__in=Schedule.PROCESSABLE_SCHEDULE_STATUSES
     ).order_by("created_at")
     paginator = Paginator(payments, PER_PAGE)
     for p in paginator.page_range:
@@ -310,7 +313,7 @@ def process_all_one_time_payments(scheduled_date):
     # make sure we always keep consistent order, otherwise we'll get unpredictable results
     payments = OnetimeSchedule.objects.filter(
         scheduled_date=scheduled_date,
-        status=ScheduleStatus.open
+        status__in=Schedule.PROCESSABLE_SCHEDULE_STATUSES
     ).order_by("created_at")
     paginator = Paginator(payments, PER_PAGE)
     for p in paginator.page_range:
@@ -331,7 +334,7 @@ def process_all_weekly_payments(scheduled_date):
     # make sure we always keep consistent order, otherwise we'll get unpredictable results
     payments = WeeklySchedule.objects.filter(
         scheduled_date=scheduled_date,
-        status__in=[ScheduleStatus.open, ScheduleStatus.overdue]
+        status__in=Schedule.PROCESSABLE_SCHEDULE_STATUSES
     ).order_by("created_at")
     paginator = Paginator(payments, PER_PAGE)
     for p in paginator.page_range:
@@ -352,7 +355,7 @@ def process_all_monthly_payments(scheduled_date):
     # make sure we always keep consistent order, otherwise we'll get unpredictable results
     payments = MonthlySchedule.objects.filter(
         scheduled_date=scheduled_date,
-        status__in=[ScheduleStatus.open, ScheduleStatus.overdue]
+        status__in=Schedule.PROCESSABLE_SCHEDULE_STATUSES
     ).order_by("created_at")
     paginator = Paginator(payments, PER_PAGE)
     for p in paginator.page_range:
@@ -373,7 +376,7 @@ def process_all_quarterly_payments(scheduled_date):
     # make sure we always keep consistent order, otherwise we'll get unpredictable results
     payments = QuarterlySchedule.objects.filter(
         scheduled_date=scheduled_date,
-        status__in=[ScheduleStatus.open, ScheduleStatus.overdue]
+        status__in=Schedule.PROCESSABLE_SCHEDULE_STATUSES
     ).order_by("created_at")
     paginator = Paginator(payments, PER_PAGE)
     for p in paginator.page_range:
@@ -394,7 +397,7 @@ def process_all_yearly_payments(scheduled_date):
     # make sure we always keep consistent order, otherwise we'll get unpredictable results
     payments = YearlySchedule.objects.filter(
         scheduled_date=scheduled_date,
-        status__in=[ScheduleStatus.open, ScheduleStatus.overdue]
+        status__in=Schedule.PROCESSABLE_SCHEDULE_STATUSES
     ).order_by("created_at")
     paginator = Paginator(payments, PER_PAGE)
     for p in paginator.page_range:

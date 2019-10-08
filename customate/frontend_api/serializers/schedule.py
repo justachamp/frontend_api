@@ -7,8 +7,8 @@ from customate.settings import PAYMENT_SYSTEM_CLOSING_TIME
 
 from rest_framework.serializers import ValidationError
 from rest_framework_json_api.serializers import HyperlinkedModelSerializer
-from rest_framework.fields import DateField, IntegerField
 from django.utils.functional import cached_property
+from rest_framework.fields import DateField, IntegerField, BooleanField
 
 from core.fields import Currency, SerializerField, FundingSourceType, PayeeType
 from frontend_api.fields import ScheduleStatus, SchedulePeriod, SchedulePurpose
@@ -157,6 +157,8 @@ class ScheduleSerializer(BaseScheduleSerializer):
     origin_user_id = UUIDField(required=False)
     origin_payment_account_id = UUIDField(required=False, read_only=True)
     recipient_user_id = UUIDField(required=False)
+    is_overdue = BooleanField(required=False, read_only=True)
+    is_processing = BooleanField(required=False, read_only=True)
 
     documents = SerializerField(resource=DocumentSerializer, many=True, required=False)
 
@@ -168,7 +170,7 @@ class ScheduleSerializer(BaseScheduleSerializer):
             'deposit_payment_date', 'additional_information', 'payee_id', 'funding_source_id',
             'backup_funding_source_id', 'payee_title', 'payee_iban', 'payee_recipient_name', 'payee_recipient_email',
             'payee_type', 'documents', 'origin_user_id', 'recipient_user_id',
-            'funding_source_type', 'backup_funding_source_type',
+            'funding_source_type', 'backup_funding_source_type', 'is_overdue', 'is_processing',
             # we can use model properties as well
             'next_payment_date', 'payment_type',
             'number_of_payments_left', 'number_of_payments_made',

@@ -217,11 +217,11 @@ class ScheduleViewSet(views.ModelViewSet):
         :return:
         """
 
-        if not schedule.is_cancelable():
+        if not schedule.is_stoppable():
             raise ValidationError({"status": "Schedule with current status cannot be canceled"})
 
-        # cancel Schedule
-        schedule.move_to_status(ScheduleStatus.cancelled)
+        # stop Schedule
+        schedule.move_to_status(ScheduleStatus.stopped)
         self.payment_client.cancel_schedule_payments(schedule.id)
 
     @action(methods=['DELETE'], detail=True, permission_classes=(
@@ -253,8 +253,13 @@ class ScheduleViewSet(views.ModelViewSet):
             schedule = Schedule.objects.get(id=schedule_id)
         except Exception as e:
             raise ValidationError("Unable to fetch schedule_id=%s " % schedule_id)
-        # TODO: do we need to check that schedule is indeed in 'overdue' status?
-        schedule.move_to_status(ScheduleStatus.processing)
+
+        if not schedule.overdue:
+            raise ValidationError("Schedule is expected to be in overdue state")
+
+        if schedule.processing:
+            raise ValidationError("Schedule is being processed right now")
+
         logger.info("Submit make_overdue_payment(schedule_id=%s) task for processing" % schedule_id)
         make_overdue_payment.delay(
             schedule_id=schedule_id,

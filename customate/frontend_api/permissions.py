@@ -121,9 +121,9 @@ class HasParticularDocumentPermission(permissions.BasePermission):
         # Check if recipient or sender have common account with user from request (or user's subusers)
         related_account_ids = user.get_all_related_account_ids()
 
-        # Check if schedule has status 'cancelled'
+        # Check if schedule has status 'stopped'
         #    need to avoid documents handling for such schedules
-        if schedule.status == ScheduleStatus.cancelled:
+        if schedule.status == ScheduleStatus.stopped:
             return False
 
         if user.role == UserRole.owner:
@@ -175,11 +175,11 @@ class HasParticularDocumentPermission(permissions.BasePermission):
         if not document.schedule and document.user == request.user:
             return True
         user = request.user
-        # Check if schedule has status 'cancelled'
+        # Check if schedule has status 'stopped'
         #    need to avoid documents handling for such schedules
         schedule = document.schedule
         if schedule:
-            if schedule.status == ScheduleStatus.cancelled:
+            if schedule.status == ScheduleStatus.stopped:
                 return False
         schedule_creator_account = document.schedule.origin_user.account.owner_account if \
             hasattr(document.schedule.origin_user.account, "owner_account") else \

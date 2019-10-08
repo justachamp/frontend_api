@@ -79,6 +79,14 @@ class AbstractSchedule(Model):
     additional_information = models.CharField(max_length=250, blank=True, null=True,
                                               validators=[RegexValidator(regex=r'^([a-zA-Z0-9\/\-\?\:\.\+ ]*)$',
                                                                          message='Field contains forbidden characters')])
+    is_overdue = models.BooleanField(
+        default=False,
+        help_text=_('Indicates whether the schedule has overdue payments'),
+    )
+    is_processing = models.BooleanField(
+        default=False,
+        help_text=_('Preventing users from starting "pay overdue" process several times at once'),
+    )
 
     def __str__(self):
         return "Schedule(id=%s, period=%s, amount=%s, deposit_amount=%s, start_date=%s)" % (
@@ -94,8 +102,8 @@ class AbstractSchedule(Model):
 
 
 class Schedule(AbstractSchedule):
-    ACTIVE_SCHEDULE_STATUSES = [ScheduleStatus.open, ScheduleStatus.pending, ScheduleStatus.processing,
-                                ScheduleStatus.overdue]
+    ACTIVE_SCHEDULE_STATUSES = [ScheduleStatus.open, ScheduleStatus.pending]
+    PROCESSABLE_SCHEDULE_STATUSES = [ScheduleStatus.open]
 
     @property
     def total_sum_to_pay(self) -> int:
@@ -124,8 +132,8 @@ class Schedule(AbstractSchedule):
     def total_fee_amount(self) -> int:
         return (self.payment_fee_amount * self.number_of_payments) + self.deposit_fee_amount
 
-    def is_cancelable(self):
-        return self.status in [ScheduleStatus.open, ScheduleStatus.overdue]
+    def is_stoppable(self):
+        return self.status in [ScheduleStatus.open]
 
     def _did_we_send_first_payment(self):
         # return self.number_of_payments_made > 0 # we can't rely on this field here, since there is
@@ -157,7 +165,7 @@ class Schedule(AbstractSchedule):
         """
         res = None
 
-        if not (self.status in [ScheduleStatus.open, ScheduleStatus.overdue, ScheduleStatus.processing] and self.number_of_payments_left != 0):
+        if not (self.status in [ScheduleStatus.open] and self.number_of_payments_left != 0):
             res = None
         elif self.period is SchedulePeriod.one_time or not self._did_we_send_first_payment():
             res = arrow.get(self.start_date)
@@ -199,6 +207,28 @@ class Schedule(AbstractSchedule):
         self.save(update_fields=["status"])
         logger.info("Updated Schedule(id=%s) status=%s(was=%s)" % (self.id, status, old_status))
 
+    @property
+    def processing(self) -> bool:
+        return self.is_processing
+
+    @processing.setter
+    def processing(self, value: bool):
+        old_val = self.is_processing
+        self.is_processing = value
+        self.save(update_fields=["is_processing"])
+        logger.info("Updated schedule(id=%s) is_processing=%s(was=%s)" % (self.id, value, old_val))
+
+    @property
+    def overdue(self) -> bool:
+        return self.is_overdue
+
+    @overdue.setter
+    def overdue(self, value: bool):
+        old_val = self.is_overdue
+        self.is_overdue = value
+        self.save(update_fields=["is_overdue"])
+        logger.info("Updated schedule(id=%s) is_overdue=%s(was=%s)" % (self.id, value, old_val))
+
     def refresh_number_of_payments_made(self):
         """
         Update count of actual payments made in the DB
@@ -219,28 +249,15 @@ class Schedule(AbstractSchedule):
         Possible Schedule statuses
           'open', there are some future planned payments and all past payments are successful
           'closed' there are NO future planned payments and all past payments are successful
-          'overdue', there are some past payments which were unsuccessful
-          'cancelled', regardless of underlying payments statuses schedule is cancelled by user
-          'processing', there is at least ONE payment whose status is 'PROCESSING'
+          'stopped', regardless of underlying payments statuses schedule is stopped by user
 
         :return: new Schedule status
         :rtype: ScheduleStatus
         """
         logger.info("Updating schedule(id=%s) with status=%s" % (self.id, self.status))
 
-        if self.status == ScheduleStatus.cancelled:
-            # ignore any status updates
-            logger.info("Leaving schedule(id=%s) with unchanged status=%s, since it is cancelled by user" % (
-                self.id, self.status
-            ))
-            return self.status
-
-        if self.status == ScheduleStatus.closed:
-            # ignore any status updates
-            logger.info("Leaving schedule(id=%s) with unchanged status=%s, since it is already closed" % (
-                self.id, self.status
-            ))
-            return self.status
+        # THIS IS NOT TRUE! Status changing means that the schedule is not processing state anymore
+        #self.processing = False
 
         # get the list of last payments
         last_payments = LastSchedulePayments.objects.filter(
@@ -257,32 +274,58 @@ class Schedule(AbstractSchedule):
             logger.info("Leaving schedule(id=%s) with unchanged status=%s, since there are no last payments made" % (
                 self.id, self.status
             ))
+            self.processing = False
             return self.status
 
         if any([s in [PaymentStatusType.FAILED, PaymentStatusType.REFUND, PaymentStatusType.CANCELED] for s in
                 statuses]):
-            # mark schedule as overdue
-            self.move_to_status(ScheduleStatus.overdue)
-            return ScheduleStatus.overdue
+            # mark schedule as overdue and return current status
+            self.overdue = True
+            self.processing = False
+            return self.status
+
+        # if we've gone so far, we're definitely not overdue anymore
+        self.overdue = False
+
+        # no need to lookup particular payment statuses, if we are either
+        #  a) 'stopped' by user
+        #  b) 'closed' (all scheduled payments were successfully made)
+        if self.status in [ScheduleStatus.stopped, ScheduleStatus.closed]:
+            # ignore any status updates
+            logger.info("Leaving schedule(id=%s) with unchanged status=%s" % (self.id, self.status))
+            self.processing = False
+            return self.status
 
         if all([s in [PaymentStatusType.SUCCESS, PaymentStatusType.PENDING, PaymentStatusType.PROCESSING] for s in
                 statuses]) and self.number_of_payments_left != 0:
             # mark schedule as open(default state)
             self.move_to_status(ScheduleStatus.open)
+            self.processing = False
             return ScheduleStatus.open
 
         if self.number_of_payments_left == 0:
             self.move_to_status(ScheduleStatus.closed)
+            self.processing = False
             return ScheduleStatus.closed
 
         return self.status
 
     def accept(self, payment_fee_amount, deposit_fee_amount, funding_source_id, funding_source_type,
                backup_funding_source_id, backup_funding_source_type):
+        """
+        This is a 'receive' funds scenario
+        :param payment_fee_amount:
+        :param deposit_fee_amount:
+        :param funding_source_id:
+        :param funding_source_type:
+        :param backup_funding_source_id:
+        :param backup_funding_source_type:
+        :return:
+        """
         # accept schedules in 'PENDING' status only
         if self.status != ScheduleStatus.pending:
             raise ValidationError(f'Cannot accept schedule with current status (status={self.status})')
-
+        # TODO: check for 'scenario' type: it should be 'receive funds'
         self.move_to_status(ScheduleStatus.open)
 
         self.payment_fee_amount = payment_fee_amount

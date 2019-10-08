@@ -37,18 +37,14 @@ class AccountType(Enum):
 class ScheduleStatus(Enum):
     open = 'open'
     closed = 'closed'
-    overdue = 'overdue'
-    cancelled = 'cancelled'
-    processing = 'processing'  # block user from altering our model to avoid concurrency problems
+    stopped = 'stopped'
     pending = 'pending'  # for 'receive funds' scenario only(wait for other part to accept proposed payment schedule)
     rejected = 'rejected'  # for 'receive funds' scenario only
 
     class Labels:
         open = 'Open'
         closed = 'Closed'
-        overdue = 'Overdue'
-        cancelled = 'Cancelled'
-        processing = 'Processing'
+        stopped = 'Stopped'
         pending = 'Pending'
         rejected = 'Rejected'
 
