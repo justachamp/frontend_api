@@ -439,7 +439,7 @@ def initiate_daily_payments():
         logger.info(f"Finished with processing all payments, check if next date ({scheduled_date}) "
                     f"is blacklisted (retry_count={retry_count})")
         # Check if specified date is not blacklisted, i.e. NOT weekend and/or special day
-        if not BlacklistDate.contains(scheduled_date):
+        if not BlacklistDate.contains(scheduled_date.date()):
             # No need to continue because scheduler will be executed on "scheduled_date"
             # and will process all schedules in "normal" way
             break
