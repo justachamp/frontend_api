@@ -41,7 +41,7 @@ class UserActivityMonitoringMiddleware:
         if request.user.remember_me:
             return
 
-        inactivity_bound = arrow.utcnow().replace(minutes=-MAX_ALLOW_USER_INACTIVITY).datetime
+        inactivity_bound = arrow.utcnow().replace(minutes=-int(MAX_ALLOW_USER_INACTIVITY)).datetime
         if request.user.last_activity is not None and request.user.last_activity <= inactivity_bound:
             self._sign_out(request)
             raise ProlongedUserInactivityIssue()
