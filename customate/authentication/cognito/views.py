@@ -1,3 +1,5 @@
+import arrow
+
 from authentication.cognito.serializers import CognitoAuthSerializer, CognitoAuthRetrieveSerializer, \
     CognitoSignOutSerializer, CognitoAuthForgotPasswordSerializer, CognitoAuthPasswordRestoreSerializer, \
     CognitoAuthVerificationSerializer, CognitoAuthAttributeVerifySerializer, CognitoAuthChallengeSerializer, \
@@ -29,6 +31,8 @@ class AuthView(viewsets.ViewSet):
         serializer = CognitoAuthRetrieveSerializer(data=request.data)
         if serializer.is_valid(True):
             entity = serializer.retrieve(serializer.validated_data)
+            self._update_user_model(entity.user, serializer.validated_data)
+
             if type(entity) == Challenge:
                 return response.Response(
                     CognitoAuthChallengeSerializer(instance=entity, context={'request': request}).data)
@@ -36,6 +40,11 @@ class AuthView(viewsets.ViewSet):
                 context = {'request': request, 'additional_keys': {'account': ['permission']}}
                 return response.Response(
                     CognitoAuthRetrieveSerializer(instance=entity, context=context).data)
+
+    def _update_user_model(self, user, data):
+        user.remember_me = data.get('remember', False)
+        user.last_activity = arrow.utcnow().datetime
+        user.save(update_fields=["remember_me", "last_activity"])
 
     @action(methods=['POST'], detail=False, name='Challenge')
     def challenge(self, request):

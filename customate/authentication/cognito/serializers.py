@@ -275,6 +275,7 @@ class CognitoAuthRetrieveSerializer(serializers.Serializer, UserServiceMixin):
     id = serializers.UUIDField(read_only=True)
     username = serializers.EmailField(required=True, source='preferred_username', write_only=True)
     password = serializers.CharField(max_length=50, required=False, write_only=True)
+    remember = serializers.BooleanField(default=False, required=False, write_only=True)
     id_token = serializers.CharField(read_only=True)
     access_token = serializers.CharField(read_only=True)
     refresh_token = serializers.CharField(read_only=False, required=False)

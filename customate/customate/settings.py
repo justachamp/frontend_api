@@ -68,6 +68,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # 'authentication.cognito.middleware.cognito_django_middleware.AwsDjangoMiddleware'
     'customate.middlewares.RequestDetailsLoggingMiddleware',
+    'authentication.middlewares.UserActivityMonitoringMiddleware',
 ]
 
 AUTHENTICATION_BACKENDS = [
@@ -469,3 +470,4 @@ PAYMENT_SYSTEM_CLOSING_TIME = environ['PAYMENT_SYSTEM_CLOSING_TIME']  # HH:mm fo
 _ = arrow.get("2000-01-01T%s:00" % PAYMENT_SYSTEM_CLOSING_TIME, ['YYYY-MM-DDTH:mm:ss'])  # make sure we fail early
 
 DOCUMENTS_MAX_LIMIT_PER_SCHEDULE = 5
+MAX_ALLOW_USER_INACTIVITY = environ.get('MAX_ALLOW_USER_INACTIVITY', 10)  # in minutes

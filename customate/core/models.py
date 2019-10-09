@@ -102,6 +102,15 @@ class User(AbstractUser, Model):
         null=True
     )
 
+    last_activity = models.DateTimeField(blank=True, null=True)
+    remember_me = models.BooleanField(
+        _('remember me'),
+        default=False,
+        help_text=_(
+            'Indicates whether the system will remember user and not sign out automatically'
+        ),
+    )
+
     def __str__(self):
         return "%s (cognito_id=%s, role=%r)" % (self.email, self.cognito_id, self.role)
 
