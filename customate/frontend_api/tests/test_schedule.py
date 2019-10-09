@@ -77,6 +77,16 @@ class ScheduleModelTest(TestCase):
 
         self.assertEquals(arrow.get(2013, 5, 28).datetime.date(), schedule.next_payment_date)
 
+    def test_next_payment_date_weekly_two_made_payments(self):
+        current_datetime = arrow.utcnow()
+        schedule = self._get_test_schedule_model()
+        schedule.start_date = current_datetime.datetime.date()
+        schedule.period = SchedulePeriod.weekly
+        schedule.number_of_payments_made = 2
+        schedule.save()
+
+        self.assertEquals(current_datetime.shift(weeks=2).datetime.date(), schedule.next_payment_date)
+
     def test_next_payment_date_monthly(self):
         schedule = self._get_test_schedule_model()
         schedule.start_date = arrow.get(2013, 5, 21).datetime.date()
