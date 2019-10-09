@@ -1,3 +1,5 @@
+from typing import Iterable
+
 import arrow
 from django.contrib.auth.models import AnonymousUser
 from django.http import HttpResponse
@@ -32,8 +34,9 @@ class UserActivityMonitoringMiddleware:
             return
 
         # Don't check last activity if it's some type of sign-in request (that returns "access_token")
-        if 'access_token' in response.data:
-            return
+        if isinstance(response.data, Iterable):
+            if 'access_token' in response.data:
+                return
 
         if request.user.remember_me:
             return
