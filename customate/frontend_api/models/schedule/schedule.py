@@ -153,7 +153,8 @@ class Schedule(AbstractSchedule):
     def number_of_sent_regular_payments(self):
         return LastSchedulePayments.objects.filter(
                 schedule_id=self.id,
-                parent_payment_id=None
+                parent_payment_id=None,
+                is_deposit=False
             ).count()
 
     @property
@@ -236,10 +237,11 @@ class Schedule(AbstractSchedule):
         Update count of actual payments made in the DB
         :return:
         """
-        # get the list of last successfull payments
+        # get the list of last successful, regular payments
         self.number_of_payments_made = LastSchedulePayments.objects.filter(
             schedule_id=self.id,
-            payment_status__in=[PaymentStatusType.SUCCESS]
+            payment_status__in=[PaymentStatusType.SUCCESS],
+            is_deposit=False
         ).count()
         self.save(update_fields=["number_of_payments_made"])
 
