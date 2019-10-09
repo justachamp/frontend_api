@@ -164,22 +164,23 @@ class Schedule(AbstractSchedule):
         :rtype: datetime.date|None
         """
         res = None
-        period_shift = max(1, self.number_of_payments_made)
+        # If we didn't make any payments yet then factor is 1 (which transforms into: next week, next month etc.)
+        period_shift_factor = max(1, self.number_of_payments_made)
 
         if not (self.status in [ScheduleStatus.open] and self.number_of_payments_left != 0):
             res = None
         elif self.period is SchedulePeriod.one_time or not self._did_we_send_first_payment():
             res = arrow.get(self.start_date)
         elif self.period is SchedulePeriod.weekly:
-            res = arrow.get(self.start_date).replace(weeks=+period_shift)
+            res = arrow.get(self.start_date).replace(weeks=+period_shift_factor)
         elif self.period is SchedulePeriod.monthly:
-            res = arrow.get(self.start_date).replace(months=+period_shift)
+            res = arrow.get(self.start_date).replace(months=+period_shift_factor)
             # Note how JAN->FEB is handled in following example:
             # <Arrow [2019-01-31T11:58:11.459665+00:00]> -> <Arrow [2019-02-28T11:58:11.459665+00:00]>
         elif self.period is SchedulePeriod.quarterly:
-            res = arrow.get(self.start_date).replace(months=+(4 * period_shift))
+            res = arrow.get(self.start_date).replace(months=+(4 * period_shift_factor))
         elif self.period is SchedulePeriod.yearly:
-            res = arrow.get(self.start_date).replace(years=+period_shift)
+            res = arrow.get(self.start_date).replace(years=+period_shift_factor)
 
         return res.datetime.date() if res else None
 
