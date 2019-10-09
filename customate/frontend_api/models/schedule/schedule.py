@@ -260,9 +260,6 @@ class Schedule(AbstractSchedule):
         """
         logger.info("Updating schedule(id=%s) with status=%s" % (self.id, self.status))
 
-        # THIS IS NOT TRUE! Status changing means that the schedule is not processing state anymore
-        #self.processing = False
-
         # get the list of last payments
         last_payments = LastSchedulePayments.objects.filter(
             schedule_id=self.id,
@@ -278,14 +275,12 @@ class Schedule(AbstractSchedule):
             logger.info("Leaving schedule(id=%s) with unchanged status=%s, since there are no last payments made" % (
                 self.id, self.status
             ))
-            self.processing = False
             return self.status
 
         if any([s in [PaymentStatusType.FAILED, PaymentStatusType.REFUND, PaymentStatusType.CANCELED] for s in
                 statuses]):
             # mark schedule as overdue and return current status
             self.overdue = True
-            self.processing = False
             return self.status
 
         # if we've gone so far, we're definitely not overdue anymore
@@ -297,19 +292,16 @@ class Schedule(AbstractSchedule):
         if self.status in [ScheduleStatus.stopped, ScheduleStatus.closed]:
             # ignore any status updates
             logger.info("Leaving schedule(id=%s) with unchanged status=%s" % (self.id, self.status))
-            self.processing = False
             return self.status
 
         if all([s in [PaymentStatusType.SUCCESS, PaymentStatusType.PENDING, PaymentStatusType.PROCESSING] for s in
                 statuses]) and self.number_of_payments_left != 0:
             # mark schedule as open(default state)
             self.move_to_status(ScheduleStatus.open)
-            self.processing = False
             return ScheduleStatus.open
 
         if self.number_of_payments_left == 0:
             self.move_to_status(ScheduleStatus.closed)
-            self.processing = False
             return ScheduleStatus.closed
 
         return self.status

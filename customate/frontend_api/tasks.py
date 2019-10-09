@@ -5,7 +5,6 @@ import arrow
 import logging
 from uuid import UUID, uuid4
 from celery import shared_task
-from django.core.paginator import Paginator
 from django.core.exceptions import ObjectDoesNotExist
 from django.conf import settings
 from django.core.paginator import Paginator
@@ -66,6 +65,7 @@ def make_payment(user_id: str, payment_account_id: str, schedule_id: str, curren
 
     payment_id = uuid4()
     schedule_payment = None
+    result = None
 
     try:
         schedule_payment = SchedulePayments(
@@ -79,7 +79,7 @@ def make_payment(user_id: str, payment_account_id: str, schedule_id: str, curren
         )
         schedule_payment.save()
 
-        PaymentApiClient.create_payment(p=PaymentDetails(
+        result = PaymentApiClient.create_payment(p=PaymentDetails(
             id=payment_id,
             user_id=UUID(user_id),
             payment_account_id=UUID(payment_account_id),
@@ -100,6 +100,8 @@ def make_payment(user_id: str, payment_account_id: str, schedule_id: str, curren
             # will prevent next payment's successful execution
             schedule_payment.update(payment_status=PaymentStatusType.FAILED)
         Schedule.objects.get(id=schedule_id).overdue = True
+
+    return result
 
 
 @shared_task
@@ -219,7 +221,7 @@ def make_overdue_payment(schedule_id: str, request_id=None):
         logger.info("SchedulePayment(id=%s, payment_id=%s, parent_payment_id=%s) is overdue, retrying payment." % (
             op.id, op.payment_id, op.parent_payment_id
         ))
-        make_payment.delay(
+        payment = make_payment(
             user_id=str(schedule.origin_user_id),
             payment_account_id=str(schedule.origin_payment_account_id),
             schedule_id=str(schedule_id),
@@ -231,8 +233,19 @@ def make_overdue_payment(schedule_id: str, request_id=None):
             parent_payment_id=str(op.payment_id),  # NOTE: keep payment chain in order!
             request_id=request_id
         )
-        # TODO: setting schedule.processing in .update_status() is not very reliable, we may need to use celery chord/group here
-        # see more here: https://docs.celeryproject.org/en/latest/userguide/canvas.html
+        logger.info("Making payment result (overdue_schedulepayment_id=%s, payment_id=%s, parent_payment_id=%s): %s" % (
+            op.id, op.payment_id, op.parent_payment_id, payment
+        ))
+
+        # If we faced with some problems during payment's creation we stop sending overdue payments
+        if payment is None or payment.status is PaymentStatusType.FAILED:
+            logger.info("Failed to create new payment from overdue (overdue_schedulepayment_id=%s, payment_id=%s, parent_payment_id=%s). Stop trying." % (
+                op.id, op.payment_id, op.parent_payment_id
+            ))
+            break
+
+    # Processing is over and we can allow user to use "Pay overdue" again if he wants
+    schedule.processing = False
 
 
 def process_all_deposit_payments(scheduled_date):
