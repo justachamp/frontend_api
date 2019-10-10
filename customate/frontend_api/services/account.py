@@ -273,4 +273,4 @@ class ProfileValidationService:
                 "GBG verification error (user=%s, address=%s) transport exception: %r" % (user, address, format_exc()))
             raise GBGVerificationError({"account": "KYC request is unsuccessful. Please, contact the support team."})
         except Exception as e:
-            logger.error("GBG verification error (user=%s, address=%s) exception: %r" % (user, address, format_exc()))
+            logger.info("GBG verification error (user=%s, address=%s) exception: %r" % (user, address, format_exc()))
