@@ -521,7 +521,7 @@ def process_unaccepted_schedules():
     """
     now = arrow.utcnow()
     opened_receive_funds_schedules = Schedule.objects.filter(purpose=SchedulePurpose.receive,
-                                                             status=ScheduleStatus.open)
+                                                             status=ScheduleStatus.pending)
     # Filter opened receive funds schedules by deposit_payment_date (if not None) or start_date
     schedules_with_deposit_payment_date = opened_receive_funds_schedules.filter(
         deposit_payment_date__isnull=False).filter(
