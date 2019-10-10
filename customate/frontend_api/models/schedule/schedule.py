@@ -396,19 +396,11 @@ class Schedule(AbstractSchedule):
             if self.number_of_sent_regular_payments == self.number_of_payments:
                 return True
 
-            schedule_cls_by_period = {
-                SchedulePeriod.one_time: OnetimeSchedule,
-                SchedulePeriod.weekly: WeeklySchedule,
-                SchedulePeriod.monthly: MonthlySchedule,
-                SchedulePeriod.quarterly: QuarterlySchedule,
-                SchedulePeriod.yearly: YearlySchedule
-            }
-
             # Selecting nearest scheduled date for regular payments, by skipping dates for which
             # we already sent payments
             from_index = self.number_of_sent_regular_payments
             to_index = from_index + 1
-            nearest_payment = schedule_cls_by_period.get(self.period).objects.filter(
+            nearest_payment = self.schedule_cls_by_period.objects.filter(
                 id=self.id,
                 status=ScheduleStatus.open,
             ).order_by("scheduled_date").all()[from_index:to_index].first()
@@ -433,6 +425,36 @@ class Schedule(AbstractSchedule):
                 break
 
         return scheduler_start_time.datetime.date()
+
+    @property
+    def schedule_cls_by_period(self):
+        return {
+            SchedulePeriod.one_time: OnetimeSchedule,
+            SchedulePeriod.weekly: WeeklySchedule,
+            SchedulePeriod.monthly: MonthlySchedule,
+            SchedulePeriod.quarterly: QuarterlySchedule,
+            SchedulePeriod.yearly: YearlySchedule
+        }.get(self.period)
+
+    @property
+    def deposit_payment_scheduled_date(self):
+        result = None if self.deposit_payment_date is None \
+            else DepositsSchedule.objects.get(id=self.id).scheduled_date
+
+        logger.debug("Schedule.deposit_payment_scheduled_date (id=%s, deposit_payment_date=%s, result=%s)"
+                     % (self.id, self.deposit_payment_date, result))
+        return result
+
+    @property
+    def first_payment_scheduled_date(self):
+        result = self.schedule_cls_by_period.objects\
+            .filter(id=self.id)\
+            .order_by("scheduled_date")\
+            .first().scheduled_date
+
+        logger.debug("Schedule.first_payment_scheduled_date (id=%s, start_date=%s, result=%s)"
+                     % (self.id, self.start_date, result))
+        return result
 
 
 class OnetimeSchedule(AbstractSchedule):

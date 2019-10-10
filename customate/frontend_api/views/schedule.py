@@ -114,14 +114,14 @@ class ScheduleViewSet(views.ModelViewSet):
             # Immediately create first payments
             scheduler_start_time = Schedule.get_celery_processing_time()
             current_date = arrow.utcnow().datetime.date()
+            logger.debug("Verifying if schedule already run (scheduler_start_time=%s, now=%s)"
+                         % (scheduler_start_time, arrow.utcnow()))
 
             if arrow.utcnow() > scheduler_start_time:
                 # background celerybeatd service has already started payment processing
                 # and missed first payment date which is now, therefore we initiate payments here
-                if schedule.deposit_payment_date == current_date:
-                    logger.info("Submitting deposit payment for schedule_id=%s, deposit_payment_date=%s" % (
-                        schedule.id, schedule.deposit_payment_date
-                    ))
+                if schedule.deposit_payment_scheduled_date == current_date:
+                    logger.info("Submitting deposit payment for schedule_id=%s" % schedule.id)
                     # initiate one-off deposit payment
                     make_payment.delay(
                         user_id=str(user.id),
@@ -135,10 +135,8 @@ class ScheduleViewSet(views.ModelViewSet):
                         is_deposit=True
                     )
 
-                if schedule.start_date == current_date:
-                    logger.info("Submitting first payment for schedule_id=%s, start_date=%s" % (
-                        schedule.id, schedule.start_date
-                    ))
+                if schedule.first_payment_scheduled_date == current_date:
+                    logger.info("Submitting first payment for schedule_id=%s" % schedule.id)
                     make_payment.delay(
                         user_id=str(user.id),
                         payment_account_id=str(schedule.origin_payment_account_id),
