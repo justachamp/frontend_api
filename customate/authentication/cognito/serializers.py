@@ -223,6 +223,7 @@ class CognitoAuthChallengeSerializer(serializers.Serializer, UserServiceMixin):
     challenge_delivery = serializers.CharField(max_length=20, required=False)
     destination = serializers.CharField(max_length=14, required=False)
     session = serializers.CharField(required=True)
+    remember = serializers.BooleanField(default=False, required=False)
 
     def auth_challenge(self, validated_data):
         try:

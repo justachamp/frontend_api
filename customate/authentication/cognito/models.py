@@ -19,7 +19,7 @@ class Invitation(Entity):
 
 
 class Challenge(Entity):
-    fields = ('id', 'username', 'challenge_name', 'challenge_delivery', 'destination', 'session')
+    fields = ('id', 'username', 'challenge_name', 'challenge_delivery', 'destination', 'session', 'remember')
 
 
 class Verification(Entity):
