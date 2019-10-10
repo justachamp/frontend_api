@@ -52,6 +52,8 @@ class AuthView(viewsets.ViewSet):
         serializer = CognitoAuthChallengeSerializer(data=request.data)
         if serializer.is_valid(True):
             entity = serializer.auth_challenge(serializer.validated_data)
+            self._update_user_model(entity, serializer.validated_data)
+
             context = {'request': request, 'additional_keys': {'account': ['permission']}}
             return response.Response(
                 CognitoAuthRetrieveSerializer(instance=entity, context=context).data)
