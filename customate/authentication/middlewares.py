@@ -38,6 +38,10 @@ class UserActivityMonitoringMiddleware:
             if 'access_token' in response.data:
                 return
 
+        # Don't sign out user if he is still in onboarding step
+        if not request.user.contact_info_once_verified:
+            return
+
         if request.user.remember_me:
             return
 
