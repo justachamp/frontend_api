@@ -275,6 +275,11 @@ class AdminUserAccountSerializer(AccountFlexFieldsSerializerMixin, HyperlinkedMo
 class AccountSerializer(PolymorphicModelSerializer):
     polymorphic_serializers = [UserAccountSerializer, AdminUserAccountSerializer, SubUserAccountSerializer]
 
+    included_serializers = {
+        'user': 'frontend_api.serializers.UserSerializer',
+        'payment_account': 'payment_api.serializers.PaymentAccountSerializer',
+    }
+
     class Meta:
         model = Account
         fields = '__all__'
