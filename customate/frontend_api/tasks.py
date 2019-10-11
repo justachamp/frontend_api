@@ -532,6 +532,9 @@ def process_unaccepted_schedules():
         start_date__lte=now.datetime)
     unaccepted_schedules = schedules_with_deposit_payment_date | schedules_without_deposit_payment_date
 
+    logger.info("Start process unaccepted schedules. Datetime: %s." % now.datetime.strftime("%d/%b %H/%M"))
+    logger.info("Unaccepted schedules: %s." % ", ".join([schedule.name for schedule in unaccepted_schedules]))
+
     while unaccepted_schedules.count():
         paginator = Paginator(unaccepted_schedules, PER_PAGE)
         for page in paginator.page_range:
@@ -539,3 +542,6 @@ def process_unaccepted_schedules():
             # WARN: potential generation of 1-N SQL UPDATE command here
             for schedule in paginator.page(page).object_list:
                 schedule.move_to_status(ScheduleStatus.rejected)
+
+    logger.info("Stop process unaccepted schedules.")
+    logger.info("Unaccepted schedules: %s." % ", ".join([schedule.name for schedule in unaccepted_schedules]))
