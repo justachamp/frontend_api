@@ -239,9 +239,10 @@ def make_overdue_payment(schedule_id: str, request_id=None):
 
         # If we faced with some problems during payment's creation we stop sending overdue payments
         if payment is None or payment.status is PaymentStatusType.FAILED:
-            logger.info("Failed to create new payment from overdue (overdue_schedulepayment_id=%s, payment_id=%s, parent_payment_id=%s). Stop trying." % (
-                op.id, op.payment_id, op.parent_payment_id
-            ))
+            logger.info(
+                "Failed to create new payment from overdue (overdue_schedulepayment_id=%s, payment_id=%s, parent_payment_id=%s). Stop trying." % (
+                    op.id, op.payment_id, op.parent_payment_id
+                ))
             break
 
     # Processing is over and we can allow user to use "Pay overdue" again if he wants
@@ -525,15 +526,16 @@ def process_unaccepted_schedules():
     # Filter opened receive funds schedules by deposit_payment_date (if not None) or start_date
     schedules_with_deposit_payment_date = opened_receive_funds_schedules.filter(
         deposit_payment_date__isnull=False).filter(
-        deposit_payment_date__lt=now.datetime)
+        deposit_payment_date__lte=now.datetime)
     schedules_without_deposit_payment_date = opened_receive_funds_schedules.filter(
         deposit_payment_date__isnull=True,
-        start_date__lt=now.datetime)
+        start_date__lte=now.datetime)
     unaccepted_schedules = schedules_with_deposit_payment_date | schedules_without_deposit_payment_date
 
-    paginator = Paginator(unaccepted_schedules, PER_PAGE)
-    for page in paginator.page_range:
-        # Update statuses via .move_to_status()
-        # WARN: potential generation of 1-N SQL UPDATE command here
-        for schedule in paginator.page(page).object_list:
-            schedule.move_to_status(ScheduleStatus.rejected)
+    while unaccepted_schedules.count():
+        paginator = Paginator(unaccepted_schedules, PER_PAGE)
+        for page in paginator.page_range:
+            # Update statuses via .move_to_status()
+            # WARN: potential generation of 1-N SQL UPDATE command here
+            for schedule in paginator.page(page).object_list:
+                schedule.move_to_status(ScheduleStatus.rejected)
