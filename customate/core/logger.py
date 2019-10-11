@@ -2,6 +2,7 @@ import copy
 import errno
 import logging
 import os
+import re
 import threading
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
@@ -58,6 +59,10 @@ logging._shared_extra = threading.local()
 
 
 class CustomateLogger(logging.Logger):
+    def __init__(self, *args, **kwargs):
+        super(CustomateLogger, self).__init__(*args, **kwargs)
+        self.addFilter(SensitiveDataObfuscator())
+
     def makeRecord(self, name, level, fn, lno, msg, args, exc_info, func=None, extra=None, sinfo=None):
         if extra is not None:
             # Based on required format we need to make sure that any extra information is placed in "data" section.
@@ -125,6 +130,49 @@ class CustomateJsonFormatter(jsonlogger.JsonFormatter):
 
                 log_record['data'][key] = log_record.get(key)
                 del(log_record[key])
+
+
+class SensitiveDataObfuscator(logging.Filter):
+    _placeholder = '***'
+    _patterns = {
+        # IBANs, for example:
+        # "iban":"DE05202208445090025780", \"iban\":\"DE05202208445090025780\", "feeIban": "DE05202208445090025780"
+        # "DE05202208445090025780" => "DE0***780"
+        re.compile(r'(\\?\"\w*iban\\?\":\s?\\?\".{3})(.*?)(\w{3}\\?\")', re.IGNORECASE):
+            f'\g<1>{_placeholder}\g<3>',
+        re.compile(r'(\\?\"ibanGeneralPart\\?\":\s?\\?\")(.*?)(\w{3}\\?\")', re.IGNORECASE):
+            f'\g<1>{_placeholder}\g<3>',
+
+        # Funding sources details, for example:
+        # "bic":"SXPADAH", \"bic\":\"SXPADAH\", "accountNumber": "3244334"
+        # "SXPADAH" => "SX***"
+        re.compile(r'(\\?\"(?:bic|accountNumber|sortCode|expYear|lastDigits)\\?\":\s?\\?\"\w{2})(.*?)(\\?\")', re.IGNORECASE):
+            f'\g<1>{_placeholder}\g<3>',
+
+        # Personal information, for example:
+        # "email": "dev_verified@mailinator.com", "fullName": "Christopher Hurst", "driver_licence_postcode": "B18888"
+        # "dev_verified@mailinator.com" => "***"
+        re.compile(r'(\\?\"(?:\w*email|\w*name|password|phone_number|address\w*|city|locality|postcode|birth_date|driver_licence\w*|\w*token)\\?\":\s?\\?\")(.*?)(\\?\")', re.IGNORECASE):
+            f'\g<1>{_placeholder}\g<3>'
+    }
+
+    def filter(self, record):
+        if hasattr(record, 'args'):
+            record.args = self.obfuscate(record.args)
+        if hasattr(record, 'data'):
+            record.data = self.obfuscate(record.data)
+
+        return True
+
+    def obfuscate(self, data):
+        if isinstance(data, str):
+            for pattern, replace in self._patterns.items():
+                data = pattern.sub(replace, data)
+        elif isinstance(data, dict):
+            for k in data.keys():
+                data[k] = self.obfuscate(data[k])
+
+        return data
 
 
 class RequestIdGenerator:

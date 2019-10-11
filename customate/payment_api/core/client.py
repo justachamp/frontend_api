@@ -88,7 +88,7 @@ class Session(DefaultSession):
         return doc
 
     def _ext_fetch_by_url(self, url: str) -> 'Document':
-        logger.info(f'fetch_by_url: {url}')
+        logger.info('Fetching Payment API resource: url=%s' % url)
         return super()._ext_fetch_by_url(url)
 
     def http_request(self, http_method: str, url: str, send_json: dict,
@@ -99,12 +99,13 @@ class Session(DefaultSession):
         """
         self.assert_sync()
         import requests
-        logger.debug('%s request: %s', http_method.upper(), send_json)
         expected_statuses = expected_statuses or HttpStatus.ALL_OK
 
         self._request_kwargs["headers"].update({'Content-Type': 'application/vnd.api+json'})
+        logger.info("Request to Payment API: url=%s, method=%s", url, http_method, extra={'body': send_json})
         response = requests.request(http_method, url, json=send_json,
                                     **self._request_kwargs)
+        logger.info("Response from Payment API: status=%s", response.status_code, extra={'body': response.text})
 
         if response.status_code not in expected_statuses:
             raise DocumentError(f'Could not {http_method.upper()} '

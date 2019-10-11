@@ -17,7 +17,7 @@ from core.models import User
 from core import views
 from core.exceptions import ConflictError
 from core.fields import FundingSourceType
-from customate.settings import CELERY_BEAT_SCHEDULE
+from customate.settings import CELERY_BEAT_SCHEDULE, FIRST_PAYMENTS_MIN_EXECUTION_DELAY
 
 from frontend_api.fields import ScheduleStatus, SchedulePurpose
 from frontend_api.tasks import make_overdue_payment, make_payment
@@ -123,29 +123,39 @@ class ScheduleViewSet(views.ModelViewSet):
                 if schedule.deposit_payment_scheduled_date == current_date:
                     logger.info("Submitting deposit payment for schedule_id=%s" % schedule.id)
                     # initiate one-off deposit payment
-                    make_payment.delay(
-                        user_id=str(user.id),
-                        payment_account_id=str(schedule.origin_payment_account_id),
-                        schedule_id=str(schedule.id),
-                        currency=str(schedule.currency.value),
-                        payment_amount=int(schedule.deposit_amount),  # NOTE: deposit amount here!
-                        additional_information=str(schedule.deposit_additional_information),
-                        payee_id=str(schedule.payee_id),
-                        funding_source_id=str(schedule.funding_source_id),
-                        is_deposit=True
+                    make_payment.apply_async(
+                        # It's possible that payment creation task will start execution before schedule creation
+                        # transaction will be committed, it will cause problems for SchedulePayment record
+                        countdown=FIRST_PAYMENTS_MIN_EXECUTION_DELAY,
+                        kwargs={
+                            'user_id': str(user.id),
+                            'payment_account_id': str(schedule.origin_payment_account_id),
+                            'schedule_id': str(schedule.id),
+                            'currency': str(schedule.currency.value),
+                            'payment_amount': int(schedule.deposit_amount),  # NOTE: deposit amount here!
+                            'additional_information': str(schedule.deposit_additional_information),
+                            'payee_id': str(schedule.payee_id),
+                            'funding_source_id': str(schedule.funding_source_id),
+                            'is_deposit': True
+                        }
                     )
 
                 if schedule.first_payment_scheduled_date == current_date:
                     logger.info("Submitting first payment for schedule_id=%s" % schedule.id)
-                    make_payment.delay(
-                        user_id=str(user.id),
-                        payment_account_id=str(schedule.origin_payment_account_id),
-                        schedule_id=str(schedule.id),
-                        currency=str(schedule.currency.value),
-                        payment_amount=int(schedule.payment_amount),  # NOTE: regular amount
-                        additional_information=str(schedule.additional_information),
-                        payee_id=str(schedule.payee_id),
-                        funding_source_id=str(schedule.funding_source_id)
+                    make_payment.apply_async(
+                        # It's possible that payment creation task will start execution before schedule creation
+                        # transaction will be committed, it will cause problems for SchedulePayment record
+                        countdown=FIRST_PAYMENTS_MIN_EXECUTION_DELAY,
+                        kwargs={
+                            'user_id': str(user.id),
+                            'payment_account_id': str(schedule.origin_payment_account_id),
+                            'schedule_id': str(schedule.id),
+                            'currency': str(schedule.currency.value),
+                            'payment_amount': int(schedule.payment_amount),  # NOTE: regular amount
+                            'additional_information': str(schedule.additional_information),
+                            'payee_id': str(schedule.payee_id),
+                            'funding_source_id': str(schedule.funding_source_id)
+                        }
                     )
 
         except ValidationError as e:

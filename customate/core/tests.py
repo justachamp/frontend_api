@@ -1,4 +1,6 @@
 from traceback import format_exc
+from unittest import TestCase
+
 from botocore.exceptions import ClientError
 from django.test import SimpleTestCase
 
@@ -9,6 +11,7 @@ from authentication.cognito.core.helpers import sign_up
 import logging
 
 from core.fields import PaymentScenario, PayeeType, FundingSourceType
+from core.logger import SensitiveDataObfuscator
 
 logger = logging.getLogger(__name__)
 
@@ -57,3 +60,39 @@ class TestUserManagementMixin(object):
             raise ex
 
 
+class TestSensitiveDataObfuscator(TestCase):
+    def setUp(self):
+        self.filter = SensitiveDataObfuscator()
+
+    def test_obfuscate_empty_argument(self):
+        self.assertIsNone(self.filter.obfuscate(None))
+
+    def test_obfuscate_str_iban(self):
+        iban = '"iban":"DE05202208445090025780"'
+        expected = '"iban":"DE0' + self.filter._placeholder + '780"'
+        self.assertEqual(expected, self.filter.obfuscate(iban))
+
+    def test_obfuscate_str_encoded_iban(self):
+        iban = '\"iban\":\"DE05202208445090025780\"'
+        expected = '\"iban\":\"DE0' + self.filter._placeholder + '780\"'
+        self.assertEqual(expected, self.filter.obfuscate(iban))
+
+    def test_obfuscate_str_bic(self):
+        iban = '"bic": "SXPYDEHH"'
+        expected = '"bic": "SX' + self.filter._placeholder + '"'
+        self.assertEqual(expected, self.filter.obfuscate(iban))
+
+    def test_obfuscate_str_email(self):
+        iban = '"email": "user_for_testing@mailinator.com"'
+        expected = '"email": "' + self.filter._placeholder + '"'
+        self.assertEqual(expected, self.filter.obfuscate(iban))
+
+    def test_obfuscate_str_recipient_email(self):
+        iban = '"recipient_email": "user_for_testing@mailinator.com"'
+        expected = '"recipient_email": "' + self.filter._placeholder + '"'
+        self.assertEqual(expected, self.filter.obfuscate(iban))
+
+    def test_obfuscate_str_address(self):
+        iban = '"address_line_1": "14 Portland Chambers"'
+        expected = '"address_line_1": "' + self.filter._placeholder + '"'
+        self.assertEqual(expected, self.filter.obfuscate(iban))
