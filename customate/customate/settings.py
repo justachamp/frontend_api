@@ -154,7 +154,7 @@ logging.config.dictConfig({
 
         'django': {
             'handlers': ['console'],
-            'level': 'INFO',
+            'level': 'ERROR',
         },
 
         'django.request': {
@@ -165,14 +165,14 @@ logging.config.dictConfig({
 
         'django.db.backends': {
             'handlers': ['console'],
-            'level': LOGLEVEL,
+            'level': 'ERROR',
             'propagate': False,
         },
 
         # Logging From Your Application
         'customate': {
             'level': LOGLEVEL,
-            'handlers': ['console'],
+            'handlers': ['console', 'rotating_file'],
             # required to avoid double logging with root logger
             'propagate': False,
         },
@@ -210,7 +210,7 @@ logging.config.dictConfig({
 
         # GBG WSDL client
         'zeep.transports': {
-            'level': LOGLEVEL,
+            'level': 'ERROR',
             'propagate': False,
             'handlers': ['console'],
         },
@@ -471,3 +471,4 @@ _ = arrow.get("2000-01-01T%s:00" % PAYMENT_SYSTEM_CLOSING_TIME, ['YYYY-MM-DDTH:m
 
 DOCUMENTS_MAX_LIMIT_PER_SCHEDULE = 5
 MAX_ALLOW_USER_INACTIVITY = environ.get('MAX_ALLOW_USER_INACTIVITY', 10)  # in minutes
+FIRST_PAYMENTS_MIN_EXECUTION_DELAY = 5  # in seconds
