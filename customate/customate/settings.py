@@ -242,6 +242,16 @@ logging.config.dictConfig({
 LOGIN_REDIRECT_URL = '/accounts/profile'
 
 # more settings here https://www.django-rest-framework.org/api-guide/settings/
+
+DEFAULT_RENDERER_CLASSES = (
+    'core.renderers.CustomateJSONRenderer',
+)
+
+if DEBUG:
+    DEFAULT_RENDERER_CLASSES = DEFAULT_RENDERER_CLASSES + (
+        'rest_framework.renderers.BrowsableAPIRenderer',
+    )
+
 REST_FRAMEWORK = {
     'PAGE_SIZE': 10,
     # need custom handler
@@ -255,16 +265,7 @@ REST_FRAMEWORK = {
         # 'rest_framework.parsers.FormParser',
         # 'rest_framework.parsers.MultiPartParser'
     ),
-    'DEFAULT_RENDERER_CLASSES': (
-        # 'rest_framework_json_api.renderers.JSONRenderer',
-        'core.renderers.CustomateJSONRenderer',
-        # If you're performance testing, you will want to use the browseable API
-        # without forms, as the forms can generate their own queries.
-        # If performance testing, enable:
-        # 'example.utils.BrowsableAPIRendererWithoutForms',
-        # Otherwise, to play around with the browseable API, enable:
-        'rest_framework.renderers.BrowsableAPIRenderer'
-    ),
+    'DEFAULT_RENDERER_CLASSES': DEFAULT_RENDERER_CLASSES,
     'DEFAULT_METADATA_CLASS': 'rest_framework_json_api.metadata.JSONAPIMetadata',
     'DEFAULT_FILTER_BACKENDS': (
         'frontend_api.core.resource.filters.BetterQueryParameterValidationFilter',
@@ -449,11 +450,11 @@ CELERY_TIMEZONE = 'UTC'
 # This is for periodic execution of tasks
 # For more info: http://docs.celeryproject.org/en/latest/userguide/periodic-tasks.html#crontab-schedules
 CELERY_BEAT_SCHEDULE = {
-     # 'one_per_minute': {
-     #    'task': 'frontend_api.tasks.process_unaccepted_schedules',
-     #    'schedule': crontab(minute='*/1'),
-     #    'args': ('one_per_hour', False, None)
-     # },
+    # 'one_per_minute': {
+    #    'task': 'frontend_api.tasks.process_unaccepted_schedules',
+    #    'schedule': crontab(minute='*/1'),
+    #    'args': ('one_per_hour', False, None)
+    # },
 
     'once_per_day': {
         'task': 'frontend_api.tasks.initiate_daily_payments',
