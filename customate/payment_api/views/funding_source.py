@@ -57,8 +57,13 @@ class FundingSourceViewSet(ResourceViewSet):
     def check_payment_account_id(self, filters, key, value):
         user = self.request.user
         try:
-            return user.account.payment_account_id if \
+            payment_account_id = user.account.payment_account_id if \
                     user.is_owner else user.account.owner_account.payment_account_id
+
+            if payment_account_id is None:
+                self.get_queryset().set_empty_response()
+            else:
+                return payment_account_id
         except AttributeError:
             return None
 
