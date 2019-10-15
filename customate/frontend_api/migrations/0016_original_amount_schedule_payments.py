@@ -9,9 +9,10 @@ def migrate_existing(apps, schema_editor):
     Update newly added field with defaults from corresponding schedule
     :return:
     """
-    for sh in SchedulePayments.objects.all():  # type: SchedulePayments
-        sh.original_amount = sh.schedule.payment_amount
-        sh.save(update_fields=['original_amount'])
+    pass
+    # for sh in SchedulePayments.objects.all():  # type: SchedulePayments
+    #     sh.original_amount = sh.schedule.payment_amount
+    #     sh.save(update_fields=['original_amount'])
 
 
 class Migration(migrations.Migration):
