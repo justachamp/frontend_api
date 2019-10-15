@@ -79,11 +79,6 @@ class AuthView(viewsets.ViewSet):
         if serializer.is_valid(True):
             serializer.create(serializer.validated_data)
             result_sign_in = self.sign_in(request)
-            serializer = CognitoAuthVerificationSerializer()
-            serializer.verification_code({
-                'attribute_name': 'email',
-                'access_token': result_sign_in.data['access_token']
-            })
             return result_sign_in
 
     @action(methods=['POST'], detail=False, name='Send verification code')
