@@ -328,23 +328,6 @@ class IsNotBlocked(permissions.BasePermission):
         return request.user.status != UserStatus.blocked
 
 
-class IsBlockedUsersUpdateContactInfoRequest(permissions.BasePermission):
-    """
-    Custom permission to allow access for contact information's update for blocked user
-    """
-
-    def has_permission(self, request, view):
-        if request.method in permissions.SAFE_METHODS:
-            return True
-
-        return request.method == 'PATCH' and request.user.status == UserStatus.blocked \
-               and self._is_contact_info_updated_only(request)
-
-    def _is_contact_info_updated_only(self, request):
-        user_data = request.data.get('user', {})
-        return len(user_data) == 1 and ('email' in user_data or 'phone_number' in user_data)
-
-
 class IsVerified(permissions.BasePermission):
     """
     Custom permission to restrict access for unverified users
