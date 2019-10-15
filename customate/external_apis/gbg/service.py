@@ -134,7 +134,7 @@ def validate_identity_details(country: core.fields.Country,
             "IdentityDocuments": identity_document.gbg_serialization()
         })
 
-    logger.debug("Sending GBG input_data=%r" % input_data)
+    logger.info("Sending GBG input_data=%r, customer_reference=%r" % (input_data, customer_reference))
     res = GlobalAuthenticate_service.AuthenticateSP(
         ProfileIDVersion=get_profile(
             profile_id=environ["GBG_{}_IDENTITY_VALIDATION_PROFILE_ID".format(country.value)],
