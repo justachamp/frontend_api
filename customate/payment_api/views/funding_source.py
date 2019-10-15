@@ -8,7 +8,6 @@ from frontend_api.permissions import (
     IsOwnerOrReadOnly,
     SubUserManageFundingSourcesPermission,
     IsActive,
-    IsNotBlocked
 )
 from payment_api.views import (
     InclusionFilter,
@@ -26,7 +25,6 @@ class FundingSourceViewSet(ResourceViewSet):
     serializer_class = FundingSourceSerializer
     permission_classes = (  IsAuthenticated,
                             IsActive,
-                            IsNotBlocked,
                             IsSuperAdminOrReadOnly |
                             IsOwnerOrReadOnly |
                             SubUserManageFundingSourcesPermission )
@@ -81,7 +79,6 @@ class FundingSourceRelationshipView(ResourceRelationshipView):
     resource_name = 'funding_sources'
     permission_classes = (  IsAuthenticated,
                             IsActive,
-                            IsNotBlocked,
                             IsSuperAdminOrReadOnly |
                             IsOwnerOrReadOnly |
                             SubUserManageFundingSourcesPermission )
