@@ -7,12 +7,7 @@ from frontend_api.serializers import (
 )
 from frontend_api.permissions import (
     CheckFieldsCredentials,
-    IsOwnerOrReadOnly,
-    IsSuperAdminOrReadOnly,
-    SubUserManageSchedulesPermission,
-    IsNotBlocked,
-    IsActive,
-    IsBlockedUsersUpdateContactInfoRequest)
+    IsActive)
 
 import logging
 
@@ -35,10 +30,9 @@ class DomainService:
 
 
 class ProfileView(DomainService, APIView):
-    permission_classes = ( IsAuthenticated,
-                           IsActive,
-                           IsNotBlocked | IsBlockedUsersUpdateContactInfoRequest,
-                           CheckFieldsCredentials )
+    permission_classes = (IsAuthenticated,
+                          IsActive,
+                          CheckFieldsCredentials )
     _service_object = ProfileService
 
     credentials_required_fields = {}

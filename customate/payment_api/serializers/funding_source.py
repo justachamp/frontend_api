@@ -92,7 +92,7 @@ class FundingSourceSerializer(BaseFundingSourceSerializer):
                 address_line_2=address.get("address_line_2"),
                 country=address["country"],
                 locality=address["locality"]
-            ), customer_reference=user.email)
+            ), customer_reference=str(user.id))
 
         if gbg_result.BandText != BAND_PASS:
             raise ValidationError("Sorry, please choose another bank account as we were unable to validate the "

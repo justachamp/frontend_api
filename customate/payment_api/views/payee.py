@@ -9,7 +9,6 @@ from frontend_api.permissions import (
     IsOwnerOrReadOnly,
     SubUserManagePayeesPermission,
     IsActive,
-    IsNotBlocked
 )
 from payment_api.views import (
     InclusionFilter,
@@ -27,7 +26,6 @@ class PayeeViewSet(ResourceViewSet):
     serializer_class = PayeeSerializer
     permission_classes = (IsAuthenticated,
                           IsActive, 
-                          IsNotBlocked, 
                           IsSuperAdminOrReadOnly |
                           IsOwnerOrReadOnly |
                           SubUserManagePayeesPermission )
@@ -84,7 +82,6 @@ class PayeeRelationshipView(ResourceRelationshipView):
     resource_name = 'payees'
     permission_classes = (IsAuthenticated,
                           IsActive, 
-                          IsNotBlocked, 
                           IsSuperAdminOrReadOnly |
                           IsOwnerOrReadOnly |
                           SubUserManagePayeesPermission )
