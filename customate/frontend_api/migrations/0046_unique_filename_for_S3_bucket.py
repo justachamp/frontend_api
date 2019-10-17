@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('frontend_api', '0044_recreate_schedule_views'),
+        ('frontend_api', '0045_event_trigger_for_updating_schedule_views'),
     ]
 
     operations = [
