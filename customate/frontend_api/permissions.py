@@ -142,11 +142,11 @@ class HasParticularDocumentPermission(permissions.BasePermission):
         """
         Check permissions for getting document from particular schedule
         """
-        document_id = request.query_params.get("document_id")
-        if not document_id:
-            logger.error("The 'document_id' parameter has not been passed %r" % traceback.format_exc())
-            raise ValidationError("The 'document_id' field is requred.")
-        document = get_object_or_404(Document, id=document_id)
+        key = request.query_params.get("key")
+        if not key:
+            logger.error("The 'key' parameter has not been passed %r" % traceback.format_exc())
+            raise ValidationError("The 'key' field is requred.")
+        document = get_object_or_404(Document, key=key)
         schedule = document.schedule
         # The case where files handling happens on the 'create schedule' page.
         if not schedule and document.user == request.user:
@@ -167,11 +167,11 @@ class HasParticularDocumentPermission(permissions.BasePermission):
         """
         Check if user able to delete document
         """
-        document_id = request.query_params.get("document_id")
-        if not document_id:
-            logger.error("The 'document_id' parameter has not been passed %r" % traceback.format_exc())
-            raise ValidationError("The 'document_id' field is requred.")
-        document = get_object_or_404(Document, id=document_id)
+        key = request.query_params.get("key")
+        if not key:
+            logger.error("The 'key' parameter has not been passed %r" % traceback.format_exc())
+            raise ValidationError("The 'key' field is requred.")
+        document = get_object_or_404(Document, key=key)
         if not document.schedule and document.user == request.user:
             return True
         user = request.user

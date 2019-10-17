@@ -242,11 +242,11 @@ class ScheduleViewSet(views.ModelViewSet):
         """
         The method for removing document objects from database.
         """
-        document_id = request.query_params.get("document_id")
-        if not document_id:
-            logger.error("The 'document_id' parameter has not been passed %r" % format_exc())
-            raise ValidationError("The 'document_id' parameter is required")
-        document = get_object_or_404(Document, id=document_id)
+        key = request.query_params.get("key")
+        if not key:
+            logger.error("The 'key' parameter has not been passed %r" % format_exc())
+            raise ValidationError("The 'key' parameter is required")
+        document = get_object_or_404(Document, key=key)
         document.delete()
         return Response(None, status=204)
 
