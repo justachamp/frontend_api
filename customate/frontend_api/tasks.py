@@ -1,10 +1,17 @@
 from __future__ import absolute_import, unicode_literals
 from typing import Dict
 from traceback import format_exc
-import arrow
+from datetime import timedelta
 import logging
 from uuid import UUID, uuid4
+
 from celery import shared_task
+import arrow
+import boto3
+from botocore.exceptions import ClientError, EndpointConnectionError
+from botocore.config import Config
+from requests import delete as delete_http_request
+from requests.exceptions import RequestException
 from django.core.exceptions import ObjectDoesNotExist
 from django.conf import settings
 from django.core.paginator import Paginator
@@ -12,7 +19,7 @@ from django.core.paginator import Paginator
 from core.logger import RequestIdGenerator
 from core.models import User
 from core.fields import Currency, PaymentStatusType
-from frontend_api.models import Schedule
+from frontend_api.models import Schedule, Document
 from frontend_api.models.blacklist import BlacklistDate
 from frontend_api.models.schedule import OnetimeSchedule, DepositsSchedule
 from frontend_api.models.schedule import WeeklySchedule, MonthlySchedule, QuarterlySchedule, YearlySchedule
@@ -20,8 +27,6 @@ from frontend_api.models.schedule import SchedulePayments, LastSchedulePayments
 from frontend_api.core.client import PaymentApiClient, PaymentDetails
 from frontend_api.fields import ScheduleStatus, SchedulePurpose
 
-import boto3
-from botocore.exceptions import ClientError, EndpointConnectionError
 
 logger = logging.getLogger(__name__)
 PER_PAGE = 5
@@ -542,3 +547,32 @@ def process_unaccepted_schedules():
         for schedule in paginator.page(page).object_list:
             schedule.move_to_status(ScheduleStatus.rejected)
 
+
+@shared_task
+def remove_unassigned_documents():
+    """
+    Remove all documents which not related with any schedule.
+    :return:
+    """
+    hour_ago = arrow.utcnow().datetime - timedelta(hours=1)
+
+    # Documents without related schedule which created more than hour ago
+    outdated_documents = Document.objects.filter(schedule=None, created_at__lte=hour_ago, key__isnull=False)
+
+    paginator = Paginator(outdated_documents, PER_PAGE)
+    for page in paginator.page_range:
+        for document in paginator.page(page).object_list:  # type: Document
+            # Get presigned url for deleting document
+            try:
+                delete_url = document.generate_s3_presigned_url(operation_name='delete_object')
+            except ClientError as e:
+                logger.error("AWS S3 service is unavailable %r" % format_exc())
+                return
+            # Make delete request with gotten url
+            try:
+                delete_http_request(delete_url)
+            except RequestException:
+                logger.error("S3 connection error during removing file %r" % format_exc())
+                return
+            # Remove appropriate relation from database.
+            document.delete()

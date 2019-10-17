@@ -10,7 +10,7 @@ from core.fields import UserRole
 class DocumentSerializer(ModelSerializer):
     class Meta:
         model = Document
-        fields = ("id", "filename", "slug", "schedule", "user")
+        fields = ("slug", "key", "schedule", "user")
         extra_kwargs = {
             "schedule": {"write_only": True},
             "user": {"write_only": True},

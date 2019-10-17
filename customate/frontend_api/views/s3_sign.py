@@ -48,16 +48,16 @@ class PreSignedUrlView(APIView):
         """
         The method returns presigned url for further sharing file
         """
-        document_id = request.query_params.get("document_id")
-        if not document_id:
-            logger.error("The 'document' parameter has not been passed %r" % traceback.format_exc())
-            raise ValidationError("The 'document' field is requred.")
-        document = get_object_or_404(Document, id=document_id)
+        key = request.query_params.get("key")
+        if not key:
+            logger.error("The 'key' parameter has not been passed %r" % traceback.format_exc())
+            raise ValidationError("The 'key' field is requred.")
+        document = get_object_or_404(Document, key=key)
         try:
             response = self.s3_client.generate_presigned_url(
                 'get_object',
                 Params={'Bucket': settings.AWS_STORAGE_BUCKET_NAME,
-                        'Key': document.slug},
+                        'Key': document.key},
                 ExpiresIn=settings.AWS_S3_EXPIRE_PRESIGNED_URL)
             return {"attributes": {"url": response}}
         except ClientError as e:
@@ -82,29 +82,28 @@ class PreSignedUrlView(APIView):
         try:
             response = self.s3_client.generate_presigned_post(
                 settings.AWS_STORAGE_BUCKET_NAME,
-                document.slug,
+                document.key,
                 ExpiresIn=settings.AWS_S3_EXPIRE_PRESIGNED_URL)
         except ClientError as e:
             logger.error("AWS S3 service is unavailable %r" % traceback.format_exc())
             raise ServiceUnavailable
         serializer = DocumentSerializer(document, context={"request": request})
-        response.update({"filename": serializer.data["filename"]})
-        return {**serializer.data, "attributes": response}
+        return {"meta": serializer.data, "attributes": response}
 
     def delete_s3_object(self, request):
         """
         The method returns presigned url for further sharing file
         """
-        document_id = request.query_params.get("document_id")
-        if not document_id:
-            logger.error("The 'document' parameter has not been passed %r" % traceback.format_exc())
-            raise ValidationError("The 'document' field is requred.")
-        document = get_object_or_404(Document, id=document_id)
+        key = request.query_params.get("key")
+        if not key:
+            logger.error("The 'key' parameter has not been passed %r" % traceback.format_exc())
+            raise ValidationError("The 'key' field is requred.")
+        document = get_object_or_404(Document, key=key)
         try:
             response = self.s3_client.generate_presigned_url(
                 'delete_object',
                 Params={'Bucket': settings.AWS_STORAGE_BUCKET_NAME,
-                        'Key': document.slug},
+                        'Key': document.key},
                 ExpiresIn=settings.AWS_S3_EXPIRE_PRESIGNED_URL)
             return {"attributes": {"url": response}}
         except ClientError as e:

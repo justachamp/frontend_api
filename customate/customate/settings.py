@@ -465,6 +465,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'frontend_api.tasks.process_unaccepted_schedules',
         'schedule': crontab(hour='00', minute="01")  # 00:01 UTC every day
     },
+    'once_per_day_remove_unassigned_documents': {
+        'task': 'frontend_api.tasks.remove_unassigned_documents',
+        'schedule': crontab(hour='01', minute="00")  # 01:00 UTC every day
+    },
 }
 
 PAYMENT_SYSTEM_CLOSING_TIME = environ['PAYMENT_SYSTEM_CLOSING_TIME']  # HH:mm format
