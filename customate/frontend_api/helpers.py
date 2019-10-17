@@ -142,7 +142,7 @@ def get_ses_email_payload(tpl_filename: str, tpl_context: Dict, subject=None):
     """
     new_context = deepcopy(tpl_context)
     new_context.update({
-        "AWS_STORAGE_BUCKET_NAME": settings.AWS_STORAGE_BUCKET_NAME
+        "AWS_S3_STORAGE_BUCKET_NAME": settings.AWS_S3_STORAGE_BUCKET_NAME
     })
     message = {
         "Message": {
