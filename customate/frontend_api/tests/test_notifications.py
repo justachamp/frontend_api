@@ -1,12 +1,12 @@
-# -*- coding: utf-8 -*-
+from unittest import skip
+import boto3
 
 from django.test import SimpleTestCase
 from django.conf import settings
 from django.template.loader import render_to_string
-import boto3
-from botocore.exceptions import ClientError, EndpointConnectionError
 
 
+@skip("rewrite without actual requests to AWS")
 class TestEmailNotifier(SimpleTestCase):
     """
     Test if email notifier works.
@@ -49,6 +49,7 @@ class TestEmailNotifier(SimpleTestCase):
         self.assertEqual(200, response["ResponseMetadata"].get("HTTPStatusCode"))
 
 
+@skip("rewrite without actual requests to AWS")
 class TestSmsNotifier(SimpleTestCase):
     """
     Test if sms notifier works.

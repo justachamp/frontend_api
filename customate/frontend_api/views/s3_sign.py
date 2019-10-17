@@ -60,7 +60,7 @@ class PreSignedUrlView(APIView):
                 'get_object',
                 Params={'Bucket': settings.AWS_STORAGE_BUCKET_NAME,
                         'Key': os.path.join(settings.AWS_S3_UPLOAD_DOCUMENTS_PATH, document.key)},
-                ExpiresIn=settings.AWS_S3_EXPIRE_PRESIGNED_URL)
+                ExpiresIn=settings.AWS_S3_PRESIGNED_URL_EXPIRES_IN)
             return {"attributes": {"url": response}}
         except ClientError as e:
             logger.error("AWS S3 service is unailable %r" % traceback.format_exc())
@@ -85,7 +85,7 @@ class PreSignedUrlView(APIView):
             response = self.s3_client.generate_presigned_post(
                 settings.AWS_STORAGE_BUCKET_NAME,
                 os.path.join(settings.AWS_S3_UPLOAD_DOCUMENTS_PATH, document.key),
-                ExpiresIn=settings.AWS_S3_EXPIRE_PRESIGNED_URL)
+                ExpiresIn=settings.AWS_S3_PRESIGNED_URL_EXPIRES_IN)
         except ClientError as e:
             logger.error("AWS S3 service is unavailable %r" % traceback.format_exc())
             raise ServiceUnavailable

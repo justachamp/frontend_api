@@ -21,14 +21,14 @@ register = template.Library()
 
 
 @register.filter
-def prettify_number(value: int) -> str:
+def prettify_number(value) -> str:
     """
     Prettifies balance number
     :param value:
     :return:
     """
     try:
-        return "%0.2f" % (value / 100)
+        return "%0.2f" % (int(value) / 100)
     except (ValueError, ZeroDivisionError):
         return None
 

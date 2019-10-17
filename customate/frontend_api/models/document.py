@@ -75,4 +75,4 @@ class Document(Model):
                 'Bucket': settings.AWS_STORAGE_BUCKET_NAME,
                 'Key': os.path.join(settings.AWS_S3_UPLOAD_DOCUMENTS_PATH, self.key)
             },
-            ExpiresIn=settings.AWS_S3_EXPIRE_PRESIGNED_URL)
+            ExpiresIn=settings.AWS_S3_PRESIGNED_URL_EXPIRES_IN)
