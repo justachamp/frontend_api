@@ -1,7 +1,11 @@
+from traceback import format_exc
+
 from rest_framework import response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 
+from authentication.cognito.core.base import CognitoException
+from authentication.cognito.exceptions import GeneralCognitoException
 from frontend_api.serializers import (
     ProfileSerializer
 )
@@ -57,13 +61,23 @@ class ProfileView(DomainService, APIView):
         skip_gbg = bool(int(request.query_params.get("skip_gbg", 0)))
         ignore_gbg_exception = bool(int(request.query_params.get("ignore_gbg_exception", 1)))
 
-        serializer = ProfileSerializer(
-            instance=self.service.profile,
-            data=request.data,
-            context={'request': request, 'profile': profile, 'additional_keys': {'account': ['permission']}})
+        try:
+            serializer = ProfileSerializer(
+                instance=self.service.profile,
+                data=request.data,
+                context={'request': request, 'profile': profile, 'additional_keys': {'account': ['permission']}}
+            )
 
-        serializer.is_valid(True)
-        serializer.save(ignore_gbg_exception=ignore_gbg_exception, skip_gbg=skip_gbg)
+            serializer.is_valid(True)
+            serializer.save(ignore_gbg_exception=ignore_gbg_exception, skip_gbg=skip_gbg)
+        except Exception as ex:
+            # Special case for issue with Cognito's limits,
+            # we need to convert original exception to APIException instance
+            if isinstance(ex, CognitoException):
+                logger.debug("Cognito exception occurred (updating profile): %s" % format_exc())
+                raise GeneralCognitoException(ex)
+            else:
+                raise ex
 
         return response.Response(serializer.data)
 
