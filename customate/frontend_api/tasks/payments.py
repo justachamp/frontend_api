@@ -1,35 +1,28 @@
 from __future__ import absolute_import, unicode_literals
 from typing import Dict
 from traceback import format_exc
-from datetime import timedelta
 import logging
-from uuid import UUID, uuid4
 
+from uuid import UUID, uuid4
 from celery import shared_task
 import arrow
-import boto3
-from botocore.exceptions import ClientError, EndpointConnectionError
-from botocore.config import Config
-from requests import delete as delete_http_request
-from requests.exceptions import RequestException
 from django.core.exceptions import ObjectDoesNotExist
-from django.conf import settings
 from django.core.paginator import Paginator
 
 from core.logger import RequestIdGenerator
 from core.models import User
 from core.fields import Currency, PaymentStatusType
-from frontend_api.models import Schedule, Document
+from frontend_api.models import Schedule
 from frontend_api.models.blacklist import BlacklistDate
 from frontend_api.models.schedule import OnetimeSchedule, DepositsSchedule
 from frontend_api.models.schedule import WeeklySchedule, MonthlySchedule, QuarterlySchedule, YearlySchedule
 from frontend_api.models.schedule import SchedulePayments, LastSchedulePayments
-from frontend_api.core.client import PaymentApiClient, PaymentDetails
-from frontend_api.fields import ScheduleStatus, SchedulePurpose
-
+from frontend_api.core import client
+from frontend_api.fields import ScheduleStatus
+from frontend_api import helpers
+from frontend_api.tasks import PER_PAGE
 
 logger = logging.getLogger(__name__)
-PER_PAGE = 5
 BLACKLISTED_DAYS_MAX_RETRY_COUNT = 10  # max number of retries to find next non-blacklisted day
 
 
@@ -84,7 +77,7 @@ def make_payment(user_id: str, payment_account_id: str, schedule_id: str, curren
         )
         schedule_payment.save()
 
-        result = PaymentApiClient.create_payment(p=PaymentDetails(
+        client.PaymentApiClient.create_payment(p=client.PaymentDetails(
             id=payment_id,
             user_id=UUID(user_id),
             payment_account_id=UUID(payment_account_id),
@@ -104,7 +97,8 @@ def make_payment(user_id: str, payment_account_id: str, schedule_id: str, curren
             # We don't check or run payment with backup source here, because we have a severe problem that probably
             # will prevent next payment's successful execution
             schedule_payment.update(payment_status=PaymentStatusType.FAILED)
-        Schedule.objects.get(id=schedule_id).overdue = True
+        Schedule.objects.get(id=schedule_id) \
+            .move_to_status(ScheduleStatus.overdue)
 
     return result
 
@@ -158,6 +152,12 @@ def on_payment_change(payment_info: Dict):
     # refresh actual count of payments for specific schedule
     if payment_status is PaymentStatusType.SUCCESS:
         schedule.refresh_number_of_payments_made()
+        # send appropriate notifications for participants
+        helpers.balance_changed(schedule=schedule, payment_info=payment_info)
+
+    # send appropriate notifications for funds sender if payment has failed
+    if payment_status is PaymentStatusType.FAILED:
+        helpers.transaction_failed(schedule=schedule, payment_info=payment_info)
 
     # update Schedule status
     schedule.update_status()
@@ -488,91 +488,3 @@ def on_payee_change(payee_info: Dict):
     # TODO: update all payee info that is stored in Django models
 
 
-@shared_task
-def send_notification_email(to_address, message):
-    email_client = boto3.client('ses', aws_access_key_id=settings.AWS_ACCESS_KEY,
-                                aws_secret_access_key=settings.AWS_SECRET_KEY,
-                                region_name=settings.AWS_REGION_SES)
-    kwargs = {
-        "Source": settings.AWS_SES_NOTIFICATIONS_GOCUSTOMATE_SENDER,
-        "Destination": {
-            "ToAddresses": [to_address]
-        }
-    }
-    try:
-        email_client.send_email(**kwargs, **message)
-    except (ClientError, EndpointConnectionError):
-        logger.error("Error while sending email via boto3 with outcoming data: \n%s. %r" % (kwargs, format_exc()))
-
-
-@shared_task
-def send_notification_sms(to_phone_number, message):
-    sms_client = boto3.client('sns', aws_access_key_id=settings.AWS_ACCESS_KEY,
-                              aws_secret_access_key=settings.AWS_SECRET_KEY,
-                              region_name=settings.AWS_REGION_SNS)
-    kwargs = {"PhoneNumber": to_phone_number,
-              "Message": message}
-    try:
-        sms_client.publish(**kwargs)
-    except:
-        logger.error("Unable to send message via boto3 with outcoming data: \n%s. %r" % (kwargs, format_exc()))
-
-
-@shared_task
-def process_unaccepted_schedules():
-    """
-    Make sure we change schedules status to rejected
-        if this schedule was not accepted by payer before deposit_payment_date (if not None) or start_date
-    :return:
-    """
-    now = arrow.utcnow()
-    opened_receive_funds_schedules = Schedule.objects.filter(purpose=SchedulePurpose.receive,
-                                                             status=ScheduleStatus.pending)
-    # Filter opened receive funds schedules by deposit_payment_date (if not None) or start_date
-    schedules_with_deposit_payment_date = opened_receive_funds_schedules.filter(
-        deposit_payment_date__isnull=False).filter(
-        deposit_payment_date__lte=now.datetime)
-    schedules_without_deposit_payment_date = opened_receive_funds_schedules.filter(
-        deposit_payment_date__isnull=True,
-        start_date__lte=now.datetime)
-    unaccepted_schedules = schedules_with_deposit_payment_date | schedules_without_deposit_payment_date
-
-    logger.info("Start process unaccepted schedules. Datetime: %s." % now.datetime.strftime("%d/%b %H/%M"))
-    logger.info("Unaccepted schedules: %s." % ", ".join([schedule.name for schedule in unaccepted_schedules]))
-
-    paginator = Paginator(unaccepted_schedules, PER_PAGE)
-    for page in paginator.page_range:
-        # Update statuses via .move_to_status()
-        # WARN: potential generation of 1-N SQL UPDATE command here
-        for schedule in paginator.page(page).object_list:
-            schedule.move_to_status(ScheduleStatus.rejected)
-
-
-@shared_task
-def remove_unassigned_documents():
-    """
-    Remove all documents which not related with any schedule.
-    :return:
-    """
-    hour_ago = arrow.utcnow().datetime - timedelta(hours=1)
-
-    # Documents without related schedule which created more than hour ago
-    outdated_documents = Document.objects.filter(schedule=None, created_at__lte=hour_ago, key__isnull=False)
-
-    paginator = Paginator(outdated_documents, PER_PAGE)
-    for page in paginator.page_range:
-        for document in paginator.page(page).object_list:  # type: Document
-            # Get presigned url for deleting document
-            try:
-                delete_url = document.generate_s3_presigned_url(operation_name='delete_object')
-            except ClientError as e:
-                logger.error("AWS S3 service is unavailable %r" % format_exc())
-                return
-            # Make delete request with gotten url
-            try:
-                delete_http_request(delete_url)
-            except RequestException:
-                logger.error("S3 connection error during removing file %r" % format_exc())
-                return
-            # Remove appropriate relation from database.
-            document.delete()

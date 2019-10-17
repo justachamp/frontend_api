@@ -15,7 +15,7 @@ from payment_api.serializers import (
     ResourceSerializer,
     ExternalResourceRelatedField
 )
-from frontend_api.models.schedule import signals
+from frontend_api import helpers
 from frontend_api import tasks
 from core.fields import PaymentStatusType
 
@@ -75,10 +75,10 @@ class LoadFundsSerializer(ResourceSerializer):
         funds_recipient = get_user_model().objects.get(email=recipient_email)
         funds_sender = get_user_model().objects.get(id=sender_id)
 
-        funds_recipients_emails = signals.get_funds_recipients_emails(funds_recipient=funds_recipient)
-        funds_senders_emails = signals.get_funds_senders_emails(funds_sender=funds_sender)
-        funds_recipients_phones = signals.get_funds_recipients_phones(funds_recipient=funds_recipient)
-        funds_senders_phones = signals.get_funds_senders_phones(funds_sender=funds_sender)
+        funds_recipients_emails = helpers.get_funds_recipients_emails(funds_recipient=funds_recipient)
+        funds_senders_emails = helpers.get_funds_senders_emails(funds_sender=funds_sender)
+        funds_recipients_phones = helpers.get_funds_recipients_phones(funds_recipient=funds_recipient)
+        funds_senders_phones = helpers.get_funds_senders_phones(funds_sender=funds_sender)
 
         # Handle "FAILED transaction" case
         if status == PaymentStatusType.FAILED.value:
@@ -97,7 +97,7 @@ class LoadFundsSerializer(ResourceSerializer):
             # Because sender and recipient might be the same user, remove him from senders notifications
             for email in [item for item in funds_senders_emails if item not in funds_recipients_emails]:
                 context = {'original_amount': amount / 100}
-                message = signals.get_ses_email_payload(tpl_filename='notifications/email_senders_balance_updated.html',
+                message = helpers.get_ses_email_payload(tpl_filename='notifications/email_senders_balance_updated.html',
                                                         tpl_context=context)
                 tasks.send_notification_email.delay(to_address=email, message=message)
             for phone_number in [item for item in funds_senders_phones if item not in funds_recipients_phones]:
@@ -106,7 +106,7 @@ class LoadFundsSerializer(ResourceSerializer):
             # Notify funds recipients
             for email in funds_recipients_emails:
                 context = {'original_amount': amount / 100}
-                message = signals.get_ses_email_payload(tpl_filename='notifications/email_recipients_balance_updated.html',
+                message = helpers.get_ses_email_payload(tpl_filename='notifications/email_recipients_balance_updated.html',
                                                         tpl_context=context)
                 tasks.send_notification_email.delay(to_address=email, message=message)
             for phone_number in funds_recipients_phones:

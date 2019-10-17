@@ -2,6 +2,8 @@ from enumfields import Enum
 from datetime import datetime
 import logging
 
+from babel.numbers import format_currency
+
 from rest_framework.exceptions import ValidationError
 from rest_framework_json_api.serializers import ChoiceField, UUIDField as DefaultUUIDField, CharField
 from rest_framework_json_api.relations import ResourceRelatedField
@@ -683,6 +685,9 @@ class Currency(Enum):
     def __repr__(self):
         return self.value
 
+    @property
+    def symbol(self):
+        return format_currency(1, self.value)[:1]
 
 class Country(Enum):
     AF = 'AF'

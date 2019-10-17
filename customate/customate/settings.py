@@ -320,6 +320,9 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
             ],
+            'libraries': {
+                'prettify_number': 'frontend_api.helpers'
+            }
         },
     },
 ]
@@ -450,23 +453,23 @@ CELERY_TIMEZONE = 'UTC'
 # This is for periodic execution of tasks
 # For more info: http://docs.celeryproject.org/en/latest/userguide/periodic-tasks.html#crontab-schedules
 CELERY_BEAT_SCHEDULE = {
-    # 'one_per_minute': {
-    #    'task': 'frontend_api.tasks.process_unaccepted_schedules',
-    #    'schedule': crontab(minute='*/1'),
-    #    'args': ('one_per_hour', False, None)
-    # },
+     # 'one_per_minute': {
+     #    'task': 'frontend_api.tasks.schedules.process_unaccepted_schedules',
+     #    'schedule': crontab(minute='*/1'),
+     #    'args': ('one_per_hour', False, None)
+     # },
 
     'once_per_day': {
-        'task': 'frontend_api.tasks.initiate_daily_payments',
+        'task': 'frontend_api.tasks.payments.initiate_daily_payments',
         # Even though bank day is not opened, we initiate payments in the night
         'schedule': crontab(hour='00', minute="01")  # 00:01 UTC every day
     },
     'once_per_day_update_statuses_of_unaccepted_schedules': {
-        'task': 'frontend_api.tasks.process_unaccepted_schedules',
+        'task': 'frontend_api.tasks.schedules.process_unaccepted_schedules',
         'schedule': crontab(hour='00', minute="01")  # 00:01 UTC every day
     },
     'once_per_day_remove_unassigned_documents': {
-        'task': 'frontend_api.tasks.remove_unassigned_documents',
+        'task': 'frontend_api.tasks.schedules.remove_unassigned_documents',
         'schedule': crontab(hour='01', minute="00")  # 01:00 UTC every day
     },
 }
