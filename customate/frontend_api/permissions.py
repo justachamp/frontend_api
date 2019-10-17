@@ -197,13 +197,11 @@ class HasParticularDocumentPermission(permissions.BasePermission):
         methods = {
             "get_s3_object": self.has_get_permission,
             "post_s3_object": self.has_post_permission,
-            "delete_s3_object": self.has_delete_permission
         }
-        if request.method == "DELETE":
-            return self.has_delete_permission(request)
         method_name = request.query_params.get("method_name")
         try:
             return methods[method_name](request)
+
         except KeyError:
             logger.error("Got unrecognized method name %r" % traceback.format_exc())
             raise ValidationError("Unrecognized method: {}".format(method_name))

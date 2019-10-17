@@ -7,6 +7,7 @@ from django.db import models
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from rest_framework.exceptions import ValidationError
+
 from pathlib import Path
 import boto3
 from botocore.config import Config
@@ -15,6 +16,15 @@ from core.models import Model
 from frontend_api.models.schedule import Schedule
 
 logger = logging.getLogger(__name__)
+
+
+class DocumentManager(models.Manager):
+    def get_queryset(self):
+        """
+        Return only documents with 'is_active' fields equal True
+        :return:
+        """
+        return super().get_queryset().filter(is_active=True)
 
 
 class Document(Model):
@@ -26,6 +36,18 @@ class Document(Model):
                                  on_delete=models.CASCADE, null=True, blank=True)
     user = models.ForeignKey(get_user_model(), related_name="schedule_documents",
                              on_delete=models.CASCADE)
+    is_active = models.BooleanField(default=True)
+
+    objects = DocumentManager()
+
+    def move_to_archive(self) -> None:
+        """
+        Update field 'is_active' set False value.
+        Such documents will be hidden for user.
+        :return:
+        """
+        self.is_active = False
+        self.save()
 
     def save(self, *args, **kwargs):
         # Replace filename with id. Would be as 'c8026b8e-0b61-410b-9e9a-90a6505165e9.jpeg'
@@ -49,7 +71,7 @@ class Document(Model):
                                  config=Config(signature_version="s3v4"))
 
         return s3_client.generate_presigned_url(
-            'delete_object', Params={
+            operation_name, Params={
                 'Bucket': settings.AWS_STORAGE_BUCKET_NAME,
                 'Key': os.path.join(settings.AWS_S3_UPLOAD_DOCUMENTS_PATH, self.key)
             },

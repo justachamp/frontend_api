@@ -20,7 +20,7 @@ from core.fields import FundingSourceType
 from customate.settings import CELERY_BEAT_SCHEDULE, FIRST_PAYMENTS_MIN_EXECUTION_DELAY
 
 from frontend_api.fields import ScheduleStatus, SchedulePurpose
-from frontend_api.tasks import make_overdue_payment, make_payment
+from frontend_api.tasks.payments import make_overdue_payment, make_payment
 from frontend_api.core.client import PaymentApiClient
 from frontend_api.models import Schedule, Document
 
@@ -32,7 +32,7 @@ from frontend_api.permissions import (
     IsNotBlocked,
     IsActive,
     IsAccountVerified,
-    HasParticularSchedulePermission )
+    HasParticularSchedulePermission)
 
 from frontend_api.serializers.schedule import ScheduleSerializer, ScheduleAcceptanceSerializer, UpdateScheduleSerializer
 
@@ -51,7 +51,7 @@ class ScheduleViewSet(views.ModelViewSet):
                           IsSuperAdminOrReadOnly |
                           IsOwnerOrReadOnly |
                           SubUserManageSchedulesPermission,
-                          HasParticularSchedulePermission )
+                          HasParticularSchedulePermission)
 
     # Example: /api/v1/schedules/?page[number]=1&filter[currency.iexact]=EUR&filter[name.icontains]=test&sort=-status
     ordering_fields = ('id', 'name', 'status')
@@ -72,9 +72,9 @@ class ScheduleViewSet(views.ModelViewSet):
 
     def get_queryset(self, *args, **kwargs):
         target_account_ids = self.request.user.get_all_related_account_ids()
-        return Schedule.objects.filter(Q(origin_user__account__id__in=target_account_ids)
-                                       | Q(recipient_user__account__id__in=target_account_ids))
-
+        return Schedule.objects.filter(
+            Q(origin_user__account__id__in=target_account_ids) | Q(recipient_user__account__id__in=target_account_ids)
+        )
 
     @cached_property
     def payment_client(self):
@@ -235,9 +235,11 @@ class ScheduleViewSet(views.ModelViewSet):
         schedule.move_to_status(ScheduleStatus.stopped)
         self.payment_client.cancel_schedule_payments(schedule.id)
 
-    @action(methods=['DELETE'], detail=True, permission_classes=(
-            IsAuthenticated, IsActive, HasParticularDocumentPermission
-    ))
+    @action(methods=['DELETE'],
+            detail=True,
+            permission_classes=(
+                    IsAuthenticated, IsActive, HasParticularDocumentPermission
+            ))
     def documents(self, request, pk):
         """
         The method for removing document objects from database.
@@ -247,13 +249,20 @@ class ScheduleViewSet(views.ModelViewSet):
             logger.error("The 'key' parameter has not been passed %r" % format_exc())
             raise ValidationError("The 'key' parameter is required")
         document = get_object_or_404(Document, key=key)
-        document.delete()
+        document.move_to_archive()
+        logger.info("Document moved to archive. (Username: %s, Schedule id: %s, Document id: %s.)" % (
+            request.user.username, document.schedule.id, document.id
+        ))
         return Response(None, status=204)
 
     @transaction.atomic
-    @action(methods=['POST'], detail=True, permission_classes=(IsAuthenticated, IsActive, IsNotBlocked,
-                                                               IsAccountVerified, IsSuperAdminOrReadOnly | IsOwnerOrReadOnly | SubUserManageSchedulesPermission,
-                                                               HasParticularSchedulePermission)
+    @action(methods=['POST'],
+            detail=True,
+            permission_classes=(
+                    IsAuthenticated, IsActive, IsNotBlocked,
+                    IsAccountVerified,
+                    IsSuperAdminOrReadOnly | IsOwnerOrReadOnly | SubUserManageSchedulesPermission,
+                    HasParticularSchedulePermission)
             )
     def pay_overdue(self, request, pk=None):
         """
@@ -282,9 +291,13 @@ class ScheduleViewSet(views.ModelViewSet):
         return Response(status=status_codes.HTTP_204_NO_CONTENT)
 
     @transaction.atomic
-    @action(methods=['PATCH'], detail=True, permission_classes=(IsAuthenticated, IsActive, IsNotBlocked,
-                                                                IsAccountVerified, IsSuperAdminOrReadOnly | IsOwnerOrReadOnly | SubUserManageSchedulesPermission,
-                                                                HasParticularSchedulePermission)
+    @action(methods=['PATCH'],
+            detail=True,
+            permission_classes=(
+                    IsAuthenticated, IsActive, IsNotBlocked,
+                    IsAccountVerified,
+                    IsSuperAdminOrReadOnly | IsOwnerOrReadOnly | SubUserManageSchedulesPermission,
+                    HasParticularSchedulePermission)
             )
     def acceptance(self, request, pk=None):
         """
@@ -310,16 +323,22 @@ class ScheduleViewSet(views.ModelViewSet):
         funding_source_type = serializer.validated_data.get("funding_source_type", None)
         backup_funding_source_type = serializer.validated_data.get("backup_funding_source_type", None)
 
-        schedule.accept(payment_fee_amount, deposit_fee_amount,
-                        funding_source_id, funding_source_type,
-                        backup_funding_source_id, backup_funding_source_type)
+        schedule.accept(
+            payment_fee_amount, deposit_fee_amount,
+            funding_source_id, funding_source_type,
+            backup_funding_source_id, backup_funding_source_type
+        )
 
         return Response()
 
     @transaction.atomic
-    @action(methods=['PATCH'], detail=True, permission_classes=(IsAuthenticated, IsActive, IsNotBlocked,
-                                                                IsAccountVerified, IsSuperAdminOrReadOnly | IsOwnerOrReadOnly | SubUserManageSchedulesPermission,
-                                                                HasParticularSchedulePermission)
+    @action(methods=['PATCH'],
+            detail=True,
+            permission_classes=(
+                    IsAuthenticated, IsActive, IsNotBlocked,
+                    IsAccountVerified,
+                    IsSuperAdminOrReadOnly | IsOwnerOrReadOnly | SubUserManageSchedulesPermission,
+                    HasParticularSchedulePermission)
             )
     def rejection(self, request, pk=None):
         """

@@ -23,8 +23,6 @@ from frontend_api import helpers
 from frontend_api.tasks import PER_PAGE
 
 logger = logging.getLogger(__name__)
-BLACKLISTED_DAYS_MAX_RETRY_COUNT = 10  # max number of retries to find next non-blacklisted day
-
 
 # NOTE: make sure we use only primitive types in @shared_task signatures, otherwise there will be a need to write our own
 # custom JSON serializer. For more details see here:

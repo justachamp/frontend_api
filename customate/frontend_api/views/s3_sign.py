@@ -22,7 +22,7 @@ from frontend_api.permissions import (
     IsActive,
     IsOwnerOrReadOnly,
     SubUserManageSchedulesPermission,
-    )
+)
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +40,7 @@ class PreSignedUrlView(APIView):
     )
 
     def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.s3_client = boto3.client('s3', aws_access_key_id=settings.AWS_ACCESS_KEY,
                                       aws_secret_access_key=settings.AWS_SECRET_KEY,
                                       region_name=settings.AWS_REGION,
@@ -91,29 +92,11 @@ class PreSignedUrlView(APIView):
         serializer = DocumentSerializer(document, context={"request": request})
         return {"meta": serializer.data, "attributes": response}
 
-    def delete_s3_object(self, request):
-        """
-        The method returns presigned url for further sharing file
-        """
-        key = request.query_params.get("key")
-        if not key:
-            logger.error("The 'key' parameter has not been passed %r" % traceback.format_exc())
-            raise ValidationError("The 'key' field is requred.")
-        document = get_object_or_404(Document, key=key)
-        try:
-            response = self.s3_client.generate_presigned_url(
-                'delete_object',
-                Params={'Bucket': settings.AWS_STORAGE_BUCKET_NAME,
-                        'Key': os.path.join(settings.AWS_S3_UPLOAD_DOCUMENTS_PATH, document.key)},
-                ExpiresIn=settings.AWS_S3_EXPIRE_PRESIGNED_URL)
-            return {"attributes": {"url": response}}
-        except ClientError as e:
-            logger.error("AWS S3 service is unavailable %r" % traceback.format_exc())
-            raise ServiceUnavailable
-
     def get(self, request):
         method_name = request.query_params.get("method_name")
         try:
+            if method_name not in ["get_s3_object", "post_s3_object"]:
+                raise AttributeError()
             response = getattr(self, method_name)(request)
         except AttributeError as e:
             logger.error("Got unrecognized method name %r" % traceback.format_exc())

@@ -15,7 +15,7 @@ from core.models import Model, User
 from core.fields import Currency, PaymentStatusType, FundingSourceType, PayeeType
 from frontend_api.fields import SchedulePurpose, SchedulePeriod, ScheduleStatus, SchedulePaymentType
 from customate.settings import CELERY_BEAT_SCHEDULE
-from frontend_api.models.blacklist import BlacklistDate
+from frontend_api.models.blacklist import BlacklistDate, BLACKLISTED_DAYS_MAX_RETRY_COUNT
 
 logger = logging.getLogger(__name__)
 
@@ -415,7 +415,6 @@ class Schedule(AbstractSchedule):
         retry_count = 1
 
         while True:
-            from frontend_api.tasks import BLACKLISTED_DAYS_MAX_RETRY_COUNT
             if retry_count > BLACKLISTED_DAYS_MAX_RETRY_COUNT:
                 break
 

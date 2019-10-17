@@ -1,7 +1,6 @@
 from django.core.management.base import BaseCommand, CommandError
-from django.db import transaction
 from uuid import UUID
-from frontend_api.tasks import make_payment
+from frontend_api.tasks.payments import make_payment
 from frontend_api.models.schedule import Schedule
 
 

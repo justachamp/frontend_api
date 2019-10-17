@@ -5,6 +5,8 @@ from django.utils.translation import gettext_lazy as _
 
 logger = logging.getLogger(__name__)
 
+BLACKLISTED_DAYS_MAX_RETRY_COUNT = 10  # max number of retries to find next non-blacklisted day
+
 
 class BlacklistDate(Model):
     date = models.DateField(unique=True)
