@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import traceback
 import logging
+import os
 
 from django.db import models
 from django.conf import settings
@@ -50,6 +51,6 @@ class Document(Model):
         return s3_client.generate_presigned_url(
             'delete_object', Params={
                 'Bucket': settings.AWS_STORAGE_BUCKET_NAME,
-                'Key': self.key
+                'Key': os.path.join(settings.AWS_S3_UPLOAD_DOCUMENTS_PATH, self.key)
             },
             ExpiresIn=settings.AWS_S3_EXPIRE_PRESIGNED_URL)

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import logging
 import traceback
+import os
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -57,7 +58,7 @@ class PreSignedUrlView(APIView):
             response = self.s3_client.generate_presigned_url(
                 'get_object',
                 Params={'Bucket': settings.AWS_STORAGE_BUCKET_NAME,
-                        'Key': document.key},
+                        'Key': os.path.join(settings.AWS_S3_UPLOAD_DOCUMENTS_PATH, document.key)},
                 ExpiresIn=settings.AWS_S3_EXPIRE_PRESIGNED_URL)
             return {"attributes": {"url": response}}
         except ClientError as e:
@@ -82,7 +83,7 @@ class PreSignedUrlView(APIView):
         try:
             response = self.s3_client.generate_presigned_post(
                 settings.AWS_STORAGE_BUCKET_NAME,
-                document.key,
+                os.path.join(settings.AWS_S3_UPLOAD_DOCUMENTS_PATH, document.key),
                 ExpiresIn=settings.AWS_S3_EXPIRE_PRESIGNED_URL)
         except ClientError as e:
             logger.error("AWS S3 service is unavailable %r" % traceback.format_exc())
@@ -103,7 +104,7 @@ class PreSignedUrlView(APIView):
             response = self.s3_client.generate_presigned_url(
                 'delete_object',
                 Params={'Bucket': settings.AWS_STORAGE_BUCKET_NAME,
-                        'Key': document.key},
+                        'Key': os.path.join(settings.AWS_S3_UPLOAD_DOCUMENTS_PATH, document.key)},
                 ExpiresIn=settings.AWS_S3_EXPIRE_PRESIGNED_URL)
             return {"attributes": {"url": response}}
         except ClientError as e:
