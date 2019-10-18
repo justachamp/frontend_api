@@ -16,10 +16,14 @@ class RequestDetailsLoggingMiddleware:
         # the view (and later middleware) are called.
         logging.init_shared_extra()
 
-        logger.info("Request details: url=%s, method=%s", request.path, request.method, extra={'body': request.body.decode("utf-8")})
+        logger.info("Request details: url=%s, method=%s", request.path, request.method,
+                    extra={'body': request.body.decode("utf-8")})
+
         response = self.get_response(request)
+
         if self._should_log_response(request, response):
-            logger.info("Response details: status=%s", response.status_code, extra={'body': response.content.decode('utf-8')})
+            logger.info("Response details: status=%s", response.status_code,
+                        extra={'body': response.content.decode('utf-8') if response.content else None})
 
         # Code to be executed for each request/response after
         # the view is called.
