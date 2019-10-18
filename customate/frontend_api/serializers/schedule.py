@@ -122,7 +122,7 @@ class BaseScheduleSerializer(HyperlinkedModelSerializer):
             })
 
     def assign_uploaded_documents_to_schedule(self, documents):
-        Document.objects.filter(id__in=[item["id"] for item in documents]).update(schedule=self.instance)
+        Document.objects.filter(key__in=[item["key"] for item in documents]).update(schedule=self.instance)
 
 
 class ScheduleSerializer(BaseScheduleSerializer):
