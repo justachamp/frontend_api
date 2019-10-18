@@ -95,7 +95,9 @@ def make_payment(user_id: str, payment_account_id: str, schedule_id: str, curren
         if schedule_payment:
             # We don't check or run payment with backup source here, because we have a severe problem that probably
             # will prevent next payment's successful execution
-            schedule_payment.update(payment_status=PaymentStatusType.FAILED)
+            schedule_payment.payment_status = PaymentStatusType.FAILED
+            schedule_payment.save(update_fields=['payment_status'])
+
         Schedule.objects.get(id=schedule_id) \
             .move_to_status(ScheduleStatus.overdue)
 
