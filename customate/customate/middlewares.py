@@ -23,7 +23,10 @@ class RequestDetailsLoggingMiddleware:
 
         if self._should_log_response(request, response):
             logger.info("Response details: status=%s", response.status_code,
-                        extra={'body': response.content.decode('utf-8') if response.content else None})
+                        extra={'body': response.content.decode('utf-8')
+                                    if response.content and hasattr(response.content, 'decode') and callable(response.content.decode)
+                                    else None
+                               })
 
         # Code to be executed for each request/response after
         # the view is called.
