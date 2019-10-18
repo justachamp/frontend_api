@@ -251,7 +251,7 @@ class ScheduleViewSet(views.ModelViewSet):
         document = get_object_or_404(Document, key=key)
         document.move_to_archive()
         logger.info("Document moved to archive. (Username: %s, Schedule id: %s, Document id: %s.)" % (
-            request.user.username, document.schedule.id, document.id
+            request.user.username, document.schedule.id if document.schedule else None, document.id
         ))
         return Response(None, status=204)
 

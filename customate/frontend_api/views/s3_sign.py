@@ -56,11 +56,7 @@ class PreSignedUrlView(APIView):
             raise ValidationError("The 'key' field is requred.")
         document = get_object_or_404(Document, key=key)
         try:
-            response = self.s3_client.generate_presigned_url(
-                'get_object',
-                Params={'Bucket': settings.AWS_STORAGE_BUCKET_NAME,
-                        'Key': os.path.join(settings.AWS_S3_UPLOAD_DOCUMENTS_PATH, document.key)},
-                ExpiresIn=settings.AWS_S3_PRESIGNED_URL_EXPIRES_IN)
+            response = document.generate_s3_presigned_url(operation_name="get_object")
             return {"attributes": {"url": response}}
         except ClientError as e:
             logger.error("AWS S3 service is unailable %r" % traceback.format_exc())
