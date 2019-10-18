@@ -9,10 +9,11 @@ from botocore.exceptions import ClientError
 from requests import delete as delete_http_request
 from requests.exceptions import RequestException
 from django.core.paginator import Paginator
+from django.conf import settings
 
 from frontend_api.models import Schedule, Document
 from frontend_api.fields import ScheduleStatus, SchedulePurpose
-from frontend_api.tasks import PER_PAGE
+
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +39,7 @@ def process_unaccepted_schedules():
         start_date__lt=now.datetime)
     unaccepted_schedules = schedules_with_deposit_payment_date | schedules_without_deposit_payment_date
 
-    paginator = Paginator(unaccepted_schedules, PER_PAGE)
+    paginator = Paginator(unaccepted_schedules, settings.CELERY_BEAT_PER_PAGE_OBJECTS)
     for page in paginator.page_range:
         # Update statuses via .move_to_status()
         # WARN: potential generation of 1-N SQL UPDATE command here
@@ -56,7 +57,7 @@ def remove_unassigned_documents():
     # Documents without related schedule which created more than hour ago
     outdated_documents = Document.objects.filter(schedule=None, created_at__lte=hour_ago, key__isnull=False)
 
-    paginator = Paginator(outdated_documents, PER_PAGE)
+    paginator = Paginator(outdated_documents, settings.CELERY_BEAT_PER_PAGE_OBJECTS)
     for page in paginator.page_range:
         for document in paginator.page(page).object_list:  # type: Document
             # Get presigned url for deleting document

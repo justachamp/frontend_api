@@ -252,6 +252,7 @@ if DEBUG:
         'rest_framework.renderers.BrowsableAPIRenderer',
     )
 
+
 REST_FRAMEWORK = {
     'PAGE_SIZE': 10,
     # need custom handler
@@ -450,6 +451,7 @@ CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
+CELERY_BEAT_PER_PAGE_OBJECTS = 5
 
 # This is for periodic execution of tasks
 # For more info: http://docs.celeryproject.org/en/latest/userguide/periodic-tasks.html#crontab-schedules

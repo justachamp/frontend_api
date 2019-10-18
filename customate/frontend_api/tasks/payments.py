@@ -8,6 +8,7 @@ from celery import shared_task
 import arrow
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.paginator import Paginator
+from django.conf import settings
 
 from core.logger import RequestIdGenerator
 from core.models import User
@@ -20,7 +21,7 @@ from frontend_api.models.schedule import SchedulePayments, LastSchedulePayments
 from frontend_api.core import client
 from frontend_api.fields import ScheduleStatus
 from frontend_api import helpers
-from frontend_api.tasks import PER_PAGE
+
 
 logger = logging.getLogger(__name__)
 
@@ -267,7 +268,7 @@ def process_all_deposit_payments(scheduled_date):
         scheduled_date=scheduled_date,
         status__in=Schedule.PROCESSABLE_SCHEDULE_STATUSES
     ).order_by("created_at")
-    paginator = Paginator(payments, PER_PAGE)
+    paginator = Paginator(payments, settings.CELERY_BEAT_PER_PAGE_OBJECTS)
     for p in paginator.page_range:
         for s in paginator.page(p):
             s = s  # type: DepositsSchedule
@@ -332,7 +333,7 @@ def process_all_one_time_payments(scheduled_date):
         scheduled_date=scheduled_date,
         status__in=Schedule.PROCESSABLE_SCHEDULE_STATUSES
     ).order_by("created_at")
-    paginator = Paginator(payments, PER_PAGE)
+    paginator = Paginator(payments, settings.CELERY_BEAT_PER_PAGE_OBJECTS)
     for p in paginator.page_range:
         for s in paginator.page(p):
             submit_scheduled_payment(s, request_id)
@@ -353,7 +354,7 @@ def process_all_weekly_payments(scheduled_date):
         scheduled_date=scheduled_date,
         status__in=Schedule.PROCESSABLE_SCHEDULE_STATUSES
     ).order_by("created_at")
-    paginator = Paginator(payments, PER_PAGE)
+    paginator = Paginator(payments, settings.CELERY_BEAT_PER_PAGE_OBJECTS)
     for p in paginator.page_range:
         for s in paginator.page(p):
             submit_scheduled_payment(s, request_id)
@@ -374,7 +375,7 @@ def process_all_monthly_payments(scheduled_date):
         scheduled_date=scheduled_date,
         status__in=Schedule.PROCESSABLE_SCHEDULE_STATUSES
     ).order_by("created_at")
-    paginator = Paginator(payments, PER_PAGE)
+    paginator = Paginator(payments, settings.CELERY_BEAT_PER_PAGE_OBJECTS)
     for p in paginator.page_range:
         for s in paginator.page(p):
             submit_scheduled_payment(s, request_id)
@@ -395,7 +396,7 @@ def process_all_quarterly_payments(scheduled_date):
         scheduled_date=scheduled_date,
         status__in=Schedule.PROCESSABLE_SCHEDULE_STATUSES
     ).order_by("created_at")
-    paginator = Paginator(payments, PER_PAGE)
+    paginator = Paginator(payments, settings.CELERY_BEAT_PER_PAGE_OBJECTS)
     for p in paginator.page_range:
         for s in paginator.page(p):
             submit_scheduled_payment(s, request_id)
@@ -416,7 +417,7 @@ def process_all_yearly_payments(scheduled_date):
         scheduled_date=scheduled_date,
         status__in=Schedule.PROCESSABLE_SCHEDULE_STATUSES
     ).order_by("created_at")
-    paginator = Paginator(payments, PER_PAGE)
+    paginator = Paginator(payments, settings.CELERY_BEAT_PER_PAGE_OBJECTS)
     for p in paginator.page_range:
         for s in paginator.page(p):
             submit_scheduled_payment(s, request_id)
