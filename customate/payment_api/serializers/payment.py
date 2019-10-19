@@ -16,7 +16,7 @@ from payment_api.serializers import (
     ExternalResourceRelatedField
 )
 from frontend_api import helpers
-from frontend_api import tasks
+from frontend_api.tasks.notifiers import send_notification_email, send_notification_sms
 from core.fields import PaymentStatusType
 
 
@@ -86,10 +86,10 @@ class LoadFundsSerializer(ResourceSerializer):
                 context = {'original_amount': amount / 100}
                 message = helpers.get_ses_email_payload(tpl_filename='notifications/email_transaction_failed.html',
                                                         tpl_context=context)
-                tasks.send_notification_email.delay(to_address=email, message=message)
+                send_notification_email.delay(to_address=email, message=message)
             for phone_number in funds_senders_phones:
                 message = "Transaction failed."
-                tasks.send_notification_sms.delay(to_phone_number=phone_number, message=message)
+                send_notification_sms.delay(to_phone_number=phone_number, message=message)
 
         # Handle "SUCCESS transaction" case
         if status == PaymentStatusType.SUCCESS.value:
@@ -99,19 +99,19 @@ class LoadFundsSerializer(ResourceSerializer):
                 context = {'original_amount': amount / 100}
                 message = helpers.get_ses_email_payload(tpl_filename='notifications/email_senders_balance_updated.html',
                                                         tpl_context=context)
-                tasks.send_notification_email.delay(to_address=email, message=message)
+                send_notification_email.delay(to_address=email, message=message)
             for phone_number in [item for item in funds_senders_phones if item not in funds_recipients_phones]:
                 message = 'Your balance has changed.'
-                tasks.send_notification_sms.delay(to_phone_number=phone_number, message=message)
+                send_notification_sms.delay(to_phone_number=phone_number, message=message)
             # Notify funds recipients
             for email in funds_recipients_emails:
                 context = {'original_amount': amount / 100}
                 message = helpers.get_ses_email_payload(tpl_filename='notifications/email_recipients_balance_updated.html',
                                                         tpl_context=context)
-                tasks.send_notification_email.delay(to_address=email, message=message)
+                send_notification_email.delay(to_address=email, message=message)
             for phone_number in funds_recipients_phones:
                 message = 'Your balance has changed.'
-                tasks.send_notification_sms.delay(to_phone_number=phone_number, message=message)
+                send_notification_sms.delay(to_phone_number=phone_number, message=message)
 
 
     def create(self, validated_data):
