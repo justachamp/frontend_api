@@ -171,6 +171,8 @@ def transaction_failed(schedule: Schedule, payment_info: Dict) -> None:
     :param payment_info: data from payment service.
     :return:
     """
+    logger.info("Start notification. (Action: %s, Schedule: %s, Payment info: %s)"
+                % ("transaction_failed", schedule.id, payment_info))
     funds_sender = schedule.origin_user
     account_id = payment_info.get("account_id")
     logger.info("Schedule id: %s. Payment information: %s" % (schedule.id, payment_info))
@@ -194,6 +196,7 @@ def transaction_failed(schedule: Schedule, payment_info: Dict) -> None:
         error_message = payment_info.get("error_message") or 'unknown'
         schedule_details = get_schedule_details(user=funds_sender, schedule=schedule)
         funds_senders_emails = get_funds_senders_emails(funds_sender=funds_sender)
+        logger.info("Send email notifications to funds senders: %s" % ", ".join(funds_senders_emails))
         for email in funds_senders_emails:
             logger.info("Send email to %s: " % email)
             email_context = {"senders_closing_balance": closing_balance, **schedule_details}
@@ -201,11 +204,11 @@ def transaction_failed(schedule: Schedule, payment_info: Dict) -> None:
                                             tpl_context=email_context)
             # send email
             send_notification_email.delay(to_address=email, message=message)
+            logger.info("Sent email notification to %s." % email)
 
         # Extract funds senders and send sms notifications about failed transaction
         funds_senders_phones = get_funds_senders_phones(funds_sender=funds_sender)
-        logger.info("Transaction failed. Schedule id: %s. Senders phones: %s" %
-                    (schedule.id, ", ".join(funds_senders_phones)))
+        logger.info("Send sms notifications to funds senders: %s" % ", ".join(funds_senders_phones))
         for phone_number in funds_senders_phones:
             logger.info("Send sms to %s" % phone_number)
             message = message_tpl.format(
@@ -218,6 +221,7 @@ def transaction_failed(schedule: Schedule, payment_info: Dict) -> None:
             )
             # send sms
             send_notification_sms.delay(to_phone_number=phone_number, message=message)
+            logger.info("Sent sms notification to %s." % phone_number)
 
 
 def balance_changed(schedule: Schedule, payment_info: Dict) -> None:
@@ -227,11 +231,12 @@ def balance_changed(schedule: Schedule, payment_info: Dict) -> None:
     :param payment_info: data from payment service.
     :return:
     """
+    logger.info("Start notification. (Action: %s, Schedule: %s, Payment info: %s)"
+                % ("balance_changed", schedule.id, payment_info))
     funds_sender = schedule.origin_user
     funds_recipient = schedule.recipient_user if schedule.recipient_user \
         else schedule.payee_recipient_email
     account_id = payment_info.get("account_id")
-    logger.info("Schedule id: %s. Payment information: %s" % (schedule.id, payment_info))
 
     try:
         account = Account.objects.get(id=account_id)
@@ -251,6 +256,7 @@ def balance_changed(schedule: Schedule, payment_info: Dict) -> None:
         closing_balance = payment_info.get("closing_balance")
         schedule_details = get_schedule_details(user=funds_sender, schedule=schedule)
         funds_senders_emails = get_funds_senders_emails(funds_sender=funds_sender)
+        logger.info("Send email notifications to funds senders: %s" % ", ".join(funds_senders_emails))
         for email in funds_senders_emails:
             email_context_for_senders = {"senders_closing_balance": closing_balance, **schedule_details}
             message = get_ses_email_payload(
@@ -259,9 +265,11 @@ def balance_changed(schedule: Schedule, payment_info: Dict) -> None:
             )
             # Send email
             send_notification_email.delay(to_address=email, message=message)
+            logger.info("Sent email notification to %s." % email)
 
         funds_senders_phones = get_funds_senders_phones(funds_sender=funds_sender)
         for phone_number in funds_senders_phones:
+            logger.info("Send sms notifications to funds senders: %s" % ", ".join(funds_senders_phones))
             message = message_tpl.format(
                 amount=prettify_number(schedule_details['amount']),
                 cur_symbol=schedule_details["currency"].symbol,
@@ -271,6 +279,8 @@ def balance_changed(schedule: Schedule, payment_info: Dict) -> None:
             )
             # send SMS
             send_notification_sms.delay(to_phone_number=phone_number, message=message)
+            logger.info("Sent sms notification to %s." % phone_number)
+
 
     # Send notification for funds RECIPIENTS.
     if isinstance(funds_recipient, str):
@@ -288,6 +298,7 @@ def balance_changed(schedule: Schedule, payment_info: Dict) -> None:
         closing_balance = payment_info.get("closing_balance")
         funds_recipients_emails = get_funds_recipients_emails(funds_recipient=funds_recipient)
         for email in funds_recipients_emails:
+            logger.info("Send email notifications to funds recipients: %s" % ", ".join(funds_recipients_emails))
             email_context_for_recipients = {'recipients_closing_balance': closing_balance, **schedule_details}
             message = get_ses_email_payload(
                 tpl_filename='notifications/email_recipients_balance_updated.html',
@@ -295,8 +306,10 @@ def balance_changed(schedule: Schedule, payment_info: Dict) -> None:
             )
             # Send email
             send_notification_email.delay(to_address=email, message=message)
+            logger.info("Sent email notification to %s." % email)
 
         funds_recipients_phones = get_funds_recipients_phones(funds_recipient=funds_recipient)
+        logger.info("Send sms notifications to funds recipients: %s" % ", ".join(funds_recipients_phones))
         for phone_number in funds_recipients_phones:
             message = message_tpl.format(
                 amount=prettify_number(schedule_details['amount']),
@@ -307,3 +320,4 @@ def balance_changed(schedule: Schedule, payment_info: Dict) -> None:
             )
             # Send SMS
             send_notification_sms.delay(to_phone_number=phone_number, message=message)
+            logger.info("Sent email notification to %s." % phone_number)
