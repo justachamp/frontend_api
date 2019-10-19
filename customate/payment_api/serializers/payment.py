@@ -84,7 +84,7 @@ class LoadFundsSerializer(ResourceSerializer):
         if status == PaymentStatusType.FAILED.value:
             for email in funds_senders_emails:
                 context = {'original_amount': amount / 100}
-                message = signals.get_ses_email_payload(tpl_filename='notifications/email_transaction_failed.html',
+                message = helpers.get_ses_email_payload(tpl_filename='notifications/email_transaction_failed.html',
                                                         tpl_context=context)
                 tasks.send_notification_email.delay(to_address=email, message=message)
             for phone_number in funds_senders_phones:
