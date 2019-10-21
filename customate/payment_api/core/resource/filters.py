@@ -92,7 +92,13 @@ class RQLFilterSet(RQLFilterMixin):
 
     def _is_filter_already_set(self, existing_filter_data, new_filter_obj):
         filter_key = list(new_filter_obj.keys())[0]
-        return existing_filter_data.get(filter_key, None) is not None
+
+        # We need to have a chance to override incoming filter value (for example, to make sure that user didn't
+        # query other account's data)
+        if isinstance(new_filter_obj.get(filter_key), dict) and new_filter_obj.get(filter_key).get('force_override_filter'):
+            return False
+        else:
+            return existing_filter_data.get(filter_key, None) is not None
 
     @property
     def qs(self):

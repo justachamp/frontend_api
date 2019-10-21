@@ -47,7 +47,7 @@ class FundingSourceViewSet(ResourceViewSet):
     class Meta:
         filters = [
             {'active__exact': 1},
-            {'account__id__exact': {'method': 'check_payment_account_id'}},
+            {'account__id__exact': {'method': 'check_payment_account_id', 'force_override_filter': True}},
             {'currency__not_in': 'DK'}
         ]
 

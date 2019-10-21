@@ -48,7 +48,7 @@ class WalletViewSet(ResourceViewSet):
 
     class Meta:
         filters = [
-            {'account__id__exact': {'method': 'check_payment_account_id'}},
+            {'account__id__exact': {'method': 'check_payment_account_id', 'force_override_filter': True}},
             {'currency__not_in': 'DK'},
         ]
 
