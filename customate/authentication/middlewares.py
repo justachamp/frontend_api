@@ -34,9 +34,8 @@ class UserActivityMonitoringMiddleware:
             return
 
         # Don't check last activity if it's some type of sign-in request (that returns "access_token")
-        if isinstance(response.data, Iterable):
-            if 'access_token' in response.data:
-                return
+        if hasattr(response, 'data') and isinstance(response.data, Iterable) and 'access_token' in response.data:
+            return
 
         # Don't sign out user if he is still in onboarding step
         if not request.user.contact_info_once_verified:
