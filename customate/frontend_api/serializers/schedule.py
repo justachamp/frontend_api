@@ -71,13 +71,18 @@ class BaseScheduleSerializer(HyperlinkedModelSerializer):
                 'funding_source_type': self._get_and_validate_funding_source_type(fs_details)
             })
 
-        if data.get('backup_funding_source_id'):
-            fs_details = self.payment_client.get_funding_source_details(data.get('backup_funding_source_id'))
-            self._check_specific_funding_source(data, fs_details, 'backup_funding_source_id')
+        if 'backup_funding_source_id' in data:
+            backup_funding_source_type = None
+            if data.get('backup_funding_source_id'):
+                fs_details = self.payment_client.get_funding_source_details(data.get('backup_funding_source_id'))
+                self._check_specific_funding_source(data, fs_details, 'backup_funding_source_id')
+                backup_funding_source_type = self._get_and_validate_backup_funding_source_type(fs_details)
 
             data.update({
-                'backup_funding_source_type': self._get_and_validate_backup_funding_source_type(fs_details)
+                'backup_funding_source_type': backup_funding_source_type
             })
+
+
 
     def _get_and_validate_funding_source_type(self, fs_details: FundingSourceDetails):
         if fs_details and fs_details.type is not None:
@@ -295,11 +300,11 @@ class UpdateScheduleSerializer(BaseScheduleSerializer):
     payment_fee_amount = IntegerField(default=0, required=False)
     deposit_amount = IntegerField(required=False)
     deposit_fee_amount = IntegerField(default=0, required=False)
-    additional_information = CharField(required=False)
+    additional_information = CharField(required=False, allow_blank=True, allow_null=True)
     funding_source_id = UUIDField(required=True)
     funding_source_type = EnumField(enum=FundingSourceType, required=False)
-    backup_funding_source_id = UUIDField(required=False)
-    backup_funding_source_type = EnumField(enum=FundingSourceType, required=False)
+    backup_funding_source_id = UUIDField(required=False, allow_null=True)
+    backup_funding_source_type = EnumField(enum=FundingSourceType, required=False, allow_null=True)
     documents = SerializerField(resource=DocumentSerializer, many=True, required=False)
 
     class Meta:
