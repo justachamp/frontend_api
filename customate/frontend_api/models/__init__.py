@@ -24,6 +24,7 @@ class Company(Model):
     registration_business_name = models.CharField(max_length=50, blank=True)
     registration_number = models.CharField(max_length=8, blank=True)
     vat_number = models.CharField(max_length=12, blank=True)
+    business_website_url = models.URLField(max_length=400, blank=True)
     address = models.OneToOneField(
         Address,
         on_delete=models.CASCADE,
