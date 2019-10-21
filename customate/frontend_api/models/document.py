@@ -54,7 +54,7 @@ class Document(Model):
         self.key = self.filename.replace(Path(self.filename).stem, str(self.id))
         # Check documents number limit
         if self.schedule:
-            if self.schedule.documents.count() >= settings.DOCUMENTS_MAX_LIMIT_PER_SCHEDULE:
+            if self.schedule.documents.filter(is_active=True).count() > settings.DOCUMENTS_MAX_LIMIT_PER_SCHEDULE:
                 logger.error("Maximum documents per schedule has reached %r" % traceback.format_exc())
                 raise ValidationError('Maximum documents limit reached')
         return super().save(*args, **kwargs)
