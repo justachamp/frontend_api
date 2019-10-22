@@ -14,7 +14,6 @@ from django.conf import settings
 from frontend_api.models import Schedule, Document
 from frontend_api.fields import ScheduleStatus, SchedulePurpose
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -43,7 +42,8 @@ def process_unaccepted_schedules():
     for page in paginator.page_range:
         # Update statuses via .move_to_status()
         # WARN: potential generation of 1-N SQL UPDATE command here
-        map(lambda schedule: schedule.move_to_status(ScheduleStatus.rejected), paginator.page(page).object_list)
+        for schedule in paginator.page(page).object_list:
+            schedule.move_to_status(ScheduleStatus.rejected)
 
 
 @shared_task
