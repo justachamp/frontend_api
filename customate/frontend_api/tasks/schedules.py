@@ -32,12 +32,11 @@ def process_unaccepted_schedules():
     # Filter opened receive funds schedules by deposit_payment_date (if not None) or start_date
     schedules_with_deposit_payment_date = opened_receive_funds_schedules.filter(
         deposit_payment_date__isnull=False).filter(
-        deposit_payment_date__lte=now.datetime)
+        deposit_payment_date__lte=now.datetime.date())
     schedules_without_deposit_payment_date = opened_receive_funds_schedules.filter(
         deposit_payment_date__isnull=True,
-        start_date__lte=now.datetime)
+        start_date__lte=now.datetime.date())
     unaccepted_schedules = schedules_with_deposit_payment_date | schedules_without_deposit_payment_date
-
     paginator = Paginator(unaccepted_schedules, settings.CELERY_BEAT_PER_PAGE_OBJECTS)
     for page in paginator.page_range:
         # Update statuses via .move_to_status()
