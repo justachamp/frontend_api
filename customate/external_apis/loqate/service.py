@@ -3,6 +3,7 @@ import requests
 import logging
 from typing import List, Dict
 
+from core.logger import Timer
 from external_apis.loqate.settings import LOQATE_SERVICE_KEY
 from customate.settings import COUNTRIES_AVAILABLE
 
@@ -14,6 +15,8 @@ BASE_HEADERS = {
 }
 
 logger = logging.getLogger(__name__)
+
+SERVICE = 'Loqate'
 
 
 class LoqateError(Exception):
@@ -176,7 +179,14 @@ def retrieve_address(params):
     :param params:
     :return:
     """
-    r = make_request(url=BASE_URL.format("Retrieve"), params=params)
-    items = r.json().get('Items')
+    url = BASE_URL.format("Retrieve")
+    logger.info("Request to Loqate service for retrieving address (url=%r, params=%r)" % (url, params),
+                extra={'url': url, 'params': params, 'service': SERVICE})
+    timer = Timer()
+    response = make_request(url=url, params=params)
+    logger.info("Response from Loqate for retrieving address",
+                extra={'response': response, 'duration': timer.duration(), 'service': SERVICE})
+
+    items = response.json().get('Items')
     _check_errors(items)
     return items

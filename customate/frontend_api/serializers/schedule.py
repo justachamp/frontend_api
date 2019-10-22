@@ -245,7 +245,7 @@ class ScheduleSerializer(BaseScheduleSerializer):
         :return: validated res
         :rtype: OrderedDict
         """
-        logger.info("VALIDATE, res=%r" % res)
+        logger.info(f"Validating data for schedule's creation", extra={'scheduleDict': res})
 
         try:
             if res.get('start_date'):
@@ -351,7 +351,7 @@ class UpdateScheduleSerializer(BaseScheduleSerializer):
         :return: validated res
         :rtype: OrderedDict
         """
-        logger.info("Validating data for schedule's update (data=%r)" % res)
+        logger.info(f"Validating data for schedule's update (id={res.get('id')})", extra={'scheduleDict': res})
 
         try:
             if int(res["payment_amount"]) < 0:

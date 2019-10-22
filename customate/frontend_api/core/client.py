@@ -143,7 +143,7 @@ class PaymentApiClient:
 
     def get_payee_details(self, payee_id):
         try:
-            logger.info("Getting details for payee_id=%r" % payee_id)
+            logger.info("Getting payee details (id=%r)" % payee_id)
             service = PayeeRequestResourceService(resource=self)
             resource = service.get_payee_details(payee_id)
 
@@ -157,15 +157,15 @@ class PaymentApiClient:
                 payment_account_id=resource.account.id
             )
         except KeyError as e:
-            logger.error("Key error occurred during payee processing (mapping changed?): %r" % format_exc())
+            logger.error("Key error occurred during payee (id=%r) processing (mapping changed?): %r" % (payee_id, format_exc()))
             raise e
         except Exception as e:
-            logger.error("Unable to get payee details (payee_id=%r): %r" % (payee_id, format_exc()))
+            logger.error("Receiving payee details (id=%r) thrown an exception: %r" % (payee_id, format_exc()))
             raise e
 
     def get_funding_source_details(self, source_id) -> FundingSourceDetails:
         try:
-            logger.debug(f'get_funding_source_details started')
+            logger.info("Getting funding source details (id=%r)" % source_id)
             service = FundingSourceRequestResourceService(resource=self)
             resource = service.get_source_details(source_id)
 
@@ -175,6 +175,9 @@ class PaymentApiClient:
                 currency=resource.currency,
                 payment_account_id=resource.account.id
             )
+        except KeyError as e:
+            logger.error("Key error occurred during funding source (id=%r) processing (mapping changed?): %r" % (source_id, format_exc()))
+            raise e
         except Exception as e:
-            logger.error("Receiving funding source details thrown an exception: %r" % format_exc())
+            logger.error("Receiving funding source details (id=%r) thrown an exception: %r" % (source_id, format_exc()))
             raise e

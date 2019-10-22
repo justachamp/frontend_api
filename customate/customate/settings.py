@@ -163,6 +163,7 @@ logging.config.dictConfig({
             'propagate': False,
         },
 
+        # DB queries
         'django.db.backends': {
             'handlers': ['console'],
             'level': 'ERROR',

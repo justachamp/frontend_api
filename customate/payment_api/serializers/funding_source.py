@@ -110,7 +110,7 @@ class FundingSourceSerializer(BaseFundingSourceSerializer):
         :return: validated res
         :rtype: OrderedDict
         """
-        logger.info("VALIDATE, res=%r" % res)
+        logger.info(f"Validating funding source (id={res.get('id')})", extra={'fundingSourceDict': res})
         try:
             # res = self.direct_debit_gbg_validation(res)
             pass

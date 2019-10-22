@@ -17,22 +17,30 @@ class RequestDetailsLoggingMiddleware:
         logging.init_shared_extra()
 
         logger.info("Request details: url=%s, method=%s", request.path, request.method,
-                    extra={'body': request.body.decode("utf-8")})
+                    extra={'body': request.body.decode("utf-8"),
+                           'query_params': request.GET.copy(),
+                           'path': request.path,
+                           'method': request.method})
 
         response = self.get_response(request)
 
-        if self._should_log_response(request, response):
-            logger.info("Response details: status=%s", response.status_code,
-                        extra={'body': response.content.decode('utf-8')
-                                    if response.content and hasattr(response.content, 'decode') and callable(response.content.decode)
-                                    else None
-                               })
+        response_body = None
+        if self._should_log_response_body(request, response):
+            response_body = response.content.decode('utf-8') \
+                if response.content and hasattr(response.content, 'decode') and callable(response.content.decode) \
+                else None
+
+        logger.info("Response details: status_code=%s", response.status_code,
+                    extra={'status_code': response.status_code,
+                           'body': response_body,
+                           'logGlobalDuration': True
+                           })
 
         # Code to be executed for each request/response after
         # the view is called.
         return response
 
-    def _should_log_response(self, request, response):
+    def _should_log_response_body(self, request, response):
         """
         Don't want to log massive, not really interesting response related information
         """

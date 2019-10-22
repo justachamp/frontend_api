@@ -33,6 +33,7 @@ https://logback.qos.ch/manual/mdc.html
 https://gist.github.com/mdaniel/8347533
 
 Use examples:
+1) General extra parameters
 logger.info("Started schedule processing", extra={'scheduleId': schedule.id})
 
 will produce:
@@ -54,6 +55,12 @@ will produce:
     "threadName": "Thread-2"
   }
 }
+
+2) "logGlobalDuration" parameter will make sure that we add "duration" property (time from the start of request 
+processing) to log record 
+
+logger.info("Response details ...", extra={'logGlobalDuration': True})
+
 """
 logging._shared_extra = threading.local()
 
@@ -61,7 +68,7 @@ logging._shared_extra = threading.local()
 class CustomateLogger(logging.Logger):
     def __init__(self, *args, **kwargs):
         super(CustomateLogger, self).__init__(*args, **kwargs)
-        self.addFilter(SensitiveDataObfuscator())
+        self.addFilter(SensitiveDataObfuscatorFilter())
 
     def makeRecord(self, name, level, fn, lno, msg, args, exc_info, func=None, extra=None, sinfo=None):
         if extra is not None:
@@ -95,7 +102,7 @@ class CustomateJsonFormatter(jsonlogger.JsonFormatter):
         # so there is a risk to lost this information in log record
         shared_extra = logging.get_shared_extra()
         if len(shared_extra) > 0:
-            current_data = log_record.get('data', {})
+            current_data = {'data': copy.deepcopy(log_record.get('data', {}))}
             shared_extra = copy.deepcopy(shared_extra)
             shared_extra = {**shared_extra, **current_data}
             log_record.update(shared_extra)
@@ -109,9 +116,12 @@ class CustomateJsonFormatter(jsonlogger.JsonFormatter):
         else:
             log_record['level'] = record.levelname
 
-        if log_record.get('startProcessing') and not log_record.get('duration'):
-            log_record['duration'] = int((arrow.utcnow() - log_record.get('startProcessing')).microseconds / 1000)
-            del(log_record['startProcessing'])
+        if log_record.get('startProcessingTimer'):
+            if not log_record.get('duration') and log_record.get('data', {}).get('logGlobalDuration'):
+                log_record['duration'] = log_record['startProcessingTimer'].duration()
+                del(log_record['data']['logGlobalDuration'])
+
+            del(log_record['startProcessingTimer'])
 
         log_record['app'] = {
             'name': GENERAL_APP_NAME,
@@ -132,7 +142,7 @@ class CustomateJsonFormatter(jsonlogger.JsonFormatter):
                 del(log_record[key])
 
 
-class SensitiveDataObfuscator(logging.Filter):
+class SensitiveDataObfuscatorFilter(logging.Filter):
     _placeholder = '***'
     _patterns = {
         # IBANs, for example:
@@ -181,6 +191,17 @@ class RequestIdGenerator:
         return str(uuid4())
 
 
+class Timer:
+    def __init__(self):
+        self._start = arrow.utcnow()
+
+    def __str__(self):
+        return self._start
+
+    def duration(self):
+        return int((arrow.utcnow() - self._start).microseconds / 1000)
+
+
 # TODO: rewrite 'shared_extra' stuff based on custom filters
 # https://opensource.com/article/17/9/python-logging#Adding%20further%20context
 # REASON: this is more explicit, than adding non-standard magic methods to `logging`
@@ -197,7 +218,7 @@ del set_shared_extra
 def init_shared_extra(request_id=None):
     logging.set_shared_extra({
         'requestId': request_id if request_id else RequestIdGenerator.get(),
-        'startProcessing': arrow.utcnow()
+        'startProcessingTimer': Timer()
     })
 
 

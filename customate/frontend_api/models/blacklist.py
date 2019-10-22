@@ -16,7 +16,9 @@ class BlacklistDate(Model):
     @staticmethod
     def contains(date) -> bool:
         # Check if specified date falls in blacklist (weekend + holidays/special days)
-        return BlacklistDate._is_weekend(date) or BlacklistDate._is_blacklisted_date(date)
+        result = BlacklistDate._is_weekend(date) or BlacklistDate._is_blacklisted_date(date)
+        logger.info(f"Blacklist verification (data={date}) returned: {result}.")
+        return result
 
     @staticmethod
     def _is_weekend(date) -> bool:

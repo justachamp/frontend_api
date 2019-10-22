@@ -294,7 +294,8 @@ class Address(GBGData):
                     raise NonMatchingPostalCode()
                 expanded_address = defaultdict(str, expanded_address)  # make sure missing keys won't break follow-up
             except Exception:
-                logger.info("Failed to expand address(%s) using Loqate due to: %r" % (full_address, format_exc()))
+                logger.info("Failed to expand address (%s) using Loqate due to: %r" % (full_address, format_exc()),
+                            extra={'full_address': full_address})
 
         res = self.generate_free_address(expanded_address) if Country(self.country) in FREE_ADDRESS_FORMAT_COUNTRIES \
             else self.generate_fixed_address(expanded_address)

@@ -11,7 +11,7 @@ from authentication.cognito.core.helpers import sign_up
 import logging
 
 from core.fields import PaymentScenario, PayeeType, FundingSourceType
-from core.logger import SensitiveDataObfuscator
+from core.logger import SensitiveDataObfuscatorFilter
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +62,7 @@ class TestUserManagementMixin(object):
 
 class TestSensitiveDataObfuscator(TestCase):
     def setUp(self):
-        self.filter = SensitiveDataObfuscator()
+        self.filter = SensitiveDataObfuscatorFilter()
 
     def test_obfuscate_empty_argument(self):
         self.assertIsNone(self.filter.obfuscate(None))

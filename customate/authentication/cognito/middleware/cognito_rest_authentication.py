@@ -23,7 +23,7 @@ class AwsRestAuthentication(BaseAuthentication):
         logging.set_shared_extra({
             'customer': {
                 'userId': user.id if user is not None else None,
-                'accountId': user.get_root_account() if user is not None and not isinstance(user, AnonymousUser) else None
+                'accountId': user.get_root_account().id if user is not None and not isinstance(user, AnonymousUser) else None
             }
         })
 

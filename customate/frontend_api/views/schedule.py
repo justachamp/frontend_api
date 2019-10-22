@@ -108,7 +108,7 @@ class ScheduleViewSet(views.ModelViewSet):
                 origin_user=origin_user,
                 recipient_user=recipient_user
             )
-            logger.info("Successfully created new schedule_id=%r" % schedule.id)
+            logger.info("Successfully created new schedule (id=%r)" % schedule.id)
             serializer.assign_uploaded_documents_to_schedule(documents)
 
             # Immediately create first payments

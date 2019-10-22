@@ -9,6 +9,7 @@ import requests
 from requests.auth import HTTPBasicAuth
 
 import core.fields
+from core.logger import Timer
 
 from external_apis.gbg.settings import GBG_ACCOUNT, GBG_PASSWORD, GBG_WSDL, DEBUG
 from external_apis.gbg.models import BankingDetails, PersonalDetails, Address, ContactDetails, IdentityDocument
@@ -24,6 +25,7 @@ BAND_ALERT = 'Alert'
 zeep_cache = InMemoryCache()
 logger = logging.getLogger(__name__)
 
+SERVICE = 'Gbg'
 
 def get_gbg_client():
     """
@@ -90,7 +92,9 @@ def validate_banking_details(country: core.fields.Country,
         }
     }
 
-    logger.debug("Sending GBG input_data=%r" % input_data)
+    logger.info("Request to GBG service for banking details validation (input_data=%r)" % input_data,
+                extra={'input_data': input_data, 'service': SERVICE})
+    timer = Timer()
     res = GlobalAuthenticate_service.AuthenticateSP(
         ProfileIDVersion=get_profile(
             profile_id=environ["GBG_{}_BANK_VALIDATION_PROFILE_ID".format(country.value)],
@@ -99,8 +103,8 @@ def validate_banking_details(country: core.fields.Country,
         CustomerReference=customer_reference,
         InputData=input_data
     )
-
-    logger.info("GBG reply (BandText=%s, Score=%s): %r" % (res.BandText, res.Score, res))
+    logger.info("Response from GBG for banking details validation (BandText=%s, Score=%s): %r" % (res.BandText, res.Score, res),
+                extra={'response': res, 'duration': timer.duration(), 'service': SERVICE})
     return res
 
 
@@ -134,7 +138,9 @@ def validate_identity_details(country: core.fields.Country,
             "IdentityDocuments": identity_document.gbg_serialization()
         })
 
-    logger.info("Sending GBG input_data=%r, customer_reference=%r" % (input_data, customer_reference))
+    logger.info("Request to GBG service for identity details validation (input_data=%r, customer_reference=%r)" % (input_data, customer_reference),
+                extra={'input_data': input_data, 'customer_reference': customer_reference, 'service': SERVICE})
+    timer = Timer()
     res = GlobalAuthenticate_service.AuthenticateSP(
         ProfileIDVersion=get_profile(
             profile_id=environ["GBG_{}_IDENTITY_VALIDATION_PROFILE_ID".format(country.value)],
@@ -143,6 +149,6 @@ def validate_identity_details(country: core.fields.Country,
         CustomerReference=customer_reference,
         InputData=input_data
     )
-
-    logger.info("GBG reply (BandText=%s, Score=%s): %r" % (res.BandText, res.Score, res))
+    logger.info("Response from GBG for identity details validation (BandText=%s, Score=%s): %r" % (res.BandText, res.Score, res),
+                extra={'response': res, 'duration': timer.duration(), 'service': SERVICE})
     return res

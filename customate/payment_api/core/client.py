@@ -12,9 +12,12 @@ from jsonapi_client.exceptions import DocumentError
 from jsonapi_client.common import jsonify_attribute_name, error_from_response, HttpStatus, HttpMethod
 import collections
 
+from core.logger import Timer
 from payment_api.core.resource.mixins import ResourceMappingMixin, JsonApiErrorParser
 
 logger = logging.getLogger(__name__)
+
+SERVICE = 'PaymentApi'
 
 
 class ResourceObjectWithCustomId(ResourceObject):
@@ -88,8 +91,12 @@ class Session(DefaultSession):
         return doc
 
     def _ext_fetch_by_url(self, url: str) -> 'Document':
-        logger.info('Fetching Payment API resource: url=%s' % url)
-        return super()._ext_fetch_by_url(url)
+        logger.info('Fetching Payment API resource (url=%s)' % url, extra={'url': url, 'service': SERVICE})
+        timer = Timer()
+        result = super()._ext_fetch_by_url(url)
+        logger.info('Fetched Payment API resource (url=%s)' % url,
+                    extra={'url': url, 'duration': timer.duration(), 'service': SERVICE})
+        return result
 
     def http_request(self, http_method: str, url: str, send_json: dict,
                      expected_statuses: List[str] = None) -> Tuple[int, dict, str]:
@@ -102,10 +109,14 @@ class Session(DefaultSession):
         expected_statuses = expected_statuses or HttpStatus.ALL_OK
 
         self._request_kwargs["headers"].update({'Content-Type': 'application/vnd.api+json'})
-        logger.info("Request to Payment API: url=%s, method=%s", url, http_method, extra={'body': send_json})
+        logger.info("Request to Payment API: url=%s, method=%s", url, http_method,
+                    extra={'body': send_json, 'url': url, 'method': http_method, 'service': SERVICE})
+        timer = Timer()
         response = requests.request(http_method, url, json=send_json,
                                     **self._request_kwargs)
-        logger.info("Response from Payment API: status=%s", response.status_code, extra={'body': response.text})
+        logger.info("Response from Payment API: status=%s", response.status_code,
+                    extra={'body': response.text, 'status_code': response.status_code, 'url': url,
+                           'duration': timer.duration(), 'service': SERVICE})
 
         if response.status_code not in expected_statuses:
             raise DocumentError(f'Could not {http_method.upper()} '
@@ -235,7 +246,8 @@ class Client(ResourceMappingMixin, JsonApiErrorParser):
             return instance
 
         except DocumentError as ex:
-            logger.info("PaymentClient.update caught a document error: %r " % format_exc())
+            logger.info("PaymentClient.update caught a document error: %r " % format_exc(),
+                        extra={'instance_id': instance.id, 'attributes': attributes, 'service': SERVICE})
             data = self._parse_document_error(ex)
             if data:
                 raise ValidationError(data)
@@ -254,7 +266,8 @@ class Client(ResourceMappingMixin, JsonApiErrorParser):
             logger.debug(instance)
             return instance
         except DocumentError as ex:
-            logger.info("PaymentClient.create caught a document error: %r " % format_exc())
+            logger.info("PaymentClient.create caught a document error: %r " % format_exc(),
+                        extra={'resource_name': resource_name, 'attributes': attributes, 'service': SERVICE})
             data = self._parse_document_error(ex)
             if data:
                 raise ValidationError(data)
@@ -277,7 +290,8 @@ class Client(ResourceMappingMixin, JsonApiErrorParser):
             instance.delete()
             instance.commit()
         except DocumentError as ex:
-            logger.info("PaymentClient.delete caught a document error: %r " % format_exc())
+            logger.info("PaymentClient.delete caught a document error: %r " % format_exc(),
+                        extra={'resource_name': resource_name, 'resource_id': resource_id, 'service': SERVICE})
             data = self._parse_document_error(ex)
             if data:
                 raise ValidationError(data)
