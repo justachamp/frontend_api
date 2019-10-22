@@ -79,7 +79,7 @@ def make_payment(user_id: str, payment_account_id: str, schedule_id: str, curren
         logger.info("Schedule payment record was created (id=%r)" % schedule_payment.id,
                     extra={'schedule_payment_id': schedule_payment.id})
 
-        client.PaymentApiClient.create_payment(p=client.PaymentDetails(
+        result = client.PaymentApiClient.create_payment(p=client.PaymentDetails(
             id=payment_id,
             user_id=UUID(user_id),
             payment_account_id=UUID(payment_account_id),
