@@ -30,7 +30,7 @@ class TestS3Storage(SimpleTestCase):
         return os.path.join(os.path.dirname(os.path.abspath(__file__)), self.filename)
 
     def test_a_get_presigned_url_via_boto3_and_post_file_to_s3_with_given_url(self):
-        response = self.client.generate_presigned_post(settings.AWS_STORAGE_BUCKET_NAME,
+        response = self.client.generate_presigned_post(settings.AWS_S3_STORAGE_BUCKET_NAME,
                                                        self.filename,
                                                        ExpiresIn=settings.AWS_S3_PRESIGNED_URL_EXPIRES_IN)
         with open(self.filepath, 'rb') as f:
@@ -41,7 +41,7 @@ class TestS3Storage(SimpleTestCase):
     def test_b_receive_presigned_url_via_boto3_and_get_file_from_s3_by_given_url(self):
         url = self.client.generate_presigned_url('get_object',
                                                  Params={
-                                                     'Bucket': settings.AWS_STORAGE_BUCKET_NAME,
+                                                     'Bucket': settings.AWS_S3_STORAGE_BUCKET_NAME,
                                                      'Key': self.filename},
                                                  ExpiresIn=settings.AWS_S3_PRESIGNED_URL_EXPIRES_IN)
         response = requests.get(url)

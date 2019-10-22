@@ -79,7 +79,7 @@ class PreSignedUrlView(APIView):
         # Request to aws
         try:
             response = self.s3_client.generate_presigned_post(
-                settings.AWS_STORAGE_BUCKET_NAME,
+                settings.AWS_S3_STORAGE_BUCKET_NAME,
                 os.path.join(settings.AWS_S3_UPLOAD_DOCUMENTS_PATH, document.key),
                 ExpiresIn=settings.AWS_S3_PRESIGNED_URL_EXPIRES_IN)
         except ClientError as e:

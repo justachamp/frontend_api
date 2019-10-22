@@ -72,7 +72,7 @@ class Document(Model):
 
         return s3_client.generate_presigned_url(
             operation_name, Params={
-                'Bucket': settings.AWS_STORAGE_BUCKET_NAME,
+                'Bucket': settings.AWS_S3_STORAGE_BUCKET_NAME,
                 'Key': os.path.join(settings.AWS_S3_UPLOAD_DOCUMENTS_PATH, self.key)
             },
             ExpiresIn=settings.AWS_S3_PRESIGNED_URL_EXPIRES_IN)
