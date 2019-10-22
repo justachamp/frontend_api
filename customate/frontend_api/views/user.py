@@ -116,6 +116,9 @@ class UserViewSet(PatchRelatedMixin, views.ModelViewSet):
             raise NotFound(f'Account not found {user_id}')
 
         serializer.update_status(user)
+        # Setting "instance" member's value during serializer's initialization will not update user's status
+        serializer.instance = user
+
         return Response(serializer.data)
 
     def get_serializer_class(self):
