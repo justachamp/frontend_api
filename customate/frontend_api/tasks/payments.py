@@ -202,6 +202,10 @@ def on_payment_change(payment_info: Dict):
             'request_id': request_id,
             'payment_id': payment_id
         })
+
+        # WARN: it is implicitly guarantied(?) that on_payment_change with schedule_id=None will be
+        # WARN: called with user_id == funds_recipient_user_id
+        # TODO: we need to refactor this with a better naming and/or another more explicit solution
         logger.info("Load Funds. Start processing transaction. User_id: " % user_id)
         try:
             funds_recipient = User.objects.get(id=user_id)
