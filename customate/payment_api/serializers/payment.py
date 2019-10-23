@@ -20,7 +20,6 @@ from frontend_api.tasks.notifiers import send_notification_email, send_notificat
 from core.fields import PaymentStatusType
 
 
-
 class LoadFundsSerializer(ResourceSerializer):
     included_serializers = {
         'transactions': 'payment_api.serializers.TransactionSerializer',
@@ -97,8 +96,10 @@ class LoadFundsSerializer(ResourceSerializer):
             # Because sender and recipient might be the same user, remove him from senders notifications
             for email in [item for item in funds_senders_emails if item not in funds_recipients_emails]:
                 context = {'original_amount': amount / 100}
-                message = helpers.get_ses_email_payload(tpl_filename='notifications/email_senders_balance_updated.html',
-                                                        tpl_context=context)
+                message = helpers.get_ses_email_payload(
+                    tpl_filename='notifications/email_senders_balance_updated.html',
+                    tpl_context=context
+                )
                 send_notification_email.delay(to_address=email, message=message)
             for phone_number in [item for item in funds_senders_phones if item not in funds_recipients_phones]:
                 message = 'Your balance has changed.'
@@ -106,13 +107,14 @@ class LoadFundsSerializer(ResourceSerializer):
             # Notify funds recipients
             for email in funds_recipients_emails:
                 context = {'original_amount': amount / 100}
-                message = helpers.get_ses_email_payload(tpl_filename='notifications/email_recipients_balance_updated.html',
-                                                        tpl_context=context)
+                message = helpers.get_ses_email_payload(
+                    tpl_filename='notifications/email_recipients_balance_updated.html',
+                    tpl_context=context
+                )
                 send_notification_email.delay(to_address=email, message=message)
             for phone_number in funds_recipients_phones:
                 message = 'Your balance has changed.'
                 send_notification_sms.delay(to_phone_number=phone_number, message=message)
-
 
     def create(self, validated_data):
         payment = super().create(validated_data)

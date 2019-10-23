@@ -111,7 +111,7 @@ class Schedule(AbstractSchedule):
         Total sum that should be paid by this schedule
         :return:
         """
-        return self.total_fee_amount +\
+        return self.total_fee_amount + \
                (self.deposit_amount if self.deposit_amount is not None else 0) + \
                (self.payment_amount * self.number_of_payments)
 
@@ -138,24 +138,17 @@ class Schedule(AbstractSchedule):
     def _did_we_send_first_payment(self):
         # return self.number_of_payments_made > 0 # we can't rely on this field here, since there is
         # a case of long-running PENDING payments(days), which might corrupt our next_payment_date calculations
-
+        now_date = arrow.utcnow().datetime.date()
         # We cannot just compare dates and ignore time. If start_date is current date
-        # then scheduler's start time is important fact
-        return arrow.utcnow().datetime.date() > self.start_date \
-                or (arrow.utcnow().datetime.date() == self.start_date and arrow.utcnow() > self.get_celery_processing_time())
+        # then scheduler's start time is important in fact
+        return now_date > self.start_date or (
+                now_date == self.start_date and arrow.utcnow() > self.get_celery_processing_time()
+        )
 
     @property
     def number_of_payments_left(self):
         self.refresh_number_of_payments_made()
         return self.number_of_payments - self.number_of_payments_made
-
-    @property
-    def number_of_sent_regular_payments(self):
-        return LastSchedulePayments.objects.filter(
-                schedule_id=self.id,
-                parent_payment_id=None,
-                is_deposit=False
-            ).count()
 
     @property
     def next_payment_date(self):
@@ -389,28 +382,39 @@ class Schedule(AbstractSchedule):
             pk=self.id,
             status=ScheduleStatus.open.value
         )
-        return arrow.get(deposit_payment.scheduled_date).datetime.date() >= self._get_nearest_acceptable_scheduler_date()
+        scheduled_date = arrow.get(deposit_payment.scheduled_date).datetime.date()
+        return scheduled_date >= self._get_nearest_acceptable_scheduler_date()
 
     def have_time_for_regular_payment_processing(self):
         try:
-            if self.number_of_sent_regular_payments == self.number_of_payments:
+            number_of_sent_regular_payments = LastSchedulePayments.objects.filter(
+                schedule_id=self.id,
+                is_deposit=False
+            ).count()
+
+            if number_of_sent_regular_payments == self.number_of_payments:
                 return True
 
             # Selecting nearest scheduled date for regular payments, by skipping dates for which
             # we already sent payments
-            from_index = self.number_of_sent_regular_payments
+            from_index = number_of_sent_regular_payments
             to_index = from_index + 1
             nearest_payment = self.schedule_cls_by_period.objects.filter(
                 id=self.id,
                 status=ScheduleStatus.open,
             ).order_by("scheduled_date").all()[from_index:to_index].first()
 
-            return nearest_payment is not None \
-                   and arrow.get(nearest_payment.scheduled_date).datetime.date() >= self._get_nearest_acceptable_scheduler_date()
+            scheduled_date = arrow.get(nearest_payment.scheduled_date).datetime.date()
+            return nearest_payment is not None and scheduled_date >= self._get_nearest_acceptable_scheduler_date()
         except ObjectDoesNotExist:
             return False
 
     def _get_nearest_acceptable_scheduler_date(self):
+        """
+
+        :return:
+        :rtype: datetime.date
+        """
         scheduler_start_time = Schedule.get_celery_processing_time()
         retry_count = 1
 
@@ -446,9 +450,9 @@ class Schedule(AbstractSchedule):
 
     @property
     def first_payment_scheduled_date(self):
-        result = self.schedule_cls_by_period.objects\
-            .filter(id=self.id)\
-            .order_by("scheduled_date")\
+        result = self.schedule_cls_by_period.objects \
+            .filter(id=self.id) \
+            .order_by("scheduled_date") \
             .first().scheduled_date
 
         logger.debug("Schedule.first_payment_scheduled_date (id=%s, start_date=%s, result=%s)"
@@ -565,7 +569,6 @@ class DepositsSchedule(AbstractSchedule):
     @property
     def origin_payment_account_id(self):
         return self.payment_account_id
-
 
 
 class AbstractSchedulePayments(Model):

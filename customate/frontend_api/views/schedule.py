@@ -20,7 +20,7 @@ from core.fields import FundingSourceType
 from customate.settings import CELERY_BEAT_SCHEDULE, FIRST_PAYMENTS_MIN_EXECUTION_DELAY
 
 from frontend_api.fields import ScheduleStatus, SchedulePurpose
-from frontend_api.tasks.payments import make_overdue_payment, make_payment
+from frontend_api.tasks.payments import make_overdue_payment, make_payment, make_failed_payment
 from frontend_api.core.client import PaymentApiClient
 from frontend_api.models import Schedule, Document
 
@@ -191,11 +191,9 @@ class ScheduleViewSet(views.ModelViewSet):
 
     def _process_potential_late_payments(self, schedule):
         user = self.request.user
-        # We intentionally will send execution_date in past, so that these payments fail
-        execution_date = arrow.utcnow().replace(years=-1).datetime
-
+        # Make a series of 'failed' payments to keep a chain of payments in order for further overdue processing
         if not schedule.have_time_for_deposit_payment_processing():
-            make_payment.delay(
+            make_failed_payment.delay(
                 user_id=str(user.id),
                 payment_account_id=str(user.account.payment_account_id),
                 schedule_id=str(schedule.id),
@@ -204,11 +202,11 @@ class ScheduleViewSet(views.ModelViewSet):
                 additional_information=str(schedule.deposit_additional_information),
                 payee_id=str(schedule.payee_id),
                 funding_source_id=str(schedule.funding_source_id),
-                execution_date=execution_date
+                is_deposit=True
             )
 
         if not schedule.have_time_for_regular_payment_processing():
-            make_payment.delay(
+            make_failed_payment.delay(
                 user_id=str(user.id),
                 payment_account_id=str(user.account.payment_account_id),
                 schedule_id=str(schedule.id),
@@ -217,7 +215,6 @@ class ScheduleViewSet(views.ModelViewSet):
                 additional_information=str(schedule.additional_information),
                 payee_id=str(schedule.payee_id),
                 funding_source_id=str(schedule.funding_source_id),
-                execution_date=execution_date
             )
 
     def perform_destroy(self, schedule: Schedule):

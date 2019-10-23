@@ -115,9 +115,14 @@ class PaymentApiClient:
 
     @staticmethod
     def create_payment(p: PaymentDetails):
+        """
+        TODO: Refactor this crappy Payment API call and make sure we return explicit DataClass-alike return type
+        TODO: and NOT `PaymentResource`! See .get_funding_source_details() for instance
+        :param p:
+        :return:
+        """
         from payment_api.views.payment import MakePaymentViewSet
-        logger.info(f"Creating payment from payment details (schedule_id={p.schedule_id}, "
-                    f"funding_source_id={p.funding_source_id})")
+        logger.info("Creating payment from payment details=%r" % p)
 
         view = MakePaymentViewSet()
         serializer = MakePaymentSerializer(
@@ -157,10 +162,14 @@ class PaymentApiClient:
                 payment_account_id=resource.account.id
             )
         except KeyError as e:
-            logger.error("Key error occurred during payee (id=%r) processing (mapping changed?): %r" % (payee_id, format_exc()))
+            logger.error("Key error occurred during payee (id=%r) processing (mapping changed?): %r" % (
+                payee_id, format_exc()
+            ))
             raise e
         except Exception as e:
-            logger.error("Receiving payee details (id=%r) thrown an exception: %r" % (payee_id, format_exc()))
+            logger.error("Receiving payee details (id=%r) thrown an exception: %r" % (
+                payee_id, format_exc()
+            ))
             raise e
 
     def get_funding_source_details(self, source_id) -> FundingSourceDetails:
@@ -176,8 +185,12 @@ class PaymentApiClient:
                 payment_account_id=resource.account.id
             )
         except KeyError as e:
-            logger.error("Key error occurred during funding source (id=%r) processing (mapping changed?): %r" % (source_id, format_exc()))
+            logger.error("Key error occurred during funding source (id=%r) processing (mapping changed?): %r" % (
+                source_id, format_exc()
+            ))
             raise e
         except Exception as e:
-            logger.error("Receiving funding source details (id=%r) thrown an exception: %r" % (source_id, format_exc()))
+            logger.error("Receiving funding source details (id=%r) thrown an exception: %r" % (
+                source_id, format_exc()
+            ))
             raise e

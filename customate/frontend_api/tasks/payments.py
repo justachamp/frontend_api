@@ -22,13 +22,52 @@ from frontend_api.core import client
 from frontend_api.fields import ScheduleStatus
 from frontend_api import helpers
 
-
 logger = logging.getLogger(__name__)
+
 
 # NOTE: make sure we use only primitive types in @shared_task signatures, otherwise there will be a need to write our own
 # custom JSON serializer. For more details see here:
 # https://stackoverflow.com/questions/53416726/can-i-use-dataclasses-or-similar-as-arguments-and-return-values-for-celery-tas
 # https://stackoverflow.com/questions/21631878/celery-is-there-a-way-to-write-custom-json-encoder-decoder/
+
+@shared_task
+def make_failed_payment(user_id: str, payment_account_id: str, schedule_id: str, currency: str, payment_amount: int,
+                 additional_information: str, payee_id: str, funding_source_id: str,
+                 request_id=None, is_deposit=False):
+    """
+    Intentionally create failed payment to keep payment chains in order.
+    This is required for further processing of overdue payments.
+
+    :param user_id:
+    :param payment_account_id:
+    :param schedule_id:
+    :param currency:
+    :param payment_amount:
+    :param additional_information:
+    :param payee_id:
+    :param funding_source_id:
+    :param parent_payment_id:
+    :param request_id:
+    :param is_deposit:
+    :return:
+    """
+    # We intentionally will send execution_date in past, so that these payments fail
+    execution_date = arrow.utcnow().replace(years=-1).datetime
+    return make_payment(
+        user_id=user_id,
+        payment_account_id=payment_account_id,
+        schedule_id=schedule_id,
+        currency=currency,
+        payment_amount=payment_amount,
+        additional_information=additional_information,
+        payee_id=payee_id,
+        funding_source_id=funding_source_id,
+        is_deposit=is_deposit,
+        request_id=request_id,
+        execution_date=execution_date
+    )
+
+
 
 @shared_task
 def make_payment(user_id: str, payment_account_id: str, schedule_id: str, currency: str, payment_amount: int,
@@ -53,13 +92,18 @@ def make_payment(user_id: str, payment_account_id: str, schedule_id: str, curren
     """
     logging.init_shared_extra(request_id)
     logger.info("Making payment: user_id=%s, payment_account_id=%s, schedule_id=%s, currency=%s, payment_amount=%s, "
-                "additional_information=%s, payee_id=%s, funding_source_id=%s, parent_payment_id=%s, " \
+                "additional_information=%s, payee_id=%s, funding_source_id=%s, parent_payment_id=%s, "
                 "execution_date=%s, request_id=%s" % (
                     user_id, payment_account_id, schedule_id, currency, payment_amount,
                     additional_information, payee_id, funding_source_id, parent_payment_id,
                     execution_date, request_id
-                ), extra={'schedule_id': schedule_id, 'funding_source_id': funding_source_id,
-                          'payment_amount': payment_amount, 'is_deposit': is_deposit})
+                ),
+                extra={
+                    'schedule_id': schedule_id,
+                    'funding_source_id': funding_source_id,
+                    'payment_amount': payment_amount,
+                    'is_deposit': is_deposit,
+                })
 
     payment_id = uuid4()
     schedule_payment = None
@@ -76,9 +120,18 @@ def make_payment(user_id: str, payment_account_id: str, schedule_id: str, curren
             is_deposit=is_deposit
         )
         schedule_payment.save()
-        logger.info("Schedule payment record was created (id=%r)" % schedule_payment.id,
-                    extra={'schedule_payment_id': schedule_payment.id})
 
+    except Exception:
+        logger.error("Saving schedule_payment record failed due to: %r" % format_exc(), extra={
+            'schedule_id': schedule_id,
+        })
+        return result
+
+    logger.info("Schedule payment record was created (id=%r)" % schedule_payment.id, extra={
+        'schedule_payment_id': schedule_payment.id
+    })
+
+    try:
         result = client.PaymentApiClient.create_payment(p=client.PaymentDetails(
             id=payment_id,
             user_id=UUID(user_id),
@@ -93,21 +146,28 @@ def make_payment(user_id: str, payment_account_id: str, schedule_id: str, curren
             execution_date=arrow.get(execution_date).datetime if execution_date else None
         ))
     except Exception:
-        logger.error("Unable to create payment for schedule (id=%s) due to unknown error: %r. " % (schedule_id, format_exc()),
-                     extra={'schedule_id': schedule_id, 'payment_id': payment_id})
-        if schedule_payment:
-            # We don't check or run payment with backup source here, because we have a severe problem that probably
-            # will prevent next payment's successful execution
-            schedule_payment.payment_status = PaymentStatusType.FAILED
-            logger.info("Marking schedule payment (id=%s) as FAILED" % schedule_payment.id,
-                        extra={'schedule_payment_id': schedule_payment.id, 'schedule_id': schedule_id, 'payment_id': payment_id})
+        logger.error("Unable to create payment(id=%s) for schedule (id=%s) due to unknown error: %r. " % (
+            payment_id, schedule_id, format_exc()
+        ), extra={
+            'schedule_id': schedule_id,
+            'payment_id': payment_id
+        })
 
-            schedule_payment.save(update_fields=['payment_status'])
+        # We don't check or run payment with backup source here, because we have a severe problem that probably
+        # will prevent next payment's successful execution
+        schedule_payment.payment_status = PaymentStatusType.FAILED
+        logger.info("Marking schedule payment (id=%s) as FAILED" % schedule_payment.id, extra={
+            'schedule_payment_id': schedule_payment.id,
+            'schedule_id': schedule_id,
+            'payment_id': payment_id
+        })
 
-        Schedule.objects.get(id=schedule_id) \
-            .move_to_status(ScheduleStatus.overdue)
+        schedule_payment.save(update_fields=['payment_status'])
+        # move overall schedule to 'Overdue' status immediately
+        Schedule.objects.get(id=schedule_id).move_to_status(ScheduleStatus.overdue)
 
-    return result
+    finally:
+        return result
 
 
 @shared_task
@@ -118,7 +178,7 @@ def on_payment_change(payment_info: Dict):
     :return:
     """
     payment_id = payment_info.get("payment_id")
-    account_id = payment_info.get("account_id")
+    payment_account_id = payment_info.get("account_id")
     schedule_id = payment_info.get("schedule_id")
     funding_source_id = payment_info.get("funding_source_id")
     payment_status = PaymentStatusType(payment_info.get('status'))
@@ -126,35 +186,55 @@ def on_payment_change(payment_info: Dict):
     request_id = payment_info.get("request_id", RequestIdGenerator.get())
 
     logging.init_shared_extra(request_id)
-    logger.info("Received 'payment changed' event, starting processing (payment_id=%s, payment_info=%r)" % (payment_id, payment_info),
-                extra={'payment_id': payment_id, 'schedule_id': schedule_id, 'funding_source_id': funding_source_id,
-                       'status': payment_status})
+    logger.info("Received 'payment changed' event, starting processing (payment_id=%s, payment_info=%r)" % (
+        payment_id, payment_info
+    ), extra={
+        'request_id': request_id,
+        'payment_id': payment_id,
+        'schedule_id': schedule_id,
+        'funding_source_id': funding_source_id,
+        'payment_status': payment_status
+    })
 
     if schedule_id is None:
-        logger.info("Skipping payment (id=%s) processing as it is not related to any schedule" % payment_id,
-                    extra={'payment_id': payment_id})
+        logger.info("Skipping payment (id=%s), not related to any schedule" % payment_id, extra={
+            'request_id': request_id,
+            'payment_id': payment_id
+        })
         return
 
     # some sanity checks
     try:
         schedule = Schedule.objects.get(id=schedule_id)  # type: Schedule
     except ObjectDoesNotExist:
-        logger.error("Given schedule (id=%s) no longer exists, exiting" % schedule_id, extra={'schedule_id': schedule_id})
+        logger.error("Given schedule (id=%s) no longer exists, exiting" % schedule_id, extra={
+            'schedule_id': schedule_id
+        })
         return
 
+    # TODO: need to elaborate more on what is happening here. Very unclear
     # We set "scheduleId" for payments which created with link to origin user *and* for "incoming" payments
     # which are created for recipient user, but processing such events for recipient's payment could lead to confusion
     # and break our logic with "number_of_payment_*" fields
-    if str(schedule.origin_user.account.payment_account_id) != account_id:
-        logger.info("Skipping payment (id=%s) processing as it is not related to schedule\'s payer" % payment_id,
-                    extra={'payment_id': payment_id, 'schedule_id': schedule_id})
+    if str(schedule.origin_payment_account_id) != payment_account_id:
+        logger.info("Skipping payment (id=%s), not related to schedule\'s payer(origin_payment_account_id=%s)" % (
+            payment_id, schedule.origin_payment_account_id
+        ), extra={
+            'payment_id': payment_id,
+            'schedule_id': schedule_id,
+            'schedule.origin_payment_account_id': schedule.origin_payment_account_id,
+            'payment_account_id': payment_account_id
+        })
         return
 
     try:
-        _ = User.objects.get(id=schedule.origin_user_id)
+        User.objects.get(id=schedule.origin_user_id)
     except ObjectDoesNotExist:
-        logger.error("Given user (id=%s) no longer exists, exiting" % schedule.origin_user_id,
-                     extra={'payment_id': payment_id, 'schedule_id': schedule_id, 'user_id': schedule.origin_user_id})
+        logger.error("Given user (id=%s) no longer exists, exiting" % schedule.origin_user_id, extra={
+            'payment_id': payment_id,
+            'schedule_id': schedule_id,
+            'schedule.origin_user_id': schedule.origin_user_id
+        })
         return
 
     schedule_payment = SchedulePayments.objects.get(schedule_id=schedule_id, payment_id=payment_id)
@@ -179,9 +259,13 @@ def on_payment_change(payment_info: Dict):
     if payment_status in [PaymentStatusType.FAILED, PaymentStatusType.REFUND] \
             and schedule.backup_funding_source_id \
             and funding_source_id == str(schedule.funding_source_id):
-        logger.info("Retrying payment (id=%s, status=%s) using backup funding source(id=%s, was=%s)"
-                    % (payment_id, payment_status, schedule.backup_funding_source_id, funding_source_id),
-                    extra={'payment_id': payment_id, 'schedule_id': schedule_id, 'backup_funding_source_id': schedule.backup_funding_source_id})
+        logger.info("Retrying payment (id=%s, status=%s) using backup funding source(id=%s, was=%s)" % (
+            payment_id, payment_status, schedule.backup_funding_source_id, funding_source_id
+        ), extra={
+            'payment_id': payment_id,
+            'schedule_id': schedule_id,
+            'schedule.backup_funding_source_id': schedule.backup_funding_source_id
+        })
         make_payment.delay(
             user_id=str(schedule.origin_user_id),
             payment_account_id=str(schedule.origin_payment_account_id),
@@ -207,27 +291,27 @@ def make_overdue_payment(schedule_id: str, request_id=None):
     """
     request_id = request_id if request_id else RequestIdGenerator.get()
     logging.init_shared_extra(request_id)
-    logger.info("Processing overdue payment from schedule (id=%s)" % schedule_id, extra={'schedule_id': schedule_id})
+    logger.info("Processing overdue payment from schedule (id=%s)" % schedule_id, extra={
+        'schedule_id': schedule_id
+    })
 
     try:
         schedule = Schedule.objects.get(id=schedule_id)  # type: Schedule
     except Exception:
-        logger.error("Unable to fetch schedule (id=%s) from DB: %r" % (
-            schedule_id, format_exc()
-        ), extra={'schedule_id': schedule_id})
+        logger.error("Unable to fetch schedule (id=%s) from DB: %r" % (schedule_id, format_exc()), extra={
+            'schedule_id': schedule_id
+        })
         return
 
     if schedule.processing:
-        logger.error("Schedule (id=%s) is already in processing state, skipping overdue payments processing" % schedule_id,
-                     extra={'schedule_id': schedule_id})
+        logger.error("Schedule (id=%s) is in processing state, skipping overdue payments" % schedule_id, extra={
+            'schedule_id': schedule_id
+        })
         return
 
     # block from multiple overdue events
     # (for example, accidentally clicking multiple times a 'pay overdue' button)
     schedule.processing = True
-
-    # TODO: consider the case when LastSchedulePayments is empty (this means that no initial payments have ever been made)
-    # See details here: https://customate.atlassian.net/browse/CS-576
 
     # Select all SchedulePayments which are last in chains and are not in SUCCESS status
     overdue_payments = LastSchedulePayments.objects.filter(
@@ -235,37 +319,49 @@ def make_overdue_payment(schedule_id: str, request_id=None):
         payment_status__in=[PaymentStatusType.FAILED, PaymentStatusType.REFUND]
     ).order_by("created_at")  # type: list[LastSchedulePayments]
 
-    if overdue_payments:
-        logger.info("Total schedule's (id=%s) overdue payments for processing: %s" % (schedule_id, len(overdue_payments)),
-                    extra={'schedule_id': schedule_id})
+    logger.info("Total overdue payments (schedule_id=%s): %s" % (schedule_id, len(overdue_payments)), extra={
+        'schedule_id': schedule_id
+    })
 
-        for op in overdue_payments:
-            logger.info("Making new payment from overdue version (schedulepayment_id=%s, payment_id=%s, parent_payment_id=%s)" % (
-                op.id, op.payment_id, op.parent_payment_id
-            ), extra={'schedule_id': schedule_id, 'overdue_payment_id': op.payment_id, 'parent_overdue_payment_id': op.parent_payment_id})
-            payment = make_payment(
-                user_id=str(schedule.origin_user_id),
-                payment_account_id=str(schedule.origin_payment_account_id),
-                schedule_id=str(schedule_id),
-                currency=str(schedule.currency.value),
-                payment_amount=int(op.original_amount),  # NOTE: use original amount saved at the time of initial payment!
-                additional_information=str(schedule.additional_information),
-                payee_id=str(schedule.payee_id),
-                funding_source_id=str(schedule.funding_source_id),  # NOTE: always retry using primary FS
-                parent_payment_id=str(op.payment_id),  # NOTE: keep payment chain in order!
-                request_id=request_id
-            )
-            logger.info("Making payment from overdue version (overdue_schedulepayment_id=%s, payment_id=%s, parent_payment_id=%s) result : %s" % (
-                op.id, op.payment_id, op.parent_payment_id, payment
-            ), extra={'schedule_id': schedule_id, 'payment_id': payment.id, 'payment': payment})
+    for op in overdue_payments:
+        logger.info("Making new payment from overdue (id=%s, payment_id=%s, parent_payment_id=%s)" % (
+            op.id, op.payment_id, op.parent_payment_id
+        ), extra={
+            'schedule_payment_id': op.id,
+            'schedule_id': schedule_id,
+            'payment_id': op.payment_id,
+            'parent_payment_id': op.parent_payment_id
+        })
+        # INFO: this is synchronous code involving a series of HTTP requests to Payment API
+        payment = make_payment(
+            user_id=str(schedule.origin_user_id),
+            payment_account_id=str(schedule.origin_payment_account_id),
+            schedule_id=str(schedule_id),
+            currency=str(schedule.currency.value),
+            payment_amount=int(op.original_amount),  # NOTE: use original amount saved at the time of initial payment!
+            additional_information=str(schedule.additional_information),
+            payee_id=str(schedule.payee_id),
+            funding_source_id=str(schedule.funding_source_id),  # NOTE: always retry using primary FS
+            parent_payment_id=str(op.payment_id),  # NOTE: keep payment chain in order!
+            request_id=request_id
+        )
+        logger.info("Created payment from overdue (id=%s, payment_id=%s, parent_payment_id=%s) result : %r" % (
+            op.id, op.payment_id, op.parent_payment_id, payment), extra={
+            'schedule_id': schedule_id,
+            'payment_id': payment.id,
+            'payment': payment
+        })
 
-            # If we faced with some problems during payment's creation we stop sending overdue payments
-            if payment is None or payment.status is PaymentStatusType.FAILED:
-                logger.info(
-                    "Failed to create new payment from overdue version (schedulepayment_id=%s, payment_id=%s, parent_payment_id=%s). Stop trying." % (
-                        op.id, op.payment_id, op.parent_payment_id
-                    ), extra={'schedule_id': schedule_id})
-                break
+        # If we faced with some problems during payment's creation we stop sending overdue payments
+        if payment is None or payment.status is PaymentStatusType.FAILED:
+            logger.error("Payment failed from overdue (id=%s, payment_id=%s, parent_payment_id=%s). stop " % (
+                op.id, op.payment_id, op.parent_payment_id), extra={
+                'schedule_payment_id': op.id,
+                'schedule_id': schedule_id,
+                'payment_id': op.payment_id,
+                'payment': payment,
+            })
+            break
 
     # Processing is over and we can allow user to use "Pay overdue" again if he wants
     schedule.processing = False
@@ -279,7 +375,10 @@ def process_all_deposit_payments(scheduled_date):
     """
     request_id = RequestIdGenerator.get()
     logging.init_shared_extra(request_id)
-    logger.info(f"Process all deposit payments for date: {scheduled_date}", extra={'scheduled_date': scheduled_date})
+    logger.info(f"Process all deposit payments for date: {scheduled_date}", extra={
+        # TODO: how are datetime types handled in logging.extra ??
+        'scheduled_date': scheduled_date
+    })
 
     # make sure we always keep consistent order, otherwise we'll get unpredictable results
     payments = DepositsSchedule.objects.filter(
@@ -293,8 +392,13 @@ def process_all_deposit_payments(scheduled_date):
             logger.info("Submit deposit payment (schedule_id=%s, origin_user_id=%s, "
                         "origin_payment_account_id=%s, deposit_payment_amount=%s, period=%s)" % (
                             s.id, s.origin_user_id, s.origin_payment_account_id, s.deposit_amount, s.period
-                        ), extra={'schedule_id': s.id, 'funding_source_id': s.funding_source_id,
-                                  'amount': s.deposit_amount, 'period': s.period})
+                        ),
+                        extra={
+                            'schedule_id': s.id,
+                            'funding_source_id': s.funding_source_id,
+                            'amount': s.deposit_amount,
+                            'period': s.period
+                        })
 
             # submit task for asynchronous processing to queue
             make_payment.delay(
@@ -323,7 +427,13 @@ def submit_scheduled_payment(s: Schedule, request_id=None):
     logger.debug("Submit regular payment (schedule_id=%s, origin_user_id=%s, payment_account_id=%s, "
                  "origin_payment_amount=%s, deposit_payment_amount=%s, period=%s)" % (
                      s.id, s.origin_user_id, s.origin_payment_account_id, s.payment_amount, s.deposit_amount, s.period
-                 ), extra={'schedule_id': s.id, 'funding_source_id': s.funding_source_id, 'amount': s.payment_amount, 'period': s.period})
+                 ),
+                 extra={
+                     'schedule_id': s.id,
+                     'funding_source_id': s.funding_source_id,
+                     'amount': s.payment_amount,
+                     'period': s.period
+                 })
 
     # submit task for asynchronous processing to queue
     make_payment.delay(
@@ -347,7 +457,9 @@ def process_all_one_time_payments(scheduled_date):
     """
     request_id = RequestIdGenerator.get()
     logging.init_shared_extra(request_id)
-    logger.info(f"Process all one time payments for date: {scheduled_date}", extra={'scheduled_date': scheduled_date})
+    logger.info(f"Process all one time payments for date: {scheduled_date}", extra={
+        'scheduled_date': scheduled_date
+    })
 
     # make sure we always keep consistent order, otherwise we'll get unpredictable results
     payments = OnetimeSchedule.objects.filter(
@@ -370,7 +482,9 @@ def process_all_weekly_payments(scheduled_date):
     """
     request_id = RequestIdGenerator.get()
     logging.init_shared_extra(request_id)
-    logger.info(f"Process all weekly payments for date: {scheduled_date}", extra={'scheduled_date': scheduled_date})
+    logger.info(f"Process all weekly payments for date: {scheduled_date}", extra={
+        'scheduled_date': scheduled_date
+    })
 
     # make sure we always keep consistent order, otherwise we'll get unpredictable results
     payments = WeeklySchedule.objects.filter(
@@ -393,7 +507,9 @@ def process_all_monthly_payments(scheduled_date):
     """
     request_id = RequestIdGenerator.get()
     logging.init_shared_extra(request_id)
-    logger.info(f"Process all monthly payments for date: {scheduled_date}", extra={'scheduled_date': scheduled_date})
+    logger.info(f"Process all monthly payments for date: {scheduled_date}", extra={
+        'scheduled_date': scheduled_date
+    })
 
     # make sure we always keep consistent order, otherwise we'll get unpredictable results
     payments = MonthlySchedule.objects.filter(
@@ -416,7 +532,9 @@ def process_all_quarterly_payments(scheduled_date):
     """
     request_id = RequestIdGenerator.get()
     logging.init_shared_extra(request_id)
-    logger.info(f"Process all quarterly payments for date: {scheduled_date}", extra={'scheduled_date': scheduled_date})
+    logger.info(f"Process all quarterly payments for date: {scheduled_date}", extra={
+        'scheduled_date': scheduled_date
+    })
 
     # make sure we always keep consistent order, otherwise we'll get unpredictable results
     payments = QuarterlySchedule.objects.filter(
@@ -439,7 +557,9 @@ def process_all_yearly_payments(scheduled_date):
     """
     request_id = RequestIdGenerator.get()
     logging.init_shared_extra(request_id)
-    logger.info(f"Process all yearly payments for date: {scheduled_date}", extra={'scheduled_date': scheduled_date})
+    logger.info(f"Process all yearly payments for date: {scheduled_date}", extra={
+        'scheduled_date': scheduled_date
+    })
 
     # make sure we always keep consistent order, otherwise we'll get unpredictable results
     payments = YearlySchedule.objects.filter(
@@ -466,8 +586,9 @@ def initiate_daily_payments():
     # get current date
     now = arrow.utcnow()
 
-    logger.info(f"Starting daily ({now}) payments processing...",
-                extra={'BLACKLISTED_DAYS_MAX_RETRY_COUNT': BLACKLISTED_DAYS_MAX_RETRY_COUNT})
+    logger.info(f"Starting daily ({now}) payments processing...", extra={
+        'BLACKLISTED_DAYS_MAX_RETRY_COUNT': BLACKLISTED_DAYS_MAX_RETRY_COUNT
+    })
 
     if BlacklistDate.contains(now.datetime.date()):
         logger.info("Skipping scheduler execution because '%s' is a special day" % now)
@@ -501,6 +622,12 @@ def initiate_daily_payments():
 
 
 def process_all_payments_for_date(date):
+    """
+
+    :param date:
+    :rtype date: datetime.datetime
+    :return:
+    """
     logger.info(f"Process all payments for date: {date}")
     # process deposit payments first
     process_all_deposit_payments(date)
@@ -509,16 +636,3 @@ def process_all_payments_for_date(date):
     process_all_monthly_payments(date)
     process_all_quarterly_payments(date)
     process_all_yearly_payments(date)
-
-
-@shared_task
-def on_payee_change(payee_info: Dict):
-    """
-    Process notification about changes in Payee model received from Payment-api.
-    :param payee_info:
-    :return:
-    """
-    pass
-    # TODO: update all payee info that is stored in Django models
-
-
