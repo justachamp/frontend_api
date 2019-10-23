@@ -6,7 +6,7 @@ from django.utils.functional import cached_property
 from rest_framework.exceptions import ValidationError
 from phonenumbers.phonenumberutil import region_code_for_country_code
 import phonenumbers
-from zeep.exceptions import TransportError
+from zeep.exceptions import TransportError, Fault
 
 from core.fields import Dataset, Country
 from core.models import User, USER_MIN_AGE, Address as CoreAddress
@@ -268,9 +268,10 @@ class ProfileValidationService:
 
             account.save()
 
-        except TransportError:
+        except (TransportError, Fault) as e:
             logger.error(
-                "GBG verification error (user=%s, address=%s) transport exception: %r" % (user, address, format_exc()))
+                "GBG verification error (user=%s, address=%s) exception(%s): %r" % (user, address, type(e), format_exc()))
             raise GBGVerificationError({"account": "KYC request is unsuccessful. Please, contact the support team."})
         except Exception as e:
-            logger.info("GBG verification error (user=%s, address=%s) exception: %r" % (user, address, format_exc()))
+            logger.error("GBG verification error (user=%s, address=%s) exception: %r" % (user, address, format_exc()),
+                         extra={'user': user, 'address': address})
