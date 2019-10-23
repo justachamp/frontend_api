@@ -176,12 +176,12 @@ def get_ses_email_payload(tpl_filename: str, tpl_context: Dict, subject=None):
 def notify_about_loaded_funds(funds_recipient: User, payment_info: Dict, payment_status: PaymentStatusType) -> None:
     """
     Sends notification to user about updated balance after 'load funds' operation has completed.
-    :param funds_recipient
+    :param: funds_recipient
     :param: payment_info
     :param: payment_status
     :return:
     """
-    logger.info("Load Funds. Payment_info: %s" % payment_info)
+    logger.info("Load Funds. Payment_info: %r" % payment_info)
     try:
         message_tpl = {
             PaymentStatusType.SUCCESS: """Successful transaction: {amount}{cur_symbol}, 
