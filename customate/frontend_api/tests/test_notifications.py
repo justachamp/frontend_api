@@ -1,9 +1,13 @@
 from unittest import skip
 import boto3
 
+from django.contrib.auth import get_user_model
 from django.test import SimpleTestCase
 from django.conf import settings
 from django.template.loader import render_to_string
+
+from core.fields import PaymentStatusType
+from frontend_api.helpers import notify_about_loaded_funds
 
 
 @skip("rewrite without actual requests to AWS")
@@ -67,3 +71,4 @@ class TestSmsNotifier(SimpleTestCase):
                 "Message": "Test sms from customate."}
         response = self.client.publish(**data)
         self.assertEqual(200, response["ResponseMetadata"].get("HTTPStatusCode"))
+
