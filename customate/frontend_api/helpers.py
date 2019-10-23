@@ -182,7 +182,6 @@ def notify_about_loaded_funds(user_id: str, payment_info: Dict, payment_status: 
     :return:
     """
     logger.info("Start notify about loaded funds. Payment_info: %s" % payment_info)
-    user_id = payment_info.get("user_id")
     try:
         funds_recipient = User.objects.get(id=user_id)
     except User.DoesNotExist:
