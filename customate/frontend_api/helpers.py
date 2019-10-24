@@ -181,29 +181,29 @@ def notify_about_loaded_funds(user_id: str, payment_info: Dict, payment_status: 
     :param: payment_status
     :return:
     """
-    logger.info("Start notify about loaded funds. Payment_info: %s" % payment_info)
+    if payment_status not in [PaymentStatusType.SUCCESS, PaymentStatusType.FAILED]:
+        return
     try:
         funds_recipient = User.objects.get(id=user_id)
     except User.DoesNotExist:
         logger.info("User with given user_id not found. %r" % format_exc())
         return
-    try:
-        message_tpl = {
-            PaymentStatusType.SUCCESS: """Successful transaction: {amount}{cur_symbol}, 
-                                          {dt}, 
-                                          {cur_symbol} balance: {closing_balance}""",
-            PaymentStatusType.FAILED: """Failed transaction: {amount}{cur_symbol}, 
-                                        {dt}, 
-                                        {cur_symbol} balance: {closing_balance}"""
-        }[payment_status]
+    logger.info("Start notify about loaded funds. Payment_info: %s" % payment_info)
 
-        tpl_filename = {
-            PaymentStatusType.SUCCESS: 'notifications/email_recipients_balance_updated.html',
-            PaymentStatusType.FAILED: 'notifications/email_transaction_failed.html'
-        }[payment_status]
-    except KeyError:
-        logger.error("Got unexpected payment_status. %r" % format_exc())
-        return
+    message_tpl = {
+        PaymentStatusType.SUCCESS: """Successful transaction: {amount}{cur_symbol}, 
+                                      {dt}, 
+                                      {cur_symbol} balance: {closing_balance}""",
+        PaymentStatusType.FAILED: """Failed transaction: {amount}{cur_symbol}, 
+                                    {dt}, 
+                                    {cur_symbol} balance: {closing_balance}"""
+    }[payment_status]
+
+    tpl_filename = {
+        PaymentStatusType.SUCCESS: 'notifications/email_recipients_balance_updated.html',
+        PaymentStatusType.FAILED: 'notifications/email_transaction_failed.html'
+    }[payment_status]
+
     funds_recipients = get_funds_recipients(funds_recipient=funds_recipient)
     load_funds_details = get_load_funds_details(payment_info)
     emails = [user.email for user in funds_recipients if user.notify_by_email]
