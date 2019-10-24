@@ -9,6 +9,7 @@ import arrow
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.paginator import Paginator
 from django.conf import settings
+from django.db import transaction
 
 from core.logger import RequestIdGenerator
 from core.models import User
@@ -68,7 +69,9 @@ def make_failed_payment(user_id: str, payment_account_id: str, schedule_id: str,
     )
 
 
-
+# Must NOT be executed in transaction, in this way we guarantee that SchedulePayments will be created event if something
+# goes wrong after that. SchedulePayments record will eventually prevent making extra requests to PaymentApi
+# upon second run for the same payment.
 @shared_task
 def make_payment(user_id: str, payment_account_id: str, schedule_id: str, currency: str, payment_amount: int,
                  additional_information: str, payee_id: str, funding_source_id: str, parent_payment_id=None,
@@ -88,7 +91,7 @@ def make_payment(user_id: str, payment_account_id: str, schedule_id: str, curren
     :param execution_date: When payment should be executed
     :param request_id: Unique processing request's id.
     :param is_deposit: Indicates whether this payment is deposit
-    :return:
+    :return: created payment instance
     """
     logging.init_shared_extra(request_id)
     logger.info("Making payment: user_id=%s, payment_account_id=%s, schedule_id=%s, currency=%s, payment_amount=%s, "
@@ -106,7 +109,6 @@ def make_payment(user_id: str, payment_account_id: str, schedule_id: str, curren
                 })
 
     payment_id = uuid4()
-    schedule_payment = None
     result = None
 
     try:
@@ -171,6 +173,7 @@ def make_payment(user_id: str, payment_account_id: str, schedule_id: str, curren
 
 
 @shared_task
+@transaction.atomic
 def on_payment_change(payment_info: Dict):
     """
     Process notification about changes in Payment model received from Payment-api.
@@ -289,6 +292,7 @@ def on_payment_change(payment_info: Dict):
         return
 
 
+# Must NOT be executed in transaction. This requirement comes from "make_payment" requirements.
 @shared_task
 def make_overdue_payment(schedule_id: str, request_id=None):
     """
