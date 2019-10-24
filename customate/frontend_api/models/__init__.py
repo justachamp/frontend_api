@@ -2,6 +2,7 @@ import datetime
 from dataclasses import dataclass
 from uuid import UUID
 
+from django.core.validators import URLValidator
 from enumfields import EnumField
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -19,12 +20,30 @@ GBG_SUCCESS_STATUS = 'Pass'
 GBG_ALLOWED_VERIFICATION_COUNT = 3
 
 
+class OptionalSchemeURLValidator(URLValidator):
+    def __call__(self, value):
+        if '://' not in value:
+            value = 'http://' + value
+
+        super(OptionalSchemeURLValidator, self).__call__(value)
+
+
+# We cannot just use URLField with custom validators list, because original Field class combines default_validators &
+# _validators fields before returning a result of a "validators" call.
+class OptionalSchemeURLField(models.URLField):
+    default_validators = [OptionalSchemeURLValidator()]
+
+    def __init__(self, verbose_name=None, name=None, **kwargs):
+        kwargs.setdefault('max_length', 400)
+        super().__init__(verbose_name, name, **kwargs)
+
+
 class Company(Model):
     company_type = EnumField(CompanyType, max_length=30, blank=True, null=True)
     registration_business_name = models.CharField(max_length=50, blank=True)
     registration_number = models.CharField(max_length=8, blank=True)
     vat_number = models.CharField(max_length=12, blank=True)
-    business_website_url = models.URLField(max_length=400, blank=True)
+    business_website_url = OptionalSchemeURLField(blank=True)
     address = models.OneToOneField(
         Address,
         on_delete=models.CASCADE,

@@ -1,12 +1,12 @@
-
+from django.utils.translation import gettext_lazy as _
 from rest_framework_json_api.serializers import HyperlinkedModelSerializer
 from core.models import Address
 
 from frontend_api.models import (
     Shareholder,
     Company,
-    UserAccount
-)
+    UserAccount,
+    OptionalSchemeURLValidator)
 
 from frontend_api.fields import CompanyType
 
@@ -18,6 +18,17 @@ from frontend_api.serializers import (
 
 import logging
 logger = logging.getLogger(__name__)
+
+
+class OptionalSchemeURLField(CharField):
+    default_error_messages = {
+        'invalid': _('Enter a valid URL.')
+    }
+
+    def __init__(self, **kwargs):
+        super(OptionalSchemeURLField, self).__init__(**kwargs)
+        validator = OptionalSchemeURLValidator(message=self.error_messages['invalid'])
+        self.validators.append(validator)
 
 
 class CompanySerializer(HyperlinkedModelSerializer):
@@ -64,6 +75,7 @@ class CompanySerializer(HyperlinkedModelSerializer):
     )
 
     company_type = EnumField(enum=CompanyType)
+    business_website_url = OptionalSchemeURLField()
 
     class Meta:
         model = Company
