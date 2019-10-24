@@ -173,15 +173,20 @@ def get_ses_email_payload(tpl_filename: str, tpl_context: Dict, subject=None):
     return message
 
 
-def notify_about_loaded_funds(funds_recipient: User, payment_info: Dict, payment_status: PaymentStatusType) -> None:
+def notify_about_loaded_funds(user_id: str, payment_info: Dict, payment_status: PaymentStatusType) -> None:
     """
     Sends notification to user about updated balance after 'load funds' operation has completed.
-    :param funds_recipient
+    :param: user_id
     :param: payment_info
     :param: payment_status
     :return:
     """
-    logger.info("Load Funds. Payment_info: %s" % payment_info)
+    logger.info("Start notify about loaded funds. Payment_info: %s" % payment_info)
+    try:
+        funds_recipient = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        logger.info("User with given user_id not found. %r" % format_exc())
+        return
     try:
         message_tpl = {
             PaymentStatusType.SUCCESS: """Successful transaction: {amount}{cur_symbol}, 
@@ -197,7 +202,7 @@ def notify_about_loaded_funds(funds_recipient: User, payment_info: Dict, payment
             PaymentStatusType.FAILED: 'notifications/email_transaction_failed.html'
         }[payment_status]
     except KeyError:
-        logger.error("Notify about loaded funds. Got unexpected payment_status. %r" % format_exc())
+        logger.error("Got unexpected payment_status. %r" % format_exc())
         return
     funds_recipients = get_funds_recipients(funds_recipient=funds_recipient)
     load_funds_details = get_load_funds_details(payment_info)
@@ -218,20 +223,21 @@ def notify_about_loaded_funds(funds_recipient: User, payment_info: Dict, payment
                     tpl_message=message_tpl)
 
 
-def notify_about_schedules_failed_transaction(schedule: Schedule, payment_info: Dict) -> None:
+def notify_about_schedules_failed_payment(schedule: Schedule, payment_info: Dict) -> None:
     """
     Sends notifications for funds sender if transaction has failed.
     :param schedule:
     :param payment_info: data from payment service.
     :return:
     """
+    logger.info("Start notify about failed payment. Payment info: %s" % payment_info)
     funds_sender = schedule.origin_user
     user_id = payment_info.get("user_id")
 
     try:
         payment_user = User.objects.get(id=user_id)
     except User.DoesNotExist:
-        logger.error("Transaction failed. User with id: %s does not exist." % user_id)
+        logger.error("User with given id not found. %r" % format_exc())
         return
 
     message_tpl = """ 
@@ -268,27 +274,27 @@ def notify_about_schedules_failed_transaction(schedule: Schedule, payment_info: 
         send_bulk_smses(phone_numbers=phone_numbers,
                         context=sms_context,
                         tpl_message=message_tpl)
-        logger.info("Failed transaction. Notifications sent to %s " % funds_sender.username)
+        logger.info("Failed payment. Notifications sent to %s " % funds_sender.username)
     else:
-        logger.info("Failed transaction. Notifications sending has passed.")
+        logger.info("Failed payment. Notifications sending has passed.")
 
 
-def notify_about_schedules_successful_transaction(schedule: Schedule, payment_info: Dict) -> None:
+def notify_about_schedules_successful_payment(schedule: Schedule, payment_info: Dict) -> None:
     """
     Send notifications for funds senders and recipients in case of successful transaction.
     :param schedule:
     :param payment_info: data from payment service.
     :return:
     """
+    logger.info("Start notify about successful payment. Payment info: %s" % payment_info)
     funds_sender = schedule.origin_user
     funds_recipient = schedule.recipient_user if schedule.recipient_user \
         else schedule.payee_recipient_email
     user_id = payment_info.get("user_id")
-
     try:
         payment_user = User.objects.get(id=user_id)
     except User.DoesNotExist:
-        logger.error("Balance changed. User with id: %s does not exist." % user_id)
+        logger.error("User with given id not found. %r" % format_exc())
         return
 
     message_tpl = """ 

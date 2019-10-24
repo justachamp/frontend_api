@@ -253,7 +253,6 @@ if DEBUG:
         'rest_framework.renderers.BrowsableAPIRenderer',
     )
 
-
 REST_FRAMEWORK = {
     'PAGE_SIZE': 10,
     # need custom handler
@@ -448,6 +447,11 @@ CELERY_TASK_QUEUES = (
 #
 # )
 
+CELERY_IMPORTS = (
+    "frontend_api.tasks.notifiers",
+    "frontend_api.tasks.payments",
+    "frontend_api.tasks.schedules",
+)
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
@@ -457,11 +461,11 @@ CELERY_BEAT_PER_PAGE_OBJECTS = 5
 # This is for periodic execution of tasks
 # For more info: http://docs.celeryproject.org/en/latest/userguide/periodic-tasks.html#crontab-schedules
 CELERY_BEAT_SCHEDULE = {
-     # 'one_per_minute': {
-     #    'task': 'frontend_api.tasks.schedules.process_unaccepted_schedules',
-     #    'schedule': crontab(minute='*/1'),
-     #    'args': ('one_per_hour', False, None)
-     # },
+    # 'one_per_minute': {
+    #     'task': 'frontend_api.tasks.schedules.dummy',
+    #     'schedule': crontab(minute='*/1'),
+    #     'args': ('one_per_hour', False, None)
+    # },
 
     'once_per_day': {
         'task': 'frontend_api.tasks.payments.initiate_daily_payments',

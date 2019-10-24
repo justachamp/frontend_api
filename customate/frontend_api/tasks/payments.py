@@ -202,16 +202,11 @@ def on_payment_change(payment_info: Dict):
             'request_id': request_id,
             'payment_id': payment_id
         })
-        logger.info("Load Funds. Start processing transaction. User_id: " % user_id)
-        try:
-            funds_recipient = User.objects.get(id=user_id)
-            logger.info("Load Funds. Got recipient user: %s" % funds_recipient.username)
-        except User.DoesNotExist:
-            logger.info("Load Funds. User with given user_id not found.")
-            return
-        logger.info("Load Funds. Send notification to %s" % funds_recipient.username)
+        # WARN: it is implicitly guarantied(?) that on_payment_change with schedule_id=None will be
+        # WARN: called with user_id == funds_recipient_user_id
+        # TODO: we need to refactor this with a better naming and/or another more explicit solution
         helpers.notify_about_loaded_funds(
-            funds_recipient=funds_recipient,
+            user_id=user_id,
             payment_info=payment_info,
             payment_status=payment_status)
         return
@@ -258,13 +253,11 @@ def on_payment_change(payment_info: Dict):
     if payment_status is PaymentStatusType.SUCCESS:
         schedule.refresh_number_of_payments_made()
         # send appropriate notifications for participants
-        logger.info("Successful transaction. Payment info: %s" % payment_info)
-        helpers.notify_about_schedules_successful_transaction(schedule=schedule, payment_info=payment_info)
+        helpers.notify_about_schedules_successful_payment(schedule=schedule, payment_info=payment_info)
 
     # send appropriate notifications for funds sender if payment has failed
     if payment_status is PaymentStatusType.FAILED:
-        logger.info("Failed transaction. Payment info: %s" % payment_info)
-        helpers.notify_about_schedules_failed_transaction(schedule=schedule, payment_info=payment_info)
+        helpers.notify_about_schedules_failed_payment(schedule=schedule, payment_info=payment_info)
 
     # update Schedule status
     schedule.update_status()
