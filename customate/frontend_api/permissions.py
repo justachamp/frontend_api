@@ -62,9 +62,10 @@ class CheckFieldsCredentials(permissions.BasePermission):
                 raise ValidationError({'credentials': [{'password': 'wrong credentials'}]})
             try:
                 return serializer.check_password(serializer.validated_data)
+            except ValidationError as ex:
+                raise ex
             except Exception as ex:
                 raise ValidationError({'credentials': [{'password': ex}]})
-
         else:
             raise ValidationError({'credentials': ['credentials required']})
 
