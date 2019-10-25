@@ -103,6 +103,7 @@ def get_funds_recipients(funds_recipient: User or str) -> list:
 def get_load_funds_details(payment_info: Dict) -> Dict:
     now = arrow.utcnow()
     context = {
+        "error_msg": payment_info.get("error_message") or "unknown",
         'currency': Currency(payment_info.get("currency")),
         'amount': payment_info.get("amount"),
         'processed_datetime': now.datetime,
