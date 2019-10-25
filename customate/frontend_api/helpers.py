@@ -195,9 +195,10 @@ def notify_about_loaded_funds(user_id: str, payment_info: Dict, payment_status: 
     message_tpl = {
         PaymentStatusType.SUCCESS:
             ",".join(
-                ["Successful transaction: {amount}{cur_symbol}",
+                ["Successful transaction: + {amount}{cur_symbol}",
                  "\n{dt}",
-                 "\n{cur_symbol} wallet available balance: {closing_balance} {cur_symbol}"]
+                 "\n{payment_type}",
+                 "\n{cur_symbol} wallet available balance: {closing_balance} {cur_symbol}."]
             ),
         PaymentStatusType.FAILED:
             ",".join(
@@ -222,6 +223,7 @@ def notify_about_loaded_funds(user_id: str, payment_info: Dict, payment_status: 
                      tpl_filename=tpl_filename)
 
     sms_context = {
+        "payment_type": "incoming",
         "error_msg": payment_info.get("error_message") or "unknown",
         "amount": prettify_number(load_funds_details['amount']),
         "cur_symbol": load_funds_details["currency"].symbol,
