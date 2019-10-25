@@ -10,7 +10,6 @@ from botocore.exceptions import ClientError, EndpointConnectionError
 logger = logging.getLogger(__name__)
 
 
-
 @shared_task
 def send_notification_email(to_address, message):
     logger.info("Send email notification to %s" % to_address)
@@ -35,8 +34,17 @@ def send_notification_sms(to_phone_number, message):
     sms_client = boto3.client('sns', aws_access_key_id=settings.AWS_ACCESS_KEY,
                               aws_secret_access_key=settings.AWS_SECRET_KEY,
                               region_name=settings.AWS_REGION_SNS)
-    kwargs = {"PhoneNumber": to_phone_number,
-              "Message": message}
+    kwargs = {"MessageAttributes": {
+        'AWS.SNS.SMS.SMSType': {
+            'DataType': 'String',
+            'StringValue': 'Transactional'},
+        'AWS.SNS.SMS.SenderID': {
+            'DataType': 'String',
+            'StringValue': settings.AWS_SNS_NOTIFICATIONS_GOCUSTOMATE_SENDER,
+        }
+    },
+        "PhoneNumber": to_phone_number,
+        "Message": message}
     try:
         sms_client.publish(**kwargs)
     except:
