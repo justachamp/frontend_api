@@ -47,7 +47,8 @@ def send_bulk_emails(emails: list, context: Dict, tpl_filename: str) -> None:
     for email in new_emails:
         message = get_ses_email_payload(
             tpl_filename=tpl_filename,
-            tpl_context=context
+            tpl_context=context,
+            subject=settings.AWS_SES_SUBJECT_NAME
         )
         # Send email
         send_notification_email.delay(to_address=email, message=message)
@@ -337,7 +338,8 @@ def notify_about_schedules_successful_payment(schedule: Schedule, payment_info: 
         schedule_details = get_schedule_details(user=funds_recipient, schedule=schedule)
         message = get_ses_email_payload(
             tpl_filename='notifications/email_recipients_balance_updated.html',
-            tpl_context=schedule_details
+            tpl_context=schedule_details,
+            subject=settings.AWS_SES_SUBJECT_NAME
         )
         # Send email
         send_notification_email.delay(to_address=funds_recipient, message=message)
