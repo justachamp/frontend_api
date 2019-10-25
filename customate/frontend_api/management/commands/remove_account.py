@@ -6,7 +6,7 @@ from core.models import User
 
 class Command(BaseCommand):
     help = "PERMANENTLY remove accounts by any related user's email. " \
-           "NOTE that payment service account will not be touched."
+           "NOTE that payment service account will not be removed, just marked as inactive."
 
     def add_arguments(self, parser):
         parser.add_argument('user_email', type=str, help='Email of user that exists in target account'),
