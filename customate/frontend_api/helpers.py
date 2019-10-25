@@ -187,17 +187,24 @@ def notify_about_loaded_funds(user_id: str, payment_info: Dict, payment_status: 
     try:
         funds_recipient = User.objects.get(id=user_id)
     except User.DoesNotExist:
-        logger.info("User with given user_id not found. %r" % format_exc())
+        logger.info("User with given user_id has not found. %r" % format_exc())
         return
     logger.info("Start notify about loaded funds. Payment_info: %s" % payment_info)
 
     message_tpl = {
-        PaymentStatusType.SUCCESS: """Successful transaction: {amount}{cur_symbol}, 
-                                      {dt}, 
-                                      {cur_symbol} balance: {closing_balance}""",
-        PaymentStatusType.FAILED: """Failed transaction: {amount}{cur_symbol}, 
-                                    {dt}, 
-                                    {cur_symbol} balance: {closing_balance}"""
+        PaymentStatusType.SUCCESS:
+            ",".join(
+                ["Successful transaction: {amount}{cur_symbol}",
+                 "\n{dt}",
+                 "\n{cur_symbol} wallet available balance: {closing_balance} {cur_symbol}"]
+            ),
+        PaymentStatusType.FAILED:
+            ",".join(
+                ["Failed transaction: {amount}{cur_symbol}",
+                 "\n{dt}",
+                 "\nReason: {error_msg}",
+                 "\n{cur_symbol} wallet available balance: {closing_balance} {cur_symbol}."]
+            )
     }[payment_status]
 
     tpl_filename = {
@@ -214,6 +221,7 @@ def notify_about_loaded_funds(user_id: str, payment_info: Dict, payment_status: 
                      tpl_filename=tpl_filename)
 
     sms_context = {
+        "error_msg": payment_info.get("error_message") or "unknown",
         "amount": prettify_number(load_funds_details['amount']),
         "cur_symbol": load_funds_details["currency"].symbol,
         "dt": arrow.get(load_funds_details['processed_datetime']).format("YYYY/MM/DD hh:mm:ss"),
@@ -243,13 +251,13 @@ def notify_about_schedules_failed_payment(schedule: Schedule, payment_info: Dict
         logger.error("User with given id not found. %r" % format_exc())
         return
 
-    message_tpl = """ 
-           Failed transaction: {amount}{cur_symbol}, 
-           {dt}, 
-           error={error_msg},
-           {schedule_name},
-           {cur_symbol} balance: {closing_balance}
-       """
+    message_tpl = ",".join([
+        "Failed transaction: {amount}{cur_symbol}",
+        "\n{dt}",
+        "\n{schedule_name}",
+        "\nReason: {error_msg}",
+        "\n{cur_symbol} wallet available balance: {closing_balance} {cur_symbol}."
+    ])
 
     if payment_user.account.id in funds_sender.get_all_related_account_ids():
         funds_senders = get_funds_senders(funds_sender=funds_sender)
@@ -271,7 +279,7 @@ def notify_about_schedules_failed_payment(schedule: Schedule, payment_info: Dict
             "cur_symbol": schedule_details["currency"].symbol,
             "dt": arrow.get(schedule_details['processed_datetime']).format("YYYY/MM/DD hh:mm:ss"),
             "error_msg": error_message,
-            "schedule_name": schedule.name,
+            "schedule_name": schedule.name if len(schedule.name) < 20 else schedule.name[:20] + '...',
             "closing_balance": prettify_number(closing_balance)
         }
         phone_numbers = [user.phone_number for user in funds_senders if user.phone_number and user.notify_by_phone]
@@ -301,12 +309,12 @@ def notify_about_schedules_successful_payment(schedule: Schedule, payment_info: 
         logger.error("User with given id not found. %r" % format_exc())
         return
 
-    message_tpl = """ 
-        Successful transaction: {amount}{cur_symbol}, 
-        {dt}, 
-        {schedule_name},
-        {cur_symbol} balance: {closing_balance}
-    """
+    outgoing_payment_message_tpl = ",".join([
+        "Successful transaction: - {amount}{cur_symbol}",
+        "\n{dt}",
+        "\n{schedule_name}",
+        "\n{cur_symbol} wallet available balance: {closing_balance} {cur_symbol}."
+    ])
 
     # Send notifications for funds SENDERS.
     if payment_user.account.id in funds_sender.get_all_related_account_ids():
@@ -323,14 +331,14 @@ def notify_about_schedules_successful_payment(schedule: Schedule, payment_info: 
             "amount": prettify_number(schedule_details['amount']),
             "cur_symbol": schedule_details["currency"].symbol,
             "dt": arrow.get(schedule_details['processed_datetime']).format("YYYY/MM/DD hh:mm:ss"),
-            "schedule_name": schedule.name,
+            "schedule_name": schedule.name if len(schedule.name) < 20 else schedule.name[:20] + '...',
             "closing_balance": prettify_number(closing_balance)
         }
         phone_numbers = [user.phone_number for user in funds_senders if user.phone_number and user.notify_by_phone]
         logger.info("Successful payment. Funds senders phone_numbers: %s" % ", ".join(phone_numbers))
         send_bulk_smses(phone_numbers=phone_numbers,
                         context=sms_context,
-                        tpl_message=message_tpl)
+                        tpl_message=outgoing_payment_message_tpl)
 
     # Send notification for funds RECIPIENTS.
     if isinstance(funds_recipient, str):
@@ -345,6 +353,13 @@ def notify_about_schedules_successful_payment(schedule: Schedule, payment_info: 
         send_notification_email.delay(to_address=funds_recipient, message=message)
         return
 
+    incoming_payment_message_tpl = ",".join([
+        "Successful transaction: + {amount}{cur_symbol}",
+        "\n{dt}",
+        "\n{payment_type}",
+        "\n{cur_symbol} wallet available balance: {closing_balance} {cur_symbol}"
+    ])
+
     if payment_user.account.id in funds_recipient.get_all_related_account_ids():
         funds_recipients = get_funds_recipients(funds_recipient=funds_recipient)
         schedule_details = get_schedule_details(user=funds_recipient, schedule=schedule)
@@ -357,17 +372,18 @@ def notify_about_schedules_successful_payment(schedule: Schedule, payment_info: 
                          tpl_filename='notifications/email_recipients_balance_updated.html')
 
         sms_context = {
+            "payment_type": schedule.payment_type,
             "amount": prettify_number(schedule_details['amount']),
             "cur_symbol": schedule_details["currency"].symbol,
             "dt": arrow.get(schedule_details['processed_datetime']).format("YYYY/MM/DD hh:mm:ss"),
-            "schedule_name": schedule.name,
+            "schedule_name": schedule.name if len(schedule.name) < 20 else schedule.name[:20] + '...',
             "closing_balance": prettify_number(closing_balance)
         }
         phone_numbers = [user.phone_number for user in funds_recipients if user.phone_number and user.notify_by_phone]
         logger.info("Successful payment. Funds recipient phone numbers: %s" % ", ".join(phone_numbers))
         send_bulk_smses(phone_numbers=phone_numbers,
                         context=sms_context,
-                        tpl_message=message_tpl)
+                        tpl_message=incoming_payment_message_tpl)
         logger.info("Successful payment. Notifications sent to all participants. Schedule id: %s " % schedule.id)
     else:
         logger.info("Successful payment. Notifications sending has passed.")
