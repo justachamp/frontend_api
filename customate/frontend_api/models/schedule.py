@@ -136,13 +136,17 @@ class Schedule(AbstractSchedule):
         return self.status in [ScheduleStatus.open]
 
     def _did_we_send_first_payment(self):
+        """
+        TODO: Rewrite to fully rely on actual data in SchedulePayments instead of date comparison
+        :return:
+        """
         # return self.number_of_payments_made > 0 # we can't rely on this field here, since there is
         # a case of long-running PENDING payments(days), which might corrupt our next_payment_date calculations
         now_date = arrow.utcnow().datetime.date()
         # We cannot just compare dates and ignore time. If start_date is current date
         # then scheduler's start time is important in fact
         return now_date > self.start_date or (
-                now_date == self.start_date and arrow.utcnow() > self.get_celery_processing_time()
+                now_date == self.start_date and arrow.utcnow() > self._get_celery_processing_time()
         )
 
     @property
@@ -354,7 +358,7 @@ class Schedule(AbstractSchedule):
             .update(status=ScheduleStatus.closed)
 
     @staticmethod
-    def get_celery_processing_time():
+    def _get_celery_processing_time():
         st_hour = int(list(SCHEDULES_START_PROCESSING_TIME.hour)[0])
         st_minute = int(list(SCHEDULES_START_PROCESSING_TIME.minute)[0])
         return arrow.get("{full_date}T{hour}:{minute}:00".format(
@@ -383,12 +387,13 @@ class Schedule(AbstractSchedule):
             status=ScheduleStatus.open.value
         )
         scheduled_date = arrow.get(deposit_payment.scheduled_date).datetime.date()
-        return scheduled_date >= self._get_nearest_acceptable_scheduler_date()
+        return scheduled_date >= Schedule.nearest_scheduler_processing_date()
 
     def have_time_for_regular_payment_processing(self):
         try:
-            number_of_sent_regular_payments = LastSchedulePayments.objects.filter(
+            number_of_sent_regular_payments = SchedulePayments.objects.filter(
                 schedule_id=self.id,
+                parent_payment_id=None,
                 is_deposit=False
             ).count()
 
@@ -405,24 +410,24 @@ class Schedule(AbstractSchedule):
             ).order_by("scheduled_date").all()[from_index:to_index].first()
 
             scheduled_date = arrow.get(nearest_payment.scheduled_date).datetime.date()
-            return nearest_payment is not None and scheduled_date >= self._get_nearest_acceptable_scheduler_date()
+            return nearest_payment is not None and scheduled_date >= Schedule.nearest_scheduler_processing_date()
         except ObjectDoesNotExist:
             return False
 
-    def _get_nearest_acceptable_scheduler_date(self):
+    @staticmethod
+    def nearest_scheduler_processing_date():
         """
-
-        :return:
-        :rtype: datetime.date
+        Find out nearest schedulers processing time (taking into account blacklisted dates)
+        :return: datetime.date
         """
-        scheduler_start_time = Schedule.get_celery_processing_time()
+        scheduler_start_time = Schedule._get_celery_processing_time()
         retry_count = 1
 
         while True:
             if retry_count > BLACKLISTED_DAYS_MAX_RETRY_COUNT:
                 break
 
-            if BlacklistDate.contains(scheduler_start_time.datetime.date()) or scheduler_start_time < arrow.utcnow():
+            if BlacklistDate.contains(scheduler_start_time.datetime.date()) or arrow.utcnow() > scheduler_start_time:
                 scheduler_start_time = scheduler_start_time.shift(days=1)
             else:
                 break
