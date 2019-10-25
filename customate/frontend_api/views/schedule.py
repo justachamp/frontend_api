@@ -338,6 +338,11 @@ class ScheduleViewSet(views.ModelViewSet):
         if schedule.have_time_for_payments_processing():
             self._process_first_payments(schedule)
         else:
+            process_late_payments = bool(int(self.request.query_params.get("process_late_payments", 0)))
+            if not process_late_payments:
+                raise ConflictError(f'Cannot update schedule. '
+                                    f'There are related late payments that should be processed ({schedule.id})')
+
             self._process_potential_late_payments(schedule)
 
         return Response()
