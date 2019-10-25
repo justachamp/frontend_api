@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 @shared_task
 def send_notification_email(to_address, message):
+    logger.info("Send email notification to %s" % to_address)
     email_client = boto3.client('ses', aws_access_key_id=settings.AWS_ACCESS_KEY,
                                 aws_secret_access_key=settings.AWS_SECRET_KEY,
                                 region_name=settings.AWS_REGION_SES)
@@ -30,6 +31,7 @@ def send_notification_email(to_address, message):
 
 @shared_task
 def send_notification_sms(to_phone_number, message):
+    logger.info("Send sms notification to %s " % to_phone_number)
     sms_client = boto3.client('sns', aws_access_key_id=settings.AWS_ACCESS_KEY,
                               aws_secret_access_key=settings.AWS_SECRET_KEY,
                               region_name=settings.AWS_REGION_SNS)

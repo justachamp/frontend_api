@@ -181,32 +181,33 @@ def notify_about_loaded_funds(user_id: str, payment_info: Dict, payment_status: 
     :param: payment_status
     :return:
     """
-    logger.info("Start notify about loaded funds. Payment_info: %s" % payment_info)
+    if payment_status not in [PaymentStatusType.SUCCESS, PaymentStatusType.FAILED]:
+        return
     try:
         funds_recipient = User.objects.get(id=user_id)
     except User.DoesNotExist:
         logger.info("User with given user_id not found. %r" % format_exc())
         return
-    try:
-        message_tpl = {
-            PaymentStatusType.SUCCESS: """Successful transaction: {amount}{cur_symbol}, 
-                                          {dt}, 
-                                          {cur_symbol} balance: {closing_balance}""",
-            PaymentStatusType.FAILED: """Failed transaction: {amount}{cur_symbol}, 
-                                        {dt}, 
-                                        {cur_symbol} balance: {closing_balance}"""
-        }[payment_status]
+    logger.info("Start notify about loaded funds. Payment_info: %s" % payment_info)
 
-        tpl_filename = {
-            PaymentStatusType.SUCCESS: 'notifications/email_recipients_balance_updated.html',
-            PaymentStatusType.FAILED: 'notifications/email_transaction_failed.html'
-        }[payment_status]
-    except KeyError:
-        logger.error("Got unexpected payment_status. %r" % format_exc())
-        return
+    message_tpl = {
+        PaymentStatusType.SUCCESS: """Successful transaction: {amount}{cur_symbol}, 
+                                      {dt}, 
+                                      {cur_symbol} balance: {closing_balance}""",
+        PaymentStatusType.FAILED: """Failed transaction: {amount}{cur_symbol}, 
+                                    {dt}, 
+                                    {cur_symbol} balance: {closing_balance}"""
+    }[payment_status]
+
+    tpl_filename = {
+        PaymentStatusType.SUCCESS: 'notifications/email_recipients_balance_updated.html',
+        PaymentStatusType.FAILED: 'notifications/email_transaction_failed.html'
+    }[payment_status]
+
     funds_recipients = get_funds_recipients(funds_recipient=funds_recipient)
     load_funds_details = get_load_funds_details(payment_info)
     emails = [user.email for user in funds_recipients if user.notify_by_email]
+    logger.info("Load funds. Funds recipient emails: %s" % ", ".join(emails))
     send_bulk_emails(emails=emails,
                      context=load_funds_details,
                      tpl_filename=tpl_filename)
@@ -218,6 +219,7 @@ def notify_about_loaded_funds(user_id: str, payment_info: Dict, payment_status: 
         "closing_balance": prettify_number(load_funds_details["recipients_closing_balance"])
     }
     phone_numbers = [user.phone_number for user in funds_recipients if user.phone_number and user.notify_by_phone]
+    logger.info("Load funds. Funds recipient phone numbers: %s" % ", ".join(phone_numbers))
     send_bulk_smses(phone_numbers=phone_numbers,
                     context=sms_context,
                     tpl_message=message_tpl)
@@ -249,14 +251,15 @@ def notify_about_schedules_failed_payment(schedule: Schedule, payment_info: Dict
        """
 
     if payment_user.account.id in funds_sender.get_all_related_account_ids():
+        funds_senders = get_funds_senders(funds_sender=funds_sender)
         closing_balance = payment_info.get("closing_balance")
         error_message = payment_info.get("error_message") or 'unknown'
         schedule_details = get_schedule_details(user=funds_sender, schedule=schedule)
-        funds_senders = get_funds_senders(funds_sender=funds_sender)
         email_context = {"senders_closing_balance": closing_balance,
                          "error_message": error_message,
                          **schedule_details}
         emails = [user.email for user in funds_senders if user.notify_by_email]
+        logger.info("Failed payment. Funds senders emails: %s ." % ", ".join(emails))
         send_bulk_emails(emails=emails,
                          context=email_context,
                          tpl_filename='notifications/email_transaction_failed.html')
@@ -271,12 +274,12 @@ def notify_about_schedules_failed_payment(schedule: Schedule, payment_info: Dict
             "closing_balance": prettify_number(closing_balance)
         }
         phone_numbers = [user.phone_number for user in funds_senders if user.phone_number and user.notify_by_phone]
+        logger.info("Failed payment. Funds senders phone numbers: %s ." % ", ".join(phone_numbers))
         send_bulk_smses(phone_numbers=phone_numbers,
                         context=sms_context,
                         tpl_message=message_tpl)
-        logger.info("Failed payment. Notifications sent to %s " % funds_sender.username)
     else:
-        logger.info("Failed payment. Notifications sending has passed.")
+        logger.info("Failed payment. Notifications sending has passed. Schedule id: %s" % schedule.id)
 
 
 def notify_about_schedules_successful_payment(schedule: Schedule, payment_info: Dict) -> None:
@@ -306,11 +309,12 @@ def notify_about_schedules_successful_payment(schedule: Schedule, payment_info: 
 
     # Send notifications for funds SENDERS.
     if payment_user.account.id in funds_sender.get_all_related_account_ids():
+        funds_senders = get_funds_senders(funds_sender=funds_sender)
         closing_balance = payment_info.get("closing_balance")
         schedule_details = get_schedule_details(user=funds_sender, schedule=schedule)
-        funds_senders = get_funds_senders(funds_sender=funds_sender)
         email_context_for_senders = {"senders_closing_balance": closing_balance, **schedule_details}
         emails = [user.email for user in funds_senders if user.notify_by_email]
+        logger.info("Successful payment. Funds senders emails: %s" % ", ".join(emails))
         send_bulk_emails(emails=emails,
                          context=email_context_for_senders,
                          tpl_filename='notifications/email_senders_balance_updated.html')
@@ -322,12 +326,14 @@ def notify_about_schedules_successful_payment(schedule: Schedule, payment_info: 
             "closing_balance": prettify_number(closing_balance)
         }
         phone_numbers = [user.phone_number for user in funds_senders if user.phone_number and user.notify_by_phone]
+        logger.info("Successful payment. Funds senders phone_numbers: %s" % ", ".join(phone_numbers))
         send_bulk_smses(phone_numbers=phone_numbers,
                         context=sms_context,
                         tpl_message=message_tpl)
 
     # Send notification for funds RECIPIENTS.
     if isinstance(funds_recipient, str):
+        logger.info("Successful payment. External recipient: %s" % funds_recipient)
         schedule_details = get_schedule_details(user=funds_recipient, schedule=schedule)
         message = get_ses_email_payload(
             tpl_filename='notifications/email_recipients_balance_updated.html',
@@ -343,6 +349,7 @@ def notify_about_schedules_successful_payment(schedule: Schedule, payment_info: 
         closing_balance = payment_info.get("closing_balance")
         email_context_for_recipients = {'recipients_closing_balance': closing_balance, **schedule_details}
         emails = [user.email for user in funds_recipients if user.notify_by_email]
+        logger.info("Successful payment. Funds recipient emails: %s" % ", ".join(emails))
         send_bulk_emails(emails=emails,
                          context=email_context_for_recipients,
                          tpl_filename='notifications/email_recipients_balance_updated.html')
@@ -355,9 +362,10 @@ def notify_about_schedules_successful_payment(schedule: Schedule, payment_info: 
             "closing_balance": prettify_number(closing_balance)
         }
         phone_numbers = [user.phone_number for user in funds_recipients if user.phone_number and user.notify_by_phone]
+        logger.info("Successful payment. Funds recipient phone numbers: %s" % ", ".join(phone_numbers))
         send_bulk_smses(phone_numbers=phone_numbers,
                         context=sms_context,
                         tpl_message=message_tpl)
-        logger.info("Balance changed. Notifications sent to participants of schedule %s " % schedule.id)
+        logger.info("Successful payment. Notifications sent to all participants. Schedule id: %s " % schedule.id)
     else:
-        logger.info("Balance changed. Notifications sending has passed.")
+        logger.info("Successful payment. Notifications sending has passed.")
