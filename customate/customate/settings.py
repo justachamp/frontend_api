@@ -150,12 +150,12 @@ logging.config.dictConfig({
     'loggers': {
         # "root" logger which serves as a catch-all for any logs that are sent from any Python module
         '': {
-            'level': LOGLEVEL,
-            'handlers': ['console'],
+            'level': 'ERROR',
+            'handlers': ['console', 'rotating_file'],
         },
 
         'django': {
-            'handlers': ['console'],
+            'handlers': ['console', 'rotating_file'],
             'level': 'ERROR',
         },
 
@@ -167,7 +167,7 @@ logging.config.dictConfig({
 
         # DB queries
         'django.db.backends': {
-            'handlers': ['console'],
+            'handlers': ['console', 'rotating_file'],
             'level': 'ERROR',
             'propagate': False,
         },
