@@ -25,7 +25,6 @@ def validate_token(access_token, id_token, refresh_token=None):
         header, payload = decode_token(access_token)
         if id_token:
             id_header, id_payload = decode_token(id_token)
-            logger.debug(f'id_payload {id_payload}')
     except Exception as ex:
         # Invalid token or token we can't decode for whatever reason
         logger.error(f"Validating token process caught an exception: {ex!r}")
@@ -71,14 +70,14 @@ def validate_token(access_token, id_token, refresh_token=None):
             # TODO: DON'T return refresh token here, for methods that require a refresh token we should implement
             # them somewhere else, or differently
             data = result['AuthenticationResult']
-            logger.debug(f"Got fresh tokens: {data['AccessToken']}, {data['IdToken']}, {refresh_token}")
+            logger.debug(f"Got fresh tokens")
             return data['AccessToken'], data['IdToken'], refresh_token
         else:
             # Something went wrong with the authentication
             raise AuthenticationFailed("Empty AuthenticationResult. Please login again")
 
     # The token validated successfully, we don't need to do anything else here
-    logger.debug(f"tokens None, None, None")
+    logger.debug(f"Tokens: None, None, None")
     return None, None, None
 
 
@@ -99,23 +98,16 @@ def process_request(request, propagate_error=False):
 
 
 def get_tokens(access_token, id_token=None, refresh_token=None, propagate_error=False):
-    logger.debug(f'access_token: {access_token}')
-    logger.debug(f'refresh_token: {refresh_token}')
-    logger.debug(f'id_token: {id_token}')
-
     try:
         if not access_token:
             # Need to have this to authenticate, error out
             raise TokenIssue("No valid Access token were found in the request")
 
         new_access_token, new_id_token, new_refresh_token = validate_token(access_token, id_token, refresh_token)
-        logger.debug(f'new_access_token: {new_access_token} new_refresh_token: {new_refresh_token}')
 
         header, payload = decode_token(access_token)
-        logger.debug(f'header: {header} payload: {payload}')
         if id_token:
             id_header, id_payload = decode_token(id_token)
-            logger.debug(f'header: {id_header} payload: {id_payload}')
         else:
             id_payload = None
 
