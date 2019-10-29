@@ -218,6 +218,8 @@ class Identity:
             raise Exception(ex)
 
     def verify_attribute(self, attribute_name, access_token, code):
+        logger.info(f"Verifying user attribute: {attribute_name}")
+
         try:
             result = self.client.verify_user_attribute(
                 AttributeName=attribute_name,
@@ -287,6 +289,7 @@ class Identity:
             raise Exception(ex)
 
     def forgot_password(self, username):
+        logger.info("Calling forgot password")
         secret_hash = utils.get_cognito_secret_hash(username)
 
         params = {
@@ -303,6 +306,8 @@ class Identity:
             raise CognitoIdentityException.create_from_exception(ex)
 
     def change_password(self, previous, proposed, access_token):
+        logger.info("Changing password")
+
         params = {
             'PreviousPassword': previous,
             'ProposedPassword': proposed,
@@ -398,6 +403,7 @@ class Identity:
             raise Exception(ex)
 
     def set_user_mfa_preference(self, enable, access_token):
+        logger.info(f"Changing SMS MFA state to {enable}")
 
         params = {
             'SMSMfaSettings': {'Enabled': enable},
