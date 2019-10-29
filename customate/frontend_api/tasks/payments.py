@@ -13,7 +13,7 @@ from django.db import transaction
 
 from core.logger import RequestIdGenerator
 from core.models import User
-from core.fields import Currency, PaymentStatusType
+from core.fields import Currency, PaymentStatusType, TransactionStatusType
 from frontend_api.models import Schedule
 from frontend_api.models.blacklist import BlacklistDate, BLACKLISTED_DAYS_MAX_RETRY_COUNT
 from frontend_api.models.schedule import OnetimeSchedule, DepositsSchedule
@@ -174,13 +174,45 @@ def make_payment(user_id: str, payment_account_id: str, schedule_id: str, curren
 
 @shared_task
 @transaction.atomic
+def on_transaction_change(transaction_info: Dict):
+    """
+    Process notifications for incoming and outgoing transactions.
+    :param transaction_info:
+    :return:
+    """
+    logger.info("Start on_transaction_change. Transaction info: %s." % transaction_info)
+    user_id = transaction_info.get("user_id")
+    schedule_id = transaction_info.get("schedule_id")
+    transaction_status = TransactionStatusType(transaction_info.get("status"))
+
+    if not schedule_id:
+        helpers.notify_about_loaded_funds(
+            user_id=user_id,
+            transaction_info=transaction_info,
+            transaction_status=transaction_status)
+        return
+
+    try:
+        schedule = Schedule.objects.get(id=schedule_id)
+    except Schedule.DoesNotExist:
+        logger.error("Schedule with id %s was not found. %r" % (schedule_id, format_exc()))
+        return
+
+    if transaction_status is TransactionStatusType.SUCCESS:
+        helpers.notify_about_schedules_successful_payment(schedule=schedule, transaction_info=transaction_info)
+
+    if transaction_status is TransactionStatusType.FAILED:
+        helpers.notify_about_schedules_failed_payment(schedule=schedule, transaction_info=transaction_info)
+
+
+@shared_task
+@transaction.atomic
 def on_payment_change(payment_info: Dict):
     """
     Process notification about changes in Payment model received from Payment-api.
     :param payment_info:
     :return:
     """
-    user_id = payment_info.get("user_id")
     payment_id = payment_info.get("payment_id")
     payment_account_id = payment_info.get("account_id")
     schedule_id = payment_info.get("schedule_id")
@@ -205,13 +237,6 @@ def on_payment_change(payment_info: Dict):
             'request_id': request_id,
             'payment_id': payment_id
         })
-        # WARN: it is implicitly guarantied(?) that on_payment_change with schedule_id=None will be
-        # WARN: called with user_id == funds_recipient_user_id
-        # TODO: we need to refactor this with a better naming and/or another more explicit solution
-        helpers.notify_about_loaded_funds(
-            user_id=user_id,
-            payment_info=payment_info,
-            payment_status=payment_status)
         return
 
     # some sanity checks
@@ -255,12 +280,6 @@ def on_payment_change(payment_info: Dict):
     # refresh actual count of payments for specific schedule
     if payment_status is PaymentStatusType.SUCCESS:
         schedule.refresh_number_of_payments_made()
-        # send appropriate notifications for participants
-        helpers.notify_about_schedules_successful_payment(schedule=schedule, payment_info=payment_info)
-
-    # send appropriate notifications for funds sender if payment has failed
-    if payment_status is PaymentStatusType.FAILED:
-        helpers.notify_about_schedules_failed_payment(schedule=schedule, payment_info=payment_info)
 
     # update Schedule status
     schedule.update_status()
