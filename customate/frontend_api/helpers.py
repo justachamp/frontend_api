@@ -8,8 +8,9 @@ from django.template.loader import render_to_string
 from django import template
 from django.contrib.auth import get_user_model
 from django.conf import settings
+from django.db.models import Q
 
-from core.fields import Currency, PaymentStatusType
+from core.fields import Currency, PaymentStatusType, UserStatus
 from frontend_api.models.schedule import Schedule
 from frontend_api.tasks.notifiers import send_notification_email, send_notification_sms
 
@@ -68,34 +69,35 @@ def send_bulk_smses(phone_numbers: list, context: Dict, tpl_message: str) -> Non
 
 def get_funds_senders(funds_sender: User) -> list:
     """
-    Returns list funds senders.
+    Accepts user which sent funds.
+    Returns list of users which related to senders account.
     :return: list
     """
-    if funds_sender.is_owner and funds_sender.notify_by_email:
-        return [funds_sender]
-    # If funds sender is subuser owner should be notified as well
-    if funds_sender.is_subuser:
-        owner = funds_sender.account.owner_account.user
-        users = [user for user in [owner, funds_sender]]
-        return users
-    return []
+    users = User.objects.filter(
+        Q(status=UserStatus.active) |
+        Q(status=UserStatus.blocked),
+        ~Q(email=""),
+        account__id__in=funds_sender.get_all_related_account_ids(),
+        notify_by_email=True,
+        status=UserStatus.active)
+    return users
 
 
 def get_funds_recipients(funds_recipient: User or str) -> list:
     """
-    Returns list with funds recipients.
+    Accepts user which got funds.
+    Returns list of users which related to recipients account.
     :return: list
     """
     if isinstance(funds_recipient, str):
         return [funds_recipient]
-    if funds_recipient.is_owner and funds_recipient.notify_by_email:
-        return [funds_recipient]
-    # If funds recipient is subuser, owner should be notified as well
-    if funds_recipient.is_subuser:
-        owner = funds_recipient.account.owner_account.user
-        users = [user for user in [funds_recipient, owner]]
-        return users
-    return []
+    users = User.objects.filter(
+        Q(status=UserStatus.active) |
+        Q(status=UserStatus.blocked),
+        ~Q(phone_number=""),
+        account__id__in=funds_recipient.get_all_related_account_ids(),
+        notify_by_phone=True)
+    return users
 
 
 def get_load_funds_details(payment_info: Dict) -> Dict:
@@ -208,7 +210,7 @@ def notify_about_loaded_funds(user_id: str, payment_info: Dict, payment_status: 
 
     funds_recipients = get_funds_recipients(funds_recipient=funds_recipient)
     load_funds_details = get_load_funds_details(payment_info)
-    emails = [user.email for user in funds_recipients if user.notify_by_email]
+    emails = [user.email for user in funds_recipients]
     logger.info("Load funds. Funds recipient emails: %s" % ", ".join(emails))
     send_bulk_emails(emails=emails,
                      context=load_funds_details,
@@ -223,7 +225,7 @@ def notify_about_loaded_funds(user_id: str, payment_info: Dict, payment_status: 
         "closing_balance": prettify_number(load_funds_details["closing_balance"]),
         'sign': load_funds_details.get('sign')
     }
-    phone_numbers = [user.phone_number for user in funds_recipients if user.phone_number and user.notify_by_phone]
+    phone_numbers = [user.phone_number for user in funds_recipients]
     logger.info("Load funds. Funds recipient phone numbers: %s" % ", ".join(phone_numbers))
     send_bulk_smses(phone_numbers=phone_numbers,
                     context=sms_context,
@@ -266,7 +268,7 @@ def notify_about_schedules_failed_payment(schedule: Schedule, payment_info: Dict
         email_context = {"closing_balance": closing_balance,
                          "error_message": error_message,
                          **schedule_details}
-        emails = [user.email for user in funds_senders if user.notify_by_email]
+        emails = [user.email for user in funds_senders]
         logger.info("Failed payment. Funds senders emails: %s ." % ", ".join(emails))
         send_bulk_emails(emails=emails,
                          context=email_context,
@@ -282,7 +284,7 @@ def notify_about_schedules_failed_payment(schedule: Schedule, payment_info: Dict
             "closing_balance": prettify_number(closing_balance),
             "sign": schedule_details.get("sign")
         }
-        phone_numbers = [user.phone_number for user in funds_senders if user.phone_number and user.notify_by_phone]
+        phone_numbers = [user.phone_number for user in funds_senders]
         logger.info("Failed payment. Funds senders phone numbers: %s ." % ", ".join(phone_numbers))
         send_bulk_smses(phone_numbers=phone_numbers,
                         context=sms_context,
@@ -325,7 +327,7 @@ def notify_about_schedules_successful_payment(schedule: Schedule, payment_info: 
             schedule=schedule,
             payment_status=PaymentStatusType.SUCCESS)
         email_context_for_senders = {"closing_balance": closing_balance, **schedule_details}
-        emails = [user.email for user in funds_senders if user.notify_by_email]
+        emails = [user.email for user in funds_senders]
         logger.info("Successful payment. Funds senders emails: %s" % ", ".join(emails))
         send_bulk_emails(emails=emails,
                          context=email_context_for_senders,
@@ -338,7 +340,7 @@ def notify_about_schedules_successful_payment(schedule: Schedule, payment_info: 
             "closing_balance": prettify_number(closing_balance),
             "sign": schedule_details.get("sign")
         }
-        phone_numbers = [user.phone_number for user in funds_senders if user.phone_number and user.notify_by_phone]
+        phone_numbers = [user.phone_number for user in funds_senders]
         logger.info("Successful payment. Funds senders phone_numbers: %s" % ", ".join(phone_numbers))
         send_bulk_smses(phone_numbers=phone_numbers,
                         context=sms_context,
@@ -375,7 +377,7 @@ def notify_about_schedules_successful_payment(schedule: Schedule, payment_info: 
             payment_status=PaymentStatusType.SUCCESS)
         closing_balance = payment_info.get("closing_balance")
         email_context_for_recipients = {'closing_balance': closing_balance, **schedule_details}
-        emails = [user.email for user in funds_recipients if user.notify_by_email]
+        emails = [user.email for user in funds_recipients]
         logger.info("Successful payment. Funds recipient emails: %s" % ", ".join(emails))
         send_bulk_emails(emails=emails,
                          context=email_context_for_recipients,
@@ -390,7 +392,7 @@ def notify_about_schedules_successful_payment(schedule: Schedule, payment_info: 
             "closing_balance": prettify_number(closing_balance),
             "sign": schedule_details.get("sign")
         }
-        phone_numbers = [user.phone_number for user in funds_recipients if user.phone_number and user.notify_by_phone]
+        phone_numbers = [user.phone_number for user in funds_recipients]
         logger.info("Successful payment. Funds recipient phone numbers: %s" % ", ".join(phone_numbers))
         send_bulk_smses(phone_numbers=phone_numbers,
                         context=sms_context,
