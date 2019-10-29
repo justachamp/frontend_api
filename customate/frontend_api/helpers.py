@@ -103,6 +103,7 @@ def get_funds_recipients(funds_recipient: User or str) -> list:
 def get_load_funds_details(transaction_info: Dict) -> Dict:
     now = arrow.utcnow()
     context = {
+        "payment_type": "Card",
         "error_message": transaction_info.get("error_message") or "unknown",
         'currency': Currency(transaction_info.get("currency")),
         'amount': transaction_info.get("amount"),
@@ -212,7 +213,7 @@ def notify_about_loaded_funds(user_id: str, transaction_info: Dict, transaction_
     }[transaction_status]
 
     funds_recipients = get_funds_recipients(funds_recipient=funds_recipient)
-    load_funds_details = get_load_funds_details(payment_info)
+    load_funds_details = get_load_funds_details(transaction_info)
     emails = [user.email for user in funds_recipients]
     logger.info("Load funds. Funds recipient emails: %s" % ", ".join(emails))
     send_bulk_emails(emails=emails,
@@ -220,7 +221,7 @@ def notify_about_loaded_funds(user_id: str, transaction_info: Dict, transaction_
                      tpl_filename=tpl_filename)
 
     sms_context = {
-        "payment_type": "incoming",
+        "payment_type": load_funds_details.get("payment_type"),
         "error_msg": load_funds_details.get("error_message") or "unknown",
         "amount": prettify_number(load_funds_details['amount']),
         "cur_symbol": load_funds_details["currency"].symbol,
