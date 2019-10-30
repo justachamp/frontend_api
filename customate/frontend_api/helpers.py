@@ -135,8 +135,7 @@ def get_schedule_details(user: User, schedule: Schedule,
         'schedule_name': schedule.name,
         'payment_type': schedule.payment_type,
         # identifier specifies either funds has increased or decreased
-        'sign': ("-" if user == schedule.origin_user else '+') \
-            if transaction_status != TransactionStatusType.FAILED else "+"
+        'sign': "-" if user == schedule.origin_user else '+'
     }
     return context
 
@@ -257,7 +256,7 @@ def notify_about_schedules_failed_payment(schedule: Schedule, transaction_info: 
     message_tpl = ",".join([
         "Failed transaction: {sign}{amount}{cur_symbol}",
         "\n{dt}",
-        "\n{schedule_name}",
+        "\n{payment_type}, {schedule_name}",
         "\nReason: {error_msg}",
         "\n{cur_symbol} wallet available balance: {closing_balance} {cur_symbol}."
     ])
@@ -282,6 +281,7 @@ def notify_about_schedules_failed_payment(schedule: Schedule, transaction_info: 
 
         # Extract funds senders and send sms notifications about failed transaction
         sms_context = {
+            "payment_type": schedule_details.get("payment_type"),
             "amount": prettify_number(schedule_details['amount']),
             "cur_symbol": schedule_details["currency"].symbol,
             "dt": arrow.get(schedule_details['processed_datetime']).format("YYYY/MM/DD hh:mm:ss"),
@@ -320,7 +320,7 @@ def notify_about_schedules_successful_payment(schedule: Schedule, transaction_in
     outgoing_payment_message_tpl = ",".join([
         "Successful transaction: {sign}{amount}{cur_symbol}",
         "\n{dt}",
-        "\n{schedule_name}",
+        "\n{payment_type}, {schedule_name}",
         "\n{cur_symbol} wallet available balance: {closing_balance} {cur_symbol}."
     ])
 
@@ -340,6 +340,7 @@ def notify_about_schedules_successful_payment(schedule: Schedule, transaction_in
                          context=email_context_for_senders,
                          tpl_filename='notifications/email_senders_balance_updated.html')
         sms_context = {
+            "payment_type": schedule_details.get("payment_type"),
             "amount": prettify_number(schedule_details['amount']),
             "cur_symbol": schedule_details["currency"].symbol,
             "dt": arrow.get(schedule_details['processed_datetime']).format("YYYY/MM/DD hh:mm:ss"),
