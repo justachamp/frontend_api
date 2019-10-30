@@ -249,6 +249,26 @@ class PaymentStatusType(Enum):
         return self.value
 
 
+class TransactionStatusType(Enum):
+    PENDING = 'PENDING'
+    PROCESSING = 'PROCESSING'
+    SUCCESS = 'SUCCESS'
+    FAILED = 'FAILED'
+    REFUND = 'REFUND'
+    CANCELED = 'CANCELED'
+
+    class Labels:
+        PENDING = 'Pending'
+        PROCESSING = 'Processing'
+        SUCCESS = 'Success'
+        FAILED = 'Failed'
+        REFUND = 'Refund'
+        CANCELED = 'Canceled'
+
+    def __repr__(self):
+        return self.value
+
+
 class FeeType(Enum):
     STATIC = 'STATIC'
     PERCENTAGE = 'PERCENTAGE'
