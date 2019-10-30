@@ -5,7 +5,6 @@ import arrow
 from django.contrib.auth.models import AnonymousUser
 from django.http import HttpResponse
 
-from authentication.cognito.core.base import CognitoException
 from authentication.exceptions import ProlongedUserInactivityIssue
 from customate.settings import MAX_ALLOW_USER_INACTIVITY
 
@@ -55,6 +54,7 @@ class UserActivityMonitoringMiddleware:
 
     def _sign_out(self, request):
         from authentication.cognito.core import helpers
+        from authentication.cognito.core.base import CognitoException
         try:
             helpers.sign_out({'access_token': request.META.get('HTTP_ACCESSTOKEN')})
         except CognitoException:
