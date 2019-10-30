@@ -3,6 +3,7 @@ import datetime
 import arrow
 from dataclasses import dataclass
 
+from cached_property import cached_property
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.validators import RegexValidator
 from enumfields import EnumField
@@ -14,7 +15,7 @@ from rest_framework.exceptions import ValidationError
 from core.models import Model, User
 from core.fields import Currency, PaymentStatusType, FundingSourceType, PayeeType
 from frontend_api.fields import SchedulePurpose, SchedulePeriod, ScheduleStatus, SchedulePaymentType
-from customate.settings import CELERY_BEAT_SCHEDULE
+from customate.settings import CELERY_BEAT_SCHEDULE, PAYMENT_SYSTEM_CLOSING_TIME
 from frontend_api.models.blacklist import BlacklistDate, BLACKLISTED_DAYS_MAX_RETRY_COUNT
 
 logger = logging.getLogger(__name__)
@@ -205,7 +206,7 @@ class Schedule(AbstractSchedule):
         old_status = self.status
         self.status = status
         self.save(update_fields=["status"])
-        logger.info("Updated Schedule(id=%s) status=%s(was=%s)" % (self.id, status, old_status))
+        logger.info("Updated Schedule(id=%s) status=%s (was=%s)" % (self.id, status, old_status))
 
     @property
     def processing(self) -> bool:
@@ -216,7 +217,7 @@ class Schedule(AbstractSchedule):
         old_val = self.is_processing
         self.is_processing = value
         self.save(update_fields=["is_processing"])
-        logger.info("Updated schedule(id=%s) is_processing=%s(was=%s)" % (self.id, value, old_val))
+        logger.info("Updated schedule(id=%s) is_processing=%s (was=%s)" % (self.id, value, old_val))
 
     @property
     def overdue(self) -> bool:
@@ -227,7 +228,7 @@ class Schedule(AbstractSchedule):
         old_val = self.is_overdue
         self.is_overdue = value
         self.save(update_fields=["is_overdue"])
-        logger.info("Updated schedule(id=%s) is_overdue=%s(was=%s)" % (self.id, value, old_val))
+        logger.info("Updated schedule(id=%s) is_overdue=%s (was=%s)" % (self.id, value, old_val))
 
     def refresh_number_of_payments_made(self):
         """
@@ -255,7 +256,7 @@ class Schedule(AbstractSchedule):
         :return: new Schedule status
         :rtype: ScheduleStatus
         """
-        logger.info("Updating schedule(id=%s) with status=%s" % (self.id, self.status))
+        logger.info("Updating schedule(id=%s) with current status=%s" % (self.id, self.status))
 
         # get the list of last payments
         last_payments = LastSchedulePayments.objects.filter(
@@ -277,10 +278,12 @@ class Schedule(AbstractSchedule):
         if any([s in [PaymentStatusType.FAILED, PaymentStatusType.REFUND, PaymentStatusType.CANCELED] for s in
                 statuses]):
             # mark schedule as overdue and return current status
+            logger.info("Mark schedule(id=%s) as overdue and return current status=%s" % (self.id, self.status))
             self.overdue = True
             return self.status
 
         # if we've gone so far, we're definitely not overdue anymore
+        logger.info("Mark schedule(id=%s) as not overdue" % self.id)
         self.overdue = False
 
         # no need to lookup particular payment statuses, if we are either
@@ -367,10 +370,13 @@ class Schedule(AbstractSchedule):
             minute=st_minute
         ), ['YYYY-MM-DDTH:mm:ss', 'YYYY-MM-DDTH:m:ss', 'YYYY-MM-DDTHH:m:ss'])
 
-    def have_time_for_payments_processing(self):
-        return self.have_time_for_deposit_payment_processing() and self.have_time_for_regular_payment_processing()
+    @cached_property
+    def have_time_for_nearest_payments_processing_by_scheduler(self):
+        return self.have_time_for_deposit_payment_processing_by_scheduler \
+               and self.have_time_for_regular_payment_processing_by_scheduler
 
-    def have_time_for_deposit_payment_processing(self):
+    @cached_property
+    def have_time_for_deposit_payment_processing_by_scheduler(self):
         if self.deposit_payment_date is None:
             return True
 
@@ -389,7 +395,8 @@ class Schedule(AbstractSchedule):
         scheduled_date = arrow.get(deposit_payment.scheduled_date).datetime.date()
         return scheduled_date >= Schedule.nearest_scheduler_processing_date()
 
-    def have_time_for_regular_payment_processing(self):
+    @cached_property
+    def have_time_for_regular_payment_processing_by_scheduler(self):
         try:
             number_of_sent_regular_payments = SchedulePayments.objects.filter(
                 schedule_id=self.id,
@@ -413,6 +420,32 @@ class Schedule(AbstractSchedule):
             return nearest_payment is not None and scheduled_date >= Schedule.nearest_scheduler_processing_date()
         except ObjectDoesNotExist:
             return False
+
+    @cached_property
+    def have_time_for_first_payments_processing_manually(self):
+        return Schedule.have_time_for_payment_processing_manually(self.deposit_payment_scheduled_date, self.funding_source_type, self.payee_type) \
+               or Schedule.have_time_for_payment_processing_manually(self.first_payment_scheduled_date, self.funding_source_type, self.payee_type)
+
+    @staticmethod
+    def have_time_for_payment_processing_manually(payment_date, funding_source_type, payee_type):
+        result = False
+        utcnow = arrow.utcnow()
+
+        if payment_date is None or BlacklistDate.contains(utcnow.datetime.date()):
+            return result
+
+        current_day_start, current_day_end = utcnow.span('day')
+        payment_time = arrow.get(payment_date).replace(hour=utcnow.hour, minute=utcnow.minute, second=utcnow.second)
+
+        # Payment API's closing time restriction can be ignored if we send money between wallets
+        if funding_source_type == FundingSourceType.WALLET and payee_type == PayeeType.WALLET:
+            result = current_day_start < payment_time < current_day_end
+        else:
+            ps_hour, ps_minute = PAYMENT_SYSTEM_CLOSING_TIME.split(':')
+            ps_closing_time = utcnow.replace(hour=int(ps_hour), minute=int(ps_minute))
+            result = current_day_start < payment_time < ps_closing_time
+
+        return result
 
     @staticmethod
     def nearest_scheduler_processing_date():
@@ -444,7 +477,7 @@ class Schedule(AbstractSchedule):
             SchedulePeriod.yearly: YearlySchedule
         }.get(self.period)
 
-    @property
+    @cached_property
     def deposit_payment_scheduled_date(self):
         result = None if self.deposit_payment_date is None \
             else DepositsSchedule.objects.get(id=self.id).scheduled_date
@@ -453,7 +486,7 @@ class Schedule(AbstractSchedule):
                      % (self.id, self.deposit_payment_date, result))
         return result
 
-    @property
+    @cached_property
     def first_payment_scheduled_date(self):
         result = self.schedule_cls_by_period.objects \
             .filter(id=self.id) \
