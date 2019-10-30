@@ -5,7 +5,7 @@ from typing import List, Dict
 
 from core.logger import Timer
 from external_apis.loqate.settings import LOQATE_SERVICE_KEY
-from customate.settings import COUNTRIES_AVAILABLE
+from customate.settings import COUNTRIES_AVAILABLE, EXTERNAL_SERVICES_TIMEOUT
 
 BASE_URL = 'https://api.addressy.com/Capture/Interactive/{0}/v1.00/json3ex.ws'
 BASE_HEADERS = {
@@ -55,7 +55,7 @@ def make_request(url, params):
     id = new_params.pop('id', None)
     if id:
         new_params["Id"] = id
-    return requests.post(url, headers=BASE_HEADERS, params=new_params)
+    return requests.post(url, headers=BASE_HEADERS, params=new_params, timeout=EXTERNAL_SERVICES_TIMEOUT)
 
 
 def _check_errors(items: List):

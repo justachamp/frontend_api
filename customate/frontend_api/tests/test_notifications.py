@@ -1,13 +1,9 @@
 from unittest import skip
-import boto3
 
-from django.contrib.auth import get_user_model
 from django.test import SimpleTestCase
 from django.conf import settings
 from django.template.loader import render_to_string
-
-from core.fields import PaymentStatusType
-from frontend_api.helpers import notify_about_loaded_funds
+from external_apis.aws.service import get_aws_client
 
 
 @skip("rewrite without actual requests to AWS")
@@ -18,9 +14,7 @@ class TestEmailNotifier(SimpleTestCase):
     """
 
     def setUp(self):
-        self.client = boto3.client('ses', aws_access_key_id=settings.AWS_ACCESS_KEY,
-                                   aws_secret_access_key=settings.AWS_SECRET_KEY,
-                                   region_name=settings.AWS_REGION_SNS)
+        self.client = get_aws_client('ses', region_name=settings.AWS_REGION_SNS)
 
         self.test_recipient = "test_recipient@gocustomate.com"
         self.domain_sender = settings.AWS_SES_NOTIFICATIONS_GOCUSTOMATE_SENDER
@@ -61,9 +55,7 @@ class TestSmsNotifier(SimpleTestCase):
     """
 
     def setUp(self):
-        self.client = boto3.client('sns', aws_access_key_id=settings.AWS_ACCESS_KEY,
-                                   aws_secret_access_key=settings.AWS_SECRET_KEY,
-                                   region_name=settings.AWS_REGION_SNS)
+        self.client = get_aws_client('sns', region_name=settings.AWS_REGION_SNS)
         self.test_recipient = '+447365035690'
 
     def test_if_sms_notifier_sends_smses(self):
