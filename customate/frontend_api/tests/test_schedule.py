@@ -117,7 +117,7 @@ class ScheduleModelTest(TestCase):
         schedule.funding_source_type = FundingSourceType.CREDIT_CARD
         schedule.save()
 
-        self.assertTrue(schedule.have_time_for_deposit_payment_processing())
+        self.assertTrue(schedule.have_time_for_deposit_payment_processing_by_scheduler)
 
     def test_have_time_for_deposit_payment_processing__deposit_in_future(self):
         schedule = self._get_test_schedule_model()
@@ -126,7 +126,7 @@ class ScheduleModelTest(TestCase):
         schedule.funding_source_type = FundingSourceType.CREDIT_CARD
         schedule.save()
 
-        self.assertTrue(schedule.have_time_for_deposit_payment_processing())
+        self.assertTrue(schedule.have_time_for_deposit_payment_processing_by_scheduler)
 
     """
         We changed funding source to CREDIT_CARD: 
@@ -139,7 +139,7 @@ class ScheduleModelTest(TestCase):
         schedule.funding_source_type = FundingSourceType.CREDIT_CARD
         schedule.save()
 
-        self.assertFalse(schedule.have_time_for_deposit_payment_processing())
+        self.assertFalse(schedule.have_time_for_deposit_payment_processing_by_scheduler)
 
     """
         We changed funding source to CREDIT_CARD, but deposit payment was already executed in past 
@@ -155,7 +155,7 @@ class ScheduleModelTest(TestCase):
         schedule_payment.is_deposit = True
         schedule_payment.save()
 
-        self.assertTrue(schedule.have_time_for_deposit_payment_processing())
+        self.assertTrue(schedule.have_time_for_deposit_payment_processing_by_scheduler)
 
     def test_have_time_for_regular_payment_processing__weekly_execution_date_in_future(self):
         schedule = self._get_test_schedule_model()
@@ -166,7 +166,7 @@ class ScheduleModelTest(TestCase):
 
         self._get_test_schedulepayment_model(schedule, PaymentStatusType.SUCCESS).save()
 
-        self.assertTrue(schedule.have_time_for_regular_payment_processing())
+        self.assertTrue(schedule.have_time_for_regular_payment_processing_by_scheduler)
 
     """
         We made first, weekly payment today and changed funding source to CREDIT_CARD: 
@@ -180,7 +180,7 @@ class ScheduleModelTest(TestCase):
 
         self._get_test_schedulepayment_model(schedule, PaymentStatusType.PROCESSING).save()
 
-        self.assertFalse(schedule.have_time_for_regular_payment_processing())
+        self.assertFalse(schedule.have_time_for_regular_payment_processing_by_scheduler)
 
     """
         We made first, weekly payment yesterday and changed funding source to CREDIT_CARD: 
@@ -195,7 +195,7 @@ class ScheduleModelTest(TestCase):
 
         self._get_test_schedulepayment_model(schedule, PaymentStatusType.PROCESSING).save()
 
-        self.assertFalse(schedule.have_time_for_regular_payment_processing())
+        self.assertFalse(schedule.have_time_for_regular_payment_processing_by_scheduler)
 
     """
         We made first, monthly payment today and changed funding source to CREDIT_CARD: 
@@ -209,7 +209,7 @@ class ScheduleModelTest(TestCase):
 
         self._get_test_schedulepayment_model(schedule, PaymentStatusType.PROCESSING).save()
 
-        self.assertTrue(schedule.have_time_for_regular_payment_processing())
+        self.assertTrue(schedule.have_time_for_regular_payment_processing_by_scheduler)
 
     """
         We made first, monthly payment 10 days ago and changed funding source to CREDIT_CARD: 
@@ -224,7 +224,7 @@ class ScheduleModelTest(TestCase):
 
         self._get_test_schedulepayment_model(schedule, PaymentStatusType.PROCESSING).save()
 
-        self.assertTrue(schedule.have_time_for_regular_payment_processing())
+        self.assertTrue(schedule.have_time_for_regular_payment_processing_by_scheduler)
 
     """
         We made first, monthly payment 28 days ago and changed funding source to CREDIT_CARD: 
@@ -239,7 +239,7 @@ class ScheduleModelTest(TestCase):
 
         self._get_test_schedulepayment_model(schedule, PaymentStatusType.PROCESSING).save()
 
-        self.assertFalse(schedule.have_time_for_regular_payment_processing())
+        self.assertFalse(schedule.have_time_for_regular_payment_processing_by_scheduler)
 
     """
         We made two monthly payments 2 months and 3 days ago and changed funding source to CREDIT_CARD: 
@@ -255,7 +255,7 @@ class ScheduleModelTest(TestCase):
         self._get_test_schedulepayment_model(schedule, PaymentStatusType.SUCCESS).save()
         self._get_test_schedulepayment_model(schedule, PaymentStatusType.PROCESSING).save()
 
-        self.assertFalse(schedule.have_time_for_regular_payment_processing())
+        self.assertFalse(schedule.have_time_for_regular_payment_processing_by_scheduler)
 
     """
         We made first, monthly payment 10 days ago, payment canceled. We changed funding source to CREDIT_CARD: 
@@ -270,7 +270,7 @@ class ScheduleModelTest(TestCase):
 
         self._get_test_schedulepayment_model(schedule, PaymentStatusType.CANCELED).save()
 
-        self.assertTrue(schedule.have_time_for_regular_payment_processing())
+        self.assertTrue(schedule.have_time_for_regular_payment_processing_by_scheduler)
 
 
 @skip("Waiting for mocks")

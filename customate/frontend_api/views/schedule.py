@@ -110,7 +110,7 @@ class ScheduleViewSet(views.ModelViewSet):
             logger.info("Successfully created new schedule (id=%r)" % schedule.id)
             serializer.assign_uploaded_documents_to_schedule(documents)
 
-            self._process_first_payments(schedule)
+            self._process_first_payments_manually(schedule)
 
         except ValidationError as e:
             raise e
@@ -118,7 +118,7 @@ class ScheduleViewSet(views.ModelViewSet):
             logger.error("Unable to save Schedule=%r, due to %r" % (serializer.validated_data, format_exc()))
             raise ValidationError("Unable to save schedule")
 
-    def _process_first_payments(self, schedule):
+    def _process_first_payments_manually(self, schedule):
         """
         Immediately create payments if scheduler will not be started today anymore, but deposit or first
         regular payment must be executed today.
@@ -186,13 +186,17 @@ class ScheduleViewSet(views.ModelViewSet):
         new_instance = serializer.save()
         serializer.assign_uploaded_documents_to_schedule(documents)
 
-        if self._can_changes_cause_late_payments(original_funding_source_type, new_instance):
-            process_late_payments = bool(int(self.request.query_params.get("process_late_payments", 0)))
-            if not process_late_payments and not new_instance.have_time_for_payments_processing():
-                raise ConflictError(f'Cannot update schedule. '
-                                    f'There are related late payments that should be processed ({new_instance.id})')
+        if self._can_changes_cause_late_payments(original_funding_source_type, new_instance) \
+                and not new_instance.have_time_for_nearest_payments_processing_by_scheduler:
+            if new_instance.have_time_for_first_payments_processing_manually:
+                self._process_first_payments_manually(new_instance)
+            else:
+                process_late_payments = bool(int(self.request.query_params.get("process_late_payments", 0)))
+                if not process_late_payments:
+                    raise ConflictError(f'Cannot update schedule. '
+                                        f'There are related late payments that should be processed ({new_instance.id})')
 
-            self._process_potential_late_payments(new_instance)
+                self._process_potential_late_payments(new_instance)
 
     def _can_changes_cause_late_payments(self, original_funding_source_type, schedule):
         return original_funding_source_type != schedule.funding_source_type \
@@ -201,7 +205,7 @@ class ScheduleViewSet(views.ModelViewSet):
     def _process_potential_late_payments(self, schedule):
         user = self.request.user
         # Make a series of 'failed' payments to keep a chain of payments in order for further overdue processing
-        if not schedule.have_time_for_deposit_payment_processing():
+        if not schedule.have_time_for_deposit_payment_processing_by_scheduler():
             make_failed_payment.delay(
                 user_id=str(user.id),
                 payment_account_id=str(user.account.payment_account_id),
@@ -214,7 +218,7 @@ class ScheduleViewSet(views.ModelViewSet):
                 is_deposit=True
             )
 
-        if not schedule.have_time_for_regular_payment_processing():
+        if not schedule.have_time_for_regular_payment_processing_by_scheduler():
             make_failed_payment.delay(
                 user_id=str(user.id),
                 payment_account_id=str(user.account.payment_account_id),
@@ -335,15 +339,16 @@ class ScheduleViewSet(views.ModelViewSet):
             backup_funding_source_id, backup_funding_source_type
         )
 
-        if schedule.have_time_for_payments_processing():
-            self._process_first_payments(schedule)
-        else:
-            process_late_payments = bool(int(self.request.query_params.get("process_late_payments", 0)))
-            if not process_late_payments:
-                raise ConflictError(f'Cannot update schedule. '
-                                    f'There are related late payments that should be processed ({schedule.id})')
+        if not schedule.have_time_for_nearest_payments_processing_by_scheduler:
+            if schedule.have_time_for_first_payments_processing_manually:
+                self._process_first_payments_manually(schedule)
+            else:
+                process_late_payments = bool(int(self.request.query_params.get("process_late_payments", 0)))
+                if not process_late_payments:
+                    raise ConflictError(f'Cannot accept schedule. '
+                                        f'There are related late payments that should be processed ({schedule.id})')
 
-            self._process_potential_late_payments(schedule)
+                self._process_potential_late_payments(schedule)
 
         return Response()
 
