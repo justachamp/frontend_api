@@ -1,3 +1,4 @@
+import logging
 from typing import Iterable
 
 import arrow
@@ -6,6 +7,8 @@ from django.http import HttpResponse
 
 from authentication.exceptions import ProlongedUserInactivityIssue
 from customate.settings import MAX_ALLOW_USER_INACTIVITY
+
+logger = logging.getLogger(__name__)
 
 
 class UserActivityMonitoringMiddleware:
@@ -51,7 +54,12 @@ class UserActivityMonitoringMiddleware:
 
     def _sign_out(self, request):
         from authentication.cognito.core import helpers
-        helpers.sign_out({'access_token': request.META.get('HTTP_ACCESSTOKEN')})
+        from authentication.cognito.core.base import CognitoException
+        try:
+            helpers.sign_out({'access_token': request.META.get('HTTP_ACCESSTOKEN')})
+        except CognitoException:
+            # Typical case: access_token has been revoked
+            logger.debug("Cognito exception is thrown during sign ou attempt")
 
     def _update_user_last_activity(self, request):
         if isinstance(request.user, AnonymousUser):
