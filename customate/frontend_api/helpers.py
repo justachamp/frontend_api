@@ -21,6 +21,18 @@ User = get_user_model()
 register = template.Library()
 
 
+# Need to get transaction type for passing transaction_type to templates
+# Key is a transaction name from payment service, value is transaction type for appearance in templates
+transaction_names = {
+    "CreditCardToCustomate": "Card",
+    "DirectDebitToCustomate": "Direct Debit",
+    "CustomateToIban": "External",
+    "IncomingInternal": "Internal",
+    "OutgoingInternal": "Internal",
+    "IbanToCustomate": "Bank Transfer"
+}
+
+
 @register.filter
 def prettify_number(value) -> str:
     """
@@ -104,7 +116,7 @@ def get_funds_recipients(funds_recipient: User or str) -> list:
 def get_load_funds_details(transaction_info: Dict) -> Dict:
     now = arrow.utcnow()
     context = {
-        "payment_type": "Card",
+        "transaction_type": transaction_names.get(transaction_info.get("name"), "Unknown"),
         "error_message": transaction_info.get("error_message") or "unknown",
         'currency': Currency(transaction_info.get("currency")),
         'amount': transaction_info.get("amount"),
@@ -133,7 +145,7 @@ def get_schedule_details(user: User, schedule: Schedule,
         'amount': transaction_info.get("amount"),
         'processed_datetime': now.datetime,
         'schedule_name': schedule.name,
-        'payment_type': schedule.payment_type,
+        'transaction_type': transaction_names.get(transaction_info.get("name"), "Unknown"),
         # identifier specifies either funds has increased or decreased
         'sign': "-" if user == schedule.origin_user else '+'
     }
@@ -194,14 +206,14 @@ def notify_about_loaded_funds(user_id: str, transaction_info: Dict, transaction_
             ",".join(
                 ["Successful transaction: {sign}{amount}{cur_symbol}",
                  "\n{dt}",
-                 "\n{payment_type}",
+                 "\n{transaction_type}",
                  "\n{cur_symbol} wallet available balance: {closing_balance} {cur_symbol}."]
             ),
         TransactionStatusType.FAILED:
             ",".join(
                 ["Failed transaction: {sign}{amount}{cur_symbol}",
                  "\n{dt}",
-                 "\n{payment_type}",
+                 "\n{transaction_type}",
                  "\nReason: {error_msg}",
                  "\n{cur_symbol} wallet available balance: {closing_balance} {cur_symbol}."]
             )
@@ -221,7 +233,7 @@ def notify_about_loaded_funds(user_id: str, transaction_info: Dict, transaction_
                      tpl_filename=tpl_filename)
 
     sms_context = {
-        "payment_type": load_funds_details.get("payment_type"),
+        "transaction_type": load_funds_details.get("transaction_type"),
         "error_msg": load_funds_details.get("error_message") or "unknown",
         "amount": prettify_number(load_funds_details['amount']),
         "cur_symbol": load_funds_details["currency"].symbol,
@@ -256,7 +268,7 @@ def notify_about_schedules_failed_payment(schedule: Schedule, transaction_info: 
     message_tpl = ",".join([
         "Failed transaction: {sign}{amount}{cur_symbol}",
         "\n{dt}",
-        "\n{payment_type}, {schedule_name}",
+        "\n{transaction_type}, {schedule_name}",
         "\nReason: {error_msg}",
         "\n{cur_symbol} wallet available balance: {closing_balance} {cur_symbol}."
     ])
@@ -281,7 +293,7 @@ def notify_about_schedules_failed_payment(schedule: Schedule, transaction_info: 
 
         # Extract funds senders and send sms notifications about failed transaction
         sms_context = {
-            "payment_type": schedule_details.get("payment_type"),
+            "transaction_type": schedule_details.get("transaction_type"),
             "amount": prettify_number(schedule_details['amount']),
             "cur_symbol": schedule_details["currency"].symbol,
             "dt": arrow.get(schedule_details['processed_datetime']).format("YYYY/MM/DD hh:mm:ss"),
@@ -320,7 +332,7 @@ def notify_about_schedules_successful_payment(schedule: Schedule, transaction_in
     outgoing_payment_message_tpl = ",".join([
         "Successful transaction: {sign}{amount}{cur_symbol}",
         "\n{dt}",
-        "\n{payment_type}, {schedule_name}",
+        "\n{transaction_type}, {schedule_name}",
         "\n{cur_symbol} wallet available balance: {closing_balance} {cur_symbol}."
     ])
 
@@ -340,7 +352,7 @@ def notify_about_schedules_successful_payment(schedule: Schedule, transaction_in
                          context=email_context_for_senders,
                          tpl_filename='notifications/email_senders_balance_updated.html')
         sms_context = {
-            "payment_type": schedule_details.get("payment_type"),
+            "transaction_type": schedule_details.get("transaction_type"),
             "amount": prettify_number(schedule_details['amount']),
             "cur_symbol": schedule_details["currency"].symbol,
             "dt": arrow.get(schedule_details['processed_datetime']).format("YYYY/MM/DD hh:mm:ss"),
@@ -362,6 +374,8 @@ def notify_about_schedules_successful_payment(schedule: Schedule, transaction_in
             schedule=schedule,
             transaction_status=TransactionStatusType.SUCCESS,
             transaction_info=transaction_info)
+        # External user should not get transaction type
+        schedule_details["transaction_type"] = None
         message = get_ses_email_payload(
             tpl_filename='notifications/email_recipients_balance_updated.html',
             tpl_context=schedule_details,
@@ -374,7 +388,7 @@ def notify_about_schedules_successful_payment(schedule: Schedule, transaction_in
     incoming_payment_message_tpl = ",".join([
         "Successful transaction: {sign}{amount}{cur_symbol}",
         "\n{dt}",
-        "\n{payment_type}",
+        "\n{transaction_type}, {schedule_name}",
         "\n{cur_symbol} wallet available balance: {closing_balance} {cur_symbol}"
     ])
 
@@ -394,7 +408,7 @@ def notify_about_schedules_successful_payment(schedule: Schedule, transaction_in
                          tpl_filename='notifications/email_recipients_balance_updated.html')
 
         sms_context = {
-            "payment_type": schedule.payment_type,
+            "transaction_type": schedule_details.get("transaction_type"),
             "amount": prettify_number(schedule_details['amount']),
             "cur_symbol": schedule_details["currency"].symbol,
             "dt": arrow.get(schedule_details['processed_datetime']).format("YYYY/MM/DD hh:mm:ss"),
