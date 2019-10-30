@@ -10,6 +10,7 @@ from requests.auth import HTTPBasicAuth
 
 import core.fields
 from core.logger import Timer
+from customate.settings import EXTERNAL_SERVICES_TIMEOUT
 
 from external_apis.gbg.settings import GBG_ACCOUNT, GBG_PASSWORD, GBG_WSDL, DEBUG
 from external_apis.gbg.models import BankingDetails, PersonalDetails, Address, ContactDetails, IdentityDocument
@@ -27,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 SERVICE = 'Gbg'
 
+
 def get_gbg_client():
     """
     Creates WSDL client based on current settings
@@ -39,7 +41,7 @@ def get_gbg_client():
     session.auth = HTTPBasicAuth(GBG_ACCOUNT, GBG_PASSWORD)
     transport = Transport(
         session=session,
-        timeout=10,
+        timeout=EXTERNAL_SERVICES_TIMEOUT,
         cache=None if DEBUG else zeep_cache
     )
     return zeep.Client(wsdl=GBG_WSDL, transport=transport, wsse=token)

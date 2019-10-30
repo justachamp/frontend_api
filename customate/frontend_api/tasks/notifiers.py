@@ -1,11 +1,11 @@
 from __future__ import absolute_import, unicode_literals
 from traceback import format_exc
 import logging
+
 from celery import shared_task
 from django.conf import settings
-
-import boto3
 from botocore.exceptions import ClientError, EndpointConnectionError
+from external_apis.aws.service import get_aws_client
 
 logger = logging.getLogger(__name__)
 
@@ -13,9 +13,7 @@ logger = logging.getLogger(__name__)
 @shared_task
 def send_notification_email(to_address, message):
     logger.info("Send email notification to %s" % to_address)
-    email_client = boto3.client('ses', aws_access_key_id=settings.AWS_ACCESS_KEY,
-                                aws_secret_access_key=settings.AWS_SECRET_KEY,
-                                region_name=settings.AWS_REGION_SES)
+    email_client = get_aws_client('ses', region_name=settings.AWS_REGION_SES)
     kwargs = {
         "Source": settings.AWS_SES_NOTIFICATIONS_GOCUSTOMATE_SENDER,
         "Destination": {
@@ -31,9 +29,7 @@ def send_notification_email(to_address, message):
 @shared_task
 def send_notification_sms(to_phone_number, message):
     logger.info("Send sms notification to %s " % to_phone_number)
-    sms_client = boto3.client('sns', aws_access_key_id=settings.AWS_ACCESS_KEY,
-                              aws_secret_access_key=settings.AWS_SECRET_KEY,
-                              region_name=settings.AWS_REGION_SNS)
+    sms_client = get_aws_client('sns', region_name=settings.AWS_REGION_SNS)
     kwargs = {"MessageAttributes": {
         'AWS.SNS.SMS.SMSType': {
             'DataType': 'String',

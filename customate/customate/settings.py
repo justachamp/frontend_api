@@ -490,3 +490,4 @@ _ = arrow.get("2000-01-01T%s:00" % PAYMENT_SYSTEM_CLOSING_TIME, ['YYYY-MM-DDTH:m
 DOCUMENTS_MAX_LIMIT_PER_SCHEDULE = 5
 MAX_ALLOW_USER_INACTIVITY = environ.get('MAX_ALLOW_USER_INACTIVITY', 10)  # in minutes
 FIRST_PAYMENTS_MIN_EXECUTION_DELAY = 5  # in seconds
+EXTERNAL_SERVICES_TIMEOUT = 15  # Single parameter for all external services. Value in seconds.

@@ -2,10 +2,8 @@ import os
 from unittest import skip
 from django.test import SimpleTestCase
 from django.conf import settings
-
 import requests
-import boto3
-from botocore.config import Config
+from external_apis.aws.service import get_aws_client
 
 
 @skip("rewrite without actual requests to AWS")
@@ -19,10 +17,7 @@ class TestS3Storage(SimpleTestCase):
     """
 
     def setUp(self):
-        self.client = boto3.client('s3', aws_access_key_id=settings.AWS_ACCESS_KEY,
-                                   aws_secret_access_key=settings.AWS_SECRET_KEY,
-                                   region_name=settings.AWS_REGION,
-                                   config=Config(signature_version="s3v4"))
+        self.client = get_aws_client('s3')
         self.filename = "test_s3_file.pdf"
 
     @property

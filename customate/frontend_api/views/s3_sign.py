@@ -9,11 +9,8 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from django.conf import settings
 from django.shortcuts import get_object_or_404
-
-import boto3
 from botocore.exceptions import ClientError
-from botocore.config import Config
-
+from external_apis.aws.service import get_aws_client
 from frontend_api.serializers import DocumentSerializer
 from frontend_api.models import Schedule, Document
 from frontend_api.exceptions import ServiceUnavailable
@@ -41,10 +38,7 @@ class PreSignedUrlView(APIView):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.s3_client = boto3.client('s3', aws_access_key_id=settings.AWS_ACCESS_KEY,
-                                      aws_secret_access_key=settings.AWS_SECRET_KEY,
-                                      region_name=settings.AWS_REGION,
-                                      config=Config(signature_version="s3v4"))
+        self.s3_client = get_aws_client('s3')
 
     def get_s3_object(self, request):
         """
