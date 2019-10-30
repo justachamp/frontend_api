@@ -29,7 +29,7 @@ def prettify_number(value) -> str:
     :return:
     """
     try:
-        return "%0.2f" % (int(value) / 100)
+        return "%0.2f" % abs((int(value) / 100))
     except (ValueError, ZeroDivisionError):
         return None
 
@@ -71,12 +71,15 @@ def get_funds_senders(funds_sender: User) -> list:
     """
     Accepts user which sent funds.
     Returns list of users which related to senders account.
+    Returns subusers with active statuses only.
     :return: list
     """
-    users = User.objects.filter(
-        Q(status=UserStatus.active) |
-        Q(status=UserStatus.blocked),
-        account__id__in=funds_sender.get_all_related_account_ids())
+    account = funds_sender.account
+    owner_account = account.owner_account if funds_sender.is_subuser else account
+    subusers = User.objects.filter(
+        Q(status=UserStatus.active),
+        account__id__in=owner_account.sub_user_accounts.all().values_list("id", flat=True))
+    users = [owner_account.user] + list(subusers)
     return users
 
 
@@ -84,14 +87,17 @@ def get_funds_recipients(funds_recipient: User or str) -> list:
     """
     Accepts user which got funds.
     Returns list of users which related to recipients account.
+    Returns subusers with active statuses only.
     :return: list
     """
     if isinstance(funds_recipient, str):
         return [funds_recipient]
-    users = User.objects.filter(
-        Q(status=UserStatus.active) |
-        Q(status=UserStatus.blocked),
-        account__id__in=funds_recipient.get_all_related_account_ids())
+    account = funds_recipient.account
+    owner_account = account.owner_account if funds_recipient.is_subuser else account
+    subusers = User.objects.filter(
+        Q(status=UserStatus.active),
+        account__id__in=owner_account.sub_user_accounts.all().values_list("id", flat=True))
+    users = [owner_account.user] + list(subusers)
     return users
 
 

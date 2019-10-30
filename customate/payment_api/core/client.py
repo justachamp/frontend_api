@@ -13,6 +13,7 @@ from jsonapi_client.common import jsonify_attribute_name, error_from_response, H
 import collections
 
 from core.logger import Timer
+from customate.settings import EXTERNAL_SERVICES_TIMEOUT
 from payment_api.core.resource.mixins import ResourceMappingMixin, JsonApiErrorParser
 
 logger = logging.getLogger(__name__)
@@ -40,7 +41,7 @@ class ResourceObjectWithCustomId(ResourceObject):
 
 class Session(DefaultSession):
     def __init__(self, *args, **kwargs) -> None:
-        request_kwargs = {'headers': self._generate_request_headers()}
+        request_kwargs = {'headers': self._generate_request_headers(), 'timeout': EXTERNAL_SERVICES_TIMEOUT}
         super().__init__(request_kwargs=request_kwargs, *args, **kwargs)
 
     def _generate_request_headers(self):

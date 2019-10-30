@@ -1,11 +1,11 @@
 from django.conf import settings
-import boto3
 from django.contrib.auth import get_user_model
 from authentication.cognito.core import constants
 from authentication.cognito import utils
-# import the logging library
+from external_apis.aws.service import get_aws_client
+
 import logging
-# Get an instance of a logger
+
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
@@ -18,8 +18,7 @@ def generate_password():
 
 
 class CognitoClient:
-    client = boto3.client('cognito-idp', aws_access_key_id=settings.AWS_ACCESS_KEY,
-                          aws_secret_access_key=settings.AWS_SECRET_KEY, region_name=settings.AWS_REGION)
+    client = get_aws_client('cognito-idp')
 
 
 class CognitoException(Exception):

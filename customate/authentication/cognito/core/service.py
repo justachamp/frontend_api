@@ -1,14 +1,13 @@
 from django.conf import settings
-import boto3
 from botocore.exceptions import ParamValidationError
 from rest_framework.exceptions import status
 from authentication.cognito.core import constants
 from authentication.cognito import utils
 from core.services.user import UserService
+from external_apis.aws.service import get_aws_client
 
-# import the logging library
 import logging
-# Get an instance of a logger
+
 logger = logging.getLogger(__name__)
 
 BUSINESS_ACCOUNT = 'business'
@@ -50,8 +49,7 @@ class CognitoIdentityException(Exception):
 
 
 class Identity:
-    client = boto3.client('cognito-idp', aws_access_key_id=settings.AWS_ACCESS_KEY,
-                          aws_secret_access_key=settings.AWS_SECRET_KEY, region_name=settings.AWS_REGION)
+    client = get_aws_client('cognito-idp')
 
     _user_service = None
 

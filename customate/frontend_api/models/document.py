@@ -7,12 +7,9 @@ from django.db import models
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from rest_framework.exceptions import ValidationError
-
 from pathlib import Path
-import boto3
-from botocore.config import Config
-
 from core.models import Model
+from external_apis.aws.service import get_aws_client
 from frontend_api.models.schedule import Schedule
 
 logger = logging.getLogger(__name__)
@@ -65,10 +62,7 @@ class Document(Model):
         :param operation_name: 'delete_object', 'get_object', etc.
         :return:
         """
-        s3_client = boto3.client('s3', aws_access_key_id=settings.AWS_ACCESS_KEY,
-                                 aws_secret_access_key=settings.AWS_SECRET_KEY,
-                                 region_name=settings.AWS_REGION,
-                                 config=Config(signature_version="s3v4"))
+        s3_client = get_aws_client('s3')
 
         return s3_client.generate_presigned_url(
             operation_name, Params={
