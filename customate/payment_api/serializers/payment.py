@@ -15,8 +15,6 @@ from payment_api.serializers import (
     ResourceSerializer,
     ExternalResourceRelatedField
 )
-from frontend_api import helpers
-from frontend_api.tasks.notifiers import send_notification_email, send_notification_sms
 from core.fields import PaymentStatusType
 
 
