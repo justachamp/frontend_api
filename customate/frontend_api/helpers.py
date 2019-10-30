@@ -29,7 +29,7 @@ def prettify_number(value) -> str:
     :return:
     """
     try:
-        return "%0.2f" % (int(value) / 100)
+        return "%0.2f" % abs((int(value) / 100))
     except (ValueError, ZeroDivisionError):
         return None
 
