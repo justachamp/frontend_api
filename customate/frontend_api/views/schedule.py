@@ -205,7 +205,7 @@ class ScheduleViewSet(views.ModelViewSet):
     def _process_potential_late_payments(self, schedule):
         user = self.request.user
         # Make a series of 'failed' payments to keep a chain of payments in order for further overdue processing
-        if not schedule.have_time_for_deposit_payment_processing_by_scheduler():
+        if not schedule.have_time_for_deposit_payment_processing_by_scheduler:
             make_failed_payment.delay(
                 user_id=str(user.id),
                 payment_account_id=str(user.account.payment_account_id),
@@ -218,7 +218,7 @@ class ScheduleViewSet(views.ModelViewSet):
                 is_deposit=True
             )
 
-        if not schedule.have_time_for_regular_payment_processing_by_scheduler():
+        if not schedule.have_time_for_regular_payment_processing_by_scheduler:
             make_failed_payment.delay(
                 user_id=str(user.id),
                 payment_account_id=str(user.account.payment_account_id),
