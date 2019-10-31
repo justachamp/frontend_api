@@ -1,6 +1,8 @@
 from authentication.cognito import utils
 from authentication.cognito.core import constants
 from authentication.cognito.core.base import CognitoClient, CognitoException, CognitoUser
+# DON'T remove this import
+from authentication.cognito.middleware import helpers as mid_helpers
 
 import logging
 

@@ -448,7 +448,7 @@ class Schedule(AbstractSchedule):
         )
         scheduled_date = arrow.get(deposit_payment.scheduled_date).datetime.date()
         nearest_scheduler_processing_date = Schedule.nearest_scheduler_processing_date()
-        result = scheduled_date >= nearest_scheduler_processing_date()
+        result = scheduled_date >= nearest_scheduler_processing_date
         logger.info("Have %s time for deposit payment processing by scheduler (schedule_id=%s, scheduled_date=%s, "
                     "nearest_scheduler_processing_date=%s)"
                     % ('' if result else 'NO', self.id, scheduled_date, nearest_scheduler_processing_date),
@@ -481,7 +481,7 @@ class Schedule(AbstractSchedule):
 
             scheduled_date = arrow.get(nearest_payment.scheduled_date).datetime.date()
             nearest_scheduler_processing_date = Schedule.nearest_scheduler_processing_date()
-            result = scheduled_date >= nearest_scheduler_processing_date()
+            result = scheduled_date >= nearest_scheduler_processing_date
             logger.info("Have %s time for regular payment processing by scheduler (id=%s, scheduled_date=%s, nearest_scheduler_processing_date=%s)"
                         % ('' if result else 'NO', self.id, scheduled_date, nearest_scheduler_processing_date),
                         extra={'schedule_id': self.id})
