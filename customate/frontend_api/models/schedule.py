@@ -596,10 +596,12 @@ class Schedule(AbstractSchedule):
             schedule_id=self.id
         ).order_by("-updated_at").first()
 
+        logger.debug("Schedule.can_retry_with_backup_funding_source latest_schedule_payment(id=%s, status=%s, funding_source_id=%s)"
+                     % (latest_schedule_payment.id, latest_schedule_payment.payment_status, latest_schedule_payment.funding_source_id))
         # NOTE: check that we're being called after primary FS was already used(!)
         return latest_schedule_payment.payment_status in [PaymentStatusType.FAILED, PaymentStatusType.REFUND] \
             and self.backup_funding_source_id \
-            and latest_schedule_payment.funding_source_id == str(self.funding_source_id)
+            and latest_schedule_payment.funding_source_id == self.funding_source_id
 
 
 class OnetimeSchedule(AbstractSchedule):
