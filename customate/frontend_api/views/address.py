@@ -46,8 +46,9 @@ class UserAddressViewSet(PatchRelatedMixin, views.ModelViewSet):
                            IsOwnerOrReadOnly )
 
     def perform_create(self, serializer):
-        logger.info("perform_create")
         user = self.request.user
+        logger.info("Handle user's address creation request")
+
         if not user.address:
             user.address = serializer.save()
             user.save()
@@ -61,14 +62,15 @@ class CompanyAddressViewSet(PatchRelatedMixin, views.ModelViewSet):
                            IsOwnerOrReadOnly )
 
     def perform_create(self, serializer):
-        logger.info("perform_create")
         user = self.request.user
+        logger.info("Handle company's address creation request (company_id=%s)"
+                    % (user.account.company.id if user.account.company else None))
+
         if not user.account.company.address:
             user.account.company.address = serializer.save()
             user.account.company.save()
 
 
-# class AddressViewSet(PatchRelatedMixin, views.ModelViewSet):
 class AddressViewSet(views.ModelViewSet):
     queryset = Address.objects.all()
     serializer_class = AddressSerializer
@@ -84,7 +86,7 @@ class AddressViewSet(views.ModelViewSet):
         """
         res = []
         data = request.data
-        logger.info("Calling search,data=%r" % data)
+        logger.info("Handle address search request (data=%r)" % data)
         try:
             for r in find_address(params=data):
                 res.append(
@@ -105,7 +107,7 @@ class AddressViewSet(views.ModelViewSet):
         """
         res = []
         data = request.data
-        logger.info("Calling search_detail: %r" % data)
+        logger.info("Handle search address details (data=%r)" % data)
         try:
             for r in retrieve_address(params=data):
                 res.append(

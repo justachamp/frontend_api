@@ -62,8 +62,7 @@ class Identity:
 
     def sign_up(self, username, password, account_type, user_attributes, validation_data=None):
         try:
-            logger.debug(username)
-            logger.debug(user_attributes)
+            logger.info("Sign-in user (username=%s, user_attributes=%s) in Cognito" % (username, user_attributes))
 
             secret_hash = utils.get_cognito_secret_hash(username)
             params = {"ClientId": constants.CLIENT_ID,
@@ -77,9 +76,9 @@ class Identity:
                 params['SecretHash'] = secret_hash
 
             user_params = utils.cognito_to_dict(user_attributes, settings.COGNITO_ATTR_MAPPING)
+            logger.debug(f'User params: {user_params}')
             cognito_user = self.client.sign_up(**params)
-            logger.debug(f'cognito user {cognito_user}')
-            logger.debug(f'user_params {user_params}')
+            logger.debug(f'Cognito user: {cognito_user}')
             self.user_service.create_user(username, account_type, cognito_user['UserSub'])
             return cognito_user
 
@@ -114,6 +113,8 @@ class Identity:
         return False
 
     def initiate_auth(self, username, auth_flow, password=None, refresh_token=None):
+        logger.info("Initiating auth (username=%s, auth_flow=%s) in Cognito" % (username, auth_flow))
+
         auth_parameters = {}
         secret_hash = utils.get_cognito_secret_hash(username)
         if secret_hash:
@@ -144,6 +145,8 @@ class Identity:
             raise Exception(ex)
 
     def refresh_session(self, username, auth_flow, refresh_token=None):
+        logger.info("Refreshing session (username=%s, auth_flow=%s) in Cognito" % (username, auth_flow))
+
         auth_parameters = {}
         secret_hash = utils.get_cognito_secret_hash(username)
         if secret_hash:
@@ -172,6 +175,8 @@ class Identity:
             raise Exception(ex)
 
     def sign_out(self, access_token):
+        logger.info("Sign-out user (by access_token) in Cognito")
+
         try:
             return self.client.global_sign_out(AccessToken=access_token)
         except constants.AWS_EXCEPTIONS as ex:
@@ -183,6 +188,8 @@ class Identity:
             raise Exception(ex)
 
     def admin_sign_out(self, username):
+        logger.info("Sign-out user (by username=%s) in Cognito" % username)
+
         try:
             return self.client.admin_user_global_sign_out(
                 UserPoolId=constants.POOL_ID,
@@ -197,6 +204,8 @@ class Identity:
             raise Exception(ex)
 
     def verification_code(self, attribute_name, access_token):
+        logger.info("Get verification code (attribute_name=%s)" % attribute_name)
+
         try:
             result = self.client.get_user_attribute_verification_code(
                 AttributeName=attribute_name,
@@ -216,7 +225,7 @@ class Identity:
             raise Exception(ex)
 
     def verify_attribute(self, attribute_name, access_token, code):
-        logger.info(f"Verifying user attribute: {attribute_name}")
+        logger.info("Verifying user attribute (attribute_name=%s, code=%s)" % (attribute_name, code))
 
         try:
             result = self.client.verify_user_attribute(
@@ -264,8 +273,9 @@ class Identity:
             raise Exception('Unsupported challenge name')
 
     def respond_to_auth_challenge(self, username, challenge_name, responses, session):
-        try:
+        logger.info("Responding to auth challenge (username=%s, challenge_name=%s)" % (username, challenge_name))
 
+        try:
             responses = self._get_challenge_responses(username, challenge_name, responses)
             params = {"ClientId": constants.CLIENT_ID,
                       "ChallengeName": challenge_name,
@@ -287,7 +297,7 @@ class Identity:
             raise Exception(ex)
 
     def forgot_password(self, username):
-        logger.info("Calling forgot password")
+        logger.info("Calling forgot password in Cognito")
         secret_hash = utils.get_cognito_secret_hash(username)
 
         params = {
@@ -304,7 +314,7 @@ class Identity:
             raise CognitoIdentityException.create_from_exception(ex)
 
     def change_password(self, previous, proposed, access_token):
-        logger.info("Changing password")
+        logger.info("Changing password in Cognito")
 
         params = {
             'PreviousPassword': previous,
@@ -362,8 +372,8 @@ class Identity:
 
     def admin_create_user(self, username, user_attributes, password=None, action=None, delivery=None, validation_data=None):
         try:
-            logger.debug(username)
-            logger.debug(user_attributes)
+            logger.info("Creating user (username=%s, attributes=%s, action=%s) in Cognito"
+                        % (username, user_attributes, action))
 
             params = {
                 'UserPoolId': constants.POOL_ID,
@@ -382,10 +392,10 @@ class Identity:
                 params['ValidationData'] = validation_data
 
             user_params = utils.cognito_to_dict(user_attributes, settings.COGNITO_ATTR_MAPPING)
+            logger.debug(f'User params {user_params}')
             cognito_user = self.client.admin_create_user(**params)
-            logger.debug(f'cognito user params {params}')
-            logger.debug(f'cognito user {cognito_user}')
-            logger.debug(f'user_params {user_params}')
+            logger.debug(f'Cognito user params: {params}')
+            logger.debug(f'Cognito user: {cognito_user}')
             return cognito_user.get('User')
 
         except ParamValidationError as ex:
@@ -421,6 +431,8 @@ class Identity:
         pass
 
     def admin_update_user_attributes(self, username, user_attributes):
+        logger.info("Updating user attributes (username=%s, user_attributes=%s)" % (username, user_attributes))
+
         params = {
             'UserPoolId': constants.POOL_ID,
             'Username': username,

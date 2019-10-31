@@ -55,6 +55,8 @@ class ProfileView(DomainService, APIView):
         return response.Response(serializer.data)
 
     def patch(self, request, pk):
+        logger.info("Handle profile's update request")
+
         data = request.data
         self.service = request.user, data
         profile = self.service.profile
@@ -83,8 +85,12 @@ class ProfileView(DomainService, APIView):
 
     @staticmethod
     def can_change_email_without_credentials(request):
-        return not request.user.email_verified
+        result = not request.user.email_verified
+        logger.debug("Can change email without credentials result: %s" % result)
+        return result
 
     @staticmethod
     def can_change_phone_without_credentials(request):
-        return not request.user.phone_number_verified
+        result = not request.user.phone_number_verified
+        logger.debug("Can change phone without credentials result: %s" % result)
+        return result

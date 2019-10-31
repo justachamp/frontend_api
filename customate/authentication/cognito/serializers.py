@@ -53,7 +53,8 @@ class UserServiceMixin(object):
             cognito_user = data[1]
             identity = cognito_user.get('cognito:username')
             email = cognito_user.get('email')
-            logger.debug(f'process_request user_attributes: {cognito_user}')
+            logger.debug(f'Get Cognito user initial data: {cognito_user}')
+
             user_data = {
                 'username': email,
                 'email': email,
@@ -65,6 +66,7 @@ class UserServiceMixin(object):
                 'first_name': cognito_user.get('given_name', ''),
                 'last_name': cognito_user.get('family_name', '')
             }
+
         return identity, user_data
 
 

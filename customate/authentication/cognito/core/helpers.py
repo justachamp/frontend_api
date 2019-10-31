@@ -1,5 +1,6 @@
 from authentication.cognito.core import constants
 from authentication.cognito.core.service import Identity
+import logging
 
 # Collection of methods intended to make the calling of AWS Cognito methods a bit easier. Each method expects both a
 # data parameter (which will be a dictionary of values) and an optional param_mapping parameter - another dictionary
@@ -10,7 +11,6 @@ from authentication.cognito.core.service import Identity
 
 BAD_DATA_EXCEPTION = "The required parameters were not passed through in the data dictionary"
 
-import logging
 logger = logging.getLogger(__name__)
 
 # TODO: Possibly change some of these methods to just accept one parameter where appropriate (i.e. just a username)
@@ -203,9 +203,6 @@ def admin_create_user(data, param_mapping=None):
         temporary_password = parse_parameter(data, param_mapping, 'temporary_password')
         action = parse_parameter(data, param_mapping, 'action')
         delivery = parse_parameter(data, param_mapping, 'delivery')
-        # if "suppress" in data or "suppress" in param_mapping:
-        #     supress = parse_parameter(data, param_mapping, 'suppress')
-
     except Exception as ex:
         raise ValueError(BAD_DATA_EXCEPTION)
 

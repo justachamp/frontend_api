@@ -45,6 +45,8 @@ class PreSignedUrlView(APIView):
         The method returns presigned url for further sharing file
         """
         key = request.query_params.get("key")
+        logger.info("Receiving S3 object by key (key=%s)" % key)
+
         if not key:
             logger.error("The 'key' parameter has not been passed %r" % traceback.format_exc())
             raise ValidationError("The 'key' field is requred.")
@@ -63,6 +65,8 @@ class PreSignedUrlView(APIView):
         schedule_id = request.query_params.get("schedule_id")
         filename = request.query_params.get("filename")
         slug = request.query_params.get("slug")
+
+        logger.info("Creating S3 object (schedule_id=%s, filename=%s, slug=%s)" % (schedule_id, filename, slug))
         schedule = get_object_or_404(Schedule, id=schedule_id) if schedule_id else None
         kwargs = {"filename": filename, "slug": slug, "user": request.user}
         if schedule:
@@ -84,6 +88,8 @@ class PreSignedUrlView(APIView):
 
     def get(self, request):
         method_name = request.query_params.get("method_name")
+        logger.info("Handle S3 object processing request (method_name=%s)" % method_name)
+
         try:
             if method_name not in ["get_s3_object", "post_s3_object"]:
                 raise AttributeError()
