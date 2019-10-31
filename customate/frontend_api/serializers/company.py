@@ -75,7 +75,7 @@ class CompanySerializer(HyperlinkedModelSerializer):
     )
 
     company_type = EnumField(enum=CompanyType)
-    business_website_url = OptionalSchemeURLField()
+    business_website_url = OptionalSchemeURLField(allow_blank=True)
 
     class Meta:
         model = Company
