@@ -345,7 +345,7 @@ def make_overdue_payment(schedule_id: str, request_id=None):
     # Select all SchedulePayments which are last in chains and are not in SUCCESS status
     overdue_payments = LastSchedulePayments.objects.filter(
         schedule_id=schedule_id,
-        payment_status__in=[PaymentStatusType.FAILED, PaymentStatusType.REFUND]
+        payment_status__in=[PaymentStatusType.FAILED, PaymentStatusType.REFUND, PaymentStatusType.CANCELED]
     ).order_by("created_at")  # type: list[LastSchedulePayments]
 
     logger.info("Total overdue payments (schedule_id=%s): %s" % (schedule_id, len(overdue_payments)), extra={
@@ -377,8 +377,7 @@ def make_overdue_payment(schedule_id: str, request_id=None):
         logger.info("Created payment from overdue (id=%s, payment_id=%s, parent_payment_id=%s) result : %r" % (
             op.id, op.payment_id, op.parent_payment_id, payment), extra={
             'schedule_id': schedule_id,
-            'payment_id': payment.id,
-            'payment': payment
+            'payment_id': payment.id if payment is not None else None
         })
 
         # If we faced with some problems during payment's creation we stop sending overdue payments
