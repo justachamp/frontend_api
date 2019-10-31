@@ -386,8 +386,7 @@ def make_overdue_payment(schedule_id: str, request_id=None):
                 op.id, op.payment_id, op.parent_payment_id), extra={
                 'schedule_payment_id': op.id,
                 'schedule_id': schedule_id,
-                'payment_id': op.payment_id,
-                'payment': payment,
+                'payment_id': op.payment_id
             })
             break
 
