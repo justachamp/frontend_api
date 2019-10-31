@@ -148,7 +148,7 @@ def get_schedule_details(user: User, schedule: Schedule,
         'schedule_name': schedule.name,
         'transaction_type': transaction_names.get(transaction_info.get("name"), "Unknown"),
         # identifier specifies either funds has increased or decreased
-        'sign': "-" if user == schedule.origin_user else '+'
+        'sign': "-" if int(transaction_info["amount"]) < 0 else '+'
     }
     return context
 
