@@ -12,6 +12,7 @@ from django.db.models import Q
 
 from core.fields import Currency, TransactionStatusType, UserStatus
 from frontend_api.models.schedule import Schedule
+from frontend_api.models import UserAccount
 from frontend_api.tasks.notifiers import send_notification_email, send_notification_sms
 
 logger = logging.getLogger(__name__)
@@ -257,12 +258,12 @@ def notify_about_schedules_failed_payment(schedule: Schedule, transaction_info: 
     """
     logger.info("Start notify about failed payment. Transaction info: %s" % transaction_info)
     funds_sender = schedule.origin_user
-    user_id = transaction_info.get("user_id")
+    payment_account_id = transaction_info.get("account_id")
 
     try:
-        payment_user = User.objects.get(id=user_id)
-    except User.DoesNotExist:
-        logger.error("User with given id not found. %r" % format_exc())
+        payment_account = UserAccount.objects.get(payment_account_id=payment_account_id)
+    except UserAccount.DoesNotExist:
+        logger.error("UserAccount with given payment account id was not found. %r" % format_exc())
         return
 
     message_tpl = ",".join([
@@ -273,7 +274,7 @@ def notify_about_schedules_failed_payment(schedule: Schedule, transaction_info: 
         "\n{cur_symbol} wallet available balance: {closing_balance} {cur_symbol}."
     ])
 
-    if payment_user.account.id in funds_sender.get_all_related_account_ids():
+    if payment_account.id in funds_sender.get_all_related_account_ids():
         funds_senders = get_funds_senders(funds_sender=funds_sender)
         closing_balance = transaction_info.get("closing_balance")
         error_message = transaction_info.get("error_message") or 'unknown'
@@ -322,11 +323,11 @@ def notify_about_schedules_successful_payment(schedule: Schedule, transaction_in
     funds_sender = schedule.origin_user
     funds_recipient = schedule.recipient_user if schedule.recipient_user \
         else schedule.payee_recipient_email
-    user_id = transaction_info.get("user_id")
+    payment_account_id = transaction_info.get("account_id")
     try:
-        payment_user = User.objects.get(id=user_id)
-    except User.DoesNotExist:
-        logger.error("User with given id not found. %r" % format_exc())
+        payment_account = UserAccount.objects.get(payment_account_id=payment_account_id)
+    except UserAccount.DoesNotExist:
+        logger.error("UserAccount with given payment account id was not found. %r" % format_exc())
         return
 
     outgoing_payment_message_tpl = ",".join([
@@ -337,7 +338,7 @@ def notify_about_schedules_successful_payment(schedule: Schedule, transaction_in
     ])
 
     # Send notifications for funds SENDERS.
-    if payment_user.account.id in funds_sender.get_all_related_account_ids():
+    if payment_account.id in funds_sender.get_all_related_account_ids():
         funds_senders = get_funds_senders(funds_sender=funds_sender)
         closing_balance = transaction_info.get("closing_balance")
         schedule_details = get_schedule_details(
@@ -392,7 +393,7 @@ def notify_about_schedules_successful_payment(schedule: Schedule, transaction_in
         "\n{cur_symbol} wallet available balance: {closing_balance} {cur_symbol}"
     ])
 
-    if payment_user.account.id in funds_recipient.get_all_related_account_ids():
+    if payment_account.id in funds_recipient.get_all_related_account_ids():
         funds_recipients = get_funds_recipients(funds_recipient=funds_recipient)
         schedule_details = get_schedule_details(
             user=funds_recipient,
