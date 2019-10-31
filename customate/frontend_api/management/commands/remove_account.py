@@ -55,12 +55,12 @@ class Command(BaseCommand):
             self.stdout.write(f'Starting accounts removing process...')
             cursor.execute("SET CONSTRAINTS ALL IMMEDIATE")  # Inform about constrain violation immediately
 
-            # Remove relationship between account & company & payment account
-            cursor.execute("DELETE FROM frontend_api_useraccount WHERE account_ptr_id = ANY(%s)", params=[related_account_ids])
-
             # Remove sub-user related records (link with owner account & permissions)
             cursor.execute("DELETE FROM frontend_api_subuserpermission WHERE account_id = ANY(%s)", params=[related_account_ids])
             cursor.execute("DELETE FROM frontend_api_subuseraccount WHERE owner_account_id = ANY(%s)", params=[related_account_ids])
+
+            # Remove relationship between account & company & payment account
+            cursor.execute("DELETE FROM frontend_api_useraccount WHERE account_ptr_id = ANY(%s)", params=[related_account_ids])
 
             # Remove user's accounts
             cursor.execute("DELETE FROM frontend_api_account WHERE id = ANY(%s)", params=[related_account_ids])
