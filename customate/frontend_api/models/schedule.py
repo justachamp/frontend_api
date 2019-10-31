@@ -593,11 +593,11 @@ class Schedule(AbstractSchedule):
         :return: bool
         """
         latest_schedule_payment = LastSchedulePayments.objects.filter(
-                schedule_id=self.id
-            ).order_by("-updated_at").first()
+            schedule_id=self.id
+        ).order_by("-updated_at").first()
 
         # NOTE: check that we're being called after primary FS was already used(!)
-        return latest_schedule_payment.status in [PaymentStatusType.FAILED, PaymentStatusType.REFUND] \
+        return latest_schedule_payment.payment_status in [PaymentStatusType.FAILED, PaymentStatusType.REFUND] \
             and self.backup_funding_source_id \
             and latest_schedule_payment.funding_source_id == str(self.funding_source_id)
 
