@@ -94,21 +94,22 @@ def make_payment(user_id: str, payment_account_id: str, schedule_id: str, curren
     :return: created payment instance
     """
     logging.init_shared_extra(request_id)
-    logger.info("Making payment: user_id=%s, payment_account_id=%s, schedule_id=%s, currency=%s, payment_amount=%s, "
-                "additional_information=%s, payee_id=%s, funding_source_id=%s, parent_payment_id=%s, "
-                "execution_date=%s, request_id=%s" % (
-                    user_id, payment_account_id, schedule_id, currency, payment_amount,
+    payment_id = uuid4()
+    logger.info("Making payment: payment_id=%s, user_id=%s, payment_account_id=%s, schedule_id=%s, currency=%s, "
+                "payment_amount=%s, additional_information=%s, payee_id=%s, funding_source_id=%s, parent_payment_id=%s,"
+                " execution_date=%s, request_id=%s" % (
+                    payment_id, user_id, payment_account_id, schedule_id, currency, payment_amount,
                     additional_information, payee_id, funding_source_id, parent_payment_id,
                     execution_date, request_id
                 ),
                 extra={
                     'schedule_id': schedule_id,
+                    'payment_id': payment_id,
                     'funding_source_id': funding_source_id,
                     'payment_amount': payment_amount,
                     'is_deposit': is_deposit,
                 })
 
-    payment_id = uuid4()
     result = None
 
     try:
@@ -122,7 +123,7 @@ def make_payment(user_id: str, payment_account_id: str, schedule_id: str, curren
             is_deposit=is_deposit
         )
         schedule_payment.save()
-
+        logger.info("Schedule payment successfully created (schedule_id=%s, payment_id=%s)" % (schedule_id, payment_id))
     except Exception:
         logger.error("Saving schedule_payment record failed due to: %r" % format_exc(), extra={
             'schedule_id': schedule_id,
