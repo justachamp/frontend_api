@@ -285,10 +285,7 @@ def on_payment_change(payment_info: Dict):
     schedule.update_status()
 
     # Retry payment using backup funding source if it is available
-    # NOTE: check that we're being called after primary FS was already used(!)
-    if payment_status in [PaymentStatusType.FAILED, PaymentStatusType.REFUND] \
-            and schedule.backup_funding_source_id \
-            and funding_source_id == str(schedule.funding_source_id):
+    if schedule.can_retry_with_backup_funding_source():
         logger.info("Retrying payment (id=%s, status=%s) using backup funding source(id=%s, was=%s)" % (
             payment_id, payment_status, schedule.backup_funding_source_id, funding_source_id
         ), extra={
@@ -296,6 +293,7 @@ def on_payment_change(payment_info: Dict):
             'schedule_id': schedule_id,
             'schedule.backup_funding_source_id': schedule.backup_funding_source_id
         })
+
         make_payment.delay(
             user_id=str(schedule.origin_user_id),
             payment_account_id=str(schedule.origin_payment_account_id),

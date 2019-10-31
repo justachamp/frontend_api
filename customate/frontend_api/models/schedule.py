@@ -303,9 +303,16 @@ class Schedule(AbstractSchedule):
 
         if any([s in [PaymentStatusType.FAILED, PaymentStatusType.REFUND, PaymentStatusType.CANCELED] for s in
                 statuses]):
-            # mark schedule as overdue and return current status
-            logger.info("Mark schedule(id=%s) as overdue and return current status=%s" % (self.id, self.status))
-            self.overdue = True
+
+            # If we wasn't in overdue state before and have backup FS to retry with - don't mark schedule as overdue
+            if not self.overdue and self.can_retry_with_backup_funding_source():
+                logger.info("Don't mark schedule (id=%s, overdue=%s, status=%s) as overdue because we have to retry "
+                            "with backup funding source (id=%s)"
+                            % (self.id, self.overdue, self.status, self.backup_funding_source_id))
+            else:
+                logger.info("Mark schedule (id=%s) as overdue and return current status=%s" % (self.id, self.status))
+                self.overdue = True
+
             return self.status
 
         # if we've gone so far, we're definitely not overdue anymore
@@ -578,6 +585,21 @@ class Schedule(AbstractSchedule):
         logger.debug("Schedule.first_payment_scheduled_date (id=%s, start_date=%s, result=%s)"
                      % (self.id, self.start_date, result))
         return result
+
+    def can_retry_with_backup_funding_source(self):
+        """
+        This method assumes that it will query the latest schedule payment record, make sure that this is TRUE
+        for concurrent environment (executing this method not in DB transaction scope may lead to issues)
+        :return: bool
+        """
+        latest_schedule_payment = LastSchedulePayments.objects.filter(
+                schedule_id=self.id
+            ).order_by("-updated_at").first()
+
+        # NOTE: check that we're being called after primary FS was already used(!)
+        return latest_schedule_payment.status in [PaymentStatusType.FAILED, PaymentStatusType.REFUND] \
+            and self.backup_funding_source_id \
+            and latest_schedule_payment.funding_source_id == str(self.funding_source_id)
 
 
 class OnetimeSchedule(AbstractSchedule):
