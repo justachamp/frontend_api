@@ -7,16 +7,13 @@ from authentication.cognito.serializers import CognitoAuthSerializer, CognitoAut
 
 from authentication.cognito.models import Challenge, Identity
 from rest_framework_json_api.views import viewsets
-
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from rest_framework import response
 from rest_framework.status import HTTP_204_NO_CONTENT
 
-# import the logging library
 import logging
 
-# Get an instance of a logger
 logger = logging.getLogger(__name__)
 
 
@@ -28,27 +25,35 @@ class AuthView(viewsets.ViewSet):
 
     @action(methods=['POST'], detail=False, name='Login')
     def sign_in(self, request):
+        logger.info("Handle sign in request")
         serializer = CognitoAuthRetrieveSerializer(data=request.data)
         if serializer.is_valid(True):
             entity = serializer.retrieve(serializer.validated_data)
             self._update_user_model(entity, serializer.validated_data)
 
             if type(entity) == Challenge:
+                logger.info("Returning challenge")
                 return response.Response(
                     CognitoAuthChallengeSerializer(instance=entity, context={'request': request}).data)
             else:
+                logger.info("Returning identity data")
                 context = {'request': request, 'additional_keys': {'account': ['permission']}}
                 return response.Response(
                     CognitoAuthRetrieveSerializer(instance=entity, context=context).data)
+        else:
+            logger.info("Invalid data was transferred to sign in end-point")
 
     def _update_user_model(self, identity, data):
         if type(identity) == Identity:
             identity.user.remember_me = data.get('remember', False)
             identity.user.last_activity = arrow.utcnow().datetime
+            logger.debug("Updating user model with remember_me=%s, last_activity=%s"
+                         % (identity.user.remember_me, identity.user.last_activity))
             identity.user.save(update_fields=["remember_me", "last_activity"])
 
     @action(methods=['POST'], detail=False, name='Challenge')
     def challenge(self, request):
+        logger.info("Handle challenge request")
         serializer = CognitoAuthChallengeSerializer(data=request.data)
         if serializer.is_valid(True):
             entity = serializer.auth_challenge(serializer.validated_data)
@@ -57,6 +62,8 @@ class AuthView(viewsets.ViewSet):
             context = {'request': request, 'additional_keys': {'account': ['permission']}}
             return response.Response(
                 CognitoAuthRetrieveSerializer(instance=entity, context=context).data)
+        else:
+            logger.info("Invalid data was transferred to challenge end-point")
 
     @action(methods=['POST'], detail=False, name='Logout')
     def sign_out(self, request):

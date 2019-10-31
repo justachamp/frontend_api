@@ -74,12 +74,15 @@ class AccountRelationshipView(RelationshipPostMixin, RelationshipView):
                             IsOwnerOrReadOnly ) 
 
     def post_company(self, request, *args, **kwargs):
+        logger.info("Handle account's company creation request")
+
         related_field = kwargs.get('related_field')
         related_serializer = self.get_related_serializer(related_field)
         account = self.get_object()
         company = account.company
 
         if company:
+            logger.info("Company already exists(account=%s), do nothing" % account.id)
             raise MethodNotAllowed('POST')
 
         serializer = related_serializer(data=request.data.get('attributes'), context={'request': request})
@@ -87,6 +90,7 @@ class AccountRelationshipView(RelationshipPostMixin, RelationshipView):
         account.company = serializer.save()
         account.save()
 
+        logger.info("Company (id=%s) was successfully created" % account.company.id)
         return serializer
 
 
@@ -171,16 +175,20 @@ class AccountViewSet(RelationshipMixin, PatchRelatedMixin, views.ModelViewSet):
             return super().get_serializer_class()
 
     def perform_create(self, serializer):
-        logger.error('perform create')
+        logger.info('Handle account creation')
         user = self.request.user
 
         if not user.account:
             user.account = serializer.save()
             user.save()
 
+            logger.info("Account (id=%s) was successfully created" % user.account.id)
+
     @action(methods=['POST'], detail=True, name='Invite sub user')
     @transaction.atomic
     def invite(self, request, pk):
+        logger.info("Handle sending invite request")
+
         username = request.data.get('username').lower()
         data = {
             'username': username,
@@ -191,6 +199,7 @@ class AccountViewSet(RelationshipMixin, PatchRelatedMixin, views.ModelViewSet):
             'last_name': request.data.get('last_name', ''),
         }
 
+        logger.info("Invited sub-user's data: %s" % data)
         serializer = SubUserSerializer(data=data, context={'request': request})
         if serializer.is_valid(True):
             invitation = CognitoInviteUserSerializer.invite(data)
@@ -205,6 +214,8 @@ class AccountViewSet(RelationshipMixin, PatchRelatedMixin, views.ModelViewSet):
     @action(methods=['POST'], detail=True, name='Invite sub user')
     @transaction.atomic
     def resend_invite(self, request, pk):
+        logger.info("Handle re-sending invite request")
+
         username = request.data.get('username').lower()
         data = {
             'username': username,
@@ -213,6 +224,7 @@ class AccountViewSet(RelationshipMixin, PatchRelatedMixin, views.ModelViewSet):
             'action': 'RESEND'
         }
 
+        logger.info("Invite data: %s" % data)
         serializer = BaseUserResendInviteSerializer(data=data, context={'request': request})
         if serializer.is_valid(True):
             invitation = CognitoInviteUserSerializer.invite(data)
@@ -247,7 +259,7 @@ class UserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.ModelVi
     search_fields = ('user__email', 'user__status', 'user__username',)
 
     def perform_create(self, serializer):
-        logger.error('perform create')
+        logger.info("Handle user's account creation request")
         user = self.request.user
 
         if not user.account:
@@ -282,7 +294,7 @@ class AdminUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.Mo
     }
 
     def perform_create(self, serializer):
-        logger.error('perform create')
+        logger.info("Handle admin user's account creation request")
         user = self.request.user
 
         if not user.account:
@@ -290,10 +302,13 @@ class AdminUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.Mo
             user.save()
 
     def post_permission(self, request, *args, **kwargs):
+        logger.info("Handle admin's account permissions creation request")
+
         related_field = kwargs.get('related_field')
         related_serializer = self.get_related_serializer(related_field)
         account = self.get_object()
 
+        logger.info("Permissions for account: %s" % account.id)
         data = request.data.get('attributes') or {}
         data['account'] = account
         data['account_id'] = account.id
@@ -307,6 +322,8 @@ class AdminUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.Mo
     @action(methods=['POST'], detail=False, name='Invite admin')
     @transaction.atomic()
     def invite(self, request):
+        logger.info("Handle sending admin's invite request")
+
         user = request.user
         request_data = request.data
         if type(user) is AnonymousUser or not user.is_admin:
@@ -322,6 +339,7 @@ class AdminUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.Mo
             'last_name': request_data.get('last_name', ''),
         }
 
+        logger.info("Invited user's data: %s" % data)
         serializer = AdminUserSerializer(data=data, context={'request': request})
         if serializer.is_valid(True):
             invitation = CognitoInviteUserSerializer.invite(data)
@@ -337,6 +355,8 @@ class AdminUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.Mo
     @action(methods=['POST'], detail=True, name='Invite admin')
     @transaction.atomic
     def resend_invite(self, request, pk):
+        logger.info("Handle re-sending admin invite request")
+
         username = request.data.get('username').lower()
         data = {
             'username': username,
@@ -345,6 +365,7 @@ class AdminUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.Mo
             'action': 'RESEND'
         }
 
+        logger.info("Invite data: %s" % data)
         serializer = BaseUserResendInviteSerializer(data=data, context={'request': request})
         if serializer.is_valid(True):
             invitation = CognitoInviteUserSerializer.invite(data)
@@ -403,7 +424,7 @@ class SubUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.Mode
     }
 
     def perform_create(self, serializer):
-        logger.error('perform create')
+        logger.info("Handle sub-user's account creation request")
         user = self.request.user
 
         if not user.account:
@@ -411,10 +432,13 @@ class SubUserAccountViewSet(PatchRelatedMixin, RelationshipPostMixin, views.Mode
             user.save()
 
     def post_permission(self, request, *args, **kwargs):
+        logger.info("Handle sub-user's account permissions creation request")
+
         related_field = kwargs.get('related_field')
         related_serializer = self.get_related_serializer(related_field)
         account = self.get_object()
 
+        logger.info("Permissions for account: %s" % account.id)
         data = request.data.get('attributes') or {}
         data['account'] = account
         data['account_id'] = account.id

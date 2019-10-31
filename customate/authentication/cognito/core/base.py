@@ -43,8 +43,8 @@ class CognitoUser(CognitoClient):
             return kwargs
 
     def sign_up(self, username, password, user_attributes, validation_data=None):
-        logger.debug(username)
-        logger.debug(user_attributes)
+        logger.info("Sign up with CognitoUser class (username=%s, user_attributes=%s)" % (username, user_attributes))
+
         secret_hash = utils.get_cognito_secret_hash(username)
         params = {"ClientId": constants.CLIENT_ID,
                   "Username": username, "Password": password,
@@ -57,22 +57,23 @@ class CognitoUser(CognitoClient):
             params['SecretHash'] = secret_hash
 
         user_params = utils.cognito_to_dict(user_attributes, settings.COGNITO_ATTR_MAPPING)
+        logger.debug(f'User params: {user_params}')
         cognito_user = CognitoClient.client.sign_up(**params)
-        logger.debug(f'cognito user {cognito_user}')
-        logger.debug(f'user_params {user_params}')
+        logger.debug(f'Cognito user: {cognito_user}')
         user = self.user_class.objects.create(
             username=username, email=username, cognito_id=cognito_user['UserSub']
-            # first_name=user_params.get('given_name'), last_name=user_params.get('family_name')
         )
 
         user.save()
         return cognito_user
 
     def initiate_auth(self, auth_flow, auth_parameters):
+        logger.info("Initiating auth with CognitoUser class (auth_flow=%s)" % auth_flow)
+
         secret_hash = utils.get_cognito_secret_hash(auth_parameters.get('USERNAME'))
         if secret_hash:
             auth_parameters['SECRET_HASH'] = secret_hash
         res = self.client.initiate_auth(AuthFlow=auth_flow, ClientId=constants.CLIENT_ID,
-                                         AuthParameters=auth_parameters)
+                                        AuthParameters=auth_parameters)
 
         return res

@@ -127,6 +127,8 @@ class BaseScheduleSerializer(HyperlinkedModelSerializer):
             })
 
     def assign_uploaded_documents_to_schedule(self, documents):
+        logger.info("Assigning uploaded documents to schedule (id=%r)" % self.instance.id,
+                    extra={'schedule_id': self.instance.id})
         Document.objects.filter(key__in=[item["key"] for item in documents]).update(schedule=self.instance)
 
 

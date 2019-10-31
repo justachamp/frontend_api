@@ -15,16 +15,15 @@ from authentication.cognito.exceptions import TokenIssue
 from authentication.cognito.utils import PublicKey
 from rest_framework.exceptions import AuthenticationFailed
 
-# Get an instance of a logger
 logger = logging.getLogger(__name__)
 identity = service.Identity()
 
 
 def validate_token(access_token, id_token, refresh_token=None):
+    logger.debug(f"Validating token")
+
     try:
         header, payload = decode_token(access_token)
-        if id_token:
-            id_header, id_payload = decode_token(id_token)
     except Exception as ex:
         # Invalid token or token we can't decode for whatever reason
         logger.error(f"Validating token process caught an exception: {ex!r}")

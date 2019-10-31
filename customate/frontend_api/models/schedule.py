@@ -146,9 +146,13 @@ class Schedule(AbstractSchedule):
         now_date = arrow.utcnow().datetime.date()
         # We cannot just compare dates and ignore time. If start_date is current date
         # then scheduler's start time is important in fact
-        return now_date > self.start_date or (
+        result = now_date > self.start_date or (
                 now_date == self.start_date and arrow.utcnow() > self._get_celery_processing_time()
         )
+        # @NOTE we don't use "first_payment_scheduled_date" here, because result of this method is displayed in some way
+        # to the customer in UI and we don't want to confuse him
+        logger.debug("Schedule._did_we_send_first_payment (id=%s, result=%s)" % (self.id, result))
+        return result
 
     @property
     def number_of_payments_left(self):
@@ -162,26 +166,28 @@ class Schedule(AbstractSchedule):
         :return:
         :rtype: datetime.date|None
         """
-        res = None
+        next_payment_datetime = None
         # If we didn't make any payments yet then factor is 1 (which transforms into: next week, next month etc.)
         period_shift_factor = max(1, self.number_of_payments_made)
 
         if not (self.status in [ScheduleStatus.open] and self.number_of_payments_left != 0):
-            res = None
+            next_payment_datetime = None
         elif self.period is SchedulePeriod.one_time or not self._did_we_send_first_payment():
-            res = arrow.get(self.start_date)
+            next_payment_datetime = arrow.get(self.start_date)
         elif self.period is SchedulePeriod.weekly:
-            res = arrow.get(self.start_date).replace(weeks=+period_shift_factor)
+            next_payment_datetime = arrow.get(self.start_date).replace(weeks=+period_shift_factor)
         elif self.period is SchedulePeriod.monthly:
-            res = arrow.get(self.start_date).replace(months=+period_shift_factor)
+            next_payment_datetime = arrow.get(self.start_date).replace(months=+period_shift_factor)
             # Note how JAN->FEB is handled in following example:
             # <Arrow [2019-01-31T11:58:11.459665+00:00]> -> <Arrow [2019-02-28T11:58:11.459665+00:00]>
         elif self.period is SchedulePeriod.quarterly:
-            res = arrow.get(self.start_date).replace(months=+(4 * period_shift_factor))
+            next_payment_datetime = arrow.get(self.start_date).replace(months=+(4 * period_shift_factor))
         elif self.period is SchedulePeriod.yearly:
-            res = arrow.get(self.start_date).replace(years=+period_shift_factor)
+            next_payment_datetime = arrow.get(self.start_date).replace(years=+period_shift_factor)
 
-        return res.datetime.date() if res else None
+        result = next_payment_datetime.datetime.date() if next_payment_datetime else None
+        logger.debug("Schedule.next_payment_date (id=%s, status=%s, result=%s)" % (self.id, self.status, result))
+        return result
 
     @property
     def payment_type(self):
@@ -206,7 +212,11 @@ class Schedule(AbstractSchedule):
         old_status = self.status
         self.status = status
         self.save(update_fields=["status"])
-        logger.info("Updated Schedule(id=%s) status=%s (was=%s)" % (self.id, status, old_status))
+        logger.info("Updated schedule (id=%s) status=%s (was=%s)" % (self.id, status, old_status), extra={
+            'schedule_id': self.id,
+            'new_status': status,
+            'old_status': old_status
+        })
 
     @property
     def processing(self) -> bool:
@@ -217,7 +227,11 @@ class Schedule(AbstractSchedule):
         old_val = self.is_processing
         self.is_processing = value
         self.save(update_fields=["is_processing"])
-        logger.info("Updated schedule(id=%s) is_processing=%s (was=%s)" % (self.id, value, old_val))
+        logger.info("Updated schedule (id=%s) is_processing=%s (was=%s)" % (self.id, value, old_val), extra={
+            'schedule_id': self.id,
+            'new_value': value,
+            'old_value': old_val
+        })
 
     @property
     def overdue(self) -> bool:
@@ -228,13 +242,18 @@ class Schedule(AbstractSchedule):
         old_val = self.is_overdue
         self.is_overdue = value
         self.save(update_fields=["is_overdue"])
-        logger.info("Updated schedule(id=%s) is_overdue=%s (was=%s)" % (self.id, value, old_val))
+        logger.info("Updated schedule (id=%s) is_overdue=%s (was=%s)" % (self.id, value, old_val), extra={
+            'schedule_id': self.id,
+            'new_value': value,
+            'old_value': old_val
+        })
 
     def refresh_number_of_payments_made(self):
         """
         Update count of actual payments made in the DB
         :return:
         """
+        old_number_of_payments_made = self.number_of_payments_made
         # get the list of last successful, regular payments
         self.number_of_payments_made = LastSchedulePayments.objects.filter(
             schedule_id=self.id,
@@ -242,6 +261,13 @@ class Schedule(AbstractSchedule):
             is_deposit=False
         ).count()
         self.save(update_fields=["number_of_payments_made"])
+        logger.info("Updated schedule (id=%s) number_of_payments_made=%s (was=%s)"
+                    % (self.id, self.number_of_payments_made, old_number_of_payments_made),
+                    extra={
+                        'schedule_id': self.id,
+                        'new_value': self.number_of_payments_made,
+                        'old_value': old_number_of_payments_made
+                    })
 
     def update_status(self) -> ScheduleStatus:
         """
@@ -318,6 +344,10 @@ class Schedule(AbstractSchedule):
         :param backup_funding_source_type:
         :return:
         """
+        logger.info("Accepting schedule (id=%s, status=%s)" % (self.id, self.status), extra={
+            'schedule_id': self.id,
+            'status': self.status
+        })
         # accept schedules in 'PENDING' status only
         if self.status != ScheduleStatus.pending:
             raise ValidationError(f'Cannot accept schedule with current status (status={self.status})')
@@ -332,8 +362,18 @@ class Schedule(AbstractSchedule):
         self.backup_funding_source_type = backup_funding_source_type
         self.save(update_fields=["payment_fee_amount", "deposit_fee_amount", "funding_source_id", "funding_source_type",
                                  "backup_funding_source_id", "backup_funding_source_type"])
+        logger.info("Schedule was successfully accepted (id=%s, payment_fee_amount=%s, deposit_fee_amount=%s, "
+                    "funding_source_id=%s, funding_source_type=%s, backup_funding_source_id=%s, backup_funding_source_type=%s)"
+                    % (self.id, self.payment_fee_amount, self.deposit_fee_amount, self.funding_source_id,
+                       self.funding_source_type, self.backup_funding_source_id, self.backup_funding_source_type),
+                    extra={'schedule_id': self.id})
 
     def reject(self):
+        logger.info("Rejecting schedule (id=%s, status=%s)" % (self.id, self.status), extra={
+            'schedule_id': self.id,
+            'status': self.status
+        })
+
         # reject schedules in 'PENDING' status only
         if self.status != ScheduleStatus.pending:
             raise ValidationError(f'Cannot reject schedule with current status (status={self.status})')
@@ -342,23 +382,29 @@ class Schedule(AbstractSchedule):
 
     @staticmethod
     def has_active_schedules_with_source(funding_source_id):
-        return Schedule.objects.filter(
+        result = Schedule.objects.filter(
             funding_source_id=funding_source_id,
             status__in=Schedule.ACTIVE_SCHEDULE_STATUSES
         ).exists()
+        logger.debug("Schedule.has_active_schedules_with_source (funding_source_id=%s, result=%s)"
+                     % (funding_source_id, result))
+        return result
 
     @staticmethod
     def has_active_schedules_with_payee(payee_id):
-        return Schedule.objects.filter(
+        result = Schedule.objects.filter(
             payee_id=payee_id,
             status__in=Schedule.ACTIVE_SCHEDULE_STATUSES
         ).exists()
+        logger.debug("Schedule.has_active_schedules_with_payee (payee_id=%s, result=%s)"
+                     % (payee_id, result))
+        return result
 
     @staticmethod
     def close_user_schedules(user_id):
-        logger.info(f"Closing user's(id={user_id}) schedules")
-        Schedule.objects.filter(Q(recipient_user__id=user_id) | Q(origin_user__id=user_id)) \
+        affected_rows_count = Schedule.objects.filter(Q(recipient_user__id=user_id) | Q(origin_user__id=user_id))\
             .update(status=ScheduleStatus.closed)
+        logger.info(f"Closed user's(id={user_id}) schedules (count={affected_rows_count})")
 
     @staticmethod
     def _get_celery_processing_time():
@@ -372,12 +418,18 @@ class Schedule(AbstractSchedule):
 
     @cached_property
     def have_time_for_nearest_payments_processing_by_scheduler(self):
-        return self.have_time_for_deposit_payment_processing_by_scheduler \
+        result = self.have_time_for_deposit_payment_processing_by_scheduler \
                and self.have_time_for_regular_payment_processing_by_scheduler
+        logger.info("Have %s time for nearest payments processing by scheduler (schedule_id=%s)"
+                    % ('' if result else 'NO', self.id),
+                    extra={'schedule_id': self.id})
+        return result
 
     @cached_property
     def have_time_for_deposit_payment_processing_by_scheduler(self):
         if self.deposit_payment_date is None:
+            logger.info("There is no deposit payment for schedule (id=%s)" % self.id,
+                        extra={'schedule_id': self.id})
             return True
 
         have_made_deposit_payment = LastSchedulePayments.objects.filter(
@@ -386,6 +438,8 @@ class Schedule(AbstractSchedule):
         ).exists()
 
         if have_made_deposit_payment:
+            logger.info("Deposit payment for schedule (id=%s) was made already" % self.id,
+                        extra={'schedule_id': self.id})
             return True
 
         deposit_payment = DepositsSchedule.objects.get(
@@ -393,7 +447,13 @@ class Schedule(AbstractSchedule):
             status=ScheduleStatus.open.value
         )
         scheduled_date = arrow.get(deposit_payment.scheduled_date).datetime.date()
-        return scheduled_date >= Schedule.nearest_scheduler_processing_date()
+        nearest_scheduler_processing_date = Schedule.nearest_scheduler_processing_date()
+        result = scheduled_date >= nearest_scheduler_processing_date
+        logger.info("Have %s time for deposit payment processing by scheduler (schedule_id=%s, scheduled_date=%s, "
+                    "nearest_scheduler_processing_date=%s)"
+                    % ('' if result else 'NO', self.id, scheduled_date, nearest_scheduler_processing_date),
+                    extra={'schedule_id': self.id})
+        return result
 
     @cached_property
     def have_time_for_regular_payment_processing_by_scheduler(self):
@@ -405,6 +465,9 @@ class Schedule(AbstractSchedule):
             ).count()
 
             if number_of_sent_regular_payments == self.number_of_payments:
+                logger.info("We sent all required regular payments for schedule (id=%s, number_of_sent_regular_payments=%s, number_of_payments=%s)"
+                            % (self.id, number_of_sent_regular_payments, self.number_of_payments),
+                            extra={'schedule_id': self.id})
                 return True
 
             # Selecting nearest scheduled date for regular payments, by skipping dates for which
@@ -417,14 +480,23 @@ class Schedule(AbstractSchedule):
             ).order_by("scheduled_date").all()[from_index:to_index].first()
 
             scheduled_date = arrow.get(nearest_payment.scheduled_date).datetime.date()
-            return nearest_payment is not None and scheduled_date >= Schedule.nearest_scheduler_processing_date()
+            nearest_scheduler_processing_date = Schedule.nearest_scheduler_processing_date()
+            result = scheduled_date >= nearest_scheduler_processing_date
+            logger.info("Have %s time for regular payment processing by scheduler (id=%s, scheduled_date=%s, nearest_scheduler_processing_date=%s)"
+                        % ('' if result else 'NO', self.id, scheduled_date, nearest_scheduler_processing_date),
+                        extra={'schedule_id': self.id})
+            return result
         except ObjectDoesNotExist:
             return False
 
     @cached_property
     def have_time_for_first_payments_processing_manually(self):
-        return Schedule.have_time_for_payment_processing_manually(self.deposit_payment_scheduled_date, self.funding_source_type, self.payee_type) \
+        result = Schedule.have_time_for_payment_processing_manually(self.deposit_payment_scheduled_date, self.funding_source_type, self.payee_type) \
                or Schedule.have_time_for_payment_processing_manually(self.first_payment_scheduled_date, self.funding_source_type, self.payee_type)
+        logger.info("Have %s time for first payments processing manually for schedule (id=%s)"
+                    % ('' if result else 'NO', self.id),
+                    extra={'schedule_id': self.id})
+        return result
 
     @staticmethod
     def have_time_for_payment_processing_manually(payment_date, funding_source_type, payee_type):
@@ -432,6 +504,8 @@ class Schedule(AbstractSchedule):
         utcnow = arrow.utcnow()
 
         if payment_date is None or BlacklistDate.contains(utcnow.datetime.date()):
+            logger.info("Specified payment date (%s) is blaklisted, skipping verification for manual payment processing"
+                        % payment_date)
             return result
 
         current_day_start, current_day_end = utcnow.span('day')
@@ -445,6 +519,8 @@ class Schedule(AbstractSchedule):
             ps_closing_time = utcnow.replace(hour=int(ps_hour), minute=int(ps_minute))
             result = current_day_start < payment_time < ps_closing_time
 
+        logger.info("Have %s time for payment processing manually (payment_date=%s, funding_source_type=%s, payee_type=%s)"
+                    % ('' if result else 'NO', payment_date, funding_source_type, payee_type))
         return result
 
     @staticmethod
@@ -458,14 +534,20 @@ class Schedule(AbstractSchedule):
 
         while True:
             if retry_count > BLACKLISTED_DAYS_MAX_RETRY_COUNT:
+                logger.warning("Reached max retry count (%s) during scheduler processing date calculation. Stopping"
+                               % BLACKLISTED_DAYS_MAX_RETRY_COUNT)
                 break
 
             if BlacklistDate.contains(scheduler_start_time.datetime.date()) or arrow.utcnow() > scheduler_start_time:
+                logger.debug("Current scheduler start date (%s) is blacklisted or in the past. Trying with next day"
+                             % scheduler_start_time)
                 scheduler_start_time = scheduler_start_time.shift(days=1)
             else:
                 break
 
-        return scheduler_start_time.datetime.date()
+        result = scheduler_start_time.datetime.date()
+        logger.debug("Nearest scheduler processing date result: %s" % result)
+        return result
 
     @property
     def schedule_cls_by_period(self):

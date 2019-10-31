@@ -31,6 +31,8 @@ class CompanyRelationshipView(RelationshipPostMixin, RelationshipView):
         related_serializer = self.get_related_serializer(related_field)
         company = self.get_object()
 
+        logger.info("Handle company's address creation request (company_id=%s)" % company.id)
+
         if company.address:
             raise MethodNotAllowed('POST')
 
@@ -42,6 +44,8 @@ class CompanyRelationshipView(RelationshipPostMixin, RelationshipView):
         return serializer
 
     def post_shareholders(self, request, *args, **kwargs):
+        logger.info("Handle shareholders creation request")
+
         related_field = kwargs.get('related_field')
         related_serializer = self.get_related_serializer(related_field)
         company = self.get_object()
@@ -61,7 +65,6 @@ class CompanyRelationshipView(RelationshipPostMixin, RelationshipView):
 
 
 class CompanyViewSet(PatchRelatedMixin, views.ModelViewSet):
-
     queryset = Company.objects.all()
     serializer_class = CompanySerializer
     permission_classes = ( IsAuthenticated,
@@ -69,7 +72,7 @@ class CompanyViewSet(PatchRelatedMixin, views.ModelViewSet):
                            IsOwnerOrReadOnly )
 
     def perform_create(self, serializer):
-        logger.error('perform create')
+        logger.info("Handle company creation request")
         user = self.request.user
 
         if not user.account.company:

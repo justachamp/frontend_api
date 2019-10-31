@@ -88,6 +88,8 @@ class ScheduleViewSet(views.ModelViewSet):
         :param serializer:
         :return:
         """
+        logger.info("Handle schedule creation request")
+
         try:
             counterpart_user_id = self.request.data.get("counterpart_user_id", None)
             counterpart_user = User.objects.get(id=counterpart_user_id) if counterpart_user_id is not None else None
@@ -102,12 +104,14 @@ class ScheduleViewSet(views.ModelViewSet):
                 recipient_user = self.request.user
 
             documents = serializer.validated_data.pop("documents", [])
+            logger.info("Some initial schedule's attributes: counterpart_user_id=%s, status=%s"
+                        % (counterpart_user_id, status))
             schedule = serializer.save(
                 status=status,
                 origin_user=origin_user,
                 recipient_user=recipient_user
             )
-            logger.info("Successfully created new schedule (id=%r)" % schedule.id)
+            logger.info("Successfully created new schedule record (id=%r)" % schedule.id)
             serializer.assign_uploaded_documents_to_schedule(documents)
 
             self._process_first_payments_manually(schedule)
@@ -126,6 +130,7 @@ class ScheduleViewSet(views.ModelViewSet):
         :param schedule:
         :return:
         """
+        logger.info("Processing first payments manually if needed")
         user = self.request.user
         scheduler_start_date = Schedule.nearest_scheduler_processing_date()
         current_date = arrow.utcnow().datetime.date()
@@ -133,10 +138,12 @@ class ScheduleViewSet(views.ModelViewSet):
                      % (scheduler_start_date, arrow.utcnow()))
 
         if scheduler_start_date > current_date:
+            logger.info("Scheduler will not be run today anymore, verifying deposit & regular scheduled dates.")
             # background celerybeatd service has already started payment processing
             # and missed first payment date which is now, therefore we initiate payments here
             if schedule.deposit_payment_scheduled_date == current_date:
-                logger.info("Submitting deposit payment for schedule_id=%s" % schedule.id)
+                logger.info("Submitting deposit payment for schedule_id=%s (delay=%s)"
+                            % (schedule.id, FIRST_PAYMENTS_MIN_EXECUTION_DELAY))
                 # initiate one-off deposit payment
                 make_payment.apply_async(
                     # It's possible that payment creation task will start execution before schedule creation
@@ -156,7 +163,8 @@ class ScheduleViewSet(views.ModelViewSet):
                 )
 
             if schedule.first_payment_scheduled_date == current_date:
-                logger.info("Submitting first payment for schedule_id=%s" % schedule.id)
+                logger.info("Submitting first payment for schedule_id=%s (delay=%s)"
+                            % (schedule.id, FIRST_PAYMENTS_MIN_EXECUTION_DELAY))
                 make_payment.apply_async(
                     # It's possible that payment creation task will start execution before schedule creation
                     # transaction will be committed, it will cause problems for SchedulePayment record
@@ -181,6 +189,8 @@ class ScheduleViewSet(views.ModelViewSet):
         :param serializer:
         :return:
         """
+        logger.info("Handle schedule update request")
+
         original_funding_source_type = serializer.instance.funding_source_type
         documents = serializer.validated_data.pop("documents", [])
         new_instance = serializer.save()
@@ -199,10 +209,15 @@ class ScheduleViewSet(views.ModelViewSet):
                 self._process_potential_late_payments(new_instance)
 
     def _can_changes_cause_late_payments(self, original_funding_source_type, schedule):
-        return original_funding_source_type != schedule.funding_source_type \
+        result = original_funding_source_type != schedule.funding_source_type \
                and schedule.funding_source_type != FundingSourceType.WALLET
+        logger.info("Can changes cause late payments for schedule (id=%s) result: %s" % (schedule.id, result),
+                    extra={'schedule_id': schedule.id})
+        return result
 
     def _process_potential_late_payments(self, schedule):
+        logger.info("Processing potential late payments for schedule (id=%s)" % schedule.id,
+                    extra={'schedule_id': schedule.id})
         user = self.request.user
         # Make a series of 'failed' payments to keep a chain of payments in order for further overdue processing
         if not schedule.have_time_for_deposit_payment_processing_by_scheduler:

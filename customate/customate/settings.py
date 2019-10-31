@@ -66,7 +66,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    # 'authentication.cognito.middleware.cognito_django_middleware.AwsDjangoMiddleware'
     'customate.middlewares.RequestDetailsLoggingMiddleware',
     'authentication.middlewares.UserActivityMonitoringMiddleware',
 ]

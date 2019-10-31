@@ -40,7 +40,7 @@ class SubUserPermissionViewSet(PatchRelatedMixin, views.ModelViewSet):
                            IsOwnerOrReadOnly )
 
     def perform_create(self, serializer):
-        logger.error('perform create')
+        logger.info("Handle sub-user's permissions creation request")
         user = self.request.user
 
         if not user.account.permission:
@@ -57,7 +57,7 @@ class AdminUserPermissionViewSet(PatchRelatedMixin, views.ModelViewSet):
                            IsSuperAdminOrReadOnly )
 
     def perform_create(self, serializer):
-        logger.error('perform create')
+        logger.info("Handle admin user's permissions creation request")
         user = self.request.user
 
         if not user.account.permission:
