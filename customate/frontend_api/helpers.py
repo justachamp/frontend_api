@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
+from urllib.parse import urlparse
 from typing import Dict
 from traceback import format_exc
 import logging
 import arrow
 from copy import deepcopy
+
 from django.template.loader import render_to_string
 from django import template
 from django.contrib.auth import get_user_model
@@ -20,7 +22,6 @@ logger = logging.getLogger(__name__)
 User = get_user_model()
 
 register = template.Library()
-
 
 # Need to get transaction type for passing transaction_type to templates
 # Key is a transaction name from payment service, value is transaction type for appearance in templates
@@ -183,6 +184,28 @@ def get_ses_email_payload(tpl_filename: str, tpl_context: Dict, subject=None):
         }
     }
     return message
+
+
+def invite_payer(schedule: Schedule) -> None:
+    """
+    Notify user if new 'receive' schedule was created and he is a payer.
+    :param schedule:
+    :return:
+    """
+    logger.info("Start invite payee. Schedule id: %s, status: %s, purpose: %s"
+                % (schedule.id, schedule.status, schedule.purpose))
+    payer = schedule.origin_user
+    schedule_details = {
+        "payer": payer.email,
+        "payee": schedule.recipient_user.email,
+        "link": "https://%s/" % settings.APP_WWW_HOST
+    }
+    payers = get_funds_senders(funds_sender=payer)
+    emails = [user.email for user in payers if user.notify_by_email and user.email]
+    logger.info("Invite payee. Send email notifications to: %s" % ", ".join(emails))
+    send_bulk_emails(emails=emails,
+                     context=schedule_details,
+                     tpl_filename="notifications/email_invite_payer.html")
 
 
 def notify_about_loaded_funds(user_id: str, transaction_info: Dict, transaction_status: TransactionStatusType) -> None:
