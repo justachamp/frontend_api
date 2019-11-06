@@ -3,6 +3,7 @@ from uuid import uuid4
 import arrow
 import logging
 
+from django.db.models import Q
 from django.test import SimpleTestCase, TestCase
 from rest_framework.exceptions import ValidationError
 from rest_framework import status as status_codes
@@ -271,6 +272,55 @@ class ScheduleModelTest(TestCase):
         self._get_test_schedulepayment_model(schedule, PaymentStatusType.CANCELED).save()
 
         self.assertTrue(schedule.have_time_for_regular_payment_processing_by_scheduler)
+
+    def test_query_records_for_scheduler__with_execution_date_limitation(self):
+        schedule = self._get_test_schedule_model()
+        schedule.start_date = arrow.utcnow().shift(days=7).datetime.date()
+        schedule.period = SchedulePeriod.weekly
+        schedule.funding_source_type = FundingSourceType.CREDIT_CARD
+        schedule.save()
+
+        schedules_count = WeeklySchedule.objects.filter(
+            Q(id=schedule.id) &
+            Q(scheduled_date=arrow.utcnow().datetime.date()) &
+            Q(status__in=Schedule.PROCESSABLE_SCHEDULE_STATUSES) &
+            Schedule.is_execution_date_limited_filters(True)
+        ).count()
+
+        self.assertEquals(1, schedules_count)
+
+    def test_query_records_for_scheduler__without_execution_date_limitation_has_match(self):
+        schedule = self._get_test_schedule_model()
+        schedule.start_date = arrow.utcnow().datetime.date()
+        schedule.period = SchedulePeriod.weekly
+        schedule.funding_source_type = FundingSourceType.WALLET
+        schedule.save()
+
+        schedules_count = WeeklySchedule.objects.filter(
+            Q(id=schedule.id) &
+            Q(scheduled_date=arrow.utcnow().datetime.date()) &
+            Q(status__in=Schedule.PROCESSABLE_SCHEDULE_STATUSES) &
+            Schedule.is_execution_date_limited_filters(False)
+        ).count()
+
+        self.assertEquals(1, schedules_count)
+
+    def test_query_records_for_scheduler__without_execution_date_limitation_no_match(self):
+        schedule = self._get_test_schedule_model()
+        schedule.start_date = arrow.utcnow().shift(days=7).datetime.date()
+        schedule.period = SchedulePeriod.weekly
+        schedule.funding_source_type = FundingSourceType.CREDIT_CARD
+        schedule.save()
+
+        schedules_count = WeeklySchedule.objects.filter(
+            Q(id=schedule.id) &
+            Q(scheduled_date=arrow.utcnow().datetime.date()) &
+            Q(status__in=Schedule.PROCESSABLE_SCHEDULE_STATUSES) &
+            Schedule.is_execution_date_limited_filters(False)
+        ).count()
+
+        # No match because created schedule has CREDIT_CARD funding source
+        self.assertEquals(0, schedules_count)
 
 
 @skip("Waiting for mocks")

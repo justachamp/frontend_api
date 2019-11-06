@@ -627,16 +627,16 @@ class Schedule(AbstractSchedule):
         return self.funding_source_type is not FundingSourceType.WALLET or self.payee_type is not PayeeType.WALLET
 
     @staticmethod
-    def is_execution_date_limited_filters(is_execution_date_limited: bool):
+    def is_execution_date_limited_filters(is_execution_date_limited: bool) -> Q:
         """
         Returns set of filters for use in Django ORM queries
-        :param val:
-        :return:
+        :param is_execution_date_limited: bool
+        :return Q: complex lookup query
         """
-        return {
-            "funding_source_type": FundingSourceType.WALLET,
-            "payee_type": PayeeType.WALLET
-        } if is_execution_date_limited else {}
+        if is_execution_date_limited:
+            return ~Q(funding_source_type=FundingSourceType.WALLET) | ~Q(payee_type=PayeeType.WALLET)
+        else:
+            return Q(funding_source_type=FundingSourceType.WALLET) & Q(payee_type=PayeeType.WALLET)
 
 
 class OnetimeSchedule(AbstractSchedule):

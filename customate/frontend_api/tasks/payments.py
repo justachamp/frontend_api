@@ -11,6 +11,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.paginator import Paginator
 from django.conf import settings
 from django.db import transaction
+from django.db.models import Q
 
 from core.logger import RequestIdGenerator
 from core.models import User
@@ -470,15 +471,14 @@ def process_all_periodic_payments(scheduled_date: datetime, period: SchedulePeri
         'is_execution_date_limited': is_execution_date_limited
     })
 
-    filters = {
-        "scheduled_date": scheduled_date,
-        "status__in": Schedule.PROCESSABLE_SCHEDULE_STATUSES,
-    }
-    filters.update(Schedule.is_execution_date_limited_filters(is_execution_date_limited))
-
     cls = Schedule.get_periodic_class(period)  # type: PeriodicSchedule
     # make sure we always keep consistent order, otherwise we'll get unpredictable results
-    payments = cls.objects.filter(**filters).order_by("created_at")
+    payments = cls.objects.filter(
+        Q(scheduled_date=scheduled_date) &
+        Q(status__in=Schedule.PROCESSABLE_SCHEDULE_STATUSES) &
+        Schedule.is_execution_date_limited_filters(is_execution_date_limited)
+    ).order_by("created_at")
+
     paginator = Paginator(payments, settings.CELERY_BEAT_PER_PAGE_OBJECTS)
     for p in paginator.page_range:
         for s in paginator.page(p):  # type: PeriodicSchedule
