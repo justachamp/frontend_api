@@ -441,6 +441,11 @@ class Schedule(AbstractSchedule):
 
     @cached_property
     def have_time_for_deposit_payment_processing_by_scheduler(self):
+        if self.status is ScheduleStatus.pending:
+            logger.info("Schedule is not accepted yet (id=%s). " % self.id,
+                        extra={'schedule_id': self.id})
+            return True
+
         if self.deposit_payment_date is None:
             logger.info("There is no deposit payment for schedule (id=%s)" % self.id,
                         extra={'schedule_id': self.id})
@@ -471,39 +476,41 @@ class Schedule(AbstractSchedule):
 
     @cached_property
     def have_time_for_regular_payment_processing_by_scheduler(self):
-        try:
-            number_of_sent_regular_payments = SchedulePayments.objects.filter(
-                schedule_id=self.id,
-                parent_payment_id=None,
-                is_deposit=False
-            ).count()
+        if self.status is ScheduleStatus.pending:
+            logger.info("Schedule is not accepted yet (id=%s). " % self.id,
+                        extra={'schedule_id': self.id})
+            return True
 
-            if number_of_sent_regular_payments == self.number_of_payments:
-                logger.info(
-                    "We sent all required regular payments for schedule (id=%s, number_of_sent_regular_payments=%s, number_of_payments=%s)"
-                    % (self.id, number_of_sent_regular_payments, self.number_of_payments),
-                    extra={'schedule_id': self.id})
-                return True
+        number_of_sent_regular_payments = SchedulePayments.objects.filter(
+            schedule_id=self.id,
+            parent_payment_id=None,
+            is_deposit=False
+        ).count()
 
-            # Selecting nearest scheduled date for regular payments, by skipping dates for which
-            # we already sent payments
-            from_index = number_of_sent_regular_payments
-            to_index = from_index + 1
-            nearest_payment = self.periodic_class.objects.filter(
-                id=self.id,
-                status=ScheduleStatus.open,
-            ).order_by("scheduled_date").all()[from_index:to_index].first()
-
-            scheduled_date = arrow.get(nearest_payment.scheduled_date).datetime.date()
-            nearest_scheduler_processing_date = self.nearest_scheduler_processing_date()
-            result = scheduled_date >= nearest_scheduler_processing_date
+        if number_of_sent_regular_payments == self.number_of_payments:
             logger.info(
-                "Have %s time for regular payment processing by scheduler (id=%s, scheduled_date=%s, nearest_scheduler_processing_date=%s)"
-                % ('' if result else 'NO', self.id, scheduled_date, nearest_scheduler_processing_date),
+                "We sent all required regular payments for schedule (id=%s, number_of_sent_regular_payments=%s, number_of_payments=%s)"
+                % (self.id, number_of_sent_regular_payments, self.number_of_payments),
                 extra={'schedule_id': self.id})
-            return result
-        except ObjectDoesNotExist:
-            return False
+            return True
+
+        # Selecting nearest scheduled date for regular payments, by skipping dates for which
+        # we already sent payments
+        from_index = number_of_sent_regular_payments
+        to_index = from_index + 1
+        nearest_payment = self.periodic_class.objects.filter(
+            id=self.id,
+            status=ScheduleStatus.open,
+        ).order_by("scheduled_date").all()[from_index:to_index].first()
+
+        scheduled_date = arrow.get(nearest_payment.scheduled_date).datetime.date()
+        nearest_scheduler_processing_date = self.nearest_scheduler_processing_date()
+        result = scheduled_date >= nearest_scheduler_processing_date
+        logger.info(
+            "Have %s time for regular payment processing by scheduler (id=%s, scheduled_date=%s, nearest_scheduler_processing_date=%s)"
+            % ('' if result else 'NO', self.id, scheduled_date, nearest_scheduler_processing_date),
+            extra={'schedule_id': self.id})
+        return result
 
     @cached_property
     def have_time_for_first_payments_processing_manually(self):
