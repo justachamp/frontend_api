@@ -132,7 +132,7 @@ class ScheduleViewSet(views.ModelViewSet):
         """
         logger.info("Processing first payments manually if needed")
         user = self.request.user
-        scheduler_start_date = Schedule.nearest_scheduler_processing_date()
+        scheduler_start_date = schedule.nearest_scheduler_processing_date()
         current_date = arrow.utcnow().datetime.date()
         logger.debug("Verifying if schedule already run (scheduler_start_date=%s, now=%s)"
                      % (scheduler_start_date, arrow.utcnow()))

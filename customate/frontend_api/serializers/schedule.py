@@ -82,8 +82,6 @@ class BaseScheduleSerializer(HyperlinkedModelSerializer):
                 'backup_funding_source_type': backup_funding_source_type
             })
 
-
-
     def _get_and_validate_funding_source_type(self, fs_details: FundingSourceDetails):
         if fs_details and fs_details.type is not None:
             return fs_details.type
@@ -259,7 +257,8 @@ class ScheduleSerializer(BaseScheduleSerializer):
                         "deposit_payment_date": "Deposit payment date must come prior to start date"
                     })
 
-                self._check_payment_date(res["deposit_payment_date"], res.get('funding_source_type'), res.get('payee_type'))
+                self._check_payment_date(res["deposit_payment_date"], res.get('funding_source_type'),
+                                         res.get('payee_type'))
 
                 deposit_amount = res.get("deposit_amount")
                 if deposit_amount is None:
@@ -328,8 +327,10 @@ class UpdateScheduleSerializer(BaseScheduleSerializer):
 
         # Searching for duplicate by name (but excluding current schedule from selection)
         target_account_ids = request.user.get_all_related_account_ids()
-        queryset = Schedule.objects.filter(name=value, origin_user__account__id__in=target_account_ids).exclude(id=self.instance.id) \
-                   | Schedule.objects.filter(name=value, recipient_user__account__id__in=target_account_ids).exclude(id=self.instance.id)
+        queryset = Schedule.objects.filter(name=value, origin_user__account__id__in=target_account_ids).exclude(
+            id=self.instance.id) \
+                   | Schedule.objects.filter(name=value, recipient_user__account__id__in=target_account_ids).exclude(
+            id=self.instance.id)
 
         entries_count = queryset.count()
         if entries_count >= 1:
@@ -377,7 +378,8 @@ class UpdateScheduleSerializer(BaseScheduleSerializer):
                     "backup_funding_source_id": "Backup funding source can not be the same as default"
                 })
 
-            if self.instance.purpose == SchedulePurpose.receive and int(res["payment_amount"]) != self.instance.payment_amount:
+            if self.instance.purpose == SchedulePurpose.receive and int(
+                    res["payment_amount"]) != self.instance.payment_amount:
                 raise ValidationError({"payment_amount": "Payment amount cannot be updated"})
 
         except (ValueError, TypeError):

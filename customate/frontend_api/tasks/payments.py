@@ -1,5 +1,6 @@
 from __future__ import absolute_import, unicode_literals
 from typing import Dict
+from datetime import datetime
 from traceback import format_exc
 import logging
 
@@ -16,11 +17,11 @@ from core.models import User
 from core.fields import Currency, PaymentStatusType, TransactionStatusType
 from frontend_api.models import Schedule
 from frontend_api.models.blacklist import BlacklistDate, BLACKLISTED_DAYS_MAX_RETRY_COUNT
-from frontend_api.models.schedule import OnetimeSchedule, DepositsSchedule
+from frontend_api.models.schedule import PeriodicSchedule, OnetimeSchedule, DepositsSchedule
 from frontend_api.models.schedule import WeeklySchedule, MonthlySchedule, QuarterlySchedule, YearlySchedule
 from frontend_api.models.schedule import SchedulePayments, LastSchedulePayments
 from frontend_api.core import client
-from frontend_api.fields import ScheduleStatus
+from frontend_api.fields import ScheduleStatus, SchedulePeriod
 from frontend_api import helpers
 
 logger = logging.getLogger(__name__)
@@ -33,8 +34,8 @@ logger = logging.getLogger(__name__)
 
 @shared_task
 def make_failed_payment(user_id: str, payment_account_id: str, schedule_id: str, currency: str, payment_amount: int,
-                 additional_information: str, payee_id: str, funding_source_id: str,
-                 request_id=None, is_deposit=False):
+                        additional_information: str, payee_id: str, funding_source_id: str,
+                        request_id=None, is_deposit=False):
     """
     Intentionally create failed payment to keep payment chains in order.
     This is required for further processing of overdue payments.
@@ -395,24 +396,29 @@ def make_overdue_payment(schedule_id: str, request_id=None):
     schedule.processing = False
 
 
-def process_all_deposit_payments(scheduled_date):
+def process_all_deposit_payments(scheduled_date, is_execution_date_limited=True):
     """
     Process all deposit payments for specified date
     :param scheduled_date:
+    :param is_execution_date_limited: bool
     :return:
     """
     request_id = RequestIdGenerator.get()
     logging.init_shared_extra(request_id)
     logger.info(f"Process all deposit payments for date: {scheduled_date}", extra={
         # TODO: how are datetime types handled in logging.extra ??
-        'scheduled_date': scheduled_date
+        'scheduled_date': scheduled_date,
+        'is_execution_date_limited': is_execution_date_limited
     })
 
+    filters = {
+        "scheduled_date": scheduled_date,
+        "status__in": Schedule.PROCESSABLE_SCHEDULE_STATUSES,
+    }
+    filters.update(Schedule.is_execution_date_limited_filters(is_execution_date_limited))
     # make sure we always keep consistent order, otherwise we'll get unpredictable results
-    payments = DepositsSchedule.objects.filter(
-        scheduled_date=scheduled_date,
-        status__in=Schedule.PROCESSABLE_SCHEDULE_STATUSES
-    ).order_by("created_at")
+    payments = DepositsSchedule.objects.filter(**filters).order_by("created_at")
+
     paginator = Paginator(payments, settings.CELERY_BEAT_PER_PAGE_OBJECTS)
     for p in paginator.page_range:
         for s in paginator.page(p):
@@ -445,161 +451,89 @@ def process_all_deposit_payments(scheduled_date):
     logger.info(f"Finished deposit payments ({scheduled_date}) processing.", extra={'logGlobalDuration': True})
 
 
-def submit_scheduled_payment(s: Schedule, request_id=None):
+def process_all_periodic_payments(scheduled_date: datetime, period: SchedulePeriod, is_execution_date_limited=True):
     """
-    A common method to submit payments for execution
-    :param s:
-    :param request_id: Unique processing request's id
-    :return:
-    """
-    logger.debug("Submit regular payment (schedule_id=%s, origin_user_id=%s, payment_account_id=%s, "
-                 "origin_payment_amount=%s, deposit_payment_amount=%s, period=%s)" % (
-                     s.id, s.origin_user_id, s.origin_payment_account_id, s.payment_amount, s.deposit_amount, s.period
-                 ),
-                 extra={
-                     'schedule_id': s.id,
-                     'funding_source_id': s.funding_source_id,
-                     'amount': s.payment_amount,
-                     'period': s.period
-                 })
-
-    # submit task for asynchronous processing to queue
-    make_payment.delay(
-        user_id=str(s.origin_user_id),
-        payment_account_id=str(s.origin_payment_account_id),
-        schedule_id=str(s.id),
-        currency=str(s.currency.value),
-        payment_amount=int(s.payment_amount),
-        additional_information=str(s.additional_information),
-        payee_id=str(s.payee_id),
-        funding_source_id=str(s.funding_source_id),
-        request_id=request_id
-    )
-
-
-def process_all_one_time_payments(scheduled_date):
-    """
-    Process all one-time payments for specified date
+    Process all Periodic (weekly, monthly, quarterly, yearly) payments for specified date
     :param scheduled_date:
+    :type scheduled_date: datetime
+    :param period:
+    :type period: SchedulePeriod
+    :param is_execution_date_limited: whether or not process payments with special restrictions to exection_date
     :return:
+
     """
     request_id = RequestIdGenerator.get()
     logging.init_shared_extra(request_id)
-    logger.info(f"Process all one time payments for date: {scheduled_date}", extra={
-        'scheduled_date': scheduled_date
+    logger.info(f"Process all periodic({period}) payments for date: {scheduled_date}", extra={
+        'scheduled_date': scheduled_date,
+        'period': str(period),
+        'is_execution_date_limited': is_execution_date_limited
     })
 
+    filters = {
+        "scheduled_date": scheduled_date,
+        "status__in": Schedule.PROCESSABLE_SCHEDULE_STATUSES,
+    }
+    filters.update(Schedule.is_execution_date_limited_filters(is_execution_date_limited))
+
+    cls = Schedule.get_periodic_class(period)  # type: PeriodicSchedule
     # make sure we always keep consistent order, otherwise we'll get unpredictable results
-    payments = OnetimeSchedule.objects.filter(
-        scheduled_date=scheduled_date,
-        status__in=Schedule.PROCESSABLE_SCHEDULE_STATUSES
-    ).order_by("created_at")
+    payments = cls.objects.filter(**filters).order_by("created_at")
     paginator = Paginator(payments, settings.CELERY_BEAT_PER_PAGE_OBJECTS)
     for p in paginator.page_range:
-        for s in paginator.page(p):
-            submit_scheduled_payment(s, request_id)
+        for s in paginator.page(p):  # type: PeriodicSchedule
+            logger.debug("Submit regular payment (schedule_id=%s, origin_user_id=%s, payment_account_id=%s, "
+                         "origin_payment_amount=%s, deposit_payment_amount=%s, period=%s)" % (
+                             s.id, s.origin_user_id, s.origin_payment_account_id, s.payment_amount, s.deposit_amount,
+                             s.period
+                         ),
+                         extra={
+                             'schedule_id': s.id,
+                             'funding_source_id': s.funding_source_id,
+                             'amount': s.payment_amount,
+                             'period': s.period
+                         })
 
-    logger.info(f"Finished one time payments ({scheduled_date}) processing.", extra={'logGlobalDuration': True})
+            # submit task for asynchronous processing to queue
+            make_payment.delay(
+                user_id=str(s.origin_user_id),
+                payment_account_id=str(s.origin_payment_account_id),
+                schedule_id=str(s.id),
+                currency=str(s.currency.value),
+                payment_amount=int(s.payment_amount),
+                additional_information=str(s.additional_information),
+                payee_id=str(s.payee_id),
+                funding_source_id=str(s.funding_source_id),
+                request_id=request_id
+            )
+
+    logger.info(f"Finished periodic({period}) payments ({scheduled_date}) processing.", extra={
+        'logGlobalDuration': True
+    })
 
 
-def process_all_weekly_payments(scheduled_date):
+def process_all_payments_for_date(date: datetime, is_execution_date_limited: bool):
     """
-    Process all weekly payments for specified date
-    :param scheduled_date:
+    Process all payments for specific date taking into account inforamtion about execution time.
+
+    :param date:
+    :param is_execution_date_limited:
+    :rtype date: datetime.datetime
     :return:
     """
-    request_id = RequestIdGenerator.get()
-    logging.init_shared_extra(request_id)
-    logger.info(f"Process all weekly payments for date: {scheduled_date}", extra={
-        'scheduled_date': scheduled_date
-    })
+    logger.info("Process all payments for date=%s, is_execution_date_limited=%s" % (
+        date, is_execution_date_limited
+    ))
+    # process deposit payments first
+    process_all_deposit_payments(date, is_execution_date_limited)
 
-    # make sure we always keep consistent order, otherwise we'll get unpredictable results
-    payments = WeeklySchedule.objects.filter(
-        scheduled_date=scheduled_date,
-        status__in=Schedule.PROCESSABLE_SCHEDULE_STATUSES
-    ).order_by("created_at")
-    paginator = Paginator(payments, settings.CELERY_BEAT_PER_PAGE_OBJECTS)
-    for p in paginator.page_range:
-        for s in paginator.page(p):
-            submit_scheduled_payment(s, request_id)
-
-    logger.info(f"Finished weekly payments ({scheduled_date}) processing.", extra={'logGlobalDuration': True})
-
-
-def process_all_monthly_payments(scheduled_date):
-    """
-    Process all monthly payments for specified date
-    :param scheduled_date:
-    :return:
-    """
-    request_id = RequestIdGenerator.get()
-    logging.init_shared_extra(request_id)
-    logger.info(f"Process all monthly payments for date: {scheduled_date}", extra={
-        'scheduled_date': scheduled_date
-    })
-
-    # make sure we always keep consistent order, otherwise we'll get unpredictable results
-    payments = MonthlySchedule.objects.filter(
-        scheduled_date=scheduled_date,
-        status__in=Schedule.PROCESSABLE_SCHEDULE_STATUSES
-    ).order_by("created_at")
-    paginator = Paginator(payments, settings.CELERY_BEAT_PER_PAGE_OBJECTS)
-    for p in paginator.page_range:
-        for s in paginator.page(p):
-            submit_scheduled_payment(s, request_id)
-
-    logger.info(f"Finished monthly payments ({scheduled_date}) processing.", extra={'logGlobalDuration': True})
-
-
-def process_all_quarterly_payments(scheduled_date):
-    """
-    Process all quarterly payments for specified date
-    :param scheduled_date:
-    :return:
-    """
-    request_id = RequestIdGenerator.get()
-    logging.init_shared_extra(request_id)
-    logger.info(f"Process all quarterly payments for date: {scheduled_date}", extra={
-        'scheduled_date': scheduled_date
-    })
-
-    # make sure we always keep consistent order, otherwise we'll get unpredictable results
-    payments = QuarterlySchedule.objects.filter(
-        scheduled_date=scheduled_date,
-        status__in=Schedule.PROCESSABLE_SCHEDULE_STATUSES
-    ).order_by("created_at")
-    paginator = Paginator(payments, settings.CELERY_BEAT_PER_PAGE_OBJECTS)
-    for p in paginator.page_range:
-        for s in paginator.page(p):
-            submit_scheduled_payment(s, request_id)
-
-    logger.info(f"Finished quarterly payments ({scheduled_date}) processing.", extra={'logGlobalDuration': True})
-
-
-def process_all_yearly_payments(scheduled_date):
-    """
-    Process all yearly payments for specified date
-    :param scheduled_date:
-    :return:
-    """
-    request_id = RequestIdGenerator.get()
-    logging.init_shared_extra(request_id)
-    logger.info(f"Process all yearly payments for date: {scheduled_date}", extra={
-        'scheduled_date': scheduled_date
-    })
-
-    # make sure we always keep consistent order, otherwise we'll get unpredictable results
-    payments = YearlySchedule.objects.filter(
-        scheduled_date=scheduled_date,
-        status__in=Schedule.PROCESSABLE_SCHEDULE_STATUSES
-    ).order_by("created_at")
-    paginator = Paginator(payments, settings.CELERY_BEAT_PER_PAGE_OBJECTS)
-    for p in paginator.page_range:
-        for s in paginator.page(p):
-            submit_scheduled_payment(s, request_id)
-
-    logger.info(f"Finished yearly payments ({scheduled_date}) processing.", extra={'logGlobalDuration': True})
+    # process periodic payments
+    for period in SchedulePeriod:
+        process_all_periodic_payments(
+            scheduled_date=date,
+            period=period,
+            is_execution_date_limited=is_execution_date_limited
+        )
 
 
 @shared_task
@@ -618,12 +552,17 @@ def initiate_daily_payments():
         'BLACKLISTED_DAYS_MAX_RETRY_COUNT': BLACKLISTED_DAYS_MAX_RETRY_COUNT
     })
 
-    if BlacklistDate.contains(now.datetime.date()):
-        logger.info("Skipping scheduler execution because '%s' is a special day" % now)
-        return
-
     retry_count = 1
     scheduled_date = now
+
+    # We can safely start processing for payments that don't have any execution date limitation (in general, this is
+    # about interaction with the bank): operations will be executed inside payment service and weekends & holidays
+    # restrictions have no effect
+    process_all_payments_for_date(scheduled_date.datetime, is_execution_date_limited=False)
+
+    if BlacklistDate.contains(scheduled_date.datetime.date()):
+        logger.info("Skipping scheduler execution because '%s' is a special day" % now)
+        return
 
     while True:
         if retry_count > BLACKLISTED_DAYS_MAX_RETRY_COUNT:
@@ -631,8 +570,9 @@ def initiate_daily_payments():
                         "and payment processing." % BLACKLISTED_DAYS_MAX_RETRY_COUNT)
             break
 
-        # During first iteration we will process schedules for today
-        process_all_payments_for_date(scheduled_date.datetime)
+        # We already process payments that do not have any execution date limitation, now we will concentrate on
+        # payments for which blacklisted dates are important. During first iteration we will process schedules for today
+        process_all_payments_for_date(scheduled_date.datetime, is_execution_date_limited=True)
 
         # Taking next day as scheduled date that should be verified and processed if necessary
         scheduled_date = scheduled_date.shift(days=1)
@@ -647,23 +587,6 @@ def initiate_daily_payments():
         retry_count += 1
 
     logger.info(f"Finished daily ({now}) payments processing.", extra={'logGlobalDuration': True})
-
-
-def process_all_payments_for_date(date):
-    """
-
-    :param date:
-    :rtype date: datetime.datetime
-    :return:
-    """
-    logger.info(f"Process all payments for date: {date}")
-    # process deposit payments first
-    process_all_deposit_payments(date)
-    process_all_one_time_payments(date)
-    process_all_weekly_payments(date)
-    process_all_monthly_payments(date)
-    process_all_quarterly_payments(date)
-    process_all_yearly_payments(date)
 
 
 @shared_task

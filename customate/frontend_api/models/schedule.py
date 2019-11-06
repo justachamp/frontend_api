@@ -1,5 +1,6 @@
 import logging
 import datetime
+from typing import Union
 import arrow
 from dataclasses import dataclass
 
@@ -19,7 +20,6 @@ from customate.settings import CELERY_BEAT_SCHEDULE, PAYMENT_SYSTEM_CLOSING_TIME
 from frontend_api.models.blacklist import BlacklistDate, BLACKLISTED_DAYS_MAX_RETRY_COUNT
 
 logger = logging.getLogger(__name__)
-
 SCHEDULES_START_PROCESSING_TIME = CELERY_BEAT_SCHEDULE["once_per_day"]["schedule"]  # type: celery.schedules.crontab
 
 
@@ -77,9 +77,14 @@ class AbstractSchedule(Model):
         default=0, help_text=_("Approximate fee amount for deposit payment in schedule")
     )
     deposit_payment_date = models.DateField(null=True)  # This should be strictly < start_date
-    additional_information = models.CharField(max_length=250, blank=True, null=True,
-                                              validators=[RegexValidator(regex=r'^([a-zA-Z0-9\/\-\?\:\.\+ ]*)$',
-                                                                         message='Field contains forbidden characters')])
+    additional_information = models.CharField(
+        max_length=250,
+        blank=True,
+        null=True,
+        validators=[RegexValidator(
+            regex=r'^([a-zA-Z0-9\/\-\?\:\.\+ ]*)$',
+            message='Field contains forbidden characters'
+        )])
     is_overdue = models.BooleanField(
         default=False,
         help_text=_('Indicates whether the schedule has overdue payments'),
@@ -370,9 +375,11 @@ class Schedule(AbstractSchedule):
         self.save(update_fields=["payment_fee_amount", "deposit_fee_amount", "funding_source_id", "funding_source_type",
                                  "backup_funding_source_id", "backup_funding_source_type"])
         logger.info("Schedule was successfully accepted (id=%s, payment_fee_amount=%s, deposit_fee_amount=%s, "
-                    "funding_source_id=%s, funding_source_type=%s, backup_funding_source_id=%s, backup_funding_source_type=%s)"
+                    "funding_source_id=%s, funding_source_type=%s, backup_funding_source_id=%s, "
+                    "backup_funding_source_type=%s, is_execution_date_limited=%s)"
                     % (self.id, self.payment_fee_amount, self.deposit_fee_amount, self.funding_source_id,
-                       self.funding_source_type, self.backup_funding_source_id, self.backup_funding_source_type),
+                       self.funding_source_type, self.backup_funding_source_id, self.backup_funding_source_type,
+                       self.is_execution_date_limited),
                     extra={'schedule_id': self.id})
 
     def reject(self):
@@ -409,7 +416,7 @@ class Schedule(AbstractSchedule):
 
     @staticmethod
     def close_user_schedules(user_id):
-        affected_rows_count = Schedule.objects.filter(Q(recipient_user__id=user_id) | Q(origin_user__id=user_id))\
+        affected_rows_count = Schedule.objects.filter(Q(recipient_user__id=user_id) | Q(origin_user__id=user_id)) \
             .update(status=ScheduleStatus.closed)
         logger.info(f"Closed user's(id={user_id}) schedules (count={affected_rows_count})")
 
@@ -426,7 +433,7 @@ class Schedule(AbstractSchedule):
     @cached_property
     def have_time_for_nearest_payments_processing_by_scheduler(self):
         result = self.have_time_for_deposit_payment_processing_by_scheduler \
-               and self.have_time_for_regular_payment_processing_by_scheduler
+                 and self.have_time_for_regular_payment_processing_by_scheduler
         logger.info("Have %s time for nearest payments processing by scheduler (schedule_id=%s)"
                     % ('' if result else 'NO', self.id),
                     extra={'schedule_id': self.id})
@@ -454,7 +461,7 @@ class Schedule(AbstractSchedule):
             status=ScheduleStatus.open.value
         )
         scheduled_date = arrow.get(deposit_payment.scheduled_date).datetime.date()
-        nearest_scheduler_processing_date = Schedule.nearest_scheduler_processing_date()
+        nearest_scheduler_processing_date = self.nearest_scheduler_processing_date()
         result = scheduled_date >= nearest_scheduler_processing_date
         logger.info("Have %s time for deposit payment processing by scheduler (schedule_id=%s, scheduled_date=%s, "
                     "nearest_scheduler_processing_date=%s)"
@@ -472,68 +479,72 @@ class Schedule(AbstractSchedule):
             ).count()
 
             if number_of_sent_regular_payments == self.number_of_payments:
-                logger.info("We sent all required regular payments for schedule (id=%s, number_of_sent_regular_payments=%s, number_of_payments=%s)"
-                            % (self.id, number_of_sent_regular_payments, self.number_of_payments),
-                            extra={'schedule_id': self.id})
+                logger.info(
+                    "We sent all required regular payments for schedule (id=%s, number_of_sent_regular_payments=%s, number_of_payments=%s)"
+                    % (self.id, number_of_sent_regular_payments, self.number_of_payments),
+                    extra={'schedule_id': self.id})
                 return True
 
             # Selecting nearest scheduled date for regular payments, by skipping dates for which
             # we already sent payments
             from_index = number_of_sent_regular_payments
             to_index = from_index + 1
-            nearest_payment = self.schedule_cls_by_period.objects.filter(
+            nearest_payment = self.periodic_class.objects.filter(
                 id=self.id,
                 status=ScheduleStatus.open,
             ).order_by("scheduled_date").all()[from_index:to_index].first()
 
             scheduled_date = arrow.get(nearest_payment.scheduled_date).datetime.date()
-            nearest_scheduler_processing_date = Schedule.nearest_scheduler_processing_date()
+            nearest_scheduler_processing_date = self.nearest_scheduler_processing_date()
             result = scheduled_date >= nearest_scheduler_processing_date
-            logger.info("Have %s time for regular payment processing by scheduler (id=%s, scheduled_date=%s, nearest_scheduler_processing_date=%s)"
-                        % ('' if result else 'NO', self.id, scheduled_date, nearest_scheduler_processing_date),
-                        extra={'schedule_id': self.id})
+            logger.info(
+                "Have %s time for regular payment processing by scheduler (id=%s, scheduled_date=%s, nearest_scheduler_processing_date=%s)"
+                % ('' if result else 'NO', self.id, scheduled_date, nearest_scheduler_processing_date),
+                extra={'schedule_id': self.id})
             return result
         except ObjectDoesNotExist:
             return False
 
     @cached_property
     def have_time_for_first_payments_processing_manually(self):
-        result = Schedule.have_time_for_payment_processing_manually(self.deposit_payment_scheduled_date, self.funding_source_type, self.payee_type) \
-               or Schedule.have_time_for_payment_processing_manually(self.first_payment_scheduled_date, self.funding_source_type, self.payee_type)
+        result = Schedule.have_time_for_payment_processing_manually(self.deposit_payment_scheduled_date,
+                                                                    self.is_execution_date_limited) \
+                 or Schedule.have_time_for_payment_processing_manually(self.first_payment_scheduled_date,
+                                                                       self.is_execution_date_limited)
         logger.info("Have %s time for first payments processing manually for schedule (id=%s)"
                     % ('' if result else 'NO', self.id),
                     extra={'schedule_id': self.id})
         return result
 
     @staticmethod
-    def have_time_for_payment_processing_manually(payment_date, funding_source_type, payee_type):
+    def have_time_for_payment_processing_manually(payment_date, is_execution_date_limited):
         result = False
         utcnow = arrow.utcnow()
 
-        if payment_date is None or BlacklistDate.contains(utcnow.datetime.date()):
-            logger.info("Specified payment date (%s) is blaklisted, skipping verification for manual payment processing"
-                        % payment_date)
+        if payment_date is None or (is_execution_date_limited and BlacklistDate.contains(utcnow.datetime.date())):
+            logger.info(
+                "Specified payment date (%s) is blacklisted, skipping verification for manual payment processing"
+                % payment_date)
             return result
 
         current_day_start, current_day_end = utcnow.span('day')
         payment_time = arrow.get(payment_date).replace(hour=utcnow.hour, minute=utcnow.minute, second=utcnow.second)
 
-        # Payment API's closing time restriction can be ignored if we send money between wallets
-        if funding_source_type == FundingSourceType.WALLET and payee_type == PayeeType.WALLET:
-            result = current_day_start < payment_time < current_day_end
-        else:
+        if is_execution_date_limited:
             ps_hour, ps_minute = PAYMENT_SYSTEM_CLOSING_TIME.split(':')
             ps_closing_time = utcnow.replace(hour=int(ps_hour), minute=int(ps_minute))
             result = current_day_start < payment_time < ps_closing_time
+        else:
+            # Payment API's closing time restriction can be ignored if we don't interact with bank
+            result = current_day_start < payment_time < current_day_end
 
-        logger.info("Have %s time for payment processing manually (payment_date=%s, funding_source_type=%s, payee_type=%s)"
-                    % ('' if result else 'NO', payment_date, funding_source_type, payee_type))
+        logger.info("Have %s time for payment processing manually (payment_date=%s, is_execution_date_limited=%s)"
+                    % ('' if result else 'NO', payment_date, is_execution_date_limited))
         return result
 
-    @staticmethod
-    def nearest_scheduler_processing_date():
+    def nearest_scheduler_processing_date(self):
         """
-        Find out nearest schedulers processing time (taking into account blacklisted dates)
+        Find out nearest schedulers processing time (taking into account blacklisted dates) for this schedule
         :return: datetime.date
         """
         scheduler_start_time = Schedule._get_celery_processing_time()
@@ -545,7 +556,8 @@ class Schedule(AbstractSchedule):
                                % BLACKLISTED_DAYS_MAX_RETRY_COUNT)
                 break
 
-            if BlacklistDate.contains(scheduler_start_time.datetime.date()) or arrow.utcnow() > scheduler_start_time:
+            if (self.is_execution_date_limited and BlacklistDate.contains(scheduler_start_time.datetime.date())) \
+                    or arrow.utcnow() > scheduler_start_time:
                 logger.debug("Current scheduler start date (%s) is blacklisted or in the past. Trying with next day"
                              % scheduler_start_time)
                 scheduler_start_time = scheduler_start_time.shift(days=1)
@@ -557,33 +569,37 @@ class Schedule(AbstractSchedule):
         return result
 
     @property
-    def schedule_cls_by_period(self):
+    def periodic_class(self):
+        return Schedule.get_periodic_class(self.period)
+
+    @staticmethod
+    def get_periodic_class(period: SchedulePeriod):
         return {
             SchedulePeriod.one_time: OnetimeSchedule,
             SchedulePeriod.weekly: WeeklySchedule,
             SchedulePeriod.monthly: MonthlySchedule,
             SchedulePeriod.quarterly: QuarterlySchedule,
             SchedulePeriod.yearly: YearlySchedule
-        }.get(self.period)
+        }.get(period)
 
     @cached_property
     def deposit_payment_scheduled_date(self):
         result = None if self.deposit_payment_date is None \
             else DepositsSchedule.objects.get(id=self.id).scheduled_date
-
-        logger.debug("Schedule.deposit_payment_scheduled_date (id=%s, deposit_payment_date=%s, result=%s)"
-                     % (self.id, self.deposit_payment_date, result))
+        logger.debug("Schedule.deposit_payment_scheduled_date (id=%s, deposit_payment_date=%s, result=%s)" % (
+            self.id, self.deposit_payment_date, result
+        ))
         return result
 
     @cached_property
     def first_payment_scheduled_date(self):
-        result = self.schedule_cls_by_period.objects \
+        result = self.periodic_class.objects \
             .filter(id=self.id) \
             .order_by("scheduled_date") \
             .first().scheduled_date
-
-        logger.debug("Schedule.first_payment_scheduled_date (id=%s, start_date=%s, result=%s)"
-                     % (self.id, self.start_date, result))
+        logger.debug("Schedule.first_payment_scheduled_date (id=%s, start_date=%s, result=%s)" % (
+            self.id, self.start_date, result
+        ))
         return result
 
     def can_retry_with_backup_funding_source(self):
@@ -596,12 +612,31 @@ class Schedule(AbstractSchedule):
             schedule_id=self.id
         ).order_by("-updated_at").first()
 
-        logger.debug("Schedule.can_retry_with_backup_funding_source latest_schedule_payment(id=%s, status=%s, funding_source_id=%s)"
-                     % (latest_schedule_payment.id, latest_schedule_payment.payment_status, latest_schedule_payment.funding_source_id))
+        logger.debug("latest_schedule_payment(id=%s, status=%s, funding_source_id=%s)" % (
+            latest_schedule_payment.id,
+            latest_schedule_payment.payment_status,
+            latest_schedule_payment.funding_source_id
+        ))
         # NOTE: check that we're being called after primary FS was already used(!)
         return latest_schedule_payment.payment_status in [PaymentStatusType.FAILED, PaymentStatusType.REFUND] \
-            and self.backup_funding_source_id \
-            and latest_schedule_payment.funding_source_id == self.funding_source_id
+               and self.backup_funding_source_id \
+               and latest_schedule_payment.funding_source_id == self.funding_source_id
+
+    @property
+    def is_execution_date_limited(self):
+        return self.funding_source_type is FundingSourceType.WALLET and self.payee_type is PayeeType.WALLET
+
+    @staticmethod
+    def is_execution_date_limited_filters(is_execution_date_limited: bool):
+        """
+        Returns set of filters for use in Django ORM queries
+        :param val:
+        :return:
+        """
+        return {
+            "funding_source_type": FundingSourceType.WALLET,
+            "payee_type": PayeeType.WALLET
+        } if is_execution_date_limited else {}
 
 
 class OnetimeSchedule(AbstractSchedule):
@@ -692,6 +727,11 @@ class YearlySchedule(AbstractSchedule):
     @property
     def origin_payment_account_id(self):
         return self.payment_account_id
+
+
+PeriodicSchedule = Union[
+    OnetimeSchedule, WeeklySchedule, MonthlySchedule, QuarterlySchedule, YearlySchedule
+]
 
 
 class DepositsSchedule(AbstractSchedule):
