@@ -114,6 +114,10 @@ class ScheduleViewSet(views.ModelViewSet):
             logger.info("Successfully created new schedule record (id=%r)" % schedule.id)
             serializer.assign_uploaded_documents_to_schedule(documents)
 
+            if not schedule.have_time_for_nearest_payments_processing_by_scheduler \
+                    and not schedule.have_time_for_first_payments_processing_manually:
+                raise ConflictError(f'Cannot process first payments for schedule ({schedule.id})')
+
             self._process_first_payments_manually(schedule)
 
         except ValidationError as e:

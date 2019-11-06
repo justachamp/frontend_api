@@ -624,7 +624,7 @@ class Schedule(AbstractSchedule):
 
     @property
     def is_execution_date_limited(self):
-        return self.funding_source_type is FundingSourceType.WALLET and self.payee_type is PayeeType.WALLET
+        return self.funding_source_type is not FundingSourceType.WALLET or self.payee_type is not PayeeType.WALLET
 
     @staticmethod
     def is_execution_date_limited_filters(is_execution_date_limited: bool):
