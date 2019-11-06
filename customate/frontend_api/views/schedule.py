@@ -23,6 +23,7 @@ from frontend_api.fields import ScheduleStatus, SchedulePurpose
 from frontend_api.tasks.payments import make_overdue_payment, make_payment, make_failed_payment
 from frontend_api.core.client import PaymentApiClient
 from frontend_api.models import Schedule, Document
+from frontend_api.helpers import invite_payer
 
 from frontend_api.permissions import (
     HasParticularDocumentPermission,
@@ -121,6 +122,10 @@ class ScheduleViewSet(views.ModelViewSet):
         except Exception as e:
             logger.error("Unable to save Schedule=%r, due to %r" % (serializer.validated_data, format_exc()))
             raise ValidationError("Unable to save schedule")
+
+        # invite another customate user to pay
+        if schedule.status is ScheduleStatus.pending and schedule.purpose is SchedulePurpose.receive:
+            invite_payer(schedule=schedule)
 
     def _process_first_payments_manually(self, schedule):
         """
