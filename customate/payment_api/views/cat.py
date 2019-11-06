@@ -1,7 +1,7 @@
+from django.http import HttpRequest
 from rest_framework.permissions import AllowAny
 from rest_framework import views
 from rest_framework.response import Response
-
 from ..serializers.cat import CatSerializer
 
 import logging
@@ -22,7 +22,9 @@ class CatView(views.APIView):
 
     # ['get', 'post', 'put', 'patch', 'delete', 'head', 'options', 'trace']
 
-    def get(self, request):
+    def get(self, request: HttpRequest):
+        host = request.get_host()
+        logger.info("HOST: %s" % host)
         logger.info("MY CATS ARE HERE!!")
         yourdata = [{"id": 1, "likes": 10, "comments": 0}, {"id": 2, "likes": 4, "comments": 23}]
         results = CatSerializer(yourdata, many=True).data
