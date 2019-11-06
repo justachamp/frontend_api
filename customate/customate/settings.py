@@ -391,7 +391,7 @@ CORS_ALLOW_HEADERS = default_headers + (
 
 STATIC_ROOT = path.join(BASE_DIR, "static")
 AUTH_USER_MODEL = 'core.User'
-ALLOWED_HOSTS = ['*'] if DEBUG else environ["ALLOWED_HOSTS"].split(",")
+ALLOWED_HOSTS = ['*'] if DEBUG else [h.strip() for h in environ["ALLOWED_HOSTS"].split(",")]
 
 AWS_ACCESS_KEY_ID = AWS_ACCESS_KEY
 AWS_SECRET_ACCESS_KEY = AWS_SECRET_KEY
