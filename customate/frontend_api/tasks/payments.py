@@ -412,13 +412,12 @@ def process_all_deposit_payments(scheduled_date, is_execution_date_limited=True)
         'is_execution_date_limited': is_execution_date_limited
     })
 
-    filters = {
-        "scheduled_date": scheduled_date,
-        "status__in": Schedule.PROCESSABLE_SCHEDULE_STATUSES,
-    }
-    filters.update(Schedule.is_execution_date_limited_filters(is_execution_date_limited))
     # make sure we always keep consistent order, otherwise we'll get unpredictable results
-    payments = DepositsSchedule.objects.filter(**filters).order_by("created_at")
+    payments = DepositsSchedule.objects.filter(
+        Q(scheduled_date=scheduled_date) &
+        Q(status__in=Schedule.PROCESSABLE_SCHEDULE_STATUSES) &
+        Schedule.is_execution_date_limited_filters(is_execution_date_limited)
+    ).order_by("created_at")
 
     paginator = Paginator(payments, settings.CELERY_BEAT_PER_PAGE_OBJECTS)
     for p in paginator.page_range:
