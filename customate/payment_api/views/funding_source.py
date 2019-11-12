@@ -40,7 +40,7 @@ class FundingSourceViewSet(ResourceViewSet):
         'status': ('exact',),
         'active': ('exact',),
         'account__id': ('exact',),
-        'type': ('exact',),
+        'type': ('exact', 'in'),
         'currency': ('exact', 'not_in')
     }
 
@@ -48,7 +48,8 @@ class FundingSourceViewSet(ResourceViewSet):
         filters = [
             {'active__exact': 1},
             {'account__id__exact': {'method': 'check_payment_account_id', 'force_override_filter': True}},
-            {'currency__not_in': 'DK'}
+            {'currency__not_in': 'DK'},
+            {'type__in': 'WALLET, DIRECT_DEBIT, CREDIT_CARD'}
         ]
 
     def get_serializer_class(self):

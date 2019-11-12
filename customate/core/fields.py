@@ -183,11 +183,13 @@ class LoadFundsPaymentType(Enum):
 
 class FundingSourceType(Enum):
     WALLET = 'WALLET'
+    VIRTUAL_WALLET = 'VIRTUAL_WALLET'
     DIRECT_DEBIT = 'DIRECT_DEBIT'
     CREDIT_CARD = 'CREDIT_CARD'
 
     class Labels:
         WALLET = 'Wallet'
+        VIRTUAL_WALLET = 'Virtual wallet'
         DIRECT_DEBIT = 'Direct debit'
         CREDIT_CARD = 'Credit card'
 
@@ -197,10 +199,12 @@ class FundingSourceType(Enum):
 
 class PayeeType(Enum):
     WALLET = 'WALLET'
+    VIRTUAL_WALLET = 'VIRTUAL_WALLET'
     BANK_ACCOUNT = 'BANK_ACCOUNT'
 
     class Labels:
         WALLET = 'Wallet'
+        VIRTUAL_WALLET = 'Virtual wallet'
         BANK_ACCOUNT = 'Bank account'
 
     def __repr__(self):

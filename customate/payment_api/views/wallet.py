@@ -35,6 +35,8 @@ class WalletViewSet(ResourceViewSet):
     )
 
     filterset_fields = {
+        'active': ('exact',),
+        'is_virtual': ('exact',),
         'account__id': ('exact',),
         'currency': ('exact', 'not_in'),
     }
@@ -48,6 +50,8 @@ class WalletViewSet(ResourceViewSet):
 
     class Meta:
         filters = [
+            {'active__exact': 1},
+            {'is_virtual__exact': 0},
             {'account__id__exact': {'method': 'check_payment_account_id', 'force_override_filter': True}},
             {'currency__not_in': 'DK'},
         ]
