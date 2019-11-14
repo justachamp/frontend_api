@@ -3,11 +3,12 @@ from typing import Dict
 from datetime import datetime
 from traceback import format_exc
 import logging
+from uuid import UUID, uuid4, uuid5, NAMESPACE_OID
 
-from uuid import UUID, uuid4
-from celery import shared_task
 import arrow
+from celery import shared_task
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.utils import IntegrityError
 from django.core.paginator import Paginator
 from django.conf import settings
 from django.db import transaction
@@ -16,10 +17,8 @@ from django.db.models import Q
 from core.logger import RequestIdGenerator
 from core.models import User
 from core.fields import Currency, PaymentStatusType, TransactionStatusType
-from frontend_api.models import Schedule
 from frontend_api.models.blacklist import BlacklistDate, BLACKLISTED_DAYS_MAX_RETRY_COUNT
-from frontend_api.models.schedule import PeriodicSchedule, OnetimeSchedule, DepositsSchedule
-from frontend_api.models.schedule import WeeklySchedule, MonthlySchedule, QuarterlySchedule, YearlySchedule
+from frontend_api.models.schedule import Schedule, PeriodicSchedule, DepositsSchedule
 from frontend_api.models.schedule import SchedulePayments, LastSchedulePayments
 from frontend_api.core import client
 from frontend_api.fields import ScheduleStatus, SchedulePeriod
@@ -71,13 +70,13 @@ def make_failed_payment(user_id: str, payment_account_id: str, schedule_id: str,
     )
 
 
-# Must NOT be executed in transaction, in this way we guarantee that SchedulePayments will be created event if something
+# Must NOT be executed in transaction, in this way we guarantee that SchedulePayments will be created even if something
 # goes wrong after that. SchedulePayments record will eventually prevent making extra requests to PaymentApi
 # upon second run for the same payment.
 @shared_task
 def make_payment(user_id: str, payment_account_id: str, schedule_id: str, currency: str, payment_amount: int,
                  additional_information: str, payee_id: str, funding_source_id: str, parent_payment_id=None,
-                 execution_date=None, request_id=None, is_deposit=False):
+                 execution_date=None, request_id=None, is_deposit=False, original_scheduled_date=None):
     """
     Calls payment API to initiate a payment.
 
@@ -93,16 +92,19 @@ def make_payment(user_id: str, payment_account_id: str, schedule_id: str, curren
     :param execution_date: When payment should be executed
     :param request_id: Unique processing request's id.
     :param is_deposit: Indicates whether this payment is deposit
+    :param original_scheduled_date: Initially planned date of payment according to PeriodicSchedule
+                                    w/o any date adjustments like weekends and/or blacklisted dates
     :return: created payment instance
     """
     logging.init_shared_extra(request_id)
     payment_id = uuid4()
     logger.info("Making payment: payment_id=%s, user_id=%s, payment_account_id=%s, schedule_id=%s, currency=%s, "
                 "payment_amount=%s, additional_information=%s, payee_id=%s, funding_source_id=%s, parent_payment_id=%s,"
-                " execution_date=%s, request_id=%s" % (
+                " execution_date=%s, is_deposit=%s, original_scheduled_date=%s, request_id=%s" % (
                     payment_id, user_id, payment_account_id, schedule_id, currency, payment_amount,
                     additional_information, payee_id, funding_source_id, parent_payment_id,
-                    execution_date, request_id
+                    execution_date, is_deposit, original_scheduled_date,
+                    request_id
                 ),
                 extra={
                     'schedule_id': schedule_id,
@@ -114,6 +116,18 @@ def make_payment(user_id: str, payment_account_id: str, schedule_id: str, curren
 
     result = None
 
+    idempotence_key = {
+        False: "%s.%s.%s.%s.%s.%s.%s.%s" % (
+            user_id, payment_account_id, schedule_id, currency, payment_amount,
+            payee_id, parent_payment_id,
+            original_scheduled_date
+        ),
+        # make sure we only have SINGLE deposit payment within specific schedule
+        True: "%s.%s.%s" % (
+            schedule_id, payee_id, parent_payment_id,
+        )
+    }[is_deposit]
+
     try:
         schedule_payment = SchedulePayments(
             schedule_id=schedule_id,
@@ -122,10 +136,23 @@ def make_payment(user_id: str, payment_account_id: str, schedule_id: str, curren
             parent_payment_id=parent_payment_id,
             payment_status=PaymentStatusType.PENDING,
             original_amount=payment_amount,
-            is_deposit=is_deposit
+            is_deposit=is_deposit,
+            idempotence_key=uuid5(NAMESPACE_OID, idempotence_key)
         )
         schedule_payment.save()
         logger.info("Schedule payment successfully created (schedule_id=%s, payment_id=%s)" % (schedule_id, payment_id))
+
+    except IntegrityError as e:
+        if not ("duplicate" and "idempotence_key" in str(e)):
+            raise e
+        logger.error("Looks like double-charge payment attempt(idempotence_key=%s), exiting" % idempotence_key, extra={
+            'schedule_id': schedule_id,
+            'payment_id': payment_id,
+            'funding_source_id': funding_source_id,
+            'payment_amount': payment_amount,
+            'is_deposit': is_deposit,
+        })
+        return result
     except Exception:
         logger.error("Saving schedule_payment record failed due to: %r" % format_exc(), extra={
             'schedule_id': schedule_id,
@@ -503,6 +530,7 @@ def process_all_periodic_payments(scheduled_date: datetime, period: SchedulePeri
                 additional_information=str(s.additional_information),
                 payee_id=str(s.payee_id),
                 funding_source_id=str(s.funding_source_id),
+                original_scheduled_date=s.original_scheduled_date,
                 request_id=request_id
             )
 
