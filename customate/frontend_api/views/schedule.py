@@ -133,7 +133,7 @@ class ScheduleViewSet(views.ModelViewSet):
 
     def _process_first_payments_manually(self, schedule):
         """
-        Immediately create payments if scheduler will not be started today anymore, but deposit or first
+        Immediately create payments if  deposit or first
         regular payment must be executed today.
 
         :param schedule:
@@ -141,54 +141,52 @@ class ScheduleViewSet(views.ModelViewSet):
         """
         logger.info("Processing first payments manually if needed")
         user = self.request.user
-        scheduler_start_date = schedule.nearest_scheduler_processing_date()
         current_date = arrow.utcnow().datetime.date()
-        logger.debug("Verifying if schedule already run (scheduler_start_date=%s, now=%s)"
-                     % (scheduler_start_date, arrow.utcnow()))
 
-        if scheduler_start_date > current_date:
-            logger.info("Scheduler will not be run today anymore, verifying deposit & regular scheduled dates.")
-            # background celerybeatd service has already started payment processing
-            # and missed first payment date which is now, therefore we initiate payments here
-            if schedule.deposit_payment_scheduled_date == current_date:
-                logger.info("Submitting deposit payment for schedule_id=%s (delay=%s)"
-                            % (schedule.id, FIRST_PAYMENTS_MIN_EXECUTION_DELAY))
-                # initiate one-off deposit payment
-                make_payment.apply_async(
-                    # It's possible that payment creation task will start execution before schedule creation
-                    # transaction will be committed, it will cause problems for SchedulePayment record
-                    countdown=FIRST_PAYMENTS_MIN_EXECUTION_DELAY,
-                    kwargs={
-                        'user_id': str(user.id),
-                        'payment_account_id': str(schedule.origin_payment_account_id),
-                        'schedule_id': str(schedule.id),
-                        'currency': str(schedule.currency.value),
-                        'payment_amount': int(schedule.deposit_amount),  # NOTE: deposit amount here!
-                        'additional_information': str(schedule.deposit_additional_information),
-                        'payee_id': str(schedule.payee_id),
-                        'funding_source_id': str(schedule.funding_source_id),
-                        'is_deposit': True
-                    }
-                )
+        if schedule.deposit_payment_scheduled_date == current_date:
+            logger.info("Submitting deposit payment for schedule_id=%s (delay=%s)" % (
+                schedule.id, FIRST_PAYMENTS_MIN_EXECUTION_DELAY
+            ))
+            # initiate one-off deposit payment
+            make_payment.apply_async(
+                # TODO: Think about how to avoid 'countdown' timeouts
+                # It's possible that payment creation task will start execution before schedule creation
+                # transaction will be committed(see perform_create/perform_update view methods),
+                # it will cause problems for SchedulePayment record
 
-            if schedule.first_payment_scheduled_date == current_date:
-                logger.info("Submitting first payment for schedule_id=%s (delay=%s)"
-                            % (schedule.id, FIRST_PAYMENTS_MIN_EXECUTION_DELAY))
-                make_payment.apply_async(
-                    # It's possible that payment creation task will start execution before schedule creation
-                    # transaction will be committed, it will cause problems for SchedulePayment record
-                    countdown=FIRST_PAYMENTS_MIN_EXECUTION_DELAY,
-                    kwargs={
-                        'user_id': str(user.id),
-                        'payment_account_id': str(schedule.origin_payment_account_id),
-                        'schedule_id': str(schedule.id),
-                        'currency': str(schedule.currency.value),
-                        'payment_amount': int(schedule.payment_amount),  # NOTE: regular amount
-                        'additional_information': str(schedule.additional_information),
-                        'payee_id': str(schedule.payee_id),
-                        'funding_source_id': str(schedule.funding_source_id)
-                    }
-                )
+                countdown=FIRST_PAYMENTS_MIN_EXECUTION_DELAY,
+                kwargs={
+                    'user_id': str(user.id),
+                    'payment_account_id': str(schedule.origin_payment_account_id),
+                    'schedule_id': str(schedule.id),
+                    'currency': str(schedule.currency.value),
+                    'payment_amount': int(schedule.deposit_amount),  # NOTE: deposit amount here!
+                    'additional_information': str(schedule.deposit_additional_information),
+                    'payee_id': str(schedule.payee_id),
+                    'funding_source_id': str(schedule.funding_source_id),
+                    'is_deposit': True,
+                }
+            )
+
+        if schedule.first_payment_scheduled_date == current_date:
+            logger.info("Submitting first payment for schedule_id=%s (delay=%s)"
+                        % (schedule.id, FIRST_PAYMENTS_MIN_EXECUTION_DELAY))
+            make_payment.apply_async(
+                # It's possible that payment creation task will start execution before schedule creation
+                # transaction will be committed, it will cause problems for SchedulePayment record
+                countdown=FIRST_PAYMENTS_MIN_EXECUTION_DELAY,
+                kwargs={
+                    'user_id': str(user.id),
+                    'payment_account_id': str(schedule.origin_payment_account_id),
+                    'schedule_id': str(schedule.id),
+                    'currency': str(schedule.currency.value),
+                    'payment_amount': int(schedule.payment_amount),  # NOTE: regular amount
+                    'additional_information': str(schedule.additional_information),
+                    'payee_id': str(schedule.payee_id),
+                    'funding_source_id': str(schedule.funding_source_id),
+                    'original_scheduled_date': current_date
+                }
+            )
 
     @transaction.atomic
     def perform_update(self, serializer):
@@ -219,7 +217,7 @@ class ScheduleViewSet(views.ModelViewSet):
 
     def _can_changes_cause_late_payments(self, original_funding_source_type, schedule):
         result = original_funding_source_type != schedule.funding_source_type \
-               and schedule.funding_source_type != FundingSourceType.WALLET
+                 and schedule.funding_source_type != FundingSourceType.WALLET
         logger.info("Can changes cause late payments for schedule (id=%s) result: %s" % (schedule.id, result),
                     extra={'schedule_id': schedule.id})
         return result

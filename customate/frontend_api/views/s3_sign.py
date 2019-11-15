@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from typing import Dict
 import logging
 import traceback
 import os
@@ -40,7 +41,36 @@ class PreSignedUrlView(APIView):
         super().__init__(*args, **kwargs)
         self.s3_client = get_aws_client('s3')
 
-    def get_s3_object(self, request):
+    def get_relation_class(self, relation_name: str) -> object:
+        """
+        Dynamically returns relation to Document as class.
+        :param relation_name:
+        :return:
+        """
+        if not relation_name:
+            raise ValidationError("The 'relation_name' field is required.")
+        relation_classes = {
+            'schedule': Schedule
+         }
+        try:
+            relation_class = relation_classes[relation_name]
+        except KeyError:
+            logger.error("Got invalid relation name: %s. %r" % (relation_name, traceback.format_exc()))
+            raise ValidationError("Got invalid relation name.")
+        return relation_class
+
+    def get_document_path(self, relation_class: object, key: str) -> str:
+        """
+        Dynamically returns upload path at S3 bucket for document.
+        :param relation_class:
+        :param key:
+        :return:
+        """
+        return {
+            Schedule: os.path.join(settings.AWS_S3_UPLOAD_SCHEDULE_DOCUMENTS_PATH, key)
+        }[relation_class]
+
+    def get_s3_object(self, request) -> Dict:
         """
         The method returns presigned url for further sharing file
         """
@@ -49,36 +79,41 @@ class PreSignedUrlView(APIView):
 
         if not key:
             logger.error("The 'key' parameter has not been passed %r" % traceback.format_exc())
-            raise ValidationError("The 'key' field is requred.")
+            raise ValidationError("The 'key' field is required.")
         document = get_object_or_404(Document, key=key)
         try:
             response = document.generate_s3_presigned_url(operation_name="get_object")
             return {"attributes": {"url": response}}
         except ClientError as e:
-            logger.error("AWS S3 service is unailable %r" % traceback.format_exc())
+            logger.error("AWS S3 service is unavailable %r" % traceback.format_exc())
             raise ServiceUnavailable
 
-    def post_s3_object(self, request):
+    def post_s3_object(self, request) -> Dict:
         """
         The method returns presigned url for further posting object to S3
         """
-        schedule_id = request.query_params.get("schedule_id")
+        relation_id = request.query_params.get("relation_id")
+        relation_name = request.query_params.get("relation_name")
         filename = request.query_params.get("filename")
         slug = request.query_params.get("slug")
 
-        logger.info("Creating S3 object (schedule_id=%s, filename=%s, slug=%s)" % (schedule_id, filename, slug))
-        schedule = get_object_or_404(Schedule, id=schedule_id) if schedule_id else None
-        kwargs = {"filename": filename, "slug": slug, "user": request.user}
-        if schedule:
-            kwargs.update({"schedule": schedule})
-        # Create a new document.
-        # Need to validate filename and maximum documents limit
-        document = Document.objects.create(**kwargs)
+        model_fields = {
+            "filename": filename,
+            "slug": slug,
+            "user": request.user
+        }
+        relation_class = self.get_relation_class(relation_name)
+        if relation_id:
+            relation_obj = get_object_or_404(relation_class, id=relation_id)
+            model_fields.update({relation_name: relation_obj})
+
+        # Create new document. Need to validate maximum documents limit
+        document = Document.objects.create(**model_fields)
         # Request to aws
         try:
             response = self.s3_client.generate_presigned_post(
                 settings.AWS_S3_STORAGE_BUCKET_NAME,
-                os.path.join(settings.AWS_S3_UPLOAD_DOCUMENTS_PATH, document.key),
+                self.get_document_path(relation_class, document.key),
                 ExpiresIn=settings.AWS_S3_PRESIGNED_URL_EXPIRES_IN)
         except ClientError as e:
             logger.error("AWS S3 service is unavailable %r" % traceback.format_exc())

@@ -514,10 +514,10 @@ class Schedule(AbstractSchedule):
 
     @cached_property
     def have_time_for_first_payments_processing_manually(self):
-        result = Schedule.have_time_for_payment_processing_manually(self.deposit_payment_scheduled_date,
-                                                                    self.is_execution_date_limited) \
-                 or Schedule.have_time_for_payment_processing_manually(self.first_payment_scheduled_date,
-                                                                       self.is_execution_date_limited)
+        result = Schedule.have_time_for_payment_processing_manually(
+            self.deposit_payment_scheduled_date, self.is_execution_date_limited) \
+                 or Schedule.have_time_for_payment_processing_manually(
+            self.first_payment_scheduled_date, self.is_execution_date_limited)
         logger.info("Have %s time for first payments processing manually for schedule (id=%s)"
                     % ('' if result else 'NO', self.id),
                     extra={'schedule_id': self.id})
@@ -648,6 +648,7 @@ class Schedule(AbstractSchedule):
 
 class OnetimeSchedule(AbstractSchedule):
     scheduled_date = models.DateField()  # specific date on which the payment should be initiated
+    original_scheduled_date = models.DateField()  # specific date w/o any weekends and blacklisted days
     payment_account_id = models.UUIDField(help_text=_("Account id issued by payment API during registration"))
 
     class Meta:
@@ -666,6 +667,7 @@ class OnetimeSchedule(AbstractSchedule):
 
 class WeeklySchedule(AbstractSchedule):
     scheduled_date = models.DateField()  # specific date on which the payment should be initiated
+    original_scheduled_date = models.DateField()  # specific date w/o any weekends and blacklisted days
     payment_account_id = models.UUIDField(help_text=_("Account id issued by payment API during registration"))
 
     class Meta:
@@ -684,6 +686,7 @@ class WeeklySchedule(AbstractSchedule):
 
 class MonthlySchedule(AbstractSchedule):
     scheduled_date = models.DateField()  # specific date on which the payment should be initiated
+    original_scheduled_date = models.DateField()  # specific date w/o any weekends and blacklisted days
     payment_account_id = models.UUIDField(help_text=_("Account id issued by payment API during registration"))
 
     class Meta:
@@ -702,6 +705,7 @@ class MonthlySchedule(AbstractSchedule):
 
 class QuarterlySchedule(AbstractSchedule):
     scheduled_date = models.DateField()  # specific date on which the payment should be initiated
+    original_scheduled_date = models.DateField()  # specific date w/o any weekends and blacklisted days
     payment_account_id = models.UUIDField(help_text=_("Account id issued by payment API during registration"))
 
     class Meta:
@@ -720,6 +724,7 @@ class QuarterlySchedule(AbstractSchedule):
 
 class YearlySchedule(AbstractSchedule):
     scheduled_date = models.DateField()  # specific date on which the payment should be initiated
+    original_scheduled_date = models.DateField()  # specific date w/o any weekends and blacklisted days
     payment_account_id = models.UUIDField(help_text=_("Account id issued by payment API during registration"))
 
     class Meta:
@@ -775,7 +780,9 @@ class AbstractSchedulePayments(Model):
         on_delete=models.DO_NOTHING,
         blank=False
     )
-    payment_id = models.UUIDField(help_text=_("Original UUID from payment-api service"))
+    payment_id = models.UUIDField(
+        help_text=_("Original UUID from payment-api service")
+    )
     parent_payment_id = models.UUIDField(
         help_text=_("In case of follow-up payments, this points to a preceding payment UUID "),
         null=True,
@@ -792,6 +799,11 @@ class AbstractSchedulePayments(Model):
     is_deposit = models.BooleanField(
         default=False,
         help_text=_('Indicates whether this payment is deposit'),
+    )
+    idempotence_key = models.UUIDField(
+        default=None,
+        null=True,
+        help_text=_("used to avoid potential double charges when calling payment-api")
     )
 
 
