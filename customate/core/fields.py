@@ -170,12 +170,18 @@ class SerializerField(serializers.Field):
 
 
 class LoadFundsPaymentType(Enum):
-    CreditCardToCustomate = 'CreditCardToCustomate'
-    DirectDebitToCustomate = 'DirectDebitToCustomate'
+    CreditCardToWallet = 'CreditCardToWallet'
+    DirectDebitToWallet = 'DirectDebitToWallet'
+    CreditCardToVirtualWallet = 'CreditCardToVirtualWallet'
+    DirectDebitToVirtualWallet = 'DirectDebitToVirtualWallet'
+    WalletToVirtualWallet = 'WalletToVirtualWallet'
 
     class Labels:
-        CreditCardToCustomate = 'Credit card to Customate'
-        DirectDebitToCustomate = 'Direct Debit to Customate'
+        CreditCardToWallet = 'Credit card to wallet'
+        DirectDebitToWallet = 'Direct Debit to wallet'
+        CreditCardToVirtualWallet = 'Credit card to virtual wallet'
+        DirectDebitToVirtualWallet = 'Direct Debit to virtual wallet'
+        WalletToVirtualWallet = 'Wallet to virtual wallet'
 
     def __repr__(self):
         return self.value
@@ -214,8 +220,9 @@ class PayeeType(Enum):
 class PaymentScenario(Enum):
     CreditCardToIban = 'CreditCardToIban'
     IncomingContribution = 'IncomingContribution'
-    OutgoingInternal = 'OutgoingInternal'
-    CustomateToIban = 'CustomateToIban'
+    OutgoingInternalFromWallet = 'OutgoingInternalFromWallet'
+    OutgoingInternalFromVirtualWallet = 'OutgoingInternalFromVirtualWallet'
+    WalletToIban = 'WalletToIban'
     DirectDebitToIban = 'DirectDebitToIban'
     CreditCardWithOutgoingInternal = 'CreditCardWithOutgoingInternal'
     DirectDebitWithOutgoingInternal = 'DirectDebitWithOutgoingInternal'
@@ -223,8 +230,9 @@ class PaymentScenario(Enum):
     class Labels:
         CreditCardToIban = 'CreditCardToIban'
         IncomingContribution = 'IncomingContribution'
-        CustomateToCustomate = 'CustomateToCustomate'
-        CustomateToIban = 'CustomateToIban'
+        OutgoingInternalFromWallet = 'OutgoingInternalFromWallet'
+        OutgoingInternalFromVirtualWallet = 'OutgoingInternalFromVirtualWallet'
+        WalletToIban = 'WalletToIban'
         DirectDebitToIban = 'DirectDebitToIban'
         CreditCardWithOutgoingInternal = 'CreditCardWithOutgoingInternal'
         DirectDebitWithOutgoingInternal = 'DirectDebitWithOutgoingInternal'

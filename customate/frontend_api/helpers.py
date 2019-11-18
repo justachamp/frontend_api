@@ -26,12 +26,12 @@ register = template.Library()
 # Need to get transaction type for passing transaction_type to templates
 # Key is a transaction name from payment service, value is transaction type for appearance in templates
 transaction_names = {
-    "CreditCardToCustomate": "Card",
-    "DirectDebitToCustomate": "Direct Debit",
-    "CustomateToIban": "External",
+    "CreditCardToWallet": "Card",
+    "DirectDebitToWallet": "Direct Debit",
+    "WalletToIban": "External",
     "IncomingInternal": "Internal",
     "OutgoingInternal": "Internal",
-    "IbanToCustomate": "Bank Transfer"
+    "IbanToWallet": "Bank Transfer"
 }
 
 
