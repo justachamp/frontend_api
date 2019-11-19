@@ -40,7 +40,10 @@ class PaymentAccountViewSet(ResourceViewSet):
 
     class Meta:
         external_resource_name = 'accounts'
-        filters = [{'active__exact': 1}]
+        filters = [
+            {'active__exact': 1},
+            {'is_virtual__exact': {'resource': 'wallets', 'value': 0}}
+        ]
         resource_suffix_name = None
 
     # ordering_fields = ('email',)
@@ -56,7 +59,8 @@ class PaymentAccountViewSet(ResourceViewSet):
 
     filterset_fields = {
         'active': ('exact',),
-        'email': ('icontains', 'contains', 'iexact', 'exact')
+        'email': ('icontains', 'contains', 'iexact', 'exact'),
+        'is_virtual': ('exact',),
     }
     # search_fields = ('email',)
 

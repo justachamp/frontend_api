@@ -32,9 +32,12 @@ class RQLFilterMixin:
         'gt': '>{value}'
     }
 
-    def parse_filter(self, key, value):
+    def parse_filter(self, key, value, resource=None):
+        if resource is None:
+            resource = self.resource
+
         parts = key.split('__')
-        parts.insert(0, self.resource)
+        parts.insert(0, resource)
 
         if parts[-1] in self.OPERATORS.keys():
             value = self.OPERATORS[parts[-1]].format(value=value)
@@ -51,11 +54,14 @@ class RQLFilterMixin:
         return {key: value}
 
     def parse_value(self, filters, key, value):
-        if isinstance(value, dict) and value.get('method'):
-            fn = getattr(self._view, value.get('method'))
-            value = fn(filters, key, value)
-            if value is not None:
-                return {key: value}
+        if isinstance(value, dict):
+            if value.get('method'):
+                fn = getattr(self._view, value.get('method'))
+                value = fn(filters, key, value)
+                if value is not None:
+                    return {key: value}
+            elif 'value' in value:
+                return {key: value.get('value')}
         else:
             return {key: value}
 
@@ -118,7 +124,10 @@ class RQLFilterSet(RQLFilterMixin):
                 value = self.parse_value(filters, filter_name, data.get(filter_name))
 
                 if isinstance(value, dict) and filter_name in value:
-                    filter_data = self.parse_filter(filter_name, value.get(filter_name))
+                    resource = data.get(filter_name).get('resource') \
+                        if isinstance(data.get(filter_name), dict) \
+                        else None
+                    filter_data = self.parse_filter(filter_name, value.get(filter_name), resource)
                     key = next(iter(filter_data))
 
                     if filters.get(key, None):
