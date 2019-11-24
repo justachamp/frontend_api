@@ -5,7 +5,6 @@ import arrow
 from dataclasses import dataclass
 
 from cached_property import cached_property
-from django.core.exceptions import ObjectDoesNotExist
 from django.core.validators import RegexValidator
 from enumfields import EnumField
 from django.db import models

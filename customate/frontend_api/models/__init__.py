@@ -10,8 +10,9 @@ from django.contrib.postgres.fields import JSONField
 from django.core.serializers.json import DjangoJSONEncoder
 from django.contrib.auth import get_user_model
 from core.models import Model, Address
-from core.fields import Currency, PaymentScenario
+from core.fields import Currency
 from frontend_api.fields import AccountType, CompanyType
+
 
 from polymorphic.models import PolymorphicModel
 
@@ -251,6 +252,7 @@ class Shareholder(Model):
 
 
 from .schedule import PayeeDetails, FundingSourceDetails, Schedule
+from .escrow import Escrow, EscrowOperation
 from .document import Document
 
 
@@ -283,5 +285,9 @@ __all__ = [
     Schedule,
     Document,
     PayeeDetails,
-    FundingSourceDetails
+    FundingSourceDetails,
+
+    #Escrow
+    Escrow,
+    EscrowOperation
 ]
