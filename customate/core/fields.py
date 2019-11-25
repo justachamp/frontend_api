@@ -9,7 +9,7 @@ from rest_framework_json_api.serializers import ChoiceField, UUIDField as Defaul
 from rest_framework_json_api.relations import ResourceRelatedField
 from rest_framework import serializers
 
-from customate.settings import COUNTRIES_AVAILABLE
+from customate.settings import COUNTRIES_AVAILABLE, PAYMENT_SYSTEM_CLOSING_TIME
 
 logger = logging.getLogger(__name__)
 
@@ -1712,6 +1712,9 @@ class Dataset(object):
         from frontend_api.models.blacklist import BlacklistDate
         import arrow
 
+        ps_hour, ps_minute = PAYMENT_SYSTEM_CLOSING_TIME.split(':')
+        ps_closing_time = arrow.utcnow().replace(hour=int(ps_hour), minute=int(ps_minute))
+
         return {
             'titles': [title.label for title in UserTitle],
             'genders': [gender.label for gender in Gender],
@@ -1727,7 +1730,8 @@ class Dataset(object):
             } for country in Country],
             'blacklistDates': [blacklist_date.date for blacklist_date in BlacklistDate.objects
                 .filter(is_active=True, date__gte=arrow.utcnow().datetime.date())
-                .order_by("date")][:MAX_RETURNED_BLACKLIST_DATES]
+                .order_by("date")][:MAX_RETURNED_BLACKLIST_DATES],
+            'paymentSystemClosingTime': ps_closing_time.timestamp
         }
 
     @staticmethod
