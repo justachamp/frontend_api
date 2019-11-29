@@ -453,6 +453,7 @@ CELERY_IMPORTS = (
     "frontend_api.tasks.notifiers",
     "frontend_api.tasks.payments",
     "frontend_api.tasks.schedules",
+    "frontend_api.tasks.escrows",
 )
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
@@ -479,7 +480,7 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': crontab(hour='00', minute="01")  # 00:01 UTC every day
     },
     'once_per_day_update_statuses_of_unaccepted_escrows': {
-        'task': 'frontend_api.tasks.schedules.process_unaccepted_escrows',
+        'task': 'frontend_api.tasks.escrows.process_unaccepted_escrows',
         'schedule': crontab(hour='00', minute="01")  # 00:01 UTC every day
     },
     'once_per_day_remove_unassigned_documents': {

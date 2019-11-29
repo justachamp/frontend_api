@@ -252,7 +252,7 @@ class Shareholder(Model):
 
 
 from .schedule import PayeeDetails, FundingSourceDetails, Schedule
-from .escrow import Escrow, EscrowOperation
+from .escrow import Escrow, EscrowOperation, EscrowStatus
 from .document import Document
 
 
@@ -289,5 +289,6 @@ __all__ = [
 
     #Escrow
     Escrow,
-    EscrowOperation
+    EscrowOperation,
+    EscrowStatus
 ]
