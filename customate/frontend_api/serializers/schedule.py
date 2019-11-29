@@ -13,8 +13,7 @@ from rest_framework.fields import DateField, IntegerField, BooleanField
 from core.fields import Currency, SerializerField, FundingSourceType, PayeeType
 from frontend_api.fields import ScheduleStatus, SchedulePeriod, SchedulePurpose
 from frontend_api.models import FundingSourceDetails
-from frontend_api.models.schedule import Schedule
-from frontend_api.models.document import Document
+from frontend_api.models import Schedule, Document
 from frontend_api.serializers.document import DocumentSerializer
 from frontend_api.core.client import PaymentApiClient
 

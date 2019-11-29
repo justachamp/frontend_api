@@ -11,7 +11,7 @@ from django.utils.translation import gettext_lazy as _
 from django.contrib.postgres.fields import JSONField
 
 from core.models import Model, User
-from core.fields import Currency
+from core.fields import Currency, UserRole
 
 logger = logging.getLogger(__name__)
 
@@ -94,6 +94,31 @@ class Escrow(Model):
         # TODO: get balance from the corresponding VIRTUAL_WALLET(transit_wallet_id) ??
         return 0
 
+    def allow_post_document(self, user: User) -> bool:
+        """
+        :param user:
+        :return:
+        """
+        recipient = self.recipient_user
+        # Check if recipient or sender have common account with user from request (or user's subusers)
+        related_account_ids = user.get_all_related_account_ids()
+
+        # Check if schedule has status 'stopped'
+        #    need to avoid documents handling for such schedules
+        if self.status == EscrowStatus.stopped:
+            return False
+
+        if user.role == UserRole.owner:
+            return (recipient and recipient.account.id in related_account_ids) \
+                   or self.funder_user.account.id in related_account_ids
+
+        # Check if subuser from request is subuser of recipient or sender
+        if user.role == UserRole.sub_user:
+            return getattr(user.account.permission, "manage_schedules") and \
+                   any([recipient == user.account.owner_account.user,
+                        self.funder_user == user.account.owner_account.user,
+                        self.funder_user == user])
+        return False
 
 
 class EscrowOperationType(Enum):

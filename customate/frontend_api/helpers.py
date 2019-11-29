@@ -13,7 +13,7 @@ from django.conf import settings
 from django.db.models import Q
 
 from core.fields import Currency, TransactionStatusType, UserStatus
-from frontend_api.models.schedule import Schedule
+from frontend_api.models import Schedule, Escrow
 from frontend_api.models import UserAccount
 from frontend_api.tasks.notifiers import send_notification_email, send_notification_sms
 

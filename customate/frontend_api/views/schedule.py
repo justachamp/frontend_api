@@ -274,17 +274,14 @@ class ScheduleViewSet(views.ModelViewSet):
             ))
     def documents(self, request, pk):
         """
-        The method for removing document objects from database.
+        The method for deactivating document.
         """
         key = request.query_params.get("key")
         if not key:
             logger.error("The 'key' parameter has not been passed %r" % format_exc())
             raise ValidationError("The 'key' parameter is required")
-        document = get_object_or_404(Document, key=key)
-        document.move_to_archive()
-        logger.info("Document moved to archive. (Username: %s, Schedule id: %s, Document id: %s.)" % (
-            request.user.username, document.schedule.id if document.schedule else None, document.id
-        ))
+        document_obj = get_object_or_404(Document, key=key)
+        document_obj.move_to_archive()
         return Response(None, status=204)
 
     @transaction.atomic

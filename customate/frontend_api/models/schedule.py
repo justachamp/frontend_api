@@ -13,7 +13,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import ValidationError
 
 from core.models import Model, User
-from core.fields import Currency, PaymentStatusType, FundingSourceType, PayeeType
+from core.fields import Currency, PaymentStatusType, FundingSourceType, PayeeType, UserRole
 from frontend_api.fields import SchedulePurpose, SchedulePeriod, ScheduleStatus, SchedulePaymentType
 from customate.settings import CELERY_BEAT_SCHEDULE, PAYMENT_SYSTEM_CLOSING_TIME
 from frontend_api.models.blacklist import BlacklistDate, BLACKLISTED_DAYS_MAX_RETRY_COUNT
@@ -643,6 +643,32 @@ class Schedule(AbstractSchedule):
             return ~Q(funding_source_type=FundingSourceType.WALLET) | ~Q(payee_type=PayeeType.WALLET)
         else:
             return Q(funding_source_type=FundingSourceType.WALLET) & Q(payee_type=PayeeType.WALLET)
+
+    def allow_post_document(self, user: User) -> bool:
+        """
+        :param user:
+        :return:
+        """
+        recipient = self.recipient_user
+        # Check if recipient or sender have common account with user from request (or user's subusers)
+        related_account_ids = user.get_all_related_account_ids()
+
+        # Check if schedule has status 'stopped'
+        #    need to avoid documents handling for such schedules
+        if self.status == ScheduleStatus.stopped:
+            return False
+
+        if user.role == UserRole.owner:
+            return (recipient and recipient.account.id in related_account_ids) \
+                   or self.origin_user.account.id in related_account_ids
+
+        # Check if subuser from request is subuser of recipient or sender
+        if user.role == UserRole.sub_user:
+            return getattr(user.account.permission, "manage_schedules") and \
+                   any([recipient == user.account.owner_account.user,
+                        self.origin_user == user.account.owner_account.user,
+                        self.origin_user == user])
+        return False
 
 
 class OnetimeSchedule(AbstractSchedule):

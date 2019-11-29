@@ -7,14 +7,12 @@ import traceback
 
 from rest_framework import permissions
 from django.shortcuts import get_object_or_404
-from django.contrib.auth import get_user_model
 from rest_framework.exceptions import ValidationError
 
 from authentication.cognito.serializers import CognitoAuthRetrieveSerializer
 from core.fields import UserRole, UserStatus
 
-from frontend_api.models import Schedule, Document
-from frontend_api.fields import ScheduleStatus
+from frontend_api.models.document import Document, get_relation_class
 
 logger = logging.getLogger(__name__)
 
@@ -111,33 +109,16 @@ class HasParticularDocumentPermission(permissions.BasePermission):
         """
         Check permissions for posting document to particular schedule
         """
-        schedule_id = request.query_params.get("schedule_id")
-        # The case where files handling happens on the 'create schedule' page.
-        if not schedule_id:
+        relation_id = request.query_params.get("relation_id")
+        relation_name = request.query_params.get("relation_name")
+        # The case where files handling happens on the 'create schedule or escrow' page.
+        if not relation_id:
             return True
-
-        schedule = get_object_or_404(Schedule, id=schedule_id)
-        recipient = schedule.recipient_user
+        relation_class = get_relation_class(relation_name)
+        relation = get_object_or_404(relation_class, id=relation_id)
         user = request.user
-        # Check if recipient or sender have common account with user from request (or user's subusers)
-        related_account_ids = user.get_all_related_account_ids()
-
-        # Check if schedule has status 'stopped'
-        #    need to avoid documents handling for such schedules
-        if schedule.status == ScheduleStatus.stopped:
-            return False
-
-        if user.role == UserRole.owner:
-            return (recipient and recipient.account.id in related_account_ids) \
-                   or schedule.origin_user.account.id in related_account_ids
-
-        # Check if subuser from request is subuser of recipient or sender
-        if user.role == UserRole.sub_user:
-            return getattr(user.account.permission, "manage_schedules") and \
-                   any([recipient == user.account.owner_account.user,
-                        schedule.origin_user == user.account.owner_account.user,
-                        schedule.origin_user == user])
-        return False
+        allowed = relation.allow_post_document(user)
+        return allowed
 
     def has_get_permission(self, request) -> bool:
         """
@@ -148,21 +129,9 @@ class HasParticularDocumentPermission(permissions.BasePermission):
             logger.error("The 'key' parameter has not been passed %r" % traceback.format_exc())
             raise ValidationError("The 'key' field is requred.")
         document = get_object_or_404(Document, key=key)
-        schedule = document.schedule
-        # The case where files handling happens on the 'create schedule' page.
-        if not schedule and document.user == request.user:
-            return True
-        recipient = schedule.recipient_user
         user = request.user
-        # Check if user from request is recipient or sender
-        if user.role == UserRole.owner:
-            return any([recipient == user, schedule.origin_user == user])
-        # Check if subuser from request is subuser of recipient or sender
-        if user.role == UserRole.sub_user:
-            return getattr(user.account.permission, "manage_schedules") and \
-                   any([recipient == user.account.owner_account.user,
-                        schedule.origin_user == user.account.owner_account.user,
-                        schedule.origin_user == user])
+        allowed = document.allow_get_document(user)
+        return allowed
 
     def has_delete_permission(self, request) -> bool:
         """
@@ -173,26 +142,9 @@ class HasParticularDocumentPermission(permissions.BasePermission):
             logger.error("The 'key' parameter has not been passed %r" % traceback.format_exc())
             raise ValidationError("The 'key' field is requred.")
         document = get_object_or_404(Document, key=key)
-        if not document.schedule and document.user == request.user:
-            return True
         user = request.user
-        # Check if schedule has status 'stopped'
-        #    need to avoid documents handling for such schedules
-        schedule = document.schedule
-        if schedule:
-            if schedule.status == ScheduleStatus.stopped:
-                return False
-        schedule_creator_account = document.schedule.origin_user.account.owner_account if \
-            hasattr(document.schedule.origin_user.account, "owner_account") else \
-            document.schedule.origin_user.account
-        # If document has created by subuser and owner wants to remove it.
-        if all([document.user.role == UserRole.sub_user,
-                user.role == UserRole.owner]):
-            # Check if schedule belongs to user from request
-            return all([schedule_creator_account == user.account,
-                        # And check if subuser is subuser of user from request
-                        user.account.sub_user_accounts.filter(user=document.user)])
-        return user == document.user
+        allowed = document.allow_delete_document(user)
+        return allowed
 
     def has_permission(self, request, view) -> Callable:
         methods = {

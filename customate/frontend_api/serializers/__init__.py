@@ -59,6 +59,6 @@ __all__ = [
     ShareholderSerializer,
     ProfileSerializer,
     ScheduleSerializer,
-    DocumentSerializer
+    DocumentSerializer,
     # ExternalResourceRelatedField
 ]
