@@ -111,13 +111,6 @@ class Escrow(Model):
         if user.role == UserRole.owner:
             return (recipient and recipient.account.id in related_account_ids) \
                    or self.funder_user.account.id in related_account_ids
-
-        # Check if subuser from request is subuser of recipient or sender
-        if user.role == UserRole.sub_user:
-            return getattr(user.account.permission, "manage_schedules") and \
-                   any([recipient == user.account.owner_account.user,
-                        self.funder_user == user.account.owner_account.user,
-                        self.funder_user == user])
         return False
 
 
