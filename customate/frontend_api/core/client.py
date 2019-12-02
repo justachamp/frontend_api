@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+from uuid import uuid4
 
 from django.utils.functional import cached_property
 from rest_framework.exceptions import ValidationError
@@ -99,7 +100,6 @@ class PaymentApiClient:
             logger.error("Schedule payments cancellation thrown an exception: %r" % format_exc())
             raise e
 
-
     @staticmethod
     def create_payment(p: PaymentDetails):
         """
@@ -114,9 +114,9 @@ class PaymentApiClient:
         view = MakePaymentViewSet()
         serializer = MakePaymentSerializer(
             data={
-                'id': str(p.id),
+                'id': str(p.id) if p.id else str(uuid4()),
                 'user_id': str(p.user_id),
-                'schedule_id': str(p.schedule_id),
+                'schedule_id': str(p.schedule_id) if p.schedule_id else None,
                 'currency': p.currency.name,
                 'data': {
                     'amount': p.amount,

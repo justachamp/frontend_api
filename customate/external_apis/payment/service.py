@@ -134,7 +134,7 @@ class Payments:
                 "attributes": {
                     "userId": str(user_id),
                     "currency": currency.value,
-                    "scheduleId": str(schedule_id),
+                    "scheduleId": str(schedule_id) if schedule_id else None,
                     "data": {
                         "amount": amount,
                         "description": description,
