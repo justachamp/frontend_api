@@ -215,12 +215,18 @@ class CreateEscrowOperation(EscrowOperation):
 
         self.escrow.move_to_status(EscrowStatus.ongoing)
 
+    class Meta:
+        managed = False
+
 
 class CloseEscrowOperation(EscrowOperation):
     def accept(self, user):
         super().accept(user)
 
         self.escrow.move_to_status(EscrowStatus.closed)
+
+    class Meta:
+        managed = False
 
 
 class ReleaseFundsEscrowOperation(EscrowOperation):
@@ -258,3 +264,6 @@ class ReleaseFundsEscrowOperation(EscrowOperation):
                 'escrow_operation_id': self.id,
                 'escrow_id': escrow.id
             })
+
+    class Meta:
+        managed = False
