@@ -19,7 +19,7 @@ from core.fields import FundingSourceType
 
 from frontend_api.fields import ScheduleStatus, SchedulePurpose
 from frontend_api.core.client import PaymentApiClient
-from frontend_api.models import Escrow, Document
+from frontend_api.models import Escrow, Document, EscrowOperation
 from frontend_api.serializers import EscrowSerializer
 
 from frontend_api.permissions import (
@@ -32,6 +32,7 @@ from frontend_api.permissions import (
     IsAccountVerified,
     # HasParticularSchedulePermission
 )
+from frontend_api.serializers.escrow import EscrowOperationSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -155,3 +156,65 @@ class EscrowViewSet(views.ModelViewSet):
             request.user.username, document.escrow.id if document.escrow else None, document.id
         ))
         return Response(None, status=204)
+
+
+class EscrowOperationViewSet(views.ModelViewSet):
+    queryset = EscrowOperation.objects.all()
+    serializer_class = EscrowOperationSerializer
+    permission_classes = (IsAuthenticated,
+                          IsActive,
+                          IsNotBlocked,
+                          IsAccountVerified,
+                          IsSuperAdminOrReadOnly |
+                          IsOwnerOrReadOnly
+                          )
+
+    @transaction.atomic
+    @action(methods=['POST'],
+            detail=True,
+            permission_classes=(
+                    IsAuthenticated, IsActive, IsNotBlocked,
+                    IsAccountVerified,
+                    IsSuperAdminOrReadOnly | IsOwnerOrReadOnly)
+            )
+    def accept(self, request, pk=None):
+        """
+        Used to accept an Escrow operation by counterpart
+        :param request:
+        :param pk:
+        :return:
+        """
+
+        escrow_operation_id = pk
+
+        try:
+            escrow_operation = EscrowOperation.objects.get(id=escrow_operation_id)
+        except Exception:
+            raise NotFound(f'EscrowOperation not found {escrow_operation_id}')
+
+        return EscrowOperation.get_operation_class(escrow_operation.type).accept(request.user)
+
+    @transaction.atomic
+    @action(methods=['POST'],
+            detail=True,
+            permission_classes=(
+                    IsAuthenticated, IsActive, IsNotBlocked,
+                    IsAccountVerified,
+                    IsSuperAdminOrReadOnly | IsOwnerOrReadOnly)
+            )
+    def reject(self, request, pk=None):
+        """
+        Used to reject an Escrow operation by counterpart
+        :param request:
+        :param pk:
+        :return:
+        """
+
+        escrow_operation_id = pk
+
+        try:
+            escrow_operation = EscrowOperation.objects.get(id=escrow_operation_id)
+        except Exception:
+            raise NotFound(f'EscrowOperation not found {escrow_operation_id}')
+
+        return EscrowOperation.get_operation_class(escrow_operation.type).reject(request.user)

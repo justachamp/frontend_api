@@ -264,3 +264,7 @@ class EscrowSerializer(BaseEscrowSerializer):
         #     raise ValidationError("Schedule validation failed")
 
         return res
+
+
+class EscrowOperationSerializer(HyperlinkedModelSerializer):
+    pass

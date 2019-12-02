@@ -1,5 +1,9 @@
 import logging
+from abc import abstractmethod
 from datetime import datetime
+from traceback import format_exc
+from uuid import uuid4, UUID
+
 from enumfields import Enum
 from uuid import UUID
 import arrow
@@ -12,6 +16,7 @@ from django.contrib.postgres.fields import JSONField
 
 from core.models import Model, User
 from core.fields import Currency, UserRole
+from frontend_api.core import client
 
 logger = logging.getLogger(__name__)
 
@@ -124,6 +129,16 @@ class Escrow(Model):
 
         return False
 
+    def move_to_status(self, status: EscrowStatus):
+        old_status = self.status
+        self.status = status
+        self.save(update_fields=["status"])
+        logger.info("Updated escrow (id=%s) status=%s (was=%s)" % (self.id, status, old_status), extra={
+            'escrow_id': self.id,
+            'new_status': status,
+            'old_status': old_status
+        })
+
 
 class EscrowOperationType(Enum):
     """
@@ -174,3 +189,72 @@ class EscrowOperation(Model):
         help_text="Final deadline, after which the Operation is automatically expires",
         null=True
     )
+
+    @staticmethod
+    def get_operation_class(escrow_operation_type: EscrowOperationType):
+        return {
+            EscrowOperationType.close_escrow: CloseEscrowOperation,
+            EscrowOperationType.request_funds: ReleaseFundsEscrowOperation
+        }.get(escrow_operation_type)
+
+    @property
+    def additional_information(self):
+        return self.args.additional_information
+
+    def accept(self, user):
+        # Change EscrowOperation status to Accepted and do nothing else
+        pass
+
+    def reject(self, user):
+        # Change EscrowOperation status to Rejected and do nothing else
+        pass
+
+
+class CreateEscrowOperation(EscrowOperation):
+    def accept(self, user):
+        super().accept(user)
+
+        self.escrow.move_to_status(EscrowStatus.ongoing)
+
+
+class CloseEscrowOperation(EscrowOperation):
+    def accept(self, user):
+        super().accept(user)
+
+        self.escrow.move_to_status(EscrowStatus.closed)
+
+
+class ReleaseFundsEscrowOperation(EscrowOperation):
+    @property
+    def amount(self):
+        return self.args.amount
+
+    def accept(self, user):
+        super().accept(user)
+
+        escrow = self.escrow
+        funding_source_id = escrow.transit_funding_source_id
+        payee_id = escrow.payee_id
+
+        try:
+            client.PaymentApiClient.create_payment(p=client.PaymentDetails(
+                id=uuid4(),
+                user_id=UUID(user.id),
+                payment_account_id=UUID(user.account.payment_account_id),
+                schedule_id=None,
+                currency=Currency(escrow.currency),
+                amount=self.amount,
+                description=self.additional_information,
+                payee_id=payee_id,
+                funding_source_id=funding_source_id,
+                parent_payment_id=None,
+                execution_date=None
+            ))
+
+        except Exception:
+            logger.error("Unable to create payment for ReleaseFundsEscrowOperation (id=%s) due to unknown error: %r. " % (
+                self.id, format_exc()
+            ), extra={
+                'escrow_operation_id': self.id,
+                'escrow_id': escrow.id
+            })
