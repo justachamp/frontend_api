@@ -16,7 +16,6 @@ from django.contrib.postgres.fields import JSONField
 
 from core.models import Model, User
 from core.fields import Currency, UserRole
-from frontend_api.core import client
 
 logger = logging.getLogger(__name__)
 
@@ -237,6 +236,7 @@ class ReleaseFundsEscrowOperation(EscrowOperation):
         payee_id = escrow.payee_id
 
         try:
+            from frontend_api.core import client
             client.PaymentApiClient.create_payment(p=client.PaymentDetails(
                 id=uuid4(),
                 user_id=UUID(user.id),
