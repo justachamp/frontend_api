@@ -171,5 +171,6 @@ class EscrowOperation(Model):
     )
 
     approval_deadline = models.DateField(
-        help_text="Final deadline, after which the Operation is automatically expires"
+        help_text="Final deadline, after which the Operation is automatically expires",
+        null=True
     )
