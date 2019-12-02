@@ -343,7 +343,7 @@ def notify_about_schedules_successful_payment(schedule: Schedule, transaction_in
     :return:
     """
     logger.info("Start notify about successful payment. Transaction info: %s" % transaction_info)
-    funds_sender = schedule.origin_user
+    funds_sender = schedule.origin_user  # type: User
     funds_recipient = schedule.recipient_user if schedule.recipient_user \
         else schedule.payee_recipient_email
     payment_account_id = transaction_info.get("account_id")

@@ -4,16 +4,12 @@ import arrow
 import logging
 
 from django.db.models import Q
-from django.test import SimpleTestCase, TestCase
-from rest_framework.exceptions import ValidationError
-from rest_framework import status as status_codes
+from django.test import TestCase
 
 from core.fields import FundingSourceType, Currency, PayeeType, PaymentStatusType
 from core.models import User
-from frontend_api.core.client import PaymentApiClient, PaymentDetails
 from frontend_api.fields import SchedulePeriod, ScheduleStatus, SchedulePurpose, AccountType
 from frontend_api.models import Schedule, UserAccount
-
 
 from frontend_api.models.schedule import DepositsSchedule, OnetimeSchedule, WeeklySchedule, SchedulePayments
 
@@ -29,7 +25,8 @@ class ScheduleModelTest(TestCase):
     @staticmethod
     def _get_test_schedule_model():
         return Schedule(start_date=arrow.utcnow().datetime.date(), payment_amount=100, purpose=SchedulePurpose.receive,
-                        status=ScheduleStatus.open, currency=Currency.EUR, payee_id=uuid4(), payee_type=PayeeType.WALLET,
+                        status=ScheduleStatus.open, currency=Currency.EUR, payee_id=uuid4(),
+                        payee_type=PayeeType.WALLET,
                         number_of_payments=10, funding_source_id=uuid4(), origin_user_id=ScheduleModelTest.user.id,
                         recipient_user_id=ScheduleModelTest.user.id)
 
@@ -133,6 +130,7 @@ class ScheduleModelTest(TestCase):
         We changed funding source to CREDIT_CARD: 
         there is NO time for deposit payment 
     """
+
     def test_have_time_for_deposit_payment_processing__deposit_in_past(self):
         schedule = self._get_test_schedule_model()
         schedule.period = SchedulePeriod.weekly
@@ -145,6 +143,7 @@ class ScheduleModelTest(TestCase):
     """
         We changed funding source to CREDIT_CARD, but deposit payment was already executed in past 
     """
+
     def test_have_time_for_deposit_payment_processing__deposit_was_executed_in_past(self):
         schedule = self._get_test_schedule_model()
         schedule.period = SchedulePeriod.weekly
@@ -173,6 +172,7 @@ class ScheduleModelTest(TestCase):
         We made first, weekly payment today and changed funding source to CREDIT_CARD: 
         there is NO time for nearest payment
     """
+
     def test_have_time_for_regular_payment_processing__weekly_execution_date_today_have_no_time(self):
         schedule = self._get_test_schedule_model()
         schedule.period = SchedulePeriod.weekly
@@ -187,6 +187,7 @@ class ScheduleModelTest(TestCase):
         We made first, weekly payment yesterday and changed funding source to CREDIT_CARD: 
         there is NO time for nearest payment
     """
+
     def test_have_time_for_regular_payment_processing__weekly_execution_date_in_past_have_no_time(self):
         schedule = self._get_test_schedule_model()
         schedule.start_date = arrow.utcnow().shift(days=-1).datetime.date()
@@ -202,6 +203,7 @@ class ScheduleModelTest(TestCase):
         We made first, monthly payment today and changed funding source to CREDIT_CARD: 
         there is time for nearest payment
     """
+
     def test_have_time_for_regular_payment_processing__monthly_execution_date_today_have_time(self):
         schedule = self._get_test_schedule_model()
         schedule.period = SchedulePeriod.monthly
@@ -216,6 +218,7 @@ class ScheduleModelTest(TestCase):
         We made first, monthly payment 10 days ago and changed funding source to CREDIT_CARD: 
         there is time for nearest payment
     """
+
     def test_have_time_for_regular_payment_processing__monthly_execution_date_in_past_have_time(self):
         schedule = self._get_test_schedule_model()
         schedule.start_date = arrow.utcnow().shift(days=-10).datetime.date()
@@ -231,6 +234,7 @@ class ScheduleModelTest(TestCase):
         We made first, monthly payment 28 days ago and changed funding source to CREDIT_CARD: 
         there is NO time for nearest payment
     """
+
     def test_have_time_for_regular_payment_processing__monthly_execution_date_in_past_have_no_time(self):
         schedule = self._get_test_schedule_model()
         schedule.start_date = arrow.utcnow().shift(days=-28).datetime.date()
@@ -246,7 +250,9 @@ class ScheduleModelTest(TestCase):
         We made two monthly payments 2 months and 3 days ago and changed funding source to CREDIT_CARD: 
         there is NO time for nearest payment
     """
-    def test_have_time_for_regular_payment_processing__monthly_execution_date_in_past_have_no_time_for_third_payment(self):
+
+    def test_have_time_for_regular_payment_processing__monthly_execution_date_in_past_have_no_time_for_third_payment(
+            self):
         schedule = self._get_test_schedule_model()
         schedule.start_date = arrow.utcnow().shift(months=-2, days=-3).datetime.date()
         schedule.period = SchedulePeriod.monthly
@@ -262,6 +268,7 @@ class ScheduleModelTest(TestCase):
         We made first, monthly payment 10 days ago, payment canceled. We changed funding source to CREDIT_CARD: 
         there is time for nearest payment (we ignore canceled payment, it will be processed by "pay overdue")
     """
+
     def test_have_time_for_regular_payment_processing__monthly_execution_date_in_past_with_failed_payment(self):
         schedule = self._get_test_schedule_model()
         schedule.start_date = arrow.utcnow().shift(days=-10).datetime.date()
@@ -321,44 +328,6 @@ class ScheduleModelTest(TestCase):
 
         # No match because created schedule has CREDIT_CARD funding source
         self.assertEquals(0, schedules_count)
-
-
-@skip("Waiting for mocks")
-class PaymentApiClientTest(SimpleTestCase):
-    def setUp(self):
-        self._client = PaymentApiClient(User(id=str(uuid4())))
-
-    def test_cancel_schedule_payments_not_existing_record(self):
-        schedule_id = str(uuid4())
-        self._client.cancel_schedule_payments(schedule_id)
-
-        self.assertTrue(True)
-
-    def test_force_payment(self):
-        payment_id = str(uuid4())
-
-        with self.assertRaises(ValidationError) as e:
-            self._client.force_payment(payment_id)
-
-        self.assertEqual(e.exception.status_code, status_codes.HTTP_400_BAD_REQUEST)
-
-    def test_create_payment(self):
-        payment_details = PaymentDetails(
-            id=uuid4(),
-            user_id=uuid4(),
-            payment_account_id=uuid4(),
-            schedule_id=uuid4(),
-            currency=Currency.EUR,
-            amount=10,
-            description='',
-            payee_id=uuid4(),
-            funding_source_id=uuid4()
-        )
-
-        with self.assertRaises(ValidationError) as e:
-            self._client.create_payment(payment_details)
-
-        self.assertEqual(e.exception.status_code, status_codes.HTTP_400_BAD_REQUEST)
 
 
 class DepositsScheduleModelTest(TestCase):
@@ -453,7 +422,6 @@ class OnetimeScheduleModelTest(TestCase):
 
 
 class WeeklyScheduleModelTest(TestCase):
-
 
     @classmethod
     def setUpTestData(cls):

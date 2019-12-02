@@ -13,11 +13,10 @@ urlpatterns = [
             views.UserViewSet.as_view({'get': 'retrieve_related', 'patch': 'patch_related'}),
             name='user-related'),
 
-    # TODO: need remove
     re_path(r'^users/(?P<pk>[^/.]+)/relationships/(?P<related_field>[^/.]+)$',
-        view=views.UserRelationshipView.as_view(),
-        name='user-relationships'
-    ),
+            view=views.UserRelationshipView.as_view(),
+            name='user-relationships'
+            ),
 
     re_path(r'^companies/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
             views.CompanyViewSet.as_view({'get': 'retrieve_related', 'patch': 'patch_related'}),
@@ -28,20 +27,16 @@ urlpatterns = [
             name='company-relationships'
             ),
 
-    # TODO: need remove
-    
     # Invite/resend_invite
     re_path(r'^accounts/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
             views.AccountViewSet.as_view({'get': 'retrieve_related', 'patch': 'patch_related'}),
             name='account-related'),
 
-    # TODO: need remove
     re_path(r'^accounts/(?P<pk>[^/.]+)/relationships/(?P<related_field>[^/.]+)$',
             view=views.AccountRelationshipView.as_view(),
             name='account-relationships'
             ),
 
-    # TODO: need remove
     url(r'^accounts/(?P<pk>[^/.]+)/$',
         views.AccountViewSet.as_view({'get': 'retrieve'}),
         name='useraccount-detail'),
@@ -71,8 +66,7 @@ urlpatterns = [
             view=views.SubUserPermissionRelationshipView.as_view(),
             name='sub-user-permission-relationships'
             ),
-    # pk - 
-    # related_field - 
+
     re_path(r'^admin_user_accounts/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
             views.AdminUserAccountViewSet.as_view({'get': 'retrieve_related', 'patch': 'patch_related'}),
             name='admin-user-account-related'),
@@ -106,7 +100,7 @@ urlpatterns = [
             view=views.AddressRelationshipView.as_view(),
             name='address-relationships'
             ),
-    path('presigned-urls/', view=views.PreSignedUrlView.as_view(), name="presigned-urls"),
 
+    path('presigned-urls/', view=views.PreSignedUrlView.as_view(), name="presigned-urls"),
     path('profiles/<pk>/', view=views.ProfileView.as_view(), name='profiles'),
 ]

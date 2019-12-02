@@ -1,10 +1,6 @@
 from frontend_api import views
 from customate.routers import router
 
-# from rest_framework import routers
-
-# router = routers.DefaultRouter()
-
 router.register('users', views.UserViewSet)
 router.register('admins', views.AdminUserViewSet, basename='admins')
 router.register('user_accounts', views.UserAccountViewSet)
@@ -18,6 +14,6 @@ router.register('addresses', views.AddressViewSet)
 router.register('accounts', views.AccountViewSet)
 router.register('dataset', views.DatasetView, basename='dataset')
 router.register('schedules', views.ScheduleViewSet)
-# router.register('profiles', views.ProfileView.as_view())
+router.register('escrows', views.EscrowViewSet)
 
 urlpatterns = router.urls

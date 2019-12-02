@@ -1,8 +1,5 @@
-
-
-
-from .mixins import PatchRelatedMixin, RelationshipMixin, RelationshipPostMixin
-from .account import (
+from frontend_api.views.mixins import PatchRelatedMixin, RelationshipMixin, RelationshipPostMixin
+from frontend_api.views.account import (
     AccountRelationshipView,
     AccountViewSet,
     UserAccountViewSet,
@@ -12,21 +9,27 @@ from .account import (
     AdminUserAccountRelationshipView,
     SubUserAccountRelationshipView
 )
-from .dataset import DatasetView
-from .address import UserAddressViewSet, AddressViewSet, CompanyAddressViewSet, AddressRelationshipView
-from .company import CompanyRelationshipView, CompanyViewSet
-from .permission import (
+from frontend_api.views.dataset import DatasetView
+from frontend_api.views.address import (
+    UserAddressViewSet,
+    AddressViewSet,
+    CompanyAddressViewSet,
+    AddressRelationshipView
+)
+from frontend_api.views.company import CompanyRelationshipView, CompanyViewSet
+from frontend_api.views.permission import (
     SubUserPermissionViewSet,
     AdminUserPermissionViewSet,
     SubUserPermissionRelationshipView,
     AdminUserPermissionRelationshipView
 )
-from .shareholder import ShareholderRelationshipView, ShareholderViewSet
-from .user import AdminUserViewSet, UserViewSet, UserRelationshipView
-from .profile import ProfileView
-from .schedule import ScheduleViewSet
-from .s3_sign import PreSignedUrlView
+from frontend_api.views.shareholder import ShareholderRelationshipView, ShareholderViewSet
+from frontend_api.views.user import AdminUserViewSet, UserViewSet, UserRelationshipView
+from frontend_api.views.profile import ProfileView
 
+from frontend_api.views.schedule import ScheduleViewSet
+from frontend_api.views.escrow import EscrowViewSet
+from frontend_api.views.s3_sign import PreSignedUrlView
 
 __all__ = [
     PatchRelatedMixin,
@@ -58,5 +61,6 @@ __all__ = [
     CompanyViewSet,
     ProfileView,
     ScheduleViewSet,
+    EscrowViewSet,
     PreSignedUrlView
 ]

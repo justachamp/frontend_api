@@ -1,9 +1,9 @@
 import logging
 from datetime import datetime
 from enumfields import Enum
+from uuid import UUID
 import arrow
 from django.core.serializers.json import DjangoJSONEncoder
-from django.core.validators import RegexValidator
 
 from enumfields import EnumField
 from django.db import models
@@ -71,9 +71,6 @@ class Escrow(Model):
         help_text=_("Identifier of the transit 'blocked funds' virtual wallet's payee, for payments to Escrow")
     )
 
-    acceptance_deadline = models.DateField(
-        help_text=_("Final deadline, after which the Escrow is rejected automatically")
-    )
     additional_information = models.CharField(
         max_length=250,
         blank=True,
@@ -86,13 +83,26 @@ class Escrow(Model):
                "acceptance_deadline=%s, balance=%s)" % (
                    self.id, self.payee_id, self.wallet_id,
                    self.transit_payee_id, self.transit_funding_source_id,
-                   self.acceptance_deadline, self.balance
+                   self.funding_deadline, self.balance
                )
 
     @property
     def balance(self) -> int:
         # TODO: get balance from the corresponding VIRTUAL_WALLET(transit_wallet_id) ??
         return 0
+
+    @property
+    def initial_amount(self) -> int:
+        # TODO: get initial amount from first 'request_funds' EscrowOperation ?
+        return 0
+
+    @property
+    def funding_deadline(self) -> datetime:
+        # TODO: find out _first_ LoadFunds EscrowOperation end return its 'approval_deadline'
+        return arrow.utcnow()
+
+    def funder_payment_account_id(self) -> UUID:
+        return self.funder_user.account.payment_account_id
 
     def allow_post_document(self, user: User) -> bool:
         """
@@ -103,7 +113,7 @@ class Escrow(Model):
         # Check if recipient or sender have common account with user from request (or user's subusers)
         related_account_ids = user.get_all_related_account_ids()
 
-        # Check if schedule has status 'stopped'
+        # Check if escrow has status 'stopped'
         #    need to avoid documents handling for such schedules
         if self.status == EscrowStatus.stopped:
             return False
@@ -111,6 +121,7 @@ class Escrow(Model):
         if user.role == UserRole.owner:
             return (recipient and recipient.account.id in related_account_ids) \
                    or self.funder_user.account.id in related_account_ids
+
         return False
 
 
@@ -159,10 +170,6 @@ class EscrowOperation(Model):
         help_text=_("arbitrary set of operation arguments/values depending on 'type', for instance {'sum': 10}")
     )
 
-    @property
-    def approval_deadline(self) -> datetime:
-        """
-        Final deadline, after which the Operation is automatically expires
-        :return: 
-        """
-        return arrow.get(self.created_at).shift(days=+1).datetime
+    approval_deadline = models.DateField(
+        help_text="Final deadline, after which the Operation is automatically expires"
+    )

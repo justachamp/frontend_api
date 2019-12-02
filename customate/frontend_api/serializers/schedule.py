@@ -33,6 +33,8 @@ class BaseScheduleSerializer(HyperlinkedModelSerializer):
 
     def initialize_and_validate_payee_related_fields(self, data):
         """
+        TODO: REFACTOR to make sure function is IMMUTABLE with regards to 'data'
+
         We will try to receive some additional information (iban, title etc.) about payee from Payment API,
         and initialize appropriate fields in schedule's data
         :param data: dict of incoming fields from HTTP request

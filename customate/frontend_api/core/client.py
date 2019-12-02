@@ -91,6 +91,7 @@ class PaymentApiClient:
             raise e
 
     def cancel_schedule_payments(self, schedule_id):
+        #TODO: replace by call to new client
         try:
             logger.info("Cancelling payments for schedule_id=%r" % schedule_id)
             self.client.delete('schedule_payments', schedule_id)
@@ -98,20 +99,6 @@ class PaymentApiClient:
             logger.error("Schedule payments cancellation thrown an exception: %r" % format_exc())
             raise e
 
-    @staticmethod
-    def force_payment(user_id: str, payment_id: str):
-        from payment_api.views.payment import ForcePaymentViewSet
-
-        view = ForcePaymentViewSet()
-        serializer = ForcePaymentSerializer(
-            data={
-                'user_id': user_id,
-                'original_payment_id': payment_id
-            },
-            context={'view': view}
-        )
-        serializer.is_valid(True)
-        return serializer.save()
 
     @staticmethod
     def create_payment(p: PaymentDetails):
@@ -146,7 +133,7 @@ class PaymentApiClient:
         serializer.is_valid(True)
         return serializer.save()
 
-    def get_payee_details(self, payee_id):
+    def get_payee_details(self, payee_id) -> PayeeDetails:
         try:
             logger.info("Getting payee details (id=%r)" % payee_id)
             service = PayeeRequestResourceService(resource=self)

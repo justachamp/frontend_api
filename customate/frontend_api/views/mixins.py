@@ -13,6 +13,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# TODO: get rid of this crap
+
 
 class PatchRelatedMixin(object):
     def patch_related(self, request, *args, **kwargs):
@@ -48,9 +50,9 @@ class RelationshipMixin(object):
 
 class RelationshipPostMixin(RelationshipMixin):
 
-    def get_related_handler(self, releted_field):
+    def get_related_handler(self, related_field):
         try:
-            return getattr(self, f'post_{releted_field}')
+            return getattr(self, f'post_{related_field}')
         except AttributeError:
             raise NotFound
 

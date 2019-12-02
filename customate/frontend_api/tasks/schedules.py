@@ -37,6 +37,7 @@ def process_unaccepted_schedules():
         deposit_payment_date__isnull=True,
         start_date__lte=now.datetime.date())
     unaccepted_schedules = schedules_with_deposit_payment_date | schedules_without_deposit_payment_date
+    # TODO: add order!
     paginator = Paginator(unaccepted_schedules, settings.CELERY_BEAT_PER_PAGE_OBJECTS)
     for page in paginator.page_range:
         # Update statuses via .move_to_status()
@@ -55,7 +56,7 @@ def remove_unassigned_documents():
 
     # Documents without related schedule which created more than hour ago
     outdated_documents = Document.objects.filter(schedule=None, created_at__lte=hour_ago, key__isnull=False)
-
+    # TODO: add order!
     paginator = Paginator(outdated_documents, settings.CELERY_BEAT_PER_PAGE_OBJECTS)
     for page in paginator.page_range:
         for document in paginator.page(page).object_list:  # type: Document
