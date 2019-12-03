@@ -8,6 +8,7 @@ from enumfields import Enum
 from uuid import UUID
 import arrow
 from django.core.serializers.json import DjangoJSONEncoder
+from rest_framework.exceptions import ValidationError
 
 from enumfields import EnumField
 from django.db import models
@@ -201,12 +202,32 @@ class EscrowOperation(Model):
         return self.args.additional_information
 
     def accept(self, user):
-        # Change EscrowOperation status to Accepted and do nothing else
-        pass
+        if self.approved is not None:
+            raise ValidationError(f'Cannot accept escrow operation with current approved state (approved={self.approved})')
+
+        if self.is_expired:
+            raise ValidationError(f'Cannot accept expired escrow operation')
+
+        self.approved = True
+        self.save(update_fields=["approved"])
+        logger.info("Escrow operation (id=%s) was approved" % self.id, extra={
+            'escrow_operation_id': self.id,
+            'escrow_id': self.escrow.id
+        })
 
     def reject(self, user):
-        # Change EscrowOperation status to Rejected and do nothing else
-        pass
+        if self.approved is not None:
+            raise ValidationError(f'Cannot reject escrow operation with current approved state (approved={self.approved})')
+
+        if self.is_expired:
+            raise ValidationError(f'Cannot reject expired escrow operation')
+
+        self.approved = False
+        self.save(update_fields=["approved"])
+        logger.info("Escrow operation (id=%s) was rejected" % self.id, extra={
+            'escrow_operation_id': self.id,
+            'escrow_id': self.escrow.id
+        })
 
 
 class CreateEscrowOperation(EscrowOperation):
