@@ -1,121 +1,102 @@
 import logging
+from typing import Dict
 from collections import OrderedDict
 
+from django.utils.functional import cached_property
 from rest_framework.serializers import ValidationError
 from rest_framework.fields import DateField, IntegerField, BooleanField
-
 from rest_framework_json_api.serializers import HyperlinkedModelSerializer, SerializerMethodField
 
-from core.fields import Currency, SerializerField, PayeeType
-
 from frontend_api.models.escrow import Escrow, EscrowStatus, EscrowOperationType, EscrowOperation, EscrowOperationStatus
+from core.fields import Currency, SerializerField, PayeeType, FundingSourceType
+from frontend_api.models.escrow import Escrow, EscrowStatus
 from frontend_api.serializers.document import DocumentSerializer
-
 from frontend_api.serializers import (
     UUIDField,
     EnumField,
     CharField,
 )
+from frontend_api.core.client import PaymentApiClient
 
 logger = logging.getLogger(__name__)
 
 
 class BaseEscrowSerializer(HyperlinkedModelSerializer):
-    # @cached_property
-    # def payment_client(self):
-    #     return PaymentApiClient(self.context.get('request').user)
+    @cached_property
+    def payment_client(self):
+        return PaymentApiClient(self.context.get('request').user)
 
-    # def initialize_and_validate_payee_related_fields(self, data):
-    #     """
-    #     We will try to receive some additional information (iban, title etc.) about payee from Payment API,
-    #     and initialize appropriate fields in schedule's data
-    #     :param data: dict of incoming fields from HTTP request
-    #     """
-    #     if data.get('payee_id'):
-    #         pd = self.payment_client.get_payee_details(data.get('payee_id'))
-    #         if pd:
-    #             current_user = self.context.get('request').user
-    #             if data["purpose"] == SchedulePurpose.pay \
-    #                     and pd.type == PayeeType.WALLET.value \
-    #                     and pd.payment_account_id == str(current_user.account.payment_account_id):
-    #                 raise ValidationError({
-    #                     "payee_id": "Current user's payee cannot be used for creation 'pay funds' schedule"
-    #                 })
-    #
-    #             data.update({
-    #                 'payee_recipient_name': pd.recipient_name,
-    #                 'payee_recipient_email': pd.recipient_email,
-    #                 'payee_iban': pd.iban,
-    #                 'payee_title': pd.title,
-    #                 'payee_type': pd.type
-    #             })
-    #
-    # def initialize_and_validate_funding_source_related_fields(self, data):
-    #     """
-    #     We will try to receive funding source's types from Payment API, and initialize appropriate fields in
-    #     schedule's data
-    #     :param data: dict of incoming fields from HTTP request
-    #     """
-    #     if data.get('funding_source_id'):
-    #         fs_details = self.payment_client.get_funding_source_details(data.get('funding_source_id'))
-    #         self._check_specific_funding_source(data, fs_details, 'funding_source_id')
-    #
-    #         data.update({
-    #             'funding_source_type': self._get_and_validate_funding_source_type(fs_details)
-    #         })
-    #
-    #     if 'backup_funding_source_id' in data:
-    #         backup_funding_source_type = None
-    #         if data.get('backup_funding_source_id'):
-    #             fs_details = self.payment_client.get_funding_source_details(data.get('backup_funding_source_id'))
-    #             self._check_specific_funding_source(data, fs_details, 'backup_funding_source_id')
-    #             backup_funding_source_type = self._get_and_validate_backup_funding_source_type(fs_details)
-    #
-    #         data.update({
-    #             'backup_funding_source_type': backup_funding_source_type
-    #         })
+    def validate_payee_related_fields(self, payee_id: str) -> Dict:
+        """
+        We will try to receive some additional information (iban, title etc.) about payee from Payment API,
+        and initialize appropriate fields in escrow's data
+        :param payee_id:
+        """
+        response = {}
+        if payee_id:
+            pd = self.payment_client.get_payee_details(payee_id)
+            if pd:
+                response.update({
+                    'payee_recipient_name': pd.recipient_name,
+                    'payee_recipient_email': pd.recipient_email,
+                    'payee_iban': pd.iban,
+                    'payee_title': pd.title,
+                    'payee_type': pd.type
+                })
+        if not response:
+            logger.error("Got empty 'payee_id' or 'payee_details'. Payee_id: %s.", payee_id)
+            raise ValidationError("Payment service is not available. Try again later.")
+        return response
 
-    # def _get_and_validate_funding_source_type(self, fs_details: FundingSourceDetails):
-    #     if fs_details and fs_details.type is not None:
-    #         return fs_details.type
-    #     else:
-    #         raise ValidationError({
-    #             "funding_source_type": "This field is required"
-    #         })
-    #
-    # def _get_and_validate_backup_funding_source_type(self, fs_details: FundingSourceDetails):
-    #     # NOTE: force backup funding source to be of 'WALLET' type only,
-    #     # otherwise we can't process DD/CC payments in a timely manner: they require 7 day gap to be made in advance
-    #     if not fs_details:
-    #         raise ValidationError({
-    #             "backup_funding_source_type": "This field is required"
-    #         })
-    #     elif fs_details.type != FundingSourceType.WALLET.value:
-    #         raise ValidationError({
-    #             "backup_funding_source_id": "Backup funding source is not of type %s" % FundingSourceType.WALLET
-    #         })
-    #     else:
-    #         return fs_details.type
-    #
-    # def _check_specific_funding_source(self, res: OrderedDict, fs_details: FundingSourceDetails, field_name: str):
-    #     """
-    #     :param res: dict of incoming fields from HTTP request
-    #     :param fs_details: funding source details, received from Payment API
-    #     :param field_name: (funding_source_id, backup_funding_source_id)
-    #     """
-    #     user = self.context.get('request').user
-    #
-    #     if fs_details.payment_account_id != str(user.account.payment_account_id):
-    #         raise ValidationError({
-    #             field_name: "Invalid funding source payment account"
-    #         })
-    #
-    #     # @NOTE: we allow payments from credit card that have different currency
-    #     if fs_details.type != FundingSourceType.CREDIT_CARD.value \
-    #             and fs_details.currency != res.get("currency", self.instance.currency.value if self.instance else None):
-    #         raise ValidationError({
-    #             field_name: "Funding source currency should be the same as schedule currency"
-    #         })
+    def validate_funding_source_related_fields(self, funding_source_id: str, currency: Currency, user: object) -> Dict:
+        """
+        We will try to receive funding source's types from Payment API, and initialize appropriate fields in
+        schedule's data
+        :param user:
+        :param currency:
+        :param funding_source_id:
+        """
+        response = {}
+        if funding_source_id:
+            funding_source_details = self.payment_client.get_funding_source_details(funding_source_id)
+            if funding_source_details.payment_account_id != str(user.account.payment_account_id):
+                raise ValidationError({
+                    "funding_source_id": "Invalid funding source payment account"
+                })
+            # @NOTE: we allow payments from credit card that have different currency
+            if funding_source_details.type != FundingSourceType.CREDIT_CARD.value \
+                    and funding_source_details.currency != (currency or self.instance.currency.value if self.instance else None):
+                raise ValidationError({
+                    "funding_source_id": "Funding source currency should be the same as escrow currency"
+                })
+            if funding_source_details and getattr(funding_source_details, 'type', None) is None:
+                raise ValidationError({
+                    "funding_source_type": "This field is required"
+                })
+
+            response.update({
+                'funding_source_type': funding_source_details.type
+            })
+
+        if not response:
+            logger.error("Got empty 'funding_source_id' or 'fs_details'. funding_source_id: %s.", funding_source_id)
+            raise ValidationError("Payment service is not available. Try again later.")
+        return response
+
+    def is_valid(self, *args, **kwargs):
+        return super().is_valid(raise_exception=True)
+
+    def run_validation(self, *args, **kwargs):
+        data = super().run_validation(*args, **kwargs)
+        payee_details = self.validate_payee_related_fields(payee_id=data.get("payee_id"))
+        data.update(payee_details)
+        fs_details = self.validate_funding_source_related_fields(
+            funding_source_id=data.get("funding_source_id"),
+            currency=data.get("currency"),
+            user=self.context["request"].user
+        )
+        data.update(fs_details)
+        return data
 
     def assign_uploaded_documents_to_escrow(self, documents):
         """
