@@ -213,6 +213,7 @@ class EscrowOperationViewSet(views.ModelViewSet):
 
     filterset_fields = {
         'escrow__id': ('exact', ),
+        'type': ('in', ),
     }
 
     def get_queryset(self, *args, **kwargs):

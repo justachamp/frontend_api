@@ -202,7 +202,18 @@ class EscrowOperation(Model):
 
     @property
     def additional_information(self):
-        return self.args.additional_information
+        return self.args.get('args', {}).get('additional_information')
+
+    @property
+    def status(self):
+        if self.approved:
+            result = EscrowOperationStatus.approved
+        elif self.is_expired or self.approved is False:
+            result = EscrowOperationStatus.rejected
+        else:
+            result = EscrowOperationStatus.pending
+
+        return result
 
     def accept(self, user):
         if self.approved is not None:
@@ -232,6 +243,15 @@ class EscrowOperation(Model):
             'escrow_id': self.escrow.id
         })
 
+class EscrowOperationStatus(Enum):
+    pending = 'pending'
+    rejected = 'rejected'
+    approved = 'approved'
+
+    class Labels:
+        pending = 'Pending'
+        rejected = 'Rejected'
+        approved = 'Approved'
 
 class CreateEscrowOperation(EscrowOperation):
     def accept(self, user):
