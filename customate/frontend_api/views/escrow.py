@@ -169,6 +169,13 @@ class EscrowOperationViewSet(views.ModelViewSet):
                           IsOwnerOrReadOnly
                           )
 
+    def get_queryset(self, *args, **kwargs):
+        target_account_ids = self.request.user.get_all_related_account_ids()
+        return EscrowOperation.objects.filter(
+            Q(escrow__funder_user__account__id__in=target_account_ids)
+            | Q(escrow__recipient_user__account__id__in=target_account_ids)
+        ).order_by('created_at')
+
     @transaction.atomic
     @action(methods=['POST'],
             detail=True,
