@@ -4,7 +4,7 @@ from collections import OrderedDict
 from rest_framework.serializers import ValidationError
 from rest_framework.fields import DateField, IntegerField, BooleanField
 
-from rest_framework_json_api.serializers import HyperlinkedModelSerializer
+from rest_framework_json_api.serializers import HyperlinkedModelSerializer, SerializerMethodField
 
 from core.fields import Currency, SerializerField, PayeeType
 
@@ -168,6 +168,9 @@ class EscrowSerializer(BaseEscrowSerializer):
 
     funding_deadline = DateField(required=False)
 
+    counterpart_email = SerializerMethodField(read_only=True)
+    counterpart_name = SerializerMethodField(read_only=True)
+
     class Meta:
         model = Escrow
         fields = (
@@ -183,6 +186,8 @@ class EscrowSerializer(BaseEscrowSerializer):
 
             'additional_information',
             'documents',
+            'counterpart_email',
+            'counterpart_name',
 
             # we can use model properties as well
             'funder_payment_account_id',
@@ -190,6 +195,36 @@ class EscrowSerializer(BaseEscrowSerializer):
             'balance',
             'initial_amount'
         )
+
+    def _get_counterpart(self, escrow: Escrow):
+        """
+        Define correct counterpart based on user that performed the request
+
+        :param escrow: Escrow
+        :return counterpart: User
+        """
+        current_user = self.context.get('request').user
+        result = escrow.funder_user
+
+        if current_user.id == escrow.funder_user.id:
+            result = escrow.recipient_user
+
+        return result
+
+    def get_counterpart_email(self, obj) -> str:
+        """
+        :param obj: Escrow
+        :return counterpart's email: str
+        """
+        return self._get_counterpart(obj).email
+
+    def get_counterpart_name(self, obj) -> str:
+        """
+        :param obj: Escrow
+        :return counterpart's name: str
+        """
+        counterpart = self._get_counterpart(obj)
+        return '%s %s' % (counterpart.first_name, counterpart.last_name)
 
     def validate_name(self, value):
         """
