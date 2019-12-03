@@ -28,7 +28,7 @@ from frontend_api.views.user import AdminUserViewSet, UserViewSet, UserRelations
 from frontend_api.views.profile import ProfileView
 
 from frontend_api.views.schedule import ScheduleViewSet
-from frontend_api.views.escrow import EscrowViewSet
+from frontend_api.views.escrow import EscrowViewSet, EscrowOperationViewSet
 from frontend_api.views.s3_sign import PreSignedUrlView
 
 __all__ = [

@@ -8,7 +8,7 @@ from rest_framework_json_api.serializers import HyperlinkedModelSerializer, Seri
 
 from core.fields import Currency, SerializerField, PayeeType
 
-from frontend_api.models.escrow import Escrow, EscrowStatus
+from frontend_api.models.escrow import Escrow, EscrowStatus, EscrowOperationType, EscrowOperation
 from frontend_api.serializers.document import DocumentSerializer
 
 from frontend_api.serializers import (
@@ -302,4 +302,12 @@ class EscrowSerializer(BaseEscrowSerializer):
 
 
 class EscrowOperationSerializer(HyperlinkedModelSerializer):
-    pass
+    type = EnumField(enum=EscrowOperationType, required=True)
+    escrow_id = UUIDField(required=True)
+
+    class Meta:
+        model = EscrowOperation
+        fields = (
+            'type',
+            'escrow_id',
+        )

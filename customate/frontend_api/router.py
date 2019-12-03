@@ -15,5 +15,6 @@ router.register('accounts', views.AccountViewSet)
 router.register('dataset', views.DatasetView, basename='dataset')
 router.register('schedules', views.ScheduleViewSet)
 router.register('escrows', views.EscrowViewSet)
+router.register('escrowoperations', views.EscrowOperationViewSet)
 
 urlpatterns = router.urls

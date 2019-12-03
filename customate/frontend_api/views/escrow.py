@@ -211,6 +211,10 @@ class EscrowOperationViewSet(views.ModelViewSet):
                           IsOwnerOrReadOnly
                           )
 
+    filterset_fields = {
+        'escrow__id': ('exact', ),
+    }
+
     def get_queryset(self, *args, **kwargs):
         target_account_ids = self.request.user.get_all_related_account_ids()
         return EscrowOperation.objects.filter(
