@@ -63,6 +63,8 @@ class EscrowViewSet(views.ModelViewSet):
         # 'payee_recipient_email': ('icontains', 'contains', 'iexact'),
         # 'payee_iban': ('icontains', 'contains', 'iexact'),
         'currency': ('iexact', 'in'),
+        'funder_user__id': ('exact', ),
+        'recipient_user__id': ('exact', ),
     }
 
     def get_serializer_class(self):
