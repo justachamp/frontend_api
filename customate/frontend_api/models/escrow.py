@@ -55,7 +55,8 @@ class Escrow(Model):
     currency = EnumField(Currency)
 
     wallet_id = models.UUIDField(
-        help_text=_("Identifier of the virtual wallet, that relates to this Escrow")
+        help_text=_("Identifier of the virtual wallet, that relates to this Escrow"),
+        default=None, blank=True, null=True
     )
 
     payee_id = models.UUIDField(
@@ -68,12 +69,14 @@ class Escrow(Model):
         # "Release money from Escrow" payment will include:
         # "origin" = transit_funding_source_id and "recipient" = payee_id
         help_text=_(
-            "Identifier of the transit 'blocked funds' virtual wallet's funding source, for payments from Escrow")
+            "Identifier of the transit 'blocked funds' virtual wallet's funding source, for payments from Escrow"),
+        default=None, blank=True, null=True
     )
     transit_payee_id = models.UUIDField(
         # "Load money to Escrow" payment will include:
         # "origin" = any payer's funding source's id and "recipient" = transit_payee_id
-        help_text=_("Identifier of the transit 'blocked funds' virtual wallet's payee, for payments to Escrow")
+        help_text=_("Identifier of the transit 'blocked funds' virtual wallet's payee, for payments to Escrow"),
+        default=None, blank=True, null=True
     )
 
     additional_information = models.CharField(
