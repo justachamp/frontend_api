@@ -159,6 +159,46 @@ class EscrowViewSet(views.ModelViewSet):
         ))
         return Response(None, status=204)
 
+    @transaction.atomic
+    @action(methods=['POST'],
+            detail=True,
+            permission_classes=(
+                    IsAuthenticated, IsActive, IsNotBlocked,
+                    IsAccountVerified,
+                    IsSuperAdminOrReadOnly | IsOwnerOrReadOnly)
+            )
+    def accept(self, request, pk=None):
+        """
+        Used to accept an Escrow
+        :param request:
+        :param pk:
+        :return:
+        """
+
+        escrow_id = pk
+
+        return Response()
+
+    @transaction.atomic
+    @action(methods=['POST'],
+            detail=True,
+            permission_classes=(
+                    IsAuthenticated, IsActive, IsNotBlocked,
+                    IsAccountVerified,
+                    IsSuperAdminOrReadOnly | IsOwnerOrReadOnly)
+            )
+    def reject(self, request, pk=None):
+        """
+        Used to reject an Escrow
+        :param request:
+        :param pk:
+        :return:
+        """
+
+        escrow_id = pk
+
+        return Response()
+
 
 class EscrowOperationViewSet(views.ModelViewSet):
     queryset = EscrowOperation.objects.all()
