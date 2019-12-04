@@ -174,7 +174,8 @@ class EscrowSerializer(BaseEscrowSerializer):
             'funder_payment_account_id',
             'funding_deadline',
             'balance',
-            'initial_amount'
+            'initial_amount',
+            'closing_date'
         )
 
     def _get_counterpart(self, escrow: Escrow):

@@ -118,6 +118,12 @@ class Escrow(Model):
 
         return arrow.utcnow()
 
+    @property
+    def closing_date(self) -> datetime:
+        # We can assume that Escrow record will not be edited after moving to "Closed" state
+        # OR we can add EscrowOperation.approved_date field to trace when "close_escrow" operation will be accepted
+        return self.updated_at if self.status is EscrowStatus.closed else None
+
     def funder_payment_account_id(self) -> UUID:
         return self.funder_user.account.payment_account_id
 
