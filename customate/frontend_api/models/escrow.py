@@ -155,14 +155,13 @@ class Escrow(Model):
 
         return operation.status is not EscrowOperationStatus.pending
 
-    @property
-    def has_pending_operations(self) -> bool:
+    def has_pending_operations_for_user(self, user) -> bool:
         return EscrowOperation.objects.filter(
             escrow__id=self.id,
             # sharing knowledge about "status" field calculated fields - not good
             is_expired=False,
             approved=None
-        ).exists()
+        ).exclude(creator=user).exists()
 
     def funder_payment_account_id(self) -> UUID:
         return self.funder_user.account.payment_account_id
@@ -263,6 +262,16 @@ class EscrowOperation(Model):
         blank=False,
     )  # type: Escrow
     type = EnumField(EscrowOperationType)  # All possible operations on escrow
+
+    # We need to store operation's creator, so that we can distinguish "my" and "others" records to correctly
+    # react to them in UI (hide buttons, don't display "red dot" for Escrow etc.)
+    creator = models.ForeignKey(
+        User,
+        on_delete=models.DO_NOTHING,
+        blank=False,
+        related_name='%(class)s_created_by_me'
+    )  # type: User
+
     approved = models.BooleanField(
         default=None,
         null=True,

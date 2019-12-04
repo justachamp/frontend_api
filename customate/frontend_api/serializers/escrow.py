@@ -86,7 +86,6 @@ class EscrowSerializer(BaseEscrowSerializer):
     initial_amount = IntegerField(required=True)
     can_close = BooleanField(required=False, read_only=True)
     can_release_funds = BooleanField(required=False, read_only=True)
-    has_pending_operations = BooleanField(required=False, read_only=True)
 
     # Payment API details
     wallet_id = UUIDField(required=False)
@@ -111,6 +110,7 @@ class EscrowSerializer(BaseEscrowSerializer):
     purpose = SerializerMethodField()
     counterpart_email = SerializerMethodField()
     counterpart_name = SerializerMethodField()
+    has_pending_operations = SerializerMethodField()
 
     class Meta:
         model = Escrow
@@ -178,14 +178,17 @@ class EscrowSerializer(BaseEscrowSerializer):
         :param obj:
         :return Escrow's purpose: str
         """
-        escrow = obj
         current_user = self.context.get('request').user
         result = EscrowPurpose.receive.value
 
-        if current_user.id == escrow.funder_user.id:
+        if current_user.id == obj.funder_user.id:
             result = EscrowPurpose.pay.value
 
         return result
+
+    def get_has_pending_operations(self, obj) -> bool:
+        current_user = self.context.get('request').user
+        return obj.has_pending_operations_for_user(current_user)
 
     def validate_name(self, value):
         """
@@ -267,6 +270,7 @@ class EscrowOperationSerializer(HyperlinkedModelSerializer):
     status = EnumField(enum=EscrowOperationStatus, default=EscrowOperationStatus.pending, required=False, read_only=True)
     escrow_id = UUIDField(required=True)
     additional_information = CharField(required=False)
+    is_action_required = SerializerMethodField()
 
     class Meta:
         model = EscrowOperation
@@ -275,5 +279,11 @@ class EscrowOperationSerializer(HyperlinkedModelSerializer):
             'type',
             'escrow_id',
             'additional_information',
-            'status'
+            'status',
+            'is_action_required'
         )
+
+    # We need to require actions only from operation's counterpart user
+    def get_is_action_required(self, escrow_operation) -> bool:
+        current_user = self.context.get('request').user
+        return escrow_operation.creator.id is not current_user.id

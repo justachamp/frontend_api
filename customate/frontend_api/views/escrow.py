@@ -143,6 +143,7 @@ class EscrowViewSet(views.ModelViewSet):
         operation = EscrowOperation(
             escrow=escrow,
             type=EscrowOperationType.close_escrow,
+            creator=self.request.user
         )
         operation.save()
 
