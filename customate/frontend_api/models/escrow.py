@@ -17,6 +17,7 @@ from django.contrib.postgres.fields import JSONField
 
 from core.models import Model, User
 from core.fields import Currency, UserRole
+from customate.settings import ESCROW_OPERATION_APPROVE_DEADLINE
 from external_apis.payment.service import Payments
 
 logger = logging.getLogger(__name__)
@@ -201,12 +202,14 @@ class EscrowOperationType(Enum):
     """
     load_funds = 'load_funds'  # Load funds
     request_funds = 'request_funds'  # Request of funds
+    release_funds = 'release_funds'  # Release funds
     close_escrow = 'close_escrow'  # Request to close escrow
     create_escrow = 'create_escrow'  # Initial request to create escrow
 
     class Labels:
         load_funds = 'Load funds'
         request_funds = 'Request funds'
+        release_funds = 'Release funds'
         close_escrow = 'Close escrow'
         create_escrow = 'Create escrow'
 
@@ -244,7 +247,8 @@ class EscrowOperation(Model):
 
     approval_deadline = models.DateField(
         help_text="Final deadline, after which the Operation is automatically expires",
-        null=True
+        null=True,
+        default=arrow.utcnow().shift(days=ESCROW_OPERATION_APPROVE_DEADLINE).datetime.date
     )
 
     @staticmethod
@@ -303,6 +307,11 @@ class EscrowOperation(Model):
             'escrow_operation_id': self.id,
             'escrow_id': self.escrow.id
         })
+
+    def __str__(self):
+        return "EscrowOperation(id=%s, type=%s, escrow=%s, args=%s)" % (
+            self.id, self.type, self.escrow.id if self.escrow else None, self.args
+        )
 
 
 class EscrowOperationStatus(Enum):

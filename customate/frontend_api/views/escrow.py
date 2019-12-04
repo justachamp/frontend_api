@@ -20,6 +20,7 @@ from core.fields import FundingSourceType
 from frontend_api.fields import ScheduleStatus, SchedulePurpose
 from frontend_api.core.client import PaymentApiClient
 from frontend_api.models import Escrow, Document, EscrowOperation
+from frontend_api.models.escrow import EscrowOperationType
 from frontend_api.serializers import EscrowSerializer
 
 from frontend_api.permissions import (
@@ -127,15 +128,25 @@ class EscrowViewSet(views.ModelViewSet):
         :param serializer:
         :return:
         """
-        logger.info("Handle schedule update request")
+        logger.info("Handle escrow update request")
 
     def perform_destroy(self, escrow: Escrow):
         """
-        Handle HTTP DELETE here.
+        Handle HTTP DELETE here. We don't want to remove escrow record at all, instead we will create "close_escrow"
+        EscrowOperation and will wait for approve from counterpart to process with Escrow's cancellation
+
         :param escrow:
         :return:
         """
-        logger.info("Handle schedule update request")
+        logger.info("Handle escrow destroy request")
+
+        operation = EscrowOperation(
+            escrow=escrow,
+            type=EscrowOperationType.close_escrow,
+        )
+        operation.save()
+
+        logger.info("Created %s" % operation)
 
     @action(methods=['DELETE'],
             detail=True,
