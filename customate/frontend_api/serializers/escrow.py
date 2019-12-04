@@ -84,6 +84,8 @@ class EscrowSerializer(BaseEscrowSerializer):
 
     # initial payment amount
     initial_amount = IntegerField(required=True)
+    can_close = BooleanField(required=False, read_only=True)
+    can_release_funds = BooleanField(required=False, read_only=True)
 
     # Payment API details
     wallet_id = UUIDField(required=False)
@@ -133,7 +135,9 @@ class EscrowSerializer(BaseEscrowSerializer):
             'funding_deadline',
             'balance',
             'initial_amount',
-            'closing_date'
+            'closing_date',
+            'can_close',
+            'can_release_funds'
         )
 
     def _get_counterpart(self, escrow: Escrow):

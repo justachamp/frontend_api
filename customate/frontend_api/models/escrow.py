@@ -139,6 +139,22 @@ class Escrow(Model):
         # OR we can add EscrowOperation.approved_date field to trace when "close_escrow" operation will be accepted
         return self.updated_at if self.status is EscrowStatus.closed else None
 
+    @property
+    def can_close(self) -> bool:
+        operation = self._get_latest_operation(EscrowOperationType.close_escrow)
+        if operation is None:
+            return True
+
+        return operation.status is not EscrowOperationStatus.pending
+
+    @property
+    def can_release_funds(self) -> bool:
+        operation = self._get_latest_operation(EscrowOperationType.release_funds)
+        if operation is None:
+            return True
+
+        return operation.status is not EscrowOperationStatus.pending
+
     def funder_payment_account_id(self) -> UUID:
         return self.funder_user.account.payment_account_id
 
@@ -185,6 +201,15 @@ class Escrow(Model):
                     escrow__id=self.id,
                     type=EscrowOperationType.load_funds,
                 ).order_by("created_at")[0:1].get()
+        except EscrowOperation.DoesNotExist:
+            return None
+
+    def _get_latest_operation(self, operation_type):
+        try:
+            return EscrowOperation.objects.filter(
+                    escrow__id=self.id,
+                    type=operation_type,
+                ).order_by("-created_at")[0:1].get()
         except EscrowOperation.DoesNotExist:
             return None
 
