@@ -155,6 +155,15 @@ class Escrow(Model):
 
         return operation.status is not EscrowOperationStatus.pending
 
+    @property
+    def has_pending_operations(self) -> bool:
+        return EscrowOperation.objects.filter(
+            escrow__id=self.id,
+            # sharing knowledge about "status" field calculated fields - not good
+            is_expired=False,
+            approved=None
+        ).exists()
+
     def funder_payment_account_id(self) -> UUID:
         return self.funder_user.account.payment_account_id
 
