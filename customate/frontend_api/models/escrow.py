@@ -17,6 +17,7 @@ from django.contrib.postgres.fields import JSONField
 
 from core.models import Model, User
 from core.fields import Currency, UserRole
+from external_apis.payment.service import Payments
 
 logger = logging.getLogger(__name__)
 
@@ -286,9 +287,7 @@ class ReleaseFundsEscrowOperation(EscrowOperation):
         payee_id = escrow.payee_id
 
         try:
-            from frontend_api.core import client
-            client.PaymentApiClient.create_payment(p=client.PaymentDetails(
-                id=uuid4(),
+            Payments.create_payment(
                 user_id=UUID(user.id),
                 payment_account_id=UUID(user.account.payment_account_id),
                 schedule_id=None,
@@ -296,11 +295,8 @@ class ReleaseFundsEscrowOperation(EscrowOperation):
                 amount=self.amount,
                 description=self.additional_information,
                 payee_id=payee_id,
-                funding_source_id=funding_source_id,
-                parent_payment_id=None,
-                execution_date=None
-            ))
-
+                funding_source_id=funding_source_id
+            )
         except Exception:
             logger.error("Unable to create payment for ReleaseFundsEscrowOperation (id=%s) due to unknown error: %r. " % (
                 self.id, format_exc()
