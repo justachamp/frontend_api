@@ -7,7 +7,8 @@ from rest_framework.serializers import ValidationError
 from rest_framework.fields import DateField, IntegerField, BooleanField
 from rest_framework_json_api.serializers import HyperlinkedModelSerializer, SerializerMethodField
 
-from frontend_api.models.escrow import Escrow, EscrowStatus, EscrowOperationType, EscrowOperation, EscrowOperationStatus
+from frontend_api.models.escrow import Escrow, EscrowStatus, EscrowOperationType, EscrowOperation, \
+    EscrowOperationStatus, EscrowPurpose
 from core.fields import Currency, SerializerField, PayeeType, FundingSourceType
 from frontend_api.models.escrow import Escrow, EscrowStatus
 from frontend_api.serializers.document import DocumentSerializer
@@ -104,8 +105,9 @@ class EscrowSerializer(BaseEscrowSerializer):
 
     funding_deadline = DateField(required=False)
 
-    counterpart_email = SerializerMethodField(read_only=True)
-    counterpart_name = SerializerMethodField(read_only=True)
+    purpose = SerializerMethodField()
+    counterpart_email = SerializerMethodField()
+    counterpart_name = SerializerMethodField()
 
     class Meta:
         model = Escrow
@@ -124,6 +126,7 @@ class EscrowSerializer(BaseEscrowSerializer):
             'documents',
             'counterpart_email',
             'counterpart_name',
+            'purpose',
 
             # we can use model properties as well
             'funder_payment_account_id',
@@ -162,6 +165,21 @@ class EscrowSerializer(BaseEscrowSerializer):
         """
         counterpart = self._get_counterpart(obj)
         return '%s %s' % (counterpart.first_name, counterpart.last_name)
+
+    def get_purpose(self, obj) -> str:
+        """
+
+        :param obj:
+        :return Escrow's purpose: str
+        """
+        escrow = obj
+        current_user = self.context.get('request').user
+        result = EscrowPurpose.receive.value
+
+        if current_user.id == escrow.funder_user.id:
+            result = EscrowPurpose.pay.value
+
+        return result
 
     def validate_name(self, value):
         """

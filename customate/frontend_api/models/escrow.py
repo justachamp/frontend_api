@@ -37,6 +37,15 @@ class EscrowStatus(Enum):
         rejected = 'Rejected'
 
 
+class EscrowPurpose(Enum):
+    receive = 'receive'
+    pay = 'pay'
+
+    class Labels:
+        receive = 'Receive funds'
+        pay = 'Pay funds'
+
+
 class Escrow(Model):
     name = models.CharField(_('escrow name'), max_length=150)
     status = EnumField(EscrowStatus)
