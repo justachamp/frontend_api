@@ -12,7 +12,9 @@ from core.fields import Dataset, Country
 from core.models import User, USER_MIN_AGE, Address as CoreAddress
 from frontend_api.exceptions import GBGVerificationError
 from frontend_api.models import Account
-from frontend_api.core.client import PaymentApiClient
+
+import external_apis.payment.service as payment_service
+
 from external_apis.gbg.models import ContactDetails, PersonalDetails, Address
 from external_apis.gbg.models import IdentityDocument, UKIdentityDocument, SpainIdentityDocument, IdentityCard
 from external_apis.gbg.service import validate_identity_details
@@ -93,10 +95,6 @@ class ProfileValidationService:
     def __init__(self, profile: ProfileRecord):
         self._profile = profile
         self._errors = {}
-
-    @cached_property
-    def payment_client(self):
-        return PaymentApiClient(self.profile.user)
 
     @property
     def errors(self):
@@ -211,18 +209,26 @@ class ProfileValidationService:
 
     def verify_profile(self, instance):
 
-        account = getattr(instance, 'account', None)
+        account = getattr(instance, 'account', None)  # type: Account
         if not account:
             return None
 
-        user = getattr(instance, 'user', None)
+        user = getattr(instance, 'user', None)  # type: User
         if not user or user.is_admin:
             return None
 
         # a phone number should be verified before a user is allowed to pass KYC(Know Your Customer).
         address = getattr(instance, 'address', None)  # type: CoreAddress
         country_val = address.country.value if address and address.country else None  # 2-letter country code
-        self.payment_client.assign_payment_account()
+
+        if user.is_owner and user.contact_verified and not user.account.payment_account_id:
+            # Call PaymentAPI to create Payment Account if it is not created yet
+            payment_account_id = payment_service.PaymentAccount.create(
+                user_account_id=user.account.id,
+                email=user.email,
+                full_name=user.get_full_name()
+            )
+            user.assign_payment_account(payment_account_id)
 
         if not user.is_verified:
             return None
@@ -269,9 +275,14 @@ class ProfileValidationService:
             account.save()
 
         except (TransportError, Fault) as e:
-            logger.error(
-                "GBG verification error (user=%s, address=%s) exception(%s): %r" % (user, address, type(e), format_exc()))
+            logger.error("GBG verification error (user=%s, address=%s) exception(%s): %r" % (
+                user, address, type(e), format_exc()
+            ))
             raise GBGVerificationError({"account": "KYC request is unsuccessful. Please, contact the support team."})
         except Exception as e:
-            logger.error("GBG verification error (user=%s, address=%s) exception: %r" % (user, address, format_exc()),
-                         extra={'user': user, 'address': address})
+            logger.error("GBG verification error (user=%s, address=%s) exception: %r" % (
+                user, address, format_exc()
+            ), extra={
+                'user': user,
+                'address': address
+            })

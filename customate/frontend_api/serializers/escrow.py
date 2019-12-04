@@ -1,8 +1,7 @@
 import logging
 from typing import Dict
 from collections import OrderedDict
-
-from django.utils.functional import cached_property
+from uuid import UUID
 from rest_framework.serializers import ValidationError
 from rest_framework.fields import DateField, IntegerField, BooleanField
 from rest_framework_json_api.serializers import HyperlinkedModelSerializer, SerializerMethodField
@@ -10,6 +9,8 @@ from rest_framework_json_api.serializers import HyperlinkedModelSerializer, Seri
 from frontend_api.models.escrow import Escrow, EscrowStatus, EscrowOperationType, EscrowOperation, \
     EscrowOperationStatus, EscrowPurpose
 from core.fields import Currency, SerializerField, PayeeType, FundingSourceType
+
+import external_apis.payment.service as payment_service
 from frontend_api.models.escrow import Escrow, EscrowStatus
 from frontend_api.serializers.document import DocumentSerializer
 from frontend_api.serializers import (
@@ -17,15 +18,11 @@ from frontend_api.serializers import (
     EnumField,
     CharField,
 )
-from frontend_api.core.client import PaymentApiClient
 
 logger = logging.getLogger(__name__)
 
 
 class BaseEscrowSerializer(HyperlinkedModelSerializer):
-    @cached_property
-    def payment_client(self):
-        return PaymentApiClient(self.context.get('request').user)
 
     def validate_payee_related_fields(self, payee_id: str) -> Dict:
         """
@@ -34,17 +31,21 @@ class BaseEscrowSerializer(HyperlinkedModelSerializer):
         :param payee_id:
         """
         response = {}
-        if payee_id:
-            pd = self.payment_client.get_payee_details(payee_id)
-            if pd:
-                response.update({
-                    'payee_recipient_name': pd.recipient_name,
-                    'payee_recipient_email': pd.recipient_email,
-                    'payee_iban': pd.iban
-                })
-        if not response:
+        if not payee_id:
+            return response
+
+        try:
+            pd = payment_service.Payee.get(payee_id=UUID(payee_id))
+        except Exception:
             logger.error("Got empty 'payee_id' or 'payee_details'. Payee_id: %s.", payee_id)
             raise ValidationError("Payment service is not available. Try again later.")
+
+        response.update({
+            'payee_recipient_name': pd.recipient_name,
+            'payee_recipient_email': pd.recipient_email,
+            'payee_iban': pd.iban
+        })
+
         return response
 
     def is_valid(self, *args, **kwargs):
@@ -267,7 +268,8 @@ class EscrowSerializer(BaseEscrowSerializer):
 
 class EscrowOperationSerializer(HyperlinkedModelSerializer):
     type = EnumField(enum=EscrowOperationType, required=True)
-    status = EnumField(enum=EscrowOperationStatus, default=EscrowOperationStatus.pending, required=False, read_only=True)
+    status = EnumField(enum=EscrowOperationStatus, default=EscrowOperationStatus.pending, required=False,
+                       read_only=True)
     escrow_id = UUIDField(required=True)
     additional_information = CharField(required=False)
     is_action_required = SerializerMethodField()

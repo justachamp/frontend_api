@@ -3,24 +3,25 @@
 import core.fields
 from django.db import migrations, connection
 import enumfields.fields
-from frontend_api.core.client import PaymentApiClient
+from uuid import UUID
+import external_apis.payment.service as payment_service
+
 
 def fill_in_schedules_payee_type(apps, schema_editor):
     """
     Update newly added field with appropriate payee type
     :return:
     """
-    payment_client = PaymentApiClient(None)
+
     with connection.cursor() as c:
         c.execute("SELECT DISTINCT(payee_id) FROM frontend_api_schedule WHERE payee_type IS NULL")
-        for payee_id in c.fetchall():
-            pd = payment_client.get_payee_details(payee_id[0])
-            c.execute("UPDATE frontend_api_schedule SET payee_type = '%s' WHERE payee_id = '%s'" % (pd.type, payee_id[0]))
-    
+        for payee_rec in c.fetchall():
+            payee_id = payee_rec[0]
+            pd = payment_service.Payee.get(payee_id=UUID(payee_id))
+            c.execute("UPDATE frontend_api_schedule SET payee_type = '%s' WHERE payee_id = '%s'" % (pd.type, payee_id))
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('frontend_api', '0018_improve_user_unique_phones_constraints'),
     ]

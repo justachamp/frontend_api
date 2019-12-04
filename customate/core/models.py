@@ -1,5 +1,6 @@
-import uuid
+import logging
 from datetime import date
+import uuid
 
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.models import AbstractUser
@@ -11,6 +12,8 @@ from enumfields import EnumField
 from core.fields import UserStatus, UserRole, UserTitle, Gender, Country
 
 USER_MIN_AGE = 18
+
+logger = logging.getLogger(__name__)
 
 
 class CustomPhoneNumberDescriptor(PhoneNumberDescriptor):
@@ -132,7 +135,7 @@ class User(AbstractUser, Model):
 
     @property
     def is_owner_account_verified(self):
-        #TODO: where do we get self.account from?????
+        # TODO: where do we get self.account from?????
         return self.is_subuser and self.account.is_owner_account_verified
 
     @property
@@ -156,7 +159,8 @@ class User(AbstractUser, Model):
         return self.email
 
     def get_root_account(self):
-        return self.account.owner_account if self.is_subuser else self.account
+        account = self.account
+        return account.owner_account if self.is_subuser else account
 
     def get_all_related_account_ids(self):
         account = self.account
@@ -165,3 +169,23 @@ class User(AbstractUser, Model):
         return [owner_account.id] + list(
             owner_account.sub_user_accounts.all().values_list('id', flat=True)
         )
+
+    def assign_payment_account(self, payment_account_id: uuid.UUID):
+        """
+        Assign this user previously registered account_id on PaymentAPI side.
+        :param payment_account_id: original UUID from payment API
+        :return:
+        """
+        account = self.account
+        if self.is_owner and self.contact_verified and not account.payment_account_id:
+            logger.info("Assigning payment_account_id=%r for user_id=%r" % (
+                payment_account_id,
+                self.id
+            ))
+            account.payment_account_id = payment_account_id
+            account.save()
+        else:
+            logger.info("payment_account_id=%r already assigned for user_id=%r" % (
+                account.payment_account_id,
+                self.id
+            ))

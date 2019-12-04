@@ -18,7 +18,7 @@ from django.contrib.postgres.fields import JSONField
 from core.models import Model, User
 from core.fields import Currency, UserRole
 from customate.settings import ESCROW_OPERATION_APPROVE_DEADLINE
-from external_apis.payment.service import Payments
+from external_apis.payment.service import Payment
 
 logger = logging.getLogger(__name__)
 
@@ -402,7 +402,7 @@ class ReleaseFundsEscrowOperation(EscrowOperation):
         payee_id = escrow.payee_id
 
         try:
-            Payments.create_payment(
+            Payment.create(
                 user_id=UUID(escrow.funder_user.id),
                 payment_account_id=UUID(escrow.funder_user.account.payment_account_id),
                 schedule_id=None,

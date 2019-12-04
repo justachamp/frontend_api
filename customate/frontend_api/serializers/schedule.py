@@ -2,20 +2,23 @@ import logging
 import arrow
 from traceback import format_exc
 from collections import OrderedDict
+from uuid import UUID
 
 from customate.settings import PAYMENT_SYSTEM_CLOSING_TIME
 
 from rest_framework.serializers import ValidationError
 from rest_framework_json_api.serializers import HyperlinkedModelSerializer
-from django.utils.functional import cached_property
 from rest_framework.fields import DateField, IntegerField, BooleanField
 
 from core.fields import Currency, SerializerField, FundingSourceType, PayeeType
+
+import external_apis.payment.service as payment_service
+from external_apis.payment.models import FundingSourceDetails
+
 from frontend_api.fields import ScheduleStatus, SchedulePeriod, SchedulePurpose
-from frontend_api.models import FundingSourceDetails
+
 from frontend_api.models import Schedule, Document
 from frontend_api.serializers.document import DocumentSerializer
-from frontend_api.core.client import PaymentApiClient
 
 from frontend_api.serializers import (
     UUIDField,
@@ -27,9 +30,6 @@ logger = logging.getLogger(__name__)
 
 
 class BaseScheduleSerializer(HyperlinkedModelSerializer):
-    @cached_property
-    def payment_client(self):
-        return PaymentApiClient(self.context.get('request').user)
 
     def initialize_and_validate_payee_related_fields(self, data):
         """
@@ -39,24 +39,28 @@ class BaseScheduleSerializer(HyperlinkedModelSerializer):
         and initialize appropriate fields in schedule's data
         :param data: dict of incoming fields from HTTP request
         """
-        if data.get('payee_id'):
-            pd = self.payment_client.get_payee_details(data.get('payee_id'))
-            if pd:
-                current_user = self.context.get('request').user
-                if data["purpose"] == SchedulePurpose.pay \
-                        and pd.type == PayeeType.WALLET.value \
-                        and pd.payment_account_id == str(current_user.account.payment_account_id):
-                    raise ValidationError({
-                        "payee_id": "Current user's payee cannot be used for creation 'pay funds' schedule"
-                    })
+        if data.get('payee_id') is None:
+            return
 
-                data.update({
-                    'payee_recipient_name': pd.recipient_name,
-                    'payee_recipient_email': pd.recipient_email,
-                    'payee_iban': pd.iban,
-                    'payee_title': pd.title,
-                    'payee_type': pd.type
-                })
+        pd = payment_service.Payee.get(payee_id=UUID(data.get('payee_id')))
+        if not pd:
+            return
+
+        current_user = self.context.get('request').user
+        if data["purpose"] == SchedulePurpose.pay \
+                and pd.type == PayeeType.WALLET.value \
+                and pd.payment_account_id == str(current_user.account.payment_account_id):
+            raise ValidationError({
+                "payee_id": "Current user's payee cannot be used for creation 'pay funds' schedule"
+            })
+
+        data.update({
+            'payee_recipient_name': pd.recipient_name,
+            'payee_recipient_email': pd.recipient_email,
+            'payee_iban': pd.iban,
+            'payee_title': pd.title,
+            'payee_type': pd.type
+        })
 
     def initialize_and_validate_funding_source_related_fields(self, data):
         """
@@ -65,9 +69,8 @@ class BaseScheduleSerializer(HyperlinkedModelSerializer):
         :param data: dict of incoming fields from HTTP request
         """
         if data.get('funding_source_id'):
-            fs_details = self.payment_client.get_funding_source_details(data.get('funding_source_id'))
+            fs_details = payment_service.FundingSource.get(fs_id=UUID(data.get('funding_source_id')))
             self._check_specific_funding_source(data, fs_details, 'funding_source_id')
-
             data.update({
                 'funding_source_type': self._get_and_validate_funding_source_type(fs_details)
             })
@@ -75,10 +78,9 @@ class BaseScheduleSerializer(HyperlinkedModelSerializer):
         if 'backup_funding_source_id' in data:
             backup_funding_source_type = None
             if data.get('backup_funding_source_id'):
-                fs_details = self.payment_client.get_funding_source_details(data.get('backup_funding_source_id'))
+                fs_details = payment_service.FundingSource.get(fs_id=UUID(data.get('backup_funding_source_id')))
                 self._check_specific_funding_source(data, fs_details, 'backup_funding_source_id')
                 backup_funding_source_type = self._get_and_validate_backup_funding_source_type(fs_details)
-
             data.update({
                 'backup_funding_source_type': backup_funding_source_type
             })
@@ -118,7 +120,7 @@ class BaseScheduleSerializer(HyperlinkedModelSerializer):
                 field_name: "Invalid funding source payment account"
             })
 
-        # @NOTE: we allow payments from credit card that have different currency
+        # @NOTE: we allow payments from credit card that have differrent currency
         if fs_details.type != FundingSourceType.CREDIT_CARD.value \
                 and fs_details.currency != res.get("currency", self.instance.currency.value if self.instance else None):
             raise ValidationError({

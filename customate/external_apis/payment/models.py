@@ -27,6 +27,7 @@ class PaymentResult:
     id: UUID
     status: PaymentStatusType
 
+
 @dataclass(frozen=True)
 class WalletDetails:
     id: UUID

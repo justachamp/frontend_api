@@ -1,7 +1,9 @@
 from os import environ
-import logging
 from datetime import datetime
+import logging
+
 import requests
+from enum import Enum
 from uuid import UUID, uuid4
 
 from core.fields import PaymentStatusType, Currency, PayeeType
@@ -31,14 +33,14 @@ class PaymentApiError(requests.HTTPError):
         return "detail=%s, response=%r" % (self.error_detail, self.json_response)
 
 
-class SchedulePayments:
+class SchedulePayment:
     """
-    Schedule Payments Management
+    Schedule Payment Management
     https://customatepayment.docs.apiary.io/#reference/0/schedule-payments-management
     """
 
     @staticmethod
-    def cancel_schedule_payments(schedule_id: UUID):
+    def cancel_all_payments(schedule_id: UUID):
         r = requests.delete("{base_url}schedule_payments/{schedule_id}".format(
             base_url=BASE_URL,
             schedule_id=str(schedule_id)
@@ -52,7 +54,7 @@ class SchedulePayments:
             r.raise_for_status()
 
 
-class Payments:
+class Payment:
     """
     API docs:
     https://customatepayment.docs.apiary.io/#reference/0/payment-management
@@ -104,10 +106,11 @@ class Payments:
         return payment_id, status
 
     @staticmethod
-    def create_payment(user_id: UUID, payment_account_id: UUID, schedule_id: UUID,
-                       currency: Currency, amount: int, description: str,
-                       payee_id: UUID, funding_source_id: UUID,
-                       payment_id: UUID = None, parent_payment_id: UUID = None, execution_date: datetime = None):
+    def create(user_id: UUID, payment_account_id: UUID, schedule_id: UUID,
+               currency: Currency, amount: int, description: str,
+               payee_id: UUID, funding_source_id: UUID,
+               payment_id: UUID = None, parent_payment_id: UUID = None,
+               execution_date: datetime = None) -> PaymentResult:
         """
         Initiates payment.
 
@@ -238,7 +241,7 @@ class Payee:
     """
 
     @staticmethod
-    def get_payee_details(payee_id: UUID) -> PayeeDetails:
+    def get(payee_id: UUID) -> PayeeDetails:
         """
         Get details about specific Payee (money recipient)
         :param self:
@@ -328,7 +331,7 @@ class FundingSource:
     """
 
     @staticmethod
-    def get_funding_source_details(fs_id: UUID) -> FundingSourceDetails:
+    def get(fs_id: UUID) -> FundingSourceDetails:
         """
         Get details about funding source
         :param fs_id:
@@ -402,7 +405,7 @@ class FundingSource:
         )
 
 
-class Wallets:
+class Wallet:
     """
     Wallet management
     https://customatepayment.docs.apiary.io/#reference/0/wallet-management/
@@ -491,3 +494,159 @@ class Wallets:
             funding_source_id=UUID(res['data']['relationships']['fundingSource']['data']['id']),
             payee_id=UUID(res['data']['relationships']['payee']['data']['id']),
         )
+
+
+class PaymentAccount:
+    """
+    Account management
+    https://customatepayment.docs.apiary.io/#reference/0/account-management
+    """
+
+    class ServiceAccountType(Enum):
+        FEE = 'fee'
+        TAX = 'tax'
+        CREDIT_CARD = 'credit_card'
+
+    @staticmethod
+    def create(user_account_id: UUID, email: str,
+               full_name: str = None, service_type: ServiceAccountType = None) -> UUID:
+        """
+        Create payment account.
+        https://customatepayment.docs.apiary.io/#reference/0/account-management/create-account
+        https://customatepayment.docs.apiary.io/#reference/0/account-management/create-service-account
+
+        :param user_account_id:
+        :param email:
+        :param full_name:
+        :param service_type: Used to create 'service' accounts not intended for use by real users/companies
+        :return:
+        """
+        payload = {
+            "data": {
+                "type": "accounts",
+                "attributes": {
+                    "email": email,
+                    "fullName": full_name or email,
+                    "originalAccountId": str(user_account_id)
+                }
+            }
+        }
+
+        r = requests.post("{base_url}accounts/{s_type}".format(
+            base_url=BASE_URL,
+            s_type="" if service_type is None else service_type.value
+        ), json=payload)
+
+        if r.status_code == requests.codes.bad_request:
+            raise PaymentApiError(json_response=r.json())
+        else:
+            r.raise_for_status()
+
+        # {
+        #   "data": {
+        #     "type": "accounts",
+        #     "id": "5e13a3e7-89e6-43a7-9c3a-73e8bf76a314",
+        #     "attributes": {
+        #       "active": 1,
+        #       "email": "eugene.dymo@postindustria.com",
+        #       "fullName": "Eugene Dymo",
+        #       "originalAccountId": "1113a3e7-89e6-43a7-9c3a-73e8bf76a314",
+        #       "creationDate": 1544027186984,
+        #       "updateDate": null
+        #     },
+        #     "relationships": {
+        #       "externalServiceAccounts": {
+        #         "data": [
+        #           {
+        #             "type": "external_service_accounts",
+        #             "id": "3fd59de7-8ffd-4fc5-9899-1935497bbdad"
+        #           }
+        #         ]
+        #       },
+        #       "feeGroup": {
+        #         "data": {
+        #           "type": "fee_groups",
+        #           "id": "4fe783e6-57d7-43a6-4674-f2f6780b2e24"
+        #         }
+        #       },
+        #       "fundingSources": {
+        #         "data": [
+        #           {
+        #             "type": "funding_sources",
+        #             "id": "0d0d5f80-8feb-4ea9-af03-28d6d8ca8d6f"
+        #           },
+        #           {
+        #             "type": "funding_sources",
+        #             "id": "0e7a1762-e6c9-49ec-a803-62e0114ff374"
+        #           },
+        #           {
+        #             "type": "funding_sources",
+        #             "id": "4b4a64e6-e524-47c5-b337-d24eac233166"
+        #           },
+        #           {
+        #             "type": "funding_sources",
+        #             "id": "7d1cb39f-7bb9-4029-bf0c-7c30ef6b1d09"
+        #           }
+        #         ]
+        #       },
+        #       "payees": {
+        #         "data": [
+        #           {
+        #             "type": "payees",
+        #             "id": "1dc2645f-24ba-cc62-9b55-b3bfe687979e"
+        #           },
+        #           {
+        #             "type": "payees",
+        #             "id": "87c795a7-a3e3-f5c0-199b-67e4d1490f15"
+        #           },
+        #           {
+        #             "type": "payees",
+        #             "id": "8db9d245-87c9-b79b-77e3-f414e904fcfd"
+        #           }
+        #         ]
+        #       },
+        #       "wallets": {
+        #         "data": [
+        #           {
+        #             "type": "wallets",
+        #             "id": "7be72ac5-60af-471e-a2d3-338ea6307437"
+        #           },
+        #           {
+        #             "type": "wallets",
+        #             "id": "b3ad7e88-a0ef-4f19-8a83-17eac6d4faf8"
+        #           },
+        #           {
+        #             "type": "wallets",
+        #             "id": "cd23dcf0-0778-4025-aa4e-edf520fa4fcd"
+        #           }
+        #         ]
+        #       }
+        #     }
+        #   }
+        # }
+
+        res = r.json()
+        logger.debug("res=%r" % res)
+
+        return UUID(res["data"]["id"])
+
+    @staticmethod
+    def deactivate(payment_account_id: UUID):
+        """
+        Deactivate account.
+        https://customatepayment.docs.apiary.io/#reference/0/account-management/deactivate-account
+
+        :param payment_account_id:
+        :return:
+        """
+        r = requests.delete("{base_url}accounts/{payment_account_id}".format(
+            base_url=BASE_URL,
+            payment_account_id=str(payment_account_id)
+        ), headers={
+            "Content-Type": "application/json"
+        })
+
+        if r.status_code == requests.codes.bad_request:
+            raise PaymentApiError(json_response=r.json())
+        else:
+            r.raise_for_status()

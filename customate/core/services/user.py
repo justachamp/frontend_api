@@ -4,18 +4,19 @@ from django.contrib.auth import get_user_model
 from core.models import Address
 from core.fields import UserRole, UserStatus
 
+import external_apis.payment.service as payment_service
+
+
 from frontend_api.fields import AccountType
-from frontend_api.models import Account, Company, AdminUserAccount, SubUserAccount, UserAccount
-from frontend_api.core.client import PaymentApiClient
+from frontend_api.models import Company, AdminUserAccount, SubUserAccount, UserAccount
 from authentication.cognito.middleware import helpers
 
 
 class UserService(object):
-
     user_class = get_user_model()
 
     @property
-    def user_role(self)->UserRole.owner:
+    def user_role(self) -> UserRole.owner:
         return UserRole.owner
 
     @transaction.atomic
@@ -84,7 +85,15 @@ class UserService(object):
             if user.contact_verified:
                 user.contact_info_once_verified = True
 
-            PaymentApiClient(user).assign_payment_account()
+            if user.is_owner and user.contact_verified and not user.account.payment_account_id:
+                # Call payment API to create PaymentAccount if there's no one already
+                payment_account_id = payment_service.PaymentAccount.create(
+                    user_account_id=user.account.id,
+                    email=user.email,
+                    full_name=user.get_full_name()
+                )
+                user.assign_payment_account(payment_account_id)
+
             user.save()
 
     def user_exists(self, email):
@@ -106,6 +115,3 @@ class UserService(object):
         elif role == UserRole.sub_user:
             account = SubUserAccount.objects.create(user=user)
             account.save()
-            # company = Company.objects.create(is_active=(account_type == BUSINESS_ACCOUNT))
-            # account.company = company
-            # company.save()

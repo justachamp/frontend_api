@@ -1,25 +1,14 @@
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from core.fields import UserRole
-from enumfields import Enum
 
 from core.models import Address
-from frontend_api.core.client import PaymentApiClient
+import external_apis.payment.service as payment_service
+
 from frontend_api.fields import AccountType
 from frontend_api.models import UserAccount, Company
 
 RESEND = 'RESEND'
-
-
-class ServiceAccountType(Enum):
-    fee = 'fee'
-    tax = 'tax'
-    credit_card = 'credit_card'
-
-    class Labels:
-        fee = 'fee'
-        tax = 'tax'
-        credit_card = 'credit_card'
 
 
 class Command(BaseCommand):
@@ -77,7 +66,7 @@ class Command(BaseCommand):
         if not options.get('account_type'):
             raise CommandError('account_type argument does not exist')
 
-        if not options.get('account_type') in [s.name for s in ServiceAccountType]:
+        if not (options.get('account_type') in [s.value for s in payment_service.PaymentAccount.ServiceAccountType]):
             raise CommandError('Provided account_type argument contains incorrect data, '
                                'allowed values: fee, tax, credit_card')
 
@@ -115,8 +104,16 @@ class Command(BaseCommand):
                         account = UserAccount(user=user, account_type=AccountType.business, company=company)
                         account.save()
 
-                        client = PaymentApiClient(user)
-                        client.assign_payment_service_account(options.get('account_type'))
+                        if user.is_owner and not user.account.payment_account_id:
+                            payment_account_id = payment_service.PaymentAccount.create(
+                                user_account_id=user.account.id,
+                                email=user.email,
+                                full_name=user.get_full_name(),
+                                service_type=payment_service.PaymentAccount.ServiceAccountType(
+                                    options.get('account_type')
+                                )
+                            )
+                            user.assign_payment_account(payment_account_id=payment_account_id)
                         invitation.pk = user.id
 
                     self.stdout.write(

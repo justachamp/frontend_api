@@ -17,10 +17,12 @@ from django.db.models import Q
 from core.logger import RequestIdGenerator
 from core.models import User
 from core.fields import Currency, PaymentStatusType, TransactionStatusType
+
+import external_apis.payment.service as payment_service
+
 from frontend_api.models.blacklist import BlacklistDate, BLACKLISTED_DAYS_MAX_RETRY_COUNT
 from frontend_api.models.schedule import Schedule, PeriodicSchedule, DepositsSchedule
 from frontend_api.models.schedule import SchedulePayments, LastSchedulePayments
-from frontend_api.core import client
 from frontend_api.fields import ScheduleStatus, SchedulePeriod
 from frontend_api import helpers
 
@@ -70,8 +72,8 @@ def make_failed_payment(user_id: str, payment_account_id: str, schedule_id: str,
     )
 
 
-# Must NOT be executed in transaction, in this way we guarantee that SchedulePayments will be created even if something
-# goes wrong after that. SchedulePayments record will eventually prevent making extra requests to PaymentApi
+# Must NOT be executed in transaction, in this way we guarantee that SchedulePayment will be created even if something
+# goes wrong after that. SchedulePayment record will eventually prevent making extra requests to PaymentApi
 # upon second run for the same payment.
 @shared_task
 def make_payment(user_id: str, payment_account_id: str, schedule_id: str, currency: str, payment_amount: int,
@@ -164,8 +166,9 @@ def make_payment(user_id: str, payment_account_id: str, schedule_id: str, curren
     })
 
     try:
-        result = client.PaymentApiClient.create_payment(p=client.PaymentDetails(
-            id=payment_id,
+
+        result = payment_service.Payment.create(
+            payment_id=payment_id,
             user_id=UUID(user_id),
             payment_account_id=UUID(payment_account_id),
             schedule_id=UUID(schedule_id),
@@ -176,7 +179,8 @@ def make_payment(user_id: str, payment_account_id: str, schedule_id: str, curren
             funding_source_id=UUID(funding_source_id),
             parent_payment_id=UUID(parent_payment_id) if parent_payment_id else None,
             execution_date=arrow.get(execution_date).datetime if execution_date else None
-        ))
+        )
+
     except Exception:
         logger.error("Unable to create payment(id=%s) for schedule (id=%s) due to unknown error: %r. " % (
             payment_id, schedule_id, format_exc()
@@ -372,7 +376,7 @@ def make_overdue_payment(schedule_id: str, request_id=None):
     # (for example, accidentally clicking multiple times a 'pay overdue' button)
     schedule.processing = True
 
-    # Select all SchedulePayments which are last in chains and are not in SUCCESS status
+    # Select all SchedulePayment which are last in chains and are not in SUCCESS status
     overdue_payments = LastSchedulePayments.objects.filter(
         schedule_id=schedule_id,
         payment_status__in=[PaymentStatusType.FAILED, PaymentStatusType.REFUND, PaymentStatusType.CANCELED]

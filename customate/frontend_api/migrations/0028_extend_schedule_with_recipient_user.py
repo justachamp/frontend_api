@@ -3,7 +3,9 @@
 from django.conf import settings
 from django.db import migrations, models, connection
 import django.db.models.deletion
-from frontend_api.core.client import PaymentApiClient
+from uuid import UUID
+
+import external_apis.payment.service as payment_service
 
 
 def fill_in_schedules_recipient_id(apps, schema_editor):
@@ -11,11 +13,12 @@ def fill_in_schedules_recipient_id(apps, schema_editor):
     Update newly added field recipient_id with appropriate user_id according to selected payee
     :return:
     """
-    payment_client = PaymentApiClient(None)
     with connection.cursor() as c:
         c.execute("SELECT DISTINCT(payee_id) FROM frontend_api_schedule WHERE payee_type = 'WALLET'")
-        for payee_id in c.fetchall():
-            pd = payment_client.get_payee_details(payee_id[0])
+        for payee_rec in c.fetchall():
+            payee_id = payee_rec[0]
+            pd = payment_service.Payee.get(payee_id=UUID(payee_id))
+
             query = """
                 UPDATE
                     frontend_api_schedule
@@ -26,7 +29,7 @@ def fill_in_schedules_recipient_id(apps, schema_editor):
                         ON acc.id = uacc.account_ptr_id AND uacc.payment_account_id = '%s'
                 WHERE
                     payee_id = '%s'
-                """ % (pd.payment_account_id, payee_id[0])
+                """ % (pd.payment_account_id, payee_id)
             c.execute(query)
 
 

@@ -142,7 +142,7 @@ class Schedule(AbstractSchedule):
 
     def _did_we_send_first_payment(self):
         """
-        TODO: Rewrite to fully rely on actual data in SchedulePayments instead of date comparison
+        TODO: Rewrite to fully rely on actual data in SchedulePayment instead of date comparison
         :return:
         """
         # return self.number_of_payments_made > 0 # we can't rely on this field here, since there is
@@ -275,7 +275,7 @@ class Schedule(AbstractSchedule):
 
     def update_status(self) -> ScheduleStatus:
         """
-        Update Schedule's status based on aggregated info about all underlying payments (see SchedulePayments model).
+        Update Schedule's status based on aggregated info about all underlying payments (see SchedulePayment model).
         This is in fact, state machine. We could only migrate from one specific state into another.
 
         Possible Schedule statuses

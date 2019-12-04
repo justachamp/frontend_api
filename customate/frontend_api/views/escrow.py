@@ -18,7 +18,6 @@ from core.exceptions import ConflictError
 from core.fields import FundingSourceType
 
 from frontend_api.fields import ScheduleStatus, SchedulePurpose
-from frontend_api.core.client import PaymentApiClient
 from frontend_api.models import Escrow, Document, EscrowOperation
 from frontend_api.models.escrow import EscrowOperationType
 from frontend_api.serializers import EscrowSerializer

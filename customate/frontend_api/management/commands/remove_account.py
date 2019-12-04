@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction, connection
 
+import external_apis.payment.service as payment_service
 from core.models import User
 
 
@@ -56,11 +57,14 @@ class Command(BaseCommand):
             cursor.execute("SET CONSTRAINTS ALL IMMEDIATE")  # Inform about constrain violation immediately
 
             # Remove sub-user related records (link with owner account & permissions)
-            cursor.execute("DELETE FROM frontend_api_subuserpermission WHERE account_id = ANY(%s)", params=[related_account_ids])
-            cursor.execute("DELETE FROM frontend_api_subuseraccount WHERE owner_account_id = ANY(%s)", params=[related_account_ids])
+            cursor.execute("DELETE FROM frontend_api_subuserpermission WHERE account_id = ANY(%s)",
+                           params=[related_account_ids])
+            cursor.execute("DELETE FROM frontend_api_subuseraccount WHERE owner_account_id = ANY(%s)",
+                           params=[related_account_ids])
 
             # Remove relationship between account & company & payment account
-            cursor.execute("DELETE FROM frontend_api_useraccount WHERE account_ptr_id = ANY(%s)", params=[related_account_ids])
+            cursor.execute("DELETE FROM frontend_api_useraccount WHERE account_ptr_id = ANY(%s)",
+                           params=[related_account_ids])
 
             # Remove user's accounts
             cursor.execute("DELETE FROM frontend_api_account WHERE id = ANY(%s)", params=[related_account_ids])
@@ -68,8 +72,11 @@ class Command(BaseCommand):
             # Remove schedules related records (documents, schedule payments data and schedules themselves)
             cursor.execute("DELETE FROM frontend_api_document WHERE user_id = ANY(%s)", params=[related_user_ids])
             cursor.execute("DELETE FROM frontend_api_schedulepayments WHERE schedule_id "
-                           "IN (SELECT id FROM frontend_api_schedule WHERE recipient_user_id = ANY(%s) OR origin_user_id = ANY(%s))", params=[related_user_ids, related_user_ids])
-            cursor.execute("DELETE FROM frontend_api_schedule WHERE recipient_user_id = ANY(%s) OR origin_user_id = ANY(%s)", params=[related_user_ids, related_user_ids])
+                           "IN (SELECT id FROM frontend_api_schedule WHERE recipient_user_id = ANY(%s) OR origin_user_id = ANY(%s))",
+                           params=[related_user_ids, related_user_ids])
+            cursor.execute(
+                "DELETE FROM frontend_api_schedule WHERE recipient_user_id = ANY(%s) OR origin_user_id = ANY(%s)",
+                params=[related_user_ids, related_user_ids])
 
             # Remove core django user related records
             cursor.execute("DELETE FROM core_user_user_permissions WHERE user_id = ANY(%s)", params=[related_user_ids])
@@ -77,9 +84,7 @@ class Command(BaseCommand):
             cursor.execute("DELETE FROM core_user WHERE id = ANY(%s)", params=[related_user_ids])
 
             # Deactivate (not REMOVE) payment account (we do this in the end, to be sure that queries pass)
-            from frontend_api.core.client import PaymentApiClient
-            payment_client = PaymentApiClient(user)
             for account_id in payment_account_ids:
-                payment_client.deactivate_account(account_id)
+                payment_service.PaymentAccount.deactivate(payment_account_id=account_id)
 
             self.stdout.write(f'Done')

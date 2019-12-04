@@ -19,11 +19,13 @@ from core.exceptions import ConflictError
 from core.fields import FundingSourceType
 from customate.settings import CELERY_BEAT_SCHEDULE, FIRST_PAYMENTS_MIN_EXECUTION_DELAY
 
+import external_apis.payment.service as payment_service
+
 from frontend_api.fields import ScheduleStatus, SchedulePurpose
 from frontend_api.tasks.payments import make_overdue_payment, make_payment, make_failed_payment
-from frontend_api.core.client import PaymentApiClient
 from frontend_api.models import Schedule, Document
 from frontend_api.helpers import invite_payer
+
 
 from frontend_api.permissions import (
     HasParticularDocumentPermission,
@@ -265,7 +267,7 @@ class ScheduleViewSet(views.ModelViewSet):
 
         # stop Schedule
         schedule.move_to_status(ScheduleStatus.stopped)
-        self.payment_client.cancel_schedule_payments(schedule.id)
+        payment_service.SchedulePayment.cancel_all_payments(schedule_id=schedule.id)
 
     @action(methods=['DELETE'],
             detail=True,
