@@ -52,13 +52,11 @@ class EscrowViewSet(views.ModelViewSet):
 
     # Example: /api/v1/escrows/?page[number]=1&filter[currency.iexact]=EUR&filter[name.icontains]=test&sort=-status
     ordering_fields = ('id', 'name', 'status')
-    # search_fields = ('name', 'payee_recipient_name', 'payee_recipient_email', 'payee_iban')
-    search_fields = ('name',)
+    search_fields = ('name', 'payee_recipient_name', 'payee_recipient_email', 'payee_iban')
 
     filterset_fields = {
         # "exact" filter is excluded by framework, we can use alternative like "filter[currency.iexact]=GBP"
         'name': ('icontains', 'contains', 'iexact'),
-        # 'payee_title': ('icontains', 'contains', 'iexact'),
         # 'payee_recipient_name': ('icontains', 'contains', 'iexact'),
         # 'payee_recipient_email': ('icontains', 'contains', 'iexact'),
         # 'payee_iban': ('icontains', 'contains', 'iexact'),

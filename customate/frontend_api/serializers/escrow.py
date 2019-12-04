@@ -39,47 +39,10 @@ class BaseEscrowSerializer(HyperlinkedModelSerializer):
                 response.update({
                     'payee_recipient_name': pd.recipient_name,
                     'payee_recipient_email': pd.recipient_email,
-                    'payee_iban': pd.iban,
-                    'payee_title': pd.title,
-                    'payee_type': pd.type
+                    'payee_iban': pd.iban
                 })
         if not response:
             logger.error("Got empty 'payee_id' or 'payee_details'. Payee_id: %s.", payee_id)
-            raise ValidationError("Payment service is not available. Try again later.")
-        return response
-
-    def validate_funding_source_related_fields(self, funding_source_id: str, currency: Currency, user: object) -> Dict:
-        """
-        We will try to receive funding source's types from Payment API, and initialize appropriate fields in
-        schedule's data
-        :param user:
-        :param currency:
-        :param funding_source_id:
-        """
-        response = {}
-        if funding_source_id:
-            funding_source_details = self.payment_client.get_funding_source_details(funding_source_id)
-            if funding_source_details.payment_account_id != str(user.account.payment_account_id):
-                raise ValidationError({
-                    "funding_source_id": "Invalid funding source payment account"
-                })
-            # @NOTE: we allow payments from credit card that have different currency
-            if funding_source_details.type != FundingSourceType.CREDIT_CARD.value \
-                    and funding_source_details.currency != (currency or self.instance.currency.value if self.instance else None):
-                raise ValidationError({
-                    "funding_source_id": "Funding source currency should be the same as escrow currency"
-                })
-            if funding_source_details and getattr(funding_source_details, 'type', None) is None:
-                raise ValidationError({
-                    "funding_source_type": "This field is required"
-                })
-
-            response.update({
-                'funding_source_type': funding_source_details.type
-            })
-
-        if not response:
-            logger.error("Got empty 'funding_source_id' or 'fs_details'. funding_source_id: %s.", funding_source_id)
             raise ValidationError("Payment service is not available. Try again later.")
         return response
 
@@ -90,12 +53,7 @@ class BaseEscrowSerializer(HyperlinkedModelSerializer):
         data = super().run_validation(*args, **kwargs)
         payee_details = self.validate_payee_related_fields(payee_id=data.get("payee_id"))
         data.update(payee_details)
-        fs_details = self.validate_funding_source_related_fields(
-            funding_source_id=data.get("funding_source_id"),
-            currency=data.get("currency"),
-            user=self.context["request"].user
-        )
-        data.update(fs_details)
+
         return data
 
     def assign_uploaded_documents_to_escrow(self, documents):
@@ -131,12 +89,9 @@ class EscrowSerializer(BaseEscrowSerializer):
 
     # Payee
     payee_id = UUIDField(required=True)
-
-    payee_title = CharField(required=False)
     payee_recipient_name = CharField(required=False)
     payee_recipient_email = CharField(required=False)
     payee_iban = CharField(required=False)
-    payee_type = EnumField(enum=PayeeType, required=False)
 
     # Transit Payee
     transit_payee_id = UUIDField(required=False)
@@ -160,7 +115,7 @@ class EscrowSerializer(BaseEscrowSerializer):
             'recipient_user_id',
             'currency',
             'wallet_id',
-            'payee_id', 'payee_title', 'payee_iban', 'payee_type', 'payee_recipient_name', 'payee_recipient_email',
+            'payee_id', 'payee_iban', 'payee_recipient_name', 'payee_recipient_email',
 
             'transit_payee_id',
             'transit_funding_source_id',

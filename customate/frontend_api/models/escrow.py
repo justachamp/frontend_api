@@ -66,6 +66,11 @@ class Escrow(Model):
         help_text=_("Identifier of the recipient user wallet's payee, for payments from Escrow")
     )
 
+    # Payee related fields are required for Escrow search
+    payee_recipient_name = models.CharField(max_length=254, default='')
+    payee_recipient_email = models.CharField(max_length=254, default='')
+    payee_iban = models.CharField(max_length=50, default='')
+
     transit_funding_source_id = models.UUIDField(
         # "Release money from Escrow" payment will include:
         # "origin" = transit_funding_source_id and "recipient" = payee_id
