@@ -177,6 +177,13 @@ class EscrowViewSet(views.ModelViewSet):
 
         escrow_id = pk
 
+        try:
+            escrow = Escrow.objects.get(id=escrow_id)
+        except Exception:
+            raise NotFound(f'Escrow not found {escrow_id}')
+
+        escrow.accept()
+
         return Response()
 
     @transaction.atomic
@@ -196,6 +203,13 @@ class EscrowViewSet(views.ModelViewSet):
         """
 
         escrow_id = pk
+
+        try:
+            escrow = Escrow.objects.get(id=escrow_id)
+        except Exception:
+            raise NotFound(f'Escrow not found {escrow_id}')
+
+        escrow.reject()
 
         return Response()
 
@@ -246,7 +260,7 @@ class EscrowOperationViewSet(views.ModelViewSet):
         except Exception:
             raise NotFound(f'EscrowOperation not found {escrow_operation_id}')
 
-        return EscrowOperation.get_operation_class(escrow_operation.type).accept(request.user)
+        return EscrowOperation.get_specific_operation_obj(escrow_operation).accept(request.user)
 
     @transaction.atomic
     @action(methods=['POST'],
@@ -264,11 +278,11 @@ class EscrowOperationViewSet(views.ModelViewSet):
         :return:
         """
 
-        escrow_operation_id = pk
+        operation_id = pk
 
         try:
-            escrow_operation = EscrowOperation.objects.get(id=escrow_operation_id)
+            operation = EscrowOperation.objects.get(id=operation_id)
         except Exception:
-            raise NotFound(f'EscrowOperation not found {escrow_operation_id}')
+            raise NotFound(f'EscrowOperation not found {operation_id}')
 
-        return EscrowOperation.get_operation_class(escrow_operation.type).reject(request.user)
+        return EscrowOperation.get_specific_operation_obj(operation).reject(request.user)

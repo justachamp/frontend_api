@@ -143,16 +143,44 @@ class Escrow(Model):
             'old_status': old_status
         })
 
+    def accept(self):
+        operation = self._get_initial_load_funds_operation()
+        if operation is None:
+            raise ValidationError('Cannot find "Load funds" operation for Escrow (%s) acceptance' % self.id)
+
+        EscrowOperation.get_specific_operation_obj(operation).accept()
+
+    def _get_initial_load_funds_operation(self):
+        try:
+            return EscrowOperation.objects.get(
+                    escrow__id=self.id,
+                    type=EscrowOperationType.load_funds,
+                    # Sharing knowledge about "status" calculated parts, not good
+                    approved=None,
+                    is_expired=False
+                )
+        except EscrowOperation.DoesNotExist:
+            return None
+
+    def reject(self):
+        operation = self._get_initial_load_funds_operation()
+        if operation is None:
+            raise ValidationError('Cannot find "Load funds" operation for Escrow (%s) rejection' % self.id)
+
+        EscrowOperation.get_specific_operation_obj(operation).reject()
+
 
 class EscrowOperationType(Enum):
     """
     All of theses operation types require mutual approval
     """
+    load_funds = 'load_funds'  # Load funds
     request_funds = 'request_funds'  # Request of funds
     close_escrow = 'close_escrow'  # Request to close escrow
     create_escrow = 'create_escrow'  # Initial request to create escrow
 
     class Labels:
+        load_funds = 'Load funds'
         request_funds = 'Request funds'
         close_escrow = 'Close escrow'
         create_escrow = 'Create escrow'
@@ -195,11 +223,14 @@ class EscrowOperation(Model):
     )
 
     @staticmethod
-    def get_operation_class(escrow_operation_type: EscrowOperationType):
-        return {
+    def get_specific_operation_obj(operation):
+        specific_operation_class = {
             EscrowOperationType.close_escrow: CloseEscrowOperation,
+            EscrowOperationType.load_funds: LoadFundsEscrowOperation,
             EscrowOperationType.request_funds: ReleaseFundsEscrowOperation
-        }.get(escrow_operation_type)
+        }.get(operation.type)
+
+        return specific_operation_class.objects.get(id=operation.id)
 
     @property
     def additional_information(self):
@@ -216,7 +247,7 @@ class EscrowOperation(Model):
 
         return result
 
-    def accept(self, user):
+    def accept(self):
         if self.approved is not None:
             raise ValidationError(f'Cannot accept escrow operation with current approved state (approved={self.approved})')
 
@@ -230,7 +261,7 @@ class EscrowOperation(Model):
             'escrow_id': self.escrow.id
         })
 
-    def reject(self, user):
+    def reject(self):
         if self.approved is not None:
             raise ValidationError(f'Cannot reject escrow operation with current approved state (approved={self.approved})')
 
@@ -244,6 +275,7 @@ class EscrowOperation(Model):
             'escrow_id': self.escrow.id
         })
 
+
 class EscrowOperationStatus(Enum):
     pending = 'pending'
     rejected = 'rejected'
@@ -254,9 +286,10 @@ class EscrowOperationStatus(Enum):
         rejected = 'Rejected'
         approved = 'Approved'
 
+
 class CreateEscrowOperation(EscrowOperation):
-    def accept(self, user):
-        super().accept(user)
+    def accept(self):
+        super().accept()
 
         self.escrow.move_to_status(EscrowStatus.ongoing)
 
@@ -265,10 +298,19 @@ class CreateEscrowOperation(EscrowOperation):
 
 
 class CloseEscrowOperation(EscrowOperation):
-    def accept(self, user):
-        super().accept(user)
+    def accept(self):
+        super().accept()
 
         self.escrow.move_to_status(EscrowStatus.closed)
+
+    class Meta:
+        managed = False
+
+
+class LoadFundsEscrowOperation(EscrowOperation):
+    @property
+    def amount(self):
+        return self.args.get('args', {}).get('amount')
 
     class Meta:
         managed = False
@@ -277,10 +319,10 @@ class CloseEscrowOperation(EscrowOperation):
 class ReleaseFundsEscrowOperation(EscrowOperation):
     @property
     def amount(self):
-        return self.args.amount
+        return self.args.get('args', {}).get('amount')
 
-    def accept(self, user):
-        super().accept(user)
+    def accept(self):
+        super().accept()
 
         escrow = self.escrow
         funding_source_id = escrow.transit_funding_source_id
@@ -288,8 +330,8 @@ class ReleaseFundsEscrowOperation(EscrowOperation):
 
         try:
             Payments.create_payment(
-                user_id=UUID(user.id),
-                payment_account_id=UUID(user.account.payment_account_id),
+                user_id=UUID(escrow.funder_user.id),
+                payment_account_id=UUID(escrow.funder_user.account.payment_account_id),
                 schedule_id=None,
                 currency=Currency(escrow.currency),
                 amount=self.amount,
