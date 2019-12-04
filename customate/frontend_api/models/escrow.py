@@ -103,11 +103,19 @@ class Escrow(Model):
     @property
     def initial_amount(self) -> int:
         # TODO: get initial amount from first 'request_funds' EscrowOperation ?
+
+        operation = self._get_initial_load_funds_operation()
+        if operation is not None:
+            return operation.amount
+
         return 0
 
     @property
     def funding_deadline(self) -> datetime:
-        # TODO: find out _first_ LoadFunds EscrowOperation end return its 'approval_deadline'
+        operation = self._get_initial_load_funds_operation()
+        if operation is not None:
+            return operation.approval_deadline
+
         return arrow.utcnow()
 
     def funder_payment_account_id(self) -> UUID:
@@ -152,13 +160,10 @@ class Escrow(Model):
 
     def _get_initial_load_funds_operation(self):
         try:
-            return EscrowOperation.objects.get(
+            return EscrowOperation.objects.filter(
                     escrow__id=self.id,
                     type=EscrowOperationType.load_funds,
-                    # Sharing knowledge about "status" calculated parts, not good
-                    approved=None,
-                    is_expired=False
-                )
+                ).order_by("created_at")[0:1].get()
         except EscrowOperation.DoesNotExist:
             return None
 
@@ -237,6 +242,10 @@ class EscrowOperation(Model):
         return self.args.get('args', {}).get('additional_information')
 
     @property
+    def amount(self):
+        return self.args.get('args', {}).get('amount', 0)
+
+    @property
     def status(self):
         if self.approved:
             result = EscrowOperationStatus.approved
@@ -308,19 +317,11 @@ class CloseEscrowOperation(EscrowOperation):
 
 
 class LoadFundsEscrowOperation(EscrowOperation):
-    @property
-    def amount(self):
-        return self.args.get('args', {}).get('amount')
-
     class Meta:
         managed = False
 
 
 class ReleaseFundsEscrowOperation(EscrowOperation):
-    @property
-    def amount(self):
-        return self.args.get('args', {}).get('amount')
-
     def accept(self):
         super().accept()
 
