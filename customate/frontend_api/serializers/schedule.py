@@ -120,7 +120,7 @@ class BaseScheduleSerializer(HyperlinkedModelSerializer):
                 field_name: "Invalid funding source payment account"
             })
 
-        # @NOTE: we allow payments from credit card that have differrent currency
+        # @NOTE: we allow payments from credit card that have different currency
         if fs_details.type != FundingSourceType.CREDIT_CARD \
                 and fs_details.currency.value != res.get("currency", self.instance.currency.value if self.instance else None):
             raise ValidationError({

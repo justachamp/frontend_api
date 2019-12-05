@@ -129,22 +129,13 @@ class EscrowViewSet(views.ModelViewSet):
 
     def perform_destroy(self, escrow: Escrow):
         """
-        Handle HTTP DELETE here. We don't want to remove escrow record at all, instead we will create "close_escrow"
-        EscrowOperation and will wait for approve from counterpart to process with Escrow's cancellation
-
+        Handle HTTP DELETE here.
+        We don't want to remove escrow record at all
         :param escrow:
         :return:
         """
         logger.info("Handle escrow destroy request")
-
-        operation = EscrowOperation(
-            escrow=escrow,
-            type=EscrowOperationType.close_escrow,
-            creator=self.request.user
-        )
-        operation.save()
-
-        logger.info("Created %s" % operation)
+        raise ValidationError("Escrow record cannot be removed")
 
     @action(methods=['DELETE'],
             detail=True,
