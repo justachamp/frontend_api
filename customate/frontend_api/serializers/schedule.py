@@ -100,7 +100,7 @@ class BaseScheduleSerializer(HyperlinkedModelSerializer):
             raise ValidationError({
                 "backup_funding_source_type": "This field is required"
             })
-        elif fs_details.type != FundingSourceType.WALLET.value:
+        elif fs_details.type != FundingSourceType.WALLET:
             raise ValidationError({
                 "backup_funding_source_id": "Backup funding source is not of type %s" % FundingSourceType.WALLET
             })
