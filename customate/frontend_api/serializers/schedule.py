@@ -48,7 +48,7 @@ class BaseScheduleSerializer(HyperlinkedModelSerializer):
 
         current_user = self.context.get('request').user
         if data["purpose"] == SchedulePurpose.pay \
-                and pd.type == PayeeType.WALLET.value \
+                and pd.type == PayeeType.WALLET \
                 and pd.payment_account_id == current_user.account.payment_account_id:
             raise ValidationError({
                 "payee_id": "Current user's payee cannot be used for creation 'pay funds' schedule"
@@ -59,7 +59,7 @@ class BaseScheduleSerializer(HyperlinkedModelSerializer):
             'payee_recipient_email': pd.recipient_email,
             'payee_iban': pd.iban,
             'payee_title': pd.title,
-            'payee_type': pd.type
+            'payee_type': pd.type.value
         })
 
     def initialize_and_validate_funding_source_related_fields(self, data):
@@ -87,7 +87,7 @@ class BaseScheduleSerializer(HyperlinkedModelSerializer):
 
     def _get_and_validate_funding_source_type(self, fs_details: FundingSourceDetails):
         if fs_details and fs_details.type is not None:
-            return fs_details.type
+            return fs_details.type.value
         else:
             raise ValidationError({
                 "funding_source_type": "This field is required"
@@ -105,7 +105,7 @@ class BaseScheduleSerializer(HyperlinkedModelSerializer):
                 "backup_funding_source_id": "Backup funding source is not of type %s" % FundingSourceType.WALLET
             })
         else:
-            return fs_details.type
+            return fs_details.type.value
 
     def _check_specific_funding_source(self, res: OrderedDict, fs_details: FundingSourceDetails, field_name: str):
         """
@@ -121,8 +121,8 @@ class BaseScheduleSerializer(HyperlinkedModelSerializer):
             })
 
         # @NOTE: we allow payments from credit card that have differrent currency
-        if fs_details.type != FundingSourceType.CREDIT_CARD.value \
-                and fs_details.currency != res.get("currency", self.instance.currency.value if self.instance else None):
+        if fs_details.type != FundingSourceType.CREDIT_CARD \
+                and fs_details.currency.value != res.get("currency", self.instance.currency.value if self.instance else None):
             raise ValidationError({
                 field_name: "Funding source currency should be the same as schedule currency"
             })
