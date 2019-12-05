@@ -5,19 +5,19 @@ import os
 
 from django.db import models
 from django.conf import settings
-from django.contrib.auth import get_user_model
 from rest_framework.exceptions import ValidationError
 from pathlib import Path
 
-from core.models import Model
-from external_apis.aws.service import get_aws_client
-from frontend_api.models import Schedule, Escrow, EscrowStatus
-from frontend_api.fields import ScheduleStatus
+from core.models import Model, User
 from core.fields import UserRole
 
-logger = logging.getLogger(__name__)
+from external_apis.aws.service import get_aws_client
+from frontend_api.models.schedule import Schedule
+from frontend_api.models.escrow import Escrow, EscrowStatus
+from frontend_api.fields import ScheduleStatus
 
-User = get_user_model()
+
+logger = logging.getLogger(__name__)
 
 
 def get_relation_class(relation_name: str) -> object:
@@ -55,11 +55,11 @@ class Document(Model):
     key = models.CharField(max_length=128, blank=True, null=True, help_text="Unique filename for storing in S3 bucket.")
     slug = models.CharField(max_length=128, blank=True, null=True)
     user = models.ForeignKey(User, related_name="user_documents",
-                             on_delete=models.CASCADE)
+                             on_delete=models.CASCADE)  # type: User
     schedule = models.ForeignKey(Schedule, related_name="documents",
-                                 on_delete=models.CASCADE, null=True, blank=True)
+                                 on_delete=models.CASCADE, null=True, blank=True)  # type: Schedule
     escrow = models.ForeignKey(Escrow, related_name="documents",
-                               on_delete=models.CASCADE, null=True, blank=True)
+                               on_delete=models.CASCADE, null=True, blank=True) # type: Document
     is_active = models.BooleanField(default=True)
 
     objects = DocumentManager()

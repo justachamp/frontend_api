@@ -1,20 +1,22 @@
 import datetime
-from dataclasses import dataclass
-from uuid import UUID
+
+from enumfields import EnumField
 
 from django.core.validators import URLValidator
-from enumfields import EnumField
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.contrib.postgres.fields import JSONField
 from django.core.serializers.json import DjangoJSONEncoder
 from django.contrib.auth import get_user_model
-from core.models import Model, Address
-from core.fields import Currency
-from frontend_api.fields import AccountType, CompanyType
-
 
 from polymorphic.models import PolymorphicModel
+
+from core.models import Model, Address
+
+from frontend_api.models.schedule import Schedule, ScheduleStatus
+from frontend_api.models.escrow import Escrow, EscrowOperation, EscrowStatus
+from frontend_api.models.document import Document
+from frontend_api.fields import AccountType, CompanyType
 
 GBG_IDENTITY_VALID_DAYS = 90
 GBG_SUCCESS_STATUS = 'Pass'
@@ -251,26 +253,6 @@ class Shareholder(Model):
         return "%s the shareholder" % self.last_name
 
 
-from .schedule import PayeeDetails, FundingSourceDetails, Schedule
-from .escrow import Escrow, EscrowOperation, EscrowStatus
-from .document import Document
-
-
-@dataclass
-class PaymentDetails:
-    id: UUID
-    user_id: UUID
-    payment_account_id: UUID
-    schedule_id: UUID
-    currency: Currency
-    amount: int
-    description: str
-    payee_id: UUID
-    funding_source_id: UUID
-    parent_payment_id: UUID
-    execution_date: datetime
-
-
 __all__ = [
     Company,
     Shareholder,
@@ -283,11 +265,12 @@ __all__ = [
 
     # Schedules
     Schedule,
-    Document,
-    PayeeDetails,
-    FundingSourceDetails,
+    ScheduleStatus,
 
-    #Escrow
+    # Documents
+    Document,
+
+    # Escrow
     Escrow,
     EscrowOperation,
     EscrowStatus
