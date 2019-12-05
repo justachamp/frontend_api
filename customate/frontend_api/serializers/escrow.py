@@ -272,6 +272,7 @@ class EscrowOperationSerializer(HyperlinkedModelSerializer):
                        read_only=True)
     escrow_id = UUIDField(required=True)
     additional_information = CharField(required=False)
+    amount = IntegerField(required=False)
     is_action_required = SerializerMethodField()
 
     class Meta:
@@ -281,6 +282,7 @@ class EscrowOperationSerializer(HyperlinkedModelSerializer):
             'type',
             'escrow_id',
             'additional_information',
+            'amount',
             'status',
             'is_action_required'
         )
