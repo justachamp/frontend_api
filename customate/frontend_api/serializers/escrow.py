@@ -2,6 +2,8 @@ import logging
 from typing import Dict
 from collections import OrderedDict
 from uuid import UUID
+from traceback import format_exc
+
 from rest_framework.serializers import ValidationError
 from rest_framework.fields import DateField, IntegerField, BooleanField
 from rest_framework_json_api.serializers import HyperlinkedModelSerializer, SerializerMethodField
@@ -12,6 +14,7 @@ from core.fields import Currency, SerializerField, PayeeType, FundingSourceType
 
 import external_apis.payment.service as payment_service
 from frontend_api.models.escrow import Escrow, EscrowStatus
+from frontend_api.models.document import Document
 from frontend_api.serializers.document import DocumentSerializer
 from frontend_api.serializers import (
     UUIDField,
@@ -36,8 +39,8 @@ class BaseEscrowSerializer(HyperlinkedModelSerializer):
 
         try:
             pd = payment_service.Payee.get(payee_id=UUID(payee_id))
-        except Exception:
-            logger.error("Got empty 'payee_id' or 'payee_details'. Payee_id: %s.", payee_id)
+        except Exception as e:
+            logger.error("Got empty 'payee_id' or 'payee_details'. Payee_id: %s. %r", (payee_id, format_exc()))
             raise ValidationError("Payment service is not available. Try again later.")
 
         response.update({
@@ -55,7 +58,6 @@ class BaseEscrowSerializer(HyperlinkedModelSerializer):
         data = super().run_validation(*args, **kwargs)
         payee_details = self.validate_payee_related_fields(payee_id=data.get("payee_id"))
         data.update(payee_details)
-
         return data
 
     def assign_uploaded_documents_to_escrow(self, documents):
@@ -64,11 +66,7 @@ class BaseEscrowSerializer(HyperlinkedModelSerializer):
         :param documents:
         :return:
         """
-        logger.info("Assigning uploaded documents to schedule (id=%r)" % self.instance.id, extra={
-            'schedule_id': self.instance.id
-        })
         raise NotImplemented()
-        # Document.objects.filter(key__in=[item["key"] for item in documents]).update(schedule=self.instance)
 
 
 class EscrowSerializer(BaseEscrowSerializer):
@@ -84,7 +82,7 @@ class EscrowSerializer(BaseEscrowSerializer):
     currency = EnumField(enum=Currency, required=True)
 
     # initial payment amount
-    initial_amount = IntegerField(required=True)
+    amount = IntegerField(required=True)
     can_close = BooleanField(required=False, read_only=True)
     can_release_funds = BooleanField(required=False, read_only=True)
 
@@ -106,8 +104,6 @@ class EscrowSerializer(BaseEscrowSerializer):
     additional_information = CharField(required=False, max_length=140)
     documents = SerializerField(resource=DocumentSerializer, many=True, required=False)
 
-    funding_deadline = DateField(required=False)
-
     purpose = SerializerMethodField()
     counterpart_email = SerializerMethodField()
     counterpart_name = SerializerMethodField()
@@ -120,8 +116,13 @@ class EscrowSerializer(BaseEscrowSerializer):
             'funder_user_id',
             'recipient_user_id',
             'currency',
+            'balance',
             'wallet_id',
-            'payee_id', 'payee_iban', 'payee_recipient_name', 'payee_recipient_email',
+
+            'payee_id',
+            'payee_iban',
+            'payee_recipient_name',
+            'payee_recipient_email',
 
             'transit_payee_id',
             'transit_funding_source_id',
@@ -133,10 +134,9 @@ class EscrowSerializer(BaseEscrowSerializer):
             'purpose',
 
             # we can use model properties as well
-            'funder_payment_account_id',
-            'funding_deadline',
-            'balance',
             'initial_amount',
+            'funding_deadline',
+            'funder_payment_account_id',
             'closing_date',
             'can_close',
             'can_release_funds',
@@ -210,60 +210,9 @@ class EscrowSerializer(BaseEscrowSerializer):
             raise ValidationError("Escrow with such name already exists")
         return value
 
-    def validate_payee_id(self, value):
-        """
-
-        :param value:
-        :return:
-        """
-        return value
-
-    # validate_{fieldname} also works
-    def validate(self, res: OrderedDict):
-        """
-        Apply custom validation on whole resource.
-        See more at: https://www.django-rest-framework.org/api-guide/serializers/#validation
-        :param res: Incoming data
-        :type res: OrderedDict
-        :return: validated res
-        :rtype: OrderedDict
-        """
-        logger.info(f"Validating data for schedule's creation", extra={'scheduleDict': res})
-        # try:
-        #     if res.get('start_date'):
-        #         self._check_payment_date(res["start_date"], res.get('funding_source_type'), res.get('payee_type'))
-        #
-        #     if res.get("deposit_payment_date"):
-        #         if res["deposit_payment_date"] > res["start_date"]:
-        #             raise ValidationError({
-        #                 "deposit_payment_date": "Deposit payment date must come prior to start date"
-        #             })
-        #
-        #         self._check_payment_date(res["deposit_payment_date"], res.get('funding_source_type'),
-        #                                  res.get('payee_type'))
-        #
-        #         deposit_amount = res.get("deposit_amount")
-        #         if deposit_amount is None:
-        #             raise ValidationError({"deposit_amount": "Please, specify deposit amount"})
-        #
-        #         if int(deposit_amount) < 0:
-        #             raise ValidationError({"deposit_amount": "Deposit amount should be positive number"})
-        #
-        #     if int(res["payment_amount"]) < 0:
-        #         raise ValidationError({"payment_amount": "Payment amount should be positive number"})
-        #
-        #     if int(res["payment_fee_amount"]) < 0:
-        #         raise ValidationError({"payment_fee_amount": "Payment fee amount should be positive number"})
-        #
-        #     if res.get("deposit_fee_amount") and int(res["deposit_fee_amount"]) < 0:
-        #         raise ValidationError({"deposit_fee_amount": "Deposit fee amount should be positive number"})
-        #
-        #
-        # except (ValueError, TypeError):
-        #     logger.error("Validation failed due to: %r" % format_exc())
-        #     raise ValidationError("Schedule validation failed")
-
-        return res
+    def assign_uploaded_documents_to_escrow(self, documents):
+        logger.info("Assigned documents to escrow: %s" % self.instance.id)
+        Document.objects.filter(key__in=[item["key"] for item in documents]).update(escrow=self.instance)
 
 
 class EscrowOperationSerializer(HyperlinkedModelSerializer):

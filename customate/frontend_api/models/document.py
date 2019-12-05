@@ -135,7 +135,7 @@ class Document(Model):
         origin_user = relation.origin_user if isinstance(relation, Schedule) else relation.funder_user
         # Check if schedule has status 'stopped'
         #    need to avoid documents handling for such schedules
-        stopped_status = ScheduleStatus.stopped if isinstance(relation, Schedule) else EscrowStatus.stopped
+        stopped_status = ScheduleStatus.stopped if isinstance(relation, Schedule) else EscrowStatus.closed
         if relation.status == stopped_status:
             return False
         relation_creator_account = origin_user.account.owner_account if \

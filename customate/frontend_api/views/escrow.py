@@ -17,9 +17,15 @@ from core import views
 from core.exceptions import ConflictError
 from core.fields import FundingSourceType
 
-from frontend_api.fields import ScheduleStatus, SchedulePurpose
-from frontend_api.models import Escrow, Document, EscrowOperation
-from frontend_api.models.escrow import EscrowOperationType
+from frontend_api.models.document import Document
+from frontend_api.models.escrow import (
+    Escrow,
+    EscrowOperation,
+    CreateEscrowOperation,
+    LoadFundsEscrowOperation,
+    EscrowOperationType
+)
+
 from frontend_api.serializers import EscrowSerializer
 
 from frontend_api.permissions import (
@@ -61,8 +67,8 @@ class EscrowViewSet(views.ModelViewSet):
         # 'payee_recipient_email': ('icontains', 'contains', 'iexact'),
         # 'payee_iban': ('icontains', 'contains', 'iexact'),
         'currency': ('iexact', 'in'),
-        'funder_user__id': ('exact', ),
-        'recipient_user__id': ('exact', ),
+        'funder_user__id': ('exact',),
+        'recipient_user__id': ('exact',),
     }
 
     def get_serializer_class(self):
@@ -88,32 +94,24 @@ class EscrowViewSet(views.ModelViewSet):
         :return:
         """
         logger.info("Escrow creation, validated_data=%r" % serializer.validated_data)
-
         try:
+            funding_deadline = self.request.data.pop("funding_deadline", None)  # TODO RequestFundsEscrowOperation
+            initial_amount = self.request.data.pop("initial_amount", None)
 
-            # counterpart_user_id = self.request.data.get("counterpart_user_id", None)
-            # counterpart_user = User.objects.get(id=counterpart_user_id) if counterpart_user_id is not None else None
-
-            # if purpose == SchedulePurpose.pay:
-            #     origin_user = self.request.user
-            #     recipient_user = counterpart_user
-            # else:
-            #     origin_user = counterpart_user
-            #     recipient_user = self.request.user
-
+            funder_user = get_object_or_404(User, id=self.request.data.get("funder_user_id"))
+            recipient_user = get_object_or_404(User, id=self.request.data.get("recipient_user_id"))
             documents = serializer.validated_data.pop("documents", [])
-
-            # schedule = serializer.save(
-            #     status=status,
-            #     funder_user=origin_user,
-            #     recipient_user=recipient_user
-            # )
-
-            # logger.info("Successfully created new escrow record (id=%r)" % schedule.id)
-            # serializer.assign_uploaded_documents_to_schedule(documents)
-
-
+            if serializer.is_valid():  # Overriden method. Raises ValidationError by default
+                escrow = serializer.save(
+                    funder_user=funder_user,
+                    recipient_user=recipient_user
+                )
+                logger.info("Successfully created new escrow record (id=%r)" % escrow.id)
+                serializer.assign_uploaded_documents_to_escrow(documents)
+            else:
+                raise ValidationError("Got invalid data for Escrow")
         except ValidationError as e:
+            logger.info("Invalid EscrowSerializer error. %r" % format_exc())
             raise e
         except Exception as e:
             logger.error("Unable to save Escrow=%r, due to %r" % (serializer.validated_data, format_exc()))
@@ -235,8 +233,8 @@ class EscrowOperationViewSet(views.ModelViewSet):
                           )
 
     filterset_fields = {
-        'escrow__id': ('exact', ),
-        'type': ('in', ),
+        'escrow__id': ('exact',),
+        'type': ('in',),
     }
 
     def get_queryset(self, *args, **kwargs):
@@ -261,15 +259,13 @@ class EscrowOperationViewSet(views.ModelViewSet):
         :param pk:
         :return:
         """
-
         escrow_operation_id = pk
-
         try:
-            escrow_operation = EscrowOperation.objects.get(id=escrow_operation_id)
+            escrow_operation = CreateEscrowOperation.objects.get(id=escrow_operation_id)
         except Exception:
             raise NotFound(f'EscrowOperation not found {escrow_operation_id}')
 
-        return EscrowOperation.get_specific_operation_obj(escrow_operation).accept(request.user)
+        return EscrowOperation.get_operation_class(escrow_operation.type).accept(request.user)
 
     @transaction.atomic
     @action(methods=['POST'],

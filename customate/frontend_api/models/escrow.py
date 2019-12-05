@@ -20,6 +20,8 @@ from core.fields import Currency, UserRole
 from customate.settings import ESCROW_OPERATION_APPROVE_DEADLINE
 from external_apis.payment.service import Payment
 
+from external_apis.payment.service import Wallet
+
 logger = logging.getLogger(__name__)
 
 
@@ -102,6 +104,12 @@ class Escrow(Model):
         null=True
     )
 
+    balance = models.IntegerField(
+        blank=True,
+        null=True,
+        help_text=_("Transit storage of balance from payment service.")
+    )
+
     def __str__(self):
         return "Escrow(id=%s, payee_id=%s, transit_wallet_id=%s, " \
                "transit_payee_id=%s, transit_funding_source_id=%s, " \
@@ -110,11 +118,6 @@ class Escrow(Model):
                    self.transit_payee_id, self.transit_funding_source_id,
                    self.funding_deadline, self.balance
                )
-
-    @property
-    def balance(self) -> int:
-        # TODO: get balance from the corresponding VIRTUAL_WALLET(transit_wallet_id) ??
-        return 0
 
     @property
     def initial_amount(self) -> int:
@@ -132,7 +135,7 @@ class Escrow(Model):
         if operation is not None:
             return operation.approval_deadline
 
-        return arrow.utcnow()
+        return arrow.utcnow().datetime
 
     @property
     def closing_date(self) -> datetime:
@@ -216,18 +219,18 @@ class Escrow(Model):
     def _get_initial_load_funds_operation(self):
         try:
             return EscrowOperation.objects.filter(
-                    escrow__id=self.id,
-                    type=EscrowOperationType.load_funds,
-                ).order_by("created_at")[0:1].get()
+                escrow__id=self.id,
+                type=EscrowOperationType.load_funds,
+            ).order_by("created_at")[0:1].get()
         except EscrowOperation.DoesNotExist:
             return None
 
     def _get_latest_operation(self, operation_type):
         try:
             return EscrowOperation.objects.filter(
-                    escrow__id=self.id,
-                    type=operation_type,
-                ).order_by("-created_at")[0:1].get()
+                escrow__id=self.id,
+                type=operation_type,
+            ).order_by("-created_at")[0:1].get()
         except EscrowOperation.DoesNotExist:
             return None
 
@@ -237,6 +240,10 @@ class Escrow(Model):
             raise ValidationError('Cannot find "Create" operation for Escrow (%s) rejection' % self.id)
 
         EscrowOperation.get_specific_operation_obj(operation).reject()
+
+    def update_balance(self, balance):
+        self.balance = balance
+        self.save()
 
 
 class EscrowOperationType(Enum):
@@ -335,7 +342,8 @@ class EscrowOperation(Model):
 
     def accept(self):
         if self.approved is not None:
-            raise ValidationError(f'Cannot accept escrow operation with current approved state (approved={self.approved})')
+            raise ValidationError(
+                f'Cannot accept escrow operation with current approved state (approved={self.approved})')
 
         if self.is_expired:
             raise ValidationError(f'Cannot accept expired escrow operation')
@@ -349,7 +357,8 @@ class EscrowOperation(Model):
 
     def reject(self):
         if self.approved is not None:
-            raise ValidationError(f'Cannot reject escrow operation with current approved state (approved={self.approved})')
+            raise ValidationError(
+                f'Cannot reject escrow operation with current approved state (approved={self.approved})')
 
         if self.is_expired:
             raise ValidationError(f'Cannot reject expired escrow operation')
@@ -379,23 +388,31 @@ class EscrowOperationStatus(Enum):
 
 
 class CreateEscrowOperation(EscrowOperation):
-    def accept(self):
-        super().accept()
-
-        self.escrow.move_to_status(EscrowStatus.ongoing)
-
     class Meta:
         managed = False
 
+    # def accept(self, user):
+    #     super().accept(user)
+    #     payment_account_id = self.escrow.funder_user.account.payment_account_id
+    #     wallet_details = Wallet.create(
+    #         currency=self.escrow.currency,
+    #         payment_account_id=payment_account_id
+    #     )
+    #     self.escrow.move_to_status(EscrowStatus.pending_funding)
+    #     self.escrow.wallet_id = wallet_details["id"]
+    #     self.escrow.transit_funding_source_id = wallet_details["funding_source_id"]
+    #     self.escrow.transit_payee_id = wallet_details["payee_id"]
+    #     self.escrow.save()
+
 
 class CloseEscrowOperation(EscrowOperation):
+    class Meta:
+        managed = False
+
     def accept(self):
         super().accept()
 
         self.escrow.move_to_status(EscrowStatus.closed)
-
-    class Meta:
-        managed = False
 
 
 class LoadFundsEscrowOperation(EscrowOperation):
@@ -404,6 +421,9 @@ class LoadFundsEscrowOperation(EscrowOperation):
 
 
 class ReleaseFundsEscrowOperation(EscrowOperation):
+    class Meta:
+        managed = False
+
     def accept(self):
         super().accept()
 
@@ -423,12 +443,10 @@ class ReleaseFundsEscrowOperation(EscrowOperation):
                 funding_source_id=funding_source_id
             )
         except Exception:
-            logger.error("Unable to create payment for ReleaseFundsEscrowOperation (id=%s) due to unknown error: %r. " % (
-                self.id, format_exc()
-            ), extra={
-                'escrow_operation_id': self.id,
-                'escrow_id': escrow.id
-            })
-
-    class Meta:
-        managed = False
+            logger.error(
+                "Unable to create payment for ReleaseFundsEscrowOperation (id=%s) due to unknown error: %r. " % (
+                    self.id, format_exc()
+                ), extra={
+                    'escrow_operation_id': self.id,
+                    'escrow_id': escrow.id
+                })
