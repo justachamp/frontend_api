@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 class EscrowStatus(Enum):
     pending = 'pending'  # escrow is waiting to be accepted
+    pending_funding = 'pending_funding'  # escrow is waiting for initial funds
     ongoing = 'ongoing'  # escrow was accepted and request/load of funds ops are ongoing
     closed = 'closed'  # closed by mutual agreement of counterparts
     terminated = 'terminated'  # 'closed' automatically due to inaction of parties involved
