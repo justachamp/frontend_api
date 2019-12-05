@@ -49,7 +49,7 @@ class BaseScheduleSerializer(HyperlinkedModelSerializer):
         current_user = self.context.get('request').user
         if data["purpose"] == SchedulePurpose.pay \
                 and pd.type == PayeeType.WALLET.value \
-                and pd.payment_account_id == str(current_user.account.payment_account_id):
+                and pd.payment_account_id == current_user.account.payment_account_id:
             raise ValidationError({
                 "payee_id": "Current user's payee cannot be used for creation 'pay funds' schedule"
             })
@@ -115,7 +115,7 @@ class BaseScheduleSerializer(HyperlinkedModelSerializer):
         """
         user = self.context.get('request').user
 
-        if fs_details.payment_account_id != str(user.account.payment_account_id):
+        if fs_details.payment_account_id != user.account.payment_account_id:
             raise ValidationError({
                 field_name: "Invalid funding source payment account"
             })
