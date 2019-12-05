@@ -323,11 +323,14 @@ class EscrowOperation(Model):
 
     @property
     def additional_information(self):
-        return self.args.get('args', {}).get('additional_information')
+        return self._get_args_property('additional_information')
 
     @property
     def amount(self):
-        return self.args.get('args', {}).get('amount', 0)
+        return self._get_args_property('amount', 0)
+
+    def _get_args_property(self, name, default_value=None):
+        return self.args.get('args', {}).get(name, default_value)
 
     @property
     def status(self):
@@ -420,6 +423,33 @@ class CloseEscrowOperation(EscrowOperation):
 class LoadFundsEscrowOperation(EscrowOperation):
     class Meta:
         managed = False
+
+    def accept(self):
+        super().accept()
+
+        escrow = self.escrow
+        funding_source_id = self._get_args_property('source'),
+        payee_id = escrow.transit_payee_id
+
+        try:
+            Payment.create(
+                user_id=UUID(escrow.funder_user.id),
+                payment_account_id=UUID(escrow.funder_user.account.payment_account_id),
+                schedule_id=None,
+                currency=Currency(escrow.currency),
+                amount=self.amount,
+                description=self.additional_information,
+                payee_id=payee_id,
+                funding_source_id=funding_source_id
+            )
+        except Exception:
+            logger.error(
+                "Unable to create payment for LoadFundsEscrowOperation (id=%s) due to unknown error: %r. " % (
+                    self.id, format_exc()
+                ), extra={
+                    'escrow_operation_id': self.id,
+                    'escrow_id': escrow.id
+                })
 
 
 class ReleaseFundsEscrowOperation(EscrowOperation):
