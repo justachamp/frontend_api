@@ -197,11 +197,20 @@ class Escrow(Model):
         })
 
     def accept(self):
-        operation = self._get_initial_load_funds_operation()
+        operation = self._get_create_escrow_operation()
         if operation is None:
-            raise ValidationError('Cannot find "Load funds" operation for Escrow (%s) acceptance' % self.id)
+            raise ValidationError('Cannot find "Create" operation for Escrow (%s) acceptance' % self.id)
 
         EscrowOperation.get_specific_operation_obj(operation).accept()
+
+    def _get_create_escrow_operation(self):
+        try:
+            return EscrowOperation.objects.filter(
+                    escrow__id=self.id,
+                    type=EscrowOperationType.create_escrow,
+                ).order_by("created_at")[0:1].get()
+        except EscrowOperation.DoesNotExist:
+            return None
 
     def _get_initial_load_funds_operation(self):
         try:
@@ -222,9 +231,9 @@ class Escrow(Model):
             return None
 
     def reject(self):
-        operation = self._get_initial_load_funds_operation()
+        operation = self._get_create_escrow_operation()
         if operation is None:
-            raise ValidationError('Cannot find "Load funds" operation for Escrow (%s) rejection' % self.id)
+            raise ValidationError('Cannot find "Create" operation for Escrow (%s) rejection' % self.id)
 
         EscrowOperation.get_specific_operation_obj(operation).reject()
 
