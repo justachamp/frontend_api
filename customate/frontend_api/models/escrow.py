@@ -343,6 +343,13 @@ class EscrowOperation(Model):
 
         return result
 
+    @property
+    def requires_mutual_approval(self):
+        """
+        :return: whether or not this particular operation requires mutual approval from counterpart
+        """
+        return True
+
     def accept(self):
         if self.approved is not None:
             raise ValidationError(
@@ -424,6 +431,15 @@ class LoadFundsEscrowOperation(EscrowOperation):
     class Meta:
         managed = False
 
+    @property
+    def requires_mutual_approval(self):
+        """
+        We don't want to require approval from a counterpart if a funder decided to add funds to an Escrow
+
+        :return: whether or not this particular operation requires mutual approval from counterpart
+        """
+        return not self.creator.id == self.escrow.funder_user.id
+
     def accept(self):
         super().accept()
 
@@ -455,6 +471,15 @@ class LoadFundsEscrowOperation(EscrowOperation):
 class ReleaseFundsEscrowOperation(EscrowOperation):
     class Meta:
         managed = False
+
+    @property
+    def requires_mutual_approval(self):
+        """
+        We don't want to require approval from a counterpart if a funder decided to release funds to receiver
+
+        :return: whether or not this particular operation requires mutual approval from counterpart
+        """
+        return not self.creator.id == self.escrow.funder_user.id
 
     def accept(self):
         super().accept()

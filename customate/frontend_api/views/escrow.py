@@ -88,7 +88,7 @@ class EscrowViewSet(views.ModelViewSet):
     @transaction.atomic
     def perform_create(self, serializer):
         """
-        Create new Schedule / HTTP POST
+        Create new Escrow / HTTP POST
 
         :param serializer:
         :return:
@@ -243,6 +243,30 @@ class EscrowOperationViewSet(views.ModelViewSet):
             Q(escrow__funder_user__account__id__in=target_account_ids)
             | Q(escrow__recipient_user__account__id__in=target_account_ids)
         ).order_by('created_at')
+
+    @transaction.atomic
+    def perform_create(self, serializer):
+        """
+        Create new EscrowOperation / HTTP POST
+
+        :param serializer:
+        :return:
+        """
+        logger.info("EscrowOperation creation, validated_data=%r" % serializer.validated_data)
+        try:
+            if serializer.is_valid(raise_exception=True):
+                operation = serializer.save()
+                logger.info("Successfully created new escrow operation (id=%r)" % operation.id)
+
+                operation = EscrowOperation.get_specific_operation_obj(operation)
+                if not operation.requires_mutual_approval:
+                    operation.accept()
+        except ValidationError as e:
+            logger.info("Invalid EscrowOperationSerializer error. %r" % format_exc())
+            raise e
+        except Exception as e:
+            logger.error("Unable to save EscrowOperation=%r, due to %r" % (serializer.validated_data, format_exc()))
+            raise ValidationError("Unable to save escrow operation")
 
     @transaction.atomic
     @action(methods=['POST'],
