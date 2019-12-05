@@ -22,7 +22,7 @@ class Migration(migrations.Migration):
         migrations.RunSQL("UPDATE public.frontend_api_schedule SET number_of_payments = number_of_payments_left"),
 
         migrations.CreateModel(
-            name='SchedulePayment',
+            name='SchedulePayments',
             fields=[
                 ('id', models.UUIDField(default=uuid.uuid4, primary_key=True, serialize=False)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
