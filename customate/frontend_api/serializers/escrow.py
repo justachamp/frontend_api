@@ -158,38 +158,38 @@ class EscrowSerializer(BaseEscrowSerializer):
 
         return result
 
-    def get_counterpart_email(self, obj) -> str:
+    def get_counterpart_email(self, escrow) -> str:
         """
-        :param obj: Escrow
+        :param escrow: Escrow
         :return counterpart's email: str
         """
-        return self._get_counterpart(obj).email
+        return self._get_counterpart(escrow).email
 
-    def get_counterpart_name(self, obj) -> str:
+    def get_counterpart_name(self, escrow) -> str:
         """
-        :param obj: Escrow
+        :param escrow: Escrow
         :return counterpart's name: str
         """
-        counterpart = self._get_counterpart(obj)
+        counterpart = self._get_counterpart(escrow)
         return '%s %s' % (counterpart.first_name, counterpart.last_name)
 
-    def get_purpose(self, obj) -> str:
+    def get_purpose(self, escrow) -> str:
         """
 
-        :param obj:
+        :param escrow: Escrow
         :return Escrow's purpose: str
         """
         current_user = self.context.get('request').user
         result = EscrowPurpose.receive.value
 
-        if current_user.id == obj.funder_user.id:
+        if current_user.id == escrow.funder_user.id:
             result = EscrowPurpose.pay.value
 
         return result
 
-    def get_has_pending_operations(self, obj) -> bool:
+    def get_has_pending_operations(self, escrow) -> bool:
         current_user = self.context.get('request').user
-        return obj.has_pending_operations_for_user(current_user)
+        return escrow.has_pending_operations_for_user(current_user)
 
     def validate_name(self, value):
         """
@@ -287,5 +287,11 @@ class EscrowOperationSerializer(HyperlinkedModelSerializer):
 
     # We need to require actions only from operation's counterpart user
     def get_is_action_required(self, escrow_operation) -> bool:
+        """
+        Whether this EscrowOperation requires some action from current user
+
+        :param escrow_operation: EscrowOperation
+        :return:
+        """
         current_user = self.context.get('request').user
-        return escrow_operation.creator.id is not current_user.id
+        return not escrow_operation.creator.id == current_user.id
