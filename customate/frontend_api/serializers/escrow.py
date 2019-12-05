@@ -38,7 +38,7 @@ class BaseEscrowSerializer(HyperlinkedModelSerializer):
             return response
 
         try:
-            pd = payment_service.Payee.get(payee_id=UUID(payee_id))
+            pd = payment_service.Payee.get(payee_id=payee_id)
         except Exception as e:
             logger.error("Got empty 'payee_id' or 'payee_details'. Payee_id: %s. %r", (payee_id, format_exc()))
             raise ValidationError("Payment service is not available. Try again later.")
@@ -82,7 +82,6 @@ class EscrowSerializer(BaseEscrowSerializer):
     currency = EnumField(enum=Currency, required=True)
 
     # initial payment amount
-    amount = IntegerField(required=True)
     can_close = BooleanField(required=False, read_only=True)
     can_release_funds = BooleanField(required=False, read_only=True)
 
