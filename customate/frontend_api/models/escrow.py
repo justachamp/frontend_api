@@ -391,13 +391,15 @@ class CreateEscrowOperation(EscrowOperation):
     class Meta:
         managed = False
 
-    def accept(self, user):
-        super().accept(user)
+    def accept(self):
+        super().accept()
+
         payment_account_id = self.escrow.funder_user.account.payment_account_id
         wallet_details = Wallet.create(
             currency=self.escrow.currency,
             payment_account_id=payment_account_id
         )
+
         self.escrow.move_to_status(EscrowStatus.pending_funding)
         self.escrow.wallet_id = wallet_details.id
         self.escrow.transit_funding_source_id = wallet_details.funding_source_id
