@@ -60,7 +60,7 @@ class TransactionViewSet(ResourceViewSet):
         'completion_date': ('exact', 'eq', 'ne', 'gt', 'lt', 'gte', 'lte'),
         'payment__account__id': ('exact',),
         'payment__schedule_id': ('exact',),
-        'payment__wallet_id': ('exact',),
+        'payment__wallet_id': ('in', 'exact',),
     }
 
     class Meta:
