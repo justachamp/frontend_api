@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 class BaseEscrowSerializer(HyperlinkedModelSerializer):
 
-    def validate_payee_related_fields(self, payee_id: str) -> Dict:
+    def validate_payee_related_fields(self, payee_id: UUID) -> Dict:
         """
         We will try to receive some additional information (iban, title etc.) about payee from Payment API,
         and initialize appropriate fields in escrow's data
@@ -36,7 +36,6 @@ class BaseEscrowSerializer(HyperlinkedModelSerializer):
         response = {}
         if not payee_id:
             return response
-
         try:
             pd = payment_service.Payee.get(payee_id=payee_id)
         except Exception as e:
