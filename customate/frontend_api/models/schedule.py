@@ -2,7 +2,6 @@ import logging
 import datetime
 from typing import Union
 import arrow
-from dataclasses import dataclass
 
 from cached_property import cached_property
 from django.core.validators import RegexValidator
@@ -844,22 +843,3 @@ class LastSchedulePayments(AbstractSchedulePayments):
     class Meta:
         managed = False
         db_table = "frontend_api_last_schedulepayments"
-
-
-@dataclass
-class PayeeDetails:
-    id: str
-    title: str
-    type: EnumField(PayeeType)
-    iban: str
-    recipient_name: str
-    recipient_email: str
-    payment_account_id: models.UUIDField()
-
-
-@dataclass
-class FundingSourceDetails:
-    id: str
-    currency: EnumField(Currency)
-    type: EnumField(FundingSourceType)
-    payment_account_id: models.UUIDField()
