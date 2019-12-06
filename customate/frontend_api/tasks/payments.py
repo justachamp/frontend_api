@@ -23,6 +23,7 @@ import external_apis.payment.service as payment_service
 from frontend_api.models.blacklist import BlacklistDate, BLACKLISTED_DAYS_MAX_RETRY_COUNT
 from frontend_api.models.schedule import Schedule, PeriodicSchedule, DepositsSchedule
 from frontend_api.models.schedule import SchedulePayments, LastSchedulePayments
+from frontend_api.models.escrow import Escrow, EscrowStatus
 from frontend_api.fields import ScheduleStatus, SchedulePeriod
 from frontend_api import helpers
 
@@ -210,7 +211,7 @@ def make_payment(user_id: str, payment_account_id: str, schedule_id: str, curren
 @transaction.atomic
 def on_transaction_change(transaction_info: Dict):
     """
-    Process notifications for incoming and outgoing transactions.
+    Process events from payments service.
     :param transaction_info:
     :return:
     """
@@ -218,7 +219,20 @@ def on_transaction_change(transaction_info: Dict):
     user_id = transaction_info.get("user_id")
     schedule_id = transaction_info.get("schedule_id")
     transaction_status = TransactionStatusType(transaction_info.get("status"))
+    wallet_id = transaction_info.get("wallet_id")
+    balance = transaction_info.get("closing_balance")
 
+    # Persist balance to Escrow object
+    if transaction_status not in [TransactionStatusType.PENDING, TransactionStatusType.PROCESSING]:
+        try:
+            escrow = Escrow.objects.get(wallet_id=wallet_id)
+            escrow.update_balance(int(balance))
+            return
+        except Escrow.DoesNotExist:
+            logger.info("Got 'wallet_id': %s. Escrow with given the one does not exist. %r" % (wallet_id, format_exc()))
+            pass
+
+    # Send notifications about loaded funds
     if not schedule_id:
         helpers.notify_about_loaded_funds(
             user_id=user_id,
@@ -232,6 +246,7 @@ def on_transaction_change(transaction_info: Dict):
         logger.error("Schedule with id %s was not found. %r" % (schedule_id, format_exc()))
         return
 
+    # Send notifications about completed schedules.
     if transaction_status is TransactionStatusType.SUCCESS:
         helpers.notify_about_schedules_successful_payment(schedule=schedule, transaction_info=transaction_info)
 
