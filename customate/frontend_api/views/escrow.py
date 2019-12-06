@@ -11,6 +11,7 @@ from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.serializers import ValidationError
+from rest_framework import status
 
 from core.models import User
 from core import views
@@ -70,6 +71,18 @@ class EscrowViewSet(views.ModelViewSet):
         'funder_user__id': ('exact',),
         'recipient_user__id': ('exact',),
     }
+
+    def create(self, *args, **kwargs):
+        """
+        Overriden method for returning 200 status code instead of 201.
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        response = super().create(*args, **kwargs)
+        if status.is_success(response.status_code):
+            response.status_code = 200
+        return response
 
     def get_serializer_class(self):
         # return UpdateScheduleSerializer if self.request.method == 'PATCH' else ScheduleSerializer
