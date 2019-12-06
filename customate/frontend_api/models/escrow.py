@@ -181,7 +181,7 @@ class Escrow(Model):
 
         # Check if escrow has status 'stopped'
         #    need to avoid documents handling for such schedules
-        if self.status == EscrowStatus.stopped:
+        if self.status == EscrowStatus.closed:
             return False
 
         if user.role == UserRole.owner:
