@@ -18,10 +18,9 @@ def process_unaccepted_escrows():
     :return:
     """
     now = arrow.utcnow()
-    expired_escrows = Escrow.objects.filter(acceptance_deadline__lte=now.datetime.date())
+    expired_escrows = Escrow.objects.filter(funding_deadline__lte=now.datetime.date())
     paginator = Paginator(expired_escrows, settings.CELERY_BEAT_PER_PAGE_OBJECTS)
     for page in paginator.page_range:
         # WARN: potential generation of 1-N SQL UPDATE command here
         for escrow in paginator.page(page).object_list:
-            escrow.status = EscrowStatus.terminated
-            escrow.save()
+            escrow.move_to_status(EscrowStatus.terminated)
