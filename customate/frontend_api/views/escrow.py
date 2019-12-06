@@ -263,7 +263,7 @@ class EscrowOperationViewSet(views.ModelViewSet):
         logger.info("EscrowOperation creation, validated_data=%r" % serializer.validated_data)
         try:
             if serializer.is_valid(raise_exception=True):
-                operation = serializer.save()
+                operation = serializer.save(creator=self.request.user)
                 logger.info("Successfully created new escrow operation (id=%r)" % operation.id)
 
                 operation = EscrowOperation.get_specific_operation_obj(operation)

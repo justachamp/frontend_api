@@ -121,8 +121,6 @@ class Escrow(Model):
 
     @property
     def initial_amount(self) -> int:
-        # TODO: get initial amount from first 'request_funds' EscrowOperation ?
-
         operation = self._get_initial_load_funds_operation()
         if operation is not None:
             return operation.amount
@@ -251,14 +249,12 @@ class EscrowOperationType(Enum):
     All of theses operation types require mutual approval
     """
     load_funds = 'load_funds'  # Load funds
-    request_funds = 'request_funds'  # Request of funds
     release_funds = 'release_funds'  # Release funds
     close_escrow = 'close_escrow'  # Request to close escrow
     create_escrow = 'create_escrow'  # Initial request to create escrow
 
     class Labels:
         load_funds = 'Load funds'
-        request_funds = 'Request funds'
         release_funds = 'Release funds'
         close_escrow = 'Close escrow'
         create_escrow = 'Create escrow'
@@ -326,10 +322,15 @@ class EscrowOperation(Model):
         specific_operation_class = {
             EscrowOperationType.close_escrow: CloseEscrowOperation,
             EscrowOperationType.load_funds: LoadFundsEscrowOperation,
-            EscrowOperationType.request_funds: ReleaseFundsEscrowOperation
+            EscrowOperationType.release_funds: ReleaseFundsEscrowOperation
         }.get(operation.type)
 
-        return specific_operation_class.objects.get(id=operation.id)
+        # We need to create filled sub-class object based on superclass object
+        # https://stackoverflow.com/questions/4064808/django-model-inheritance-create-sub-instance-of-existing-instance-downcast
+        result = specific_operation_class(escrowoperation_ptr=operation)
+        result.__dict__.update(operation.__dict__)
+
+        return result
 
     @property
     def additional_information(self):
