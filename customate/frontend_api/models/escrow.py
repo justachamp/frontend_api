@@ -210,9 +210,9 @@ class Escrow(Model):
     def _get_create_escrow_operation(self):
         try:
             return EscrowOperation.objects.filter(
-                    escrow__id=self.id,
-                    type=EscrowOperationType.create_escrow,
-                ).order_by("created_at")[0:1].get()
+                escrow__id=self.id,
+                type=EscrowOperationType.create_escrow,
+            ).order_by("created_at")[0:1].get()
         except EscrowOperation.DoesNotExist:
             return None
 
@@ -269,6 +269,17 @@ def default_args_data_dict():
     return {'version': 1, 'args': {}}
 
 
+class EscrowOperationStatus(Enum):
+    pending = 'pending'
+    rejected = 'rejected'
+    approved = 'approved'
+
+    class Labels:
+        pending = 'Pending'
+        rejected = 'Rejected'
+        approved = 'Approved'
+
+
 class EscrowOperation(Model):
     """
     Any operation that requires mutual approval from both parties
@@ -279,7 +290,6 @@ class EscrowOperation(Model):
         blank=False,
     )  # type: Escrow
     type = EnumField(EscrowOperationType)  # All possible operations on escrow
-
     # We need to store operation's creator, so that we can distinguish "my" and "others" records to correctly
     # react to them in UI (hide buttons, don't display "red dot" for Escrow etc.)
     creator = models.ForeignKey(
@@ -388,17 +398,6 @@ class EscrowOperation(Model):
         return "EscrowOperation(id=%s, type=%s, escrow=%s, args=%s)" % (
             self.id, self.type, self.escrow.id if self.escrow else None, self.args
         )
-
-
-class EscrowOperationStatus(Enum):
-    pending = 'pending'
-    rejected = 'rejected'
-    approved = 'approved'
-
-    class Labels:
-        pending = 'Pending'
-        rejected = 'Rejected'
-        approved = 'Approved'
 
 
 class CreateEscrowOperation(EscrowOperation):

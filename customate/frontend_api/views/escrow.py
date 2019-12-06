@@ -22,8 +22,6 @@ from frontend_api.models.document import Document
 from frontend_api.models.escrow import (
     Escrow,
     EscrowOperation,
-    CreateEscrowOperation,
-    LoadFundsEscrowOperation,
     EscrowOperationType
 )
 
@@ -107,13 +105,18 @@ class EscrowViewSet(views.ModelViewSet):
         :return:
         """
         logger.info("Escrow creation, validated_data=%r" % serializer.validated_data)
-        try:
-            funding_deadline = self.request.data.pop("funding_deadline", None)  # TODO RequestFundsEscrowOperation
-            initial_amount = self.request.data.pop("initial_amount", None)
 
-            funder_user = get_object_or_404(User, id=self.request.data.get("funder_user_id"))
-            recipient_user = get_object_or_404(User, id=self.request.data.get("recipient_user_id"))
-            documents = serializer.validated_data.pop("documents", [])
+        funding_deadline = self.request.data.pop("funding_deadline", None)
+        initial_amount = self.request.data.pop("initial_amount", None)
+        if not all([funding_deadline, initial_amount]):
+            logger.error("Creation new Escrow. Got empty value/s with 'funding_deadline', 'initial_amount'.")
+            raise ValidationError("funding_deadline and initial_amount fields are required.")
+
+        funder_user = get_object_or_404(User, id=self.request.data.get("funder_user_id"))
+        recipient_user = get_object_or_404(User, id=self.request.data.get("recipient_user_id"))
+        documents = serializer.validated_data.pop("documents", [])
+
+        try:
             if serializer.is_valid():  # Overriden method. Raises ValidationError by default
                 escrow = serializer.save(
                     funder_user=funder_user,
@@ -129,6 +132,20 @@ class EscrowViewSet(views.ModelViewSet):
         except Exception as e:
             logger.error("Unable to save Escrow=%r, due to %r" % (serializer.validated_data, format_exc()))
             raise ValidationError("Unable to save escrow")
+
+        # Create initial operations:  Create Escrow Operation, Load Funds Operation
+        create_escrow_operation = EscrowOperation(
+            escrow=escrow, type=EscrowOperationType.create_escrow,
+            creator=self.request.user, approval_deadline=funding_deadline
+        )
+        create_escrow_operation.save()
+
+        load_funds_operation = EscrowOperation(
+            escrow=escrow, type=EscrowOperationType.load_funds,
+            creator=self.request.user, approval_deadline=funding_deadline,
+            args={"amount": initial_amount}
+        )
+        load_funds_operation.save()
 
     @transaction.atomic
     def perform_update(self, serializer):

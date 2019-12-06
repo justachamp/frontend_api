@@ -241,8 +241,9 @@ class EscrowOperationSerializer(HyperlinkedModelSerializer):
     status = EnumField(enum=EscrowOperationStatus, default=EscrowOperationStatus.pending, required=False,
                        read_only=True)
     escrow_id = UUIDField(required=True)
-    additional_information = CharField(required=False)
-    amount = IntegerField(required=False)
+    additional_information = CharField(required=False, read_only=True)
+    amount = IntegerField(required=False, read_only=True)
+
     is_action_required = SerializerMethodField()
 
     class Meta:
