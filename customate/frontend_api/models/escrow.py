@@ -494,8 +494,8 @@ class ReleaseFundsEscrowOperation(EscrowOperation):
 
         try:
             Payment.create(
-                user_id=UUID(escrow.funder_user.id),
-                payment_account_id=UUID(escrow.funder_user.account.payment_account_id),
+                user_id=escrow.funder_user.id,
+                payment_account_id=escrow.funder_user.account.payment_account_id,
                 schedule_id=None,
                 currency=Currency(escrow.currency),
                 amount=self.amount,
