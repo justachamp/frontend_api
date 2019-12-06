@@ -83,6 +83,8 @@ class EscrowSerializer(BaseEscrowSerializer):
     # initial payment amount
     can_close = BooleanField(required=False, read_only=True)
     can_release_funds = BooleanField(required=False, read_only=True)
+    can_accept = SerializerMethodField()
+    can_load_funds = SerializerMethodField()
 
     # Payment API details
     wallet_id = UUIDField(required=False)
@@ -136,10 +138,31 @@ class EscrowSerializer(BaseEscrowSerializer):
             'funding_deadline',
             'funder_payment_account_id',
             'closing_date',
+            'can_accept',
             'can_close',
+            'can_load_funds',
             'can_release_funds',
             'has_pending_operations'
         )
+
+    def get_can_accept(self, escrow) -> bool:
+        """
+        We don't save information about Escrow's creator, but EscrowOperation record contains all necessary data and we
+        base our calculations on it
+
+        :param escrow:
+        :return: whether or not this Escrow could be accepted by current user
+        """
+        return escrow.status == EscrowStatus.pending and self.get_has_pending_operations(escrow)
+
+    def get_can_load_funds(self, escrow) -> bool:
+        """
+        :param escrow:
+        :return: whether or not current user can perform load funds to an Escrow
+        """
+        current_user = self.context.get('request').user
+        return (escrow.status == EscrowStatus.pending_funding and current_user.id == escrow.funder_user.id) \
+               or escrow.status == EscrowStatus.ongoing
 
     def _get_counterpart(self, escrow: Escrow):
         """
