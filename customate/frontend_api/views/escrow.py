@@ -130,7 +130,7 @@ class EscrowViewSet(views.ModelViewSet):
         load_funds_operation = EscrowOperation(
             escrow=escrow, type=EscrowOperationType.load_funds,
             creator=self.request.user, approval_deadline=funding_deadline,
-            args={"amount": initial_amount}
+            args={'args': {"amount": initial_amount}}
         )
         load_funds_operation.save()
 
