@@ -320,10 +320,14 @@ class EscrowOperation(Model):
     @staticmethod
     def get_specific_operation_obj(operation):
         specific_operation_class = {
+            EscrowOperationType.create_escrow: CreateEscrowOperation,
             EscrowOperationType.close_escrow: CloseEscrowOperation,
             EscrowOperationType.load_funds: LoadFundsEscrowOperation,
             EscrowOperationType.release_funds: ReleaseFundsEscrowOperation
         }.get(operation.type)
+
+        if specific_operation_class is None:
+            raise ValidationError(f"Cannot find appropriate class for specified operation's type: {operation.type}")
 
         # We need to create filled sub-class object based on superclass object
         # https://stackoverflow.com/questions/4064808/django-model-inheritance-create-sub-instance-of-existing-instance-downcast
