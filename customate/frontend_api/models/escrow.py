@@ -332,6 +332,10 @@ class EscrowOperation(Model):
     def _get_args_property(self, name, default_value=None):
         return self.args.get('args', {}).get(name, default_value)
 
+    def add_args(self, data: dict):
+        self.args.get('args', {}).update(data)
+        self.save(update_fields=["args"])
+
     @property
     def status(self):
         if self.approved:

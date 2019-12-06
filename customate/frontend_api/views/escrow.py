@@ -280,6 +280,13 @@ class EscrowOperationViewSet(views.ModelViewSet):
         except Exception:
             raise NotFound(f'EscrowOperation not found {escrow_operation_id}')
 
+        # It's possible that with "accept" request we received some additional information, that is required for
+        # subsequent operation's processing ("load_funds" needs amount & funding_source_id etc.)
+        # We could pass request's data as an argument to "accept" method, but for
+        # consistency (when "load_funds" operation is initiated and executed in EscrowOperation.perform_create method)
+        # it's better to save it to "args" field
+        escrow_operation.add_args(request.data if request.data is not None else {})
+
         return EscrowOperation.get_operation_class(escrow_operation.type).accept(request.user)
 
     @transaction.atomic
