@@ -293,7 +293,7 @@ class EscrowOperationViewSet(views.ModelViewSet):
         """
         escrow_operation_id = pk
         try:
-            escrow_operation = CreateEscrowOperation.objects.get(id=escrow_operation_id)
+            escrow_operation = EscrowOperation.objects.get(id=escrow_operation_id)
         except Exception:
             raise NotFound(f'EscrowOperation not found {escrow_operation_id}')
 
