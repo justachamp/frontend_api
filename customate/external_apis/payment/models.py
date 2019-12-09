@@ -26,6 +26,7 @@ class PayeeDetails:
 class PaymentResult:
     id: UUID
     status: PaymentStatusType
+    error_message: str
 
 
 @dataclass(frozen=True)

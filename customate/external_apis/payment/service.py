@@ -233,7 +233,8 @@ class Payment:
         # }
         return PaymentResult(
             id=UUID(res["data"]["id"]),
-            status=PaymentStatusType(res["data"]["attributes"]["status"])
+            status=PaymentStatusType(res["data"]["attributes"]["status"]),
+            error_message=res["data"]["attributes"]["data"].get('errorMessage')
         )
 
 
