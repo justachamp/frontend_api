@@ -192,7 +192,7 @@ class EscrowViewSet(views.ModelViewSet):
         except Exception:
             raise NotFound(f'Escrow not found {escrow_id}')
         escrow.accept()
-        return Response()
+        return Response(status=status_codes.HTTP_204_NO_CONTENT)
 
     @transaction.atomic
     @action(methods=['POST'],
@@ -215,7 +215,7 @@ class EscrowViewSet(views.ModelViewSet):
         except Exception:
             raise NotFound(f'Escrow not found {escrow_id}')
         escrow.reject()
-        return Response()
+        return Response(status=status_codes.HTTP_204_NO_CONTENT)
 
 
 class EscrowOperationViewSet(views.ModelViewSet):
