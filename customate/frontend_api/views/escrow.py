@@ -32,6 +32,9 @@ from frontend_api.permissions import (
     # HasParticularSchedulePermission
 )
 from frontend_api.serializers.escrow import EscrowOperationSerializer
+from frontend_api.helpers import (
+    notify_counterpart_about_new_escrow
+)
 
 logger = logging.getLogger(__name__)
 
@@ -113,10 +116,11 @@ class EscrowViewSet(views.ModelViewSet):
 
         # Create initial operations:  Create Escrow Operation, Load Funds Operation
         # CreateEscrow
+        creator = self.request.user
         create_op = CreateEscrowOperation(
             escrow=escrow,
             type=EscrowOperationType.create_escrow,
-            creator=self.request.user,
+            creator=creator,
             approval_deadline=funding_deadline
         )
         create_op.save()
@@ -131,6 +135,10 @@ class EscrowViewSet(views.ModelViewSet):
         )
         load_funds_op.amount = initial_amount
         load_funds_op.save()
+
+        # Send appropriate notification to counterpart
+        counterpart = escrow.recipient_user if creator.id == escrow.funder_user.id else escrow.funder_user
+        notify_counterpart_about_new_escrow(counterpart=counterpart, create_op=create_op)
 
     @transaction.atomic
     def perform_update(self, serializer):

@@ -448,3 +448,20 @@ def notify_about_schedules_successful_payment(schedule: Schedule, transaction_in
         logger.info("Successful payment. Notifications sent to all participants. Schedule id: %s " % schedule.id)
     else:
         logger.info("Successful payment. Notifications sending has passed.")
+
+
+def notify_counterpart_about_new_escrow(counterpart: User, create_op: object):
+    """
+    Once new escrow has created, send appropriate notification to counterpart.
+    :param counterpart:
+    :param create_op:  CreateEscrowOperation object. Need for notification details.
+    :return:
+    """
+    context = {}
+    message = get_ses_email_payload(
+        tpl_filename="notifications/new_escrow_created.html",
+        tpl_context=context,
+        subject=settings.AWS_SES_SUBJECT_NAME
+    )
+    # Send email
+    send_notification_email.delay(to_address=counterpart.email, message=message)
