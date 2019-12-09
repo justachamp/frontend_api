@@ -15,7 +15,7 @@ from django.utils.translation import gettext_lazy as _
 from django.contrib.postgres.fields import JSONField
 
 from core.models import Model, User
-from core.fields import Currency, UserRole
+from core.fields import Currency, UserRole, PaymentStatusType
 from customate.settings import ESCROW_OPERATION_APPROVE_DEADLINE
 import external_apis.payment.service as payment_service
 
@@ -119,7 +119,9 @@ class Escrow(Model):
     def closing_date(self) -> datetime:
         # We can assume that Escrow record will not be edited after moving to "Closed" state
         # OR we can add EscrowOperation.approved_date field to trace when "close_escrow" operation will be accepted
-        return self.updated_at if self.status is EscrowStatus.closed else None
+        return self.updated_at \
+            if self.status in [EscrowStatus.closed, EscrowStatus.rejected, EscrowStatus.terminated] \
+            else None
 
     @property
     def can_close(self) -> bool:
@@ -448,6 +450,11 @@ class CreateEscrowOperation(EscrowOperation):
         self.escrow.transit_payee_id = wallet_details.payee_id
         self.escrow.save()
 
+    def reject(self):
+        super().reject()
+
+        self.escrow.move_to_status(status=EscrowStatus.rejected)
+
 
 class CloseEscrowOperation(EscrowOperation):
     """
@@ -465,7 +472,7 @@ class CloseEscrowOperation(EscrowOperation):
 
     def accept(self):
         super().accept()
-        self.escrow.move_to_status(EscrowStatus.closed)
+        self.escrow.move_to_status(status=EscrowStatus.closed)
         # TODO: return remaining funds on Escrow wallet to Funder!
 
 
