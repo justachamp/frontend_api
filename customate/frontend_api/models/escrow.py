@@ -523,6 +523,9 @@ class LoadFundsEscrowOperation(EscrowOperation):
         escrow = self.escrow
         payee_id = escrow.transit_payee_id
 
+        if escrow.status is EscrowStatus.pending_funding:
+            escrow.move_to_status(EscrowStatus.ongoing)
+
         try:
             payment_service.Payment.create(
                 user_id=escrow.funder_user.id,
