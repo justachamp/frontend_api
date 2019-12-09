@@ -79,10 +79,6 @@ class ScheduleViewSet(views.ModelViewSet):
             Q(origin_user__account__id__in=target_account_ids) | Q(recipient_user__account__id__in=target_account_ids)
         )
 
-    @cached_property
-    def payment_client(self):
-        return PaymentApiClient(self.request.user)
-
     @transaction.atomic
     def perform_create(self, serializer):
         """
