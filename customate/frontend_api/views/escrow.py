@@ -125,7 +125,8 @@ class EscrowViewSet(views.ModelViewSet):
         load_funds_op = LoadFundsEscrowOperation(
             escrow=escrow,
             type=EscrowOperationType.load_funds,
-            creator=self.request.user,
+            # Initial LoadFunds operation is always a pending operation for funder, so it should be created by recipient
+            creator=recipient_user,
             approval_deadline=funding_deadline
         )
         load_funds_op.amount = initial_amount
