@@ -497,8 +497,6 @@ class LoadFundsEscrowOperation(EscrowOperation):
         Arbitrary amount of money top-up for current Escrow
         :return:
         """
-        if "." in str(self.pargs["amount"]):
-            return int(float(self.pargs["amount"]) * 100)
         return int(self.pargs["amount"])
 
     @amount.setter
