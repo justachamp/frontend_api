@@ -161,8 +161,8 @@ class EscrowSerializer(BaseEscrowSerializer):
         :return: whether or not current user can perform load funds to an Escrow
         """
         current_user = self.context.get('request').user
-        return current_user.id == escrow.funder_user.id and \
-               escrow.status in [EscrowStatus.pending_funding, EscrowStatus.ongoing]
+        return (current_user.id == escrow.funder_user.id and escrow.status is EscrowStatus.pending_funding) \
+               or escrow.status is EscrowStatus.ongoing
 
     def counterpart(self, escrow: Escrow):
         """
