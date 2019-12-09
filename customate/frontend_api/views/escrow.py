@@ -305,7 +305,7 @@ class EscrowOperationViewSet(views.ModelViewSet):
             pass
 
         op.accept()
-        Response(status=status_codes.HTTP_204_NO_CONTENT)
+        return Response(status=status_codes.HTTP_204_NO_CONTENT)
 
     @transaction.atomic
     @action(methods=['POST'],
@@ -330,4 +330,4 @@ class EscrowOperationViewSet(views.ModelViewSet):
             raise NotFound(f'EscrowOperation not found {operation_id}')
 
         op.reject()
-        Response(status=status_codes.HTTP_204_NO_CONTENT)
+        return Response(status=status_codes.HTTP_204_NO_CONTENT)
