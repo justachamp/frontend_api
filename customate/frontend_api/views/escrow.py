@@ -268,7 +268,7 @@ class EscrowOperationViewSet(views.ModelViewSet):
             logger.error("Unable to save EscrowOperation=%r, due to %r" % (serializer.validated_data, format_exc()))
             raise ValidationError("Unable to save escrow operation")
 
-    @transaction.atomic
+    # @transaction.atomic
     @action(methods=['POST'],
             detail=True,
             permission_classes=(
