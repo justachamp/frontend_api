@@ -5,7 +5,7 @@ from traceback import format_exc
 
 from rest_framework.serializers import ValidationError
 from rest_framework.fields import BooleanField
-from rest_framework_json_api.serializers import HyperlinkedModelSerializer, SerializerMethodField
+from rest_framework_json_api.serializers import HyperlinkedModelSerializer, SerializerMethodField, JSONField
 
 from core.models import User
 from core.fields import Currency, SerializerField
@@ -226,6 +226,8 @@ class EscrowSerializer(BaseEscrowSerializer):
         Document.objects.filter(key__in=[item["key"] for item in documents]).update(escrow=self.instance)
 
 
+# Could be split into two serializer, one of which will be used for POST end-point and
+# will include fields that should not be returned for GET details request (like raw "args")
 class EscrowOperationSerializer(HyperlinkedModelSerializer):
     type = EnumField(enum=EscrowOperationType, required=True)
     status = EnumField(
@@ -238,6 +240,7 @@ class EscrowOperationSerializer(HyperlinkedModelSerializer):
     additional_information = CharField(required=False, read_only=True)
     amount = SerializerMethodField()
     is_action_required = SerializerMethodField()
+    args = JSONField(required=False)
 
     class Meta:
         model = EscrowOperation
@@ -248,7 +251,8 @@ class EscrowOperationSerializer(HyperlinkedModelSerializer):
             'additional_information',
             'amount',
             'status',
-            'is_action_required'
+            'is_action_required',
+            'args'
         )
 
     def get_amount(self, op: EscrowOperation) -> int or None:
