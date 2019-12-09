@@ -124,7 +124,7 @@ class Escrow(Model):
     @property
     def can_close(self) -> bool:
         """
-        Can current user issue 'CloseEscrow' operation on this Escrow?
+        Can user issue 'CloseEscrow' operation on this Escrow?
         :return:
         """
         # Check that there was no 'CloseEscrow' operations so far
@@ -136,16 +136,18 @@ class Escrow(Model):
     @property
     def can_release_funds(self) -> bool:
         """
-        Can current user issue 'ReleaseFunds' operation on this Escrow?
+        Can user issue 'ReleaseFunds' operation on this Escrow?
         :return:
         """
-        # TODO: don't we need a User instance here??
-
         # Obviously, no money to release
         if self.balance == 0:
             return False
 
         if self.status is EscrowStatus.closed:
+            return False
+
+        op = self.release_escrow_operation
+        if op is not None and op.status is not EscrowOperationStatus.pending:
             return False
 
         return True
@@ -224,6 +226,20 @@ class Escrow(Model):
         if count == 0:
             return None
         assert count == 1, "Unexpected number of CloseEscrowOperations"
+        return objs.first()
+
+    @property
+    def release_escrow_operation(self) -> ReleaseFundsEscrowOperation or None:
+        """
+        Get the last and only ReleaseEscrow operation for this escrow
+        :return:
+        """
+        objs = ReleaseFundsEscrowOperation.objects.filter(escrow__id=self.id)
+        logger.debug("count=%s" % objs.count())
+        count = objs.count()
+        if count == 0:
+            return None
+        assert count == 1, "Unexpected number of ReleaseFundsEscrowOperation"
         return objs.first()
 
     def accept(self):
