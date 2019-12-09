@@ -1,16 +1,15 @@
+from __future__ import annotations
 import logging
-from abc import abstractmethod
 from datetime import datetime
 from traceback import format_exc
-from uuid import uuid4, UUID
+from typing import Dict, Union
 
-from enumfields import Enum
+from enumfields import EnumField
 from uuid import UUID
 import arrow
 from django.core.serializers.json import DjangoJSONEncoder
 from rest_framework.exceptions import ValidationError
 
-from enumfields import EnumField
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.contrib.postgres.fields import JSONField
@@ -18,36 +17,11 @@ from django.contrib.postgres.fields import JSONField
 from core.models import Model, User
 from core.fields import Currency, UserRole
 from customate.settings import ESCROW_OPERATION_APPROVE_DEADLINE
-from external_apis.payment.service import Payment
+import external_apis.payment.service as payment_service
 
-from external_apis.payment.service import Wallet
+from frontend_api.fields import EscrowStatus, EscrowOperationType, EscrowOperationStatus
 
 logger = logging.getLogger(__name__)
-
-
-class EscrowStatus(Enum):
-    pending = 'pending'  # escrow is waiting to be accepted
-    pending_funding = 'pending_funding'  # escrow is waiting for initial funds
-    ongoing = 'ongoing'  # escrow was accepted and request/load of funds ops are ongoing
-    closed = 'closed'  # closed by mutual agreement of counterparts
-    terminated = 'terminated'  # 'closed' automatically due to inaction of parties involved
-    rejected = 'rejected'  # was rejected for some reason by either counterpart
-
-    class Labels:
-        pending = 'Pending'
-        ongoing = 'Ongoing'
-        closed = 'Closed'
-        terminated = 'Terminated'
-        rejected = 'Rejected'
-
-
-class EscrowPurpose(Enum):
-    receive = 'receive'
-    pay = 'pay'
-
-    class Labels:
-        receive = 'Receive funds'
-        pay = 'Pay funds'
 
 
 class Escrow(Model):
@@ -119,21 +93,27 @@ class Escrow(Model):
                    self.funding_deadline, self.balance
                )
 
+    def __repr__(self):
+        return str(self)
+
     @property
     def initial_amount(self) -> int:
-        operation = self._get_initial_load_funds_operation()
-        if operation is not None:
-            return operation.amount
-
-        return 0
+        """
+        Initial amount is just an 'amount' from first 'LoadFunds' operation
+        :return:
+        """
+        op = LoadFundsEscrowOperation.objects.filter(escrow__id=self.id).first()  # type: LoadFundsEscrowOperation
+        logger.debug("op=%r" % op)
+        return op.amount
 
     @property
     def funding_deadline(self) -> datetime:
-        operation = self._get_initial_load_funds_operation()
-        if operation is not None:
-            return operation.approval_deadline
-
-        return arrow.utcnow().datetime
+        """
+        Latest funding date of first 'LoadFunds' operation for this escrow
+        :return:
+        """
+        op = LoadFundsEscrowOperation.objects.filter(escrow__id=self.id).first()  # type: LoadFundsEscrowOperation
+        return op.approval_deadline or arrow.utcnow().datetime
 
     @property
     def closing_date(self) -> datetime:
@@ -143,21 +123,39 @@ class Escrow(Model):
 
     @property
     def can_close(self) -> bool:
-        operation = self._get_latest_operation(EscrowOperationType.close_escrow)
-        if operation is None:
+        """
+        Can current user issue 'CloseEscrow' operation on this Escrow?
+        :return:
+        """
+        # Check that there was no 'CloseEscrow' operations so far
+        op = self.close_escrow_operation
+        if op is None:
             return True
-
-        return operation.status is not EscrowOperationStatus.pending
+        return op.status is not EscrowOperationStatus.pending
 
     @property
     def can_release_funds(self) -> bool:
-        operation = self._get_latest_operation(EscrowOperationType.release_funds)
-        if operation is None:
-            return True
+        """
+        Can current user issue 'ReleaseFunds' operation on this Escrow?
+        :return:
+        """
+        # TODO: don't we need a User instance here??
 
-        return operation.status is not EscrowOperationStatus.pending
+        # Obviously, no money to release
+        if self.balance == 0:
+            return False
 
-    def has_pending_operations_for_user(self, user) -> bool:
+        if self.status is EscrowStatus.closed:
+            return False
+
+        return True
+
+    def has_pending_operations_for(self, user: User) -> bool:
+        """
+        Do we have any unapproved operations in current escrow which require actions from counterpart?
+        :param user:
+        :return:
+        """
         return EscrowOperation.objects.filter(
             escrow__id=self.id,
             # sharing knowledge about "status" field calculated fields - not good
@@ -165,6 +163,7 @@ class Escrow(Model):
             approved=None
         ).exclude(creator=user).exists()
 
+    @property
     def funder_payment_account_id(self) -> UUID:
         return self.funder_user.account.payment_account_id
 
@@ -177,8 +176,8 @@ class Escrow(Model):
         # Check if recipient or sender have common account with user from request (or user's subusers)
         related_account_ids = user.get_all_related_account_ids()
 
-        # Check if escrow has status 'stopped'
-        #    need to avoid documents handling for such schedules
+        # Check if escrow has status 'closed'
+        # need to avoid documents handling for such schedules
         if self.status == EscrowStatus.closed:
             return False
 
@@ -198,82 +197,62 @@ class Escrow(Model):
             'old_status': old_status
         })
 
+    @property
+    def create_escrow_operation(self) -> CreateEscrowOperation or None:
+        """
+        Get the first and only CreateEscrow operation for this escrow
+        :return:
+        """
+        # some safety assertions
+        objs = CreateEscrowOperation.objects.filter(escrow__id=self.id)
+        logger.debug("count=%s" % objs.count())
+        count = objs.count()
+        if count == 0:
+            return None
+        assert count == 1, "Unexpected number of CreateEscrowOperations"
+        return objs.first()
+
+    @property
+    def close_escrow_operation(self) -> CloseEscrowOperation or None:
+        """
+        Get the last and only CloseEscrow operation for this escrow
+        :return:
+        """
+        objs = CloseEscrowOperation.objects.filter(escrow__id=self.id)
+        logger.debug("count=%s" % objs.count())
+        count = objs.count()
+        if count == 0:
+            return None
+        assert count == 1, "Unexpected number of CloseEscrowOperations"
+        return objs.first()
+
     def accept(self):
-        operation = self._get_create_escrow_operation()
-        if operation is None:
-            raise ValidationError('Cannot find "Create" operation for Escrow (%s) acceptance' % self.id)
-
-        EscrowOperation.get_specific_operation_obj(operation).accept()
-
-    def _get_create_escrow_operation(self):
-        try:
-            return EscrowOperation.objects.filter(
-                escrow__id=self.id,
-                type=EscrowOperationType.create_escrow,
-            ).order_by("created_at")[0:1].get()
-        except EscrowOperation.DoesNotExist:
-            return None
-
-    def _get_initial_load_funds_operation(self):
-        try:
-            return EscrowOperation.objects.filter(
-                escrow__id=self.id,
-                type=EscrowOperationType.load_funds,
-            ).order_by("created_at")[0:1].get()
-        except EscrowOperation.DoesNotExist:
-            return None
-
-    def _get_latest_operation(self, operation_type):
-        try:
-            return EscrowOperation.objects.filter(
-                escrow__id=self.id,
-                type=operation_type,
-            ).order_by("-created_at")[0:1].get()
-        except EscrowOperation.DoesNotExist:
-            return None
+        """
+        Accept whole escrow by changing the status of underlying initial 'CreateEscrowOperation'
+        :return:
+        """
+        self.create_escrow_operation.accept()
 
     def reject(self):
-        operation = self._get_create_escrow_operation()
-        if operation is None:
-            raise ValidationError('Cannot find "Create" operation for Escrow (%s) rejection' % self.id)
-
-        EscrowOperation.get_specific_operation_obj(operation).reject()
+        """
+        Reject whole Escrow by changing status of underlying CreateEscrow operation
+        :return:
+        """
+        self.create_escrow_operation.reject()
 
     def update_balance(self, balance):
+        """
+        Track total balance of underlying money transactions here.
+        :param balance:
+        :return:
+        """
         self.balance = balance
         self.save()
-
-
-class EscrowOperationType(Enum):
-    """
-    All of theses operation types require mutual approval
-    """
-    load_funds = 'load_funds'  # Load funds
-    release_funds = 'release_funds'  # Release funds
-    close_escrow = 'close_escrow'  # Request to close escrow
-    create_escrow = 'create_escrow'  # Initial request to create escrow
-
-    class Labels:
-        load_funds = 'Load funds'
-        release_funds = 'Release funds'
-        close_escrow = 'Close escrow'
-        create_escrow = 'Create escrow'
 
 
 # support JSON schema versioning for possible future changes
 def default_args_data_dict():
     return {'version': 1, 'args': {}}
-
-
-class EscrowOperationStatus(Enum):
-    pending = 'pending'
-    rejected = 'rejected'
-    approved = 'approved'
-
-    class Labels:
-        pending = 'Pending'
-        rejected = 'Rejected'
-        approved = 'Approved'
 
 
 class EscrowOperation(Model):
@@ -318,41 +297,44 @@ class EscrowOperation(Model):
     )
 
     @staticmethod
-    def get_specific_operation_obj(operation):
-        specific_operation_class = {
+    def cast(op: EscrowOperation) -> Union[
+        CreateEscrowOperation, CloseEscrowOperation,
+        LoadFundsEscrowOperation, ReleaseFundsEscrowOperation
+    ]:
+        """
+        Cast operation to its appropriate specific subclass.
+        :param op:
+        :return:
+        """
+        SubClass = {
             EscrowOperationType.create_escrow: CreateEscrowOperation,
             EscrowOperationType.close_escrow: CloseEscrowOperation,
             EscrowOperationType.load_funds: LoadFundsEscrowOperation,
             EscrowOperationType.release_funds: ReleaseFundsEscrowOperation
-        }.get(operation.type)
+        }.get(op.type)
 
-        if specific_operation_class is None:
-            raise ValidationError(f"Cannot find appropriate class for specified operation's type: {operation.type}")
+        if SubClass is None:
+            raise ValidationError(f"Cannot find appropriate class for specified operation's type: {op.type}")
 
-        # We need to create filled sub-class object based on superclass object
+        # We need to create pre-filled sub-class object based on superclass object
         # https://stackoverflow.com/questions/4064808/django-model-inheritance-create-sub-instance-of-existing-instance-downcast
-        result = specific_operation_class(escrowoperation_ptr=operation)
-        result.__dict__.update(operation.__dict__)
-
+        result = SubClass()
+        result.__dict__.update(op.__dict__)
         return result
 
-    @property
-    def additional_information(self):
-        return self._get_args_property('additional_information')
-
-    @property
-    def amount(self):
-        return self._get_args_property('amount', 0)
-
-    def _get_args_property(self, name, default_value=None):
+    def get_arg(self, name, default_value=None):
         return self.args.get('args', {}).get(name, default_value)
 
-    def add_args(self, data: dict):
-        self.args.get('args', {}).update(data)
-        self.save(update_fields=["args"])
+    @property
+    def pargs(self):
+        return self.args.get('args', {})
+
+    @pargs.setter
+    def pargs(self, data: Dict):
+        self.args['args'] = data
 
     @property
-    def status(self):
+    def status(self) -> EscrowOperationStatus:
         if self.approved:
             result = EscrowOperationStatus.approved
         elif self.is_expired or self.approved is False:
@@ -363,6 +345,10 @@ class EscrowOperation(Model):
         return result
 
     @property
+    def additional_information(self):
+        return self.escrow.additional_information
+
+    @property
     def requires_mutual_approval(self):
         """
         :return: whether or not this particular operation requires mutual approval from counterpart
@@ -370,12 +356,15 @@ class EscrowOperation(Model):
         return True
 
     def accept(self):
-        if self.approved is not None:
-            raise ValidationError(
-                f'Cannot accept escrow operation with current approved state (approved={self.approved})')
+        """
+        Accept this operation on behalf of current user
+        :return:
+        """
+        if not self.approved is None:
+            raise ValidationError(f'Cannot accept operation when approved={self.approved} is set already')
 
         if self.is_expired:
-            raise ValidationError(f'Cannot accept expired escrow operation')
+            raise ValidationError(f'Cannot accept operation when is_expired={self.is_expired}')
 
         self.approved = True
         self.save(update_fields=["approved"])
@@ -385,12 +374,15 @@ class EscrowOperation(Model):
         })
 
     def reject(self):
-        if self.approved is not None:
-            raise ValidationError(
-                f'Cannot reject escrow operation with current approved state (approved={self.approved})')
+        """
+        Reject this operation on behalf of current user
+        :return:
+        """
+        if not self.approved is None:
+            raise ValidationError(f'Cannot reject escrow operation when approved={self.approved} is set already')
 
         if self.is_expired:
-            raise ValidationError(f'Cannot reject expired escrow operation')
+            raise ValidationError(f'Cannot reject escrow operation when is_expired={self.is_expired}')
 
         self.approved = False
         self.save(update_fields=["approved"])
@@ -401,24 +393,40 @@ class EscrowOperation(Model):
 
     def __str__(self):
         return "EscrowOperation(id=%s, type=%s, escrow=%s, args=%s)" % (
-            self.id, self.type, self.escrow.id if self.escrow else None, self.args
+            self.id, self.type.value, self.escrow.id if self.escrow else None, self.args
         )
+
+    def __repr__(self):
+        return str(self)
 
 
 class CreateEscrowOperation(EscrowOperation):
+    """
+    Operation related to initial creation of Escrow by either party.
+    """
+
     class Meta:
-        managed = False
+        proxy = True
+
+    class TypedManager(models.Manager):
+        def get_queryset(self):
+            return super().get_queryset().filter(type=EscrowOperationType.create_escrow).order_by("created_at")
+
+    objects = TypedManager()  # The default manager
 
     def accept(self):
         super().accept()
 
-        payment_account_id = self.escrow.funder_user.account.payment_account_id
-        wallet_details = Wallet.create(
+        if self.escrow.wallet_id:
+            logger.info("Skipping wallet creation as it exists already(wallet_id=%s)" % self.escrow.wallet_id)
+            return
+
+        wallet_details = payment_service.Wallet.create(
             currency=self.escrow.currency,
-            payment_account_id=payment_account_id
+            payment_account_id=self.escrow.funder_payment_account_id
         )
 
-        self.escrow.move_to_status(EscrowStatus.pending_funding)
+        self.escrow.move_to_status(status=EscrowStatus.pending_funding)
         self.escrow.wallet_id = wallet_details.id
         self.escrow.transit_funding_source_id = wallet_details.funding_source_id
         self.escrow.transit_payee_id = wallet_details.payee_id
@@ -426,68 +434,132 @@ class CreateEscrowOperation(EscrowOperation):
 
 
 class CloseEscrowOperation(EscrowOperation):
+    """
+    Close request of Escrow initiated by either party
+    """
+
     class Meta:
-        managed = False
+        proxy = True
+
+    class TypedManager(models.Manager):
+        def get_queryset(self):
+            return super().get_queryset().filter(type=EscrowOperationType.close_escrow).order_by("-created_at")
+
+    objects = TypedManager()  # The default manager
 
     def accept(self):
         super().accept()
-
         self.escrow.move_to_status(EscrowStatus.closed)
+        # TODO: return remaining funds on Escrow wallet to Funder!
 
 
 class LoadFundsEscrowOperation(EscrowOperation):
+    """
+    Operation of loading of funds by Funder
+    """
+
     class Meta:
-        managed = False
+        proxy = True
+
+    class TypedManager(models.Manager):
+        def get_queryset(self):
+            return super().get_queryset().filter(type=EscrowOperationType.load_funds).order_by("created_at")
+
+    objects = TypedManager()  # The default manager
 
     @property
     def requires_mutual_approval(self):
         """
         We don't want to require approval from a counterpart if a funder decided to add funds to an Escrow
-
         :return: whether or not this particular operation requires mutual approval from counterpart
         """
         return not self.creator.id == self.escrow.funder_user.id
+
+    @property
+    def amount(self) -> int:
+        """
+        Arbitrary amount of money top-up for current Escrow
+        :return:
+        """
+        if "." in str(self.pargs["amount"]):
+            return int(float(self.pargs["amount"]) * 100)
+        return int(self.pargs["amount"])
+
+    @amount.setter
+    def amount(self, value: int):
+        self.pargs["amount"] = value
+
+    @property
+    def funding_source_id(self) -> UUID:
+        """
+        Source of money to load Escrow wallet from
+        :return:
+        """
+        return UUID(self.pargs["funding_source_id"])
+
+    @funding_source_id.setter
+    def funding_source_id(self, value: UUID):
+        self.pargs["funding_source_id"] = str(value)
 
     def accept(self):
         super().accept()
 
         escrow = self.escrow
-        funding_source_id = self._get_args_property('source'),
         payee_id = escrow.transit_payee_id
 
         try:
-            Payment.create(
+            payment_service.Payment.create(
                 user_id=escrow.funder_user.id,
-                payment_account_id=escrow.funder_user.account.payment_account_id,
-                schedule_id=None,
+                payment_account_id=escrow.funder_payment_account_id,
                 currency=Currency(escrow.currency),
                 amount=self.amount,
-                description=self.additional_information,
+                description=self.escrow.additional_information,
                 payee_id=payee_id,
-                funding_source_id=funding_source_id
+                funding_source_id=self.funding_source_id
             )
         except Exception:
-            logger.error(
-                "Unable to create payment for LoadFundsEscrowOperation (id=%s) due to unknown error: %r. " % (
-                    self.id, format_exc()
-                ), extra={
-                    'escrow_operation_id': self.id,
-                    'escrow_id': escrow.id
-                })
+            logger.error("Unable to create payment for %s (id=%s) due to unknown error: %r. " % (
+                type(self), self.id, format_exc()
+            ), extra={
+                'escrow_operation_id': self.id,
+                'escrow_id': escrow.id
+            })
+            raise ValidationError("Unable to accept operation(id=%s)" % self.id)
 
 
 class ReleaseFundsEscrowOperation(EscrowOperation):
+    """
+    Request to release money by Receiver
+    """
+
     class Meta:
-        managed = False
+        proxy = True
+
+    class TypedManager(models.Manager):
+        def get_queryset(self):
+            return super().get_queryset().filter(type=EscrowOperationType.release_funds)
+
+    objects = TypedManager()  # The default manager
 
     @property
     def requires_mutual_approval(self):
         """
         We don't want to require approval from a counterpart if a funder decided to release funds to receiver
-
         :return: whether or not this particular operation requires mutual approval from counterpart
         """
         return not self.creator.id == self.escrow.funder_user.id
+
+    @property
+    def amount(self) -> int:
+        """
+        Arbitrary amount of money withdrawal for current Escrow
+        :return:
+        """
+        return int(self.pargs["amount"])
+
+    @amount.setter
+    def amount(self, value: int):
+        self.pargs["amount"] = value
 
     def accept(self):
         super().accept()
@@ -497,21 +569,20 @@ class ReleaseFundsEscrowOperation(EscrowOperation):
         payee_id = escrow.payee_id
 
         try:
-            Payment.create(
+            payment_service.Payment.create(
                 user_id=escrow.funder_user.id,
-                payment_account_id=escrow.funder_user.account.payment_account_id,
-                schedule_id=None,
+                payment_account_id=escrow.funder_payment_account_id,
                 currency=Currency(escrow.currency),
                 amount=self.amount,
-                description=self.additional_information,
+                description=escrow.additional_information,
                 payee_id=payee_id,
                 funding_source_id=funding_source_id
             )
         except Exception:
-            logger.error(
-                "Unable to create payment for ReleaseFundsEscrowOperation (id=%s) due to unknown error: %r. " % (
-                    self.id, format_exc()
-                ), extra={
-                    'escrow_operation_id': self.id,
-                    'escrow_id': escrow.id
-                })
+            logger.error("Unable to create payment for %s (op_id=%s) due to unknown error: %r. " % (
+                type(self), self.id, format_exc()
+            ), extra={
+                'escrow_operation_id': self.id,
+                'escrow_id': escrow.id
+            })
+            raise ValidationError("Unable to accept operation(id=%s)" % self.id)

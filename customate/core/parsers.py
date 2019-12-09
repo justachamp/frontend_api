@@ -13,8 +13,7 @@ class JSONAPIBulkParser(parsers.JSONParser):
         encoding = parser_context.get('encoding', settings.DEFAULT_CHARSET)
         raw_data = json.loads(stream.read().decode(encoding))
 
-        if isinstance(raw_data['data'], list):
-
+        if isinstance(raw_data.get('data'), list):
             for single_data in raw_data['data']:
                 single_data = {'data': single_data}
                 sub_data = self._single_parse(
@@ -23,12 +22,14 @@ class JSONAPIBulkParser(parsers.JSONParser):
                     parser_context=parser_context
                 )
                 data.append(sub_data)
-        else:
+        elif isinstance(raw_data.get('data'), dict):
             data = self._single_parse(
                 self._dump_data(raw_data, encoding),
                 media_type=media_type,
                 parser_context=parser_context
             )
+        else:
+            data = raw_data
 
         return data
 

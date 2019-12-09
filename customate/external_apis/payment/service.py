@@ -100,16 +100,18 @@ class Payment:
         #     "relationships": {}
         #   }
         # }
-        logger.debug("res=%r" % res)
+        logger.info("res=%r" % res)
         payment_id = UUID(res["data"]["attributes"]["newPaymentId"])
         status = PaymentStatusType(res["data"]["attributes"]["newPaymentStatus"])
         return payment_id, status
 
     @staticmethod
-    def create(user_id: UUID, payment_account_id: UUID, schedule_id: UUID,
+    def create(user_id: UUID, payment_account_id: UUID,
                currency: Currency, amount: int, description: str,
                payee_id: UUID, funding_source_id: UUID,
-               payment_id: UUID = None, parent_payment_id: UUID = None,
+               schedule_id: UUID = None,
+               payment_id: UUID = None,
+               parent_payment_id: UUID = None,
                execution_date: datetime = None) -> PaymentResult:
         """
         Initiates payment.
@@ -167,6 +169,9 @@ class Payment:
                 }
             }
         }
+
+        logger.info("payload=%r" % (payload, ))
+
         r = requests.post("{base_url}payments/".format(base_url=BASE_URL), json=payload)
         if r.status_code == requests.codes.bad_request:
             raise PaymentApiError(json_response=r.json())

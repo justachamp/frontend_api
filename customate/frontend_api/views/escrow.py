@@ -1,9 +1,8 @@
 import logging
 from traceback import format_exc
-import arrow
+from uuid import UUID
 from django.db.models import Q
 from django.db import transaction
-from django.utils.functional import cached_property
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import action
 from rest_framework import status as status_codes
@@ -14,15 +13,11 @@ from rest_framework.serializers import ValidationError
 
 from core.models import User
 from core import views
-from core.exceptions import ConflictError
-from core.fields import FundingSourceType
 
 from frontend_api.models.document import Document
-from frontend_api.models.escrow import (
-    Escrow,
-    EscrowOperation,
-    EscrowOperationType
-)
+from frontend_api.fields import EscrowOperationType
+from frontend_api.models.escrow import Escrow
+from frontend_api.models.escrow import EscrowOperation, CreateEscrowOperation, LoadFundsEscrowOperation
 
 from frontend_api.serializers import EscrowSerializer
 
@@ -79,10 +74,6 @@ class EscrowViewSet(views.ModelViewSet):
             Q(funder_user__account__id__in=target_account_ids) | Q(recipient_user__account__id__in=target_account_ids)
         ).order_by('created_at')
 
-    # @cached_property
-    # def payment_client(self):
-    #     return PaymentApiClient(self.request.user)
-
     @transaction.atomic
     def perform_create(self, serializer):
         """
@@ -95,44 +86,50 @@ class EscrowViewSet(views.ModelViewSet):
 
         funding_deadline = self.request.data.pop("funding_deadline", None)
         initial_amount = self.request.data.pop("initial_amount", None)
-        if not all([funding_deadline, initial_amount]):
-            logger.error("Creation new Escrow. Got empty value/s with 'funding_deadline', 'initial_amount'.")
-            raise ValidationError("funding_deadline and initial_amount fields are required.")
 
-        funder_user = get_object_or_404(User, id=self.request.data.get("funder_user_id"))
-        recipient_user = get_object_or_404(User, id=self.request.data.get("recipient_user_id"))
+        if not all([funding_deadline, initial_amount]):
+            raise ValidationError("'funding_deadline' and 'initial_amount' fields are required.")
+
+        funder_user = get_object_or_404(User, id=self.request.data.get("funder_user_id"))  # type: User
+        recipient_user = get_object_or_404(User, id=self.request.data.get("recipient_user_id"))  # type: User
         documents = serializer.validated_data.pop("documents", [])
 
         try:
-            if serializer.is_valid():  # Overriden method. Raises ValidationError by default
+            if serializer.is_valid(raise_exception=True):
                 escrow = serializer.save(
                     funder_user=funder_user,
                     recipient_user=recipient_user
-                )
+                )  # type: Escrow
                 logger.info("Successfully created new escrow record (id=%r)" % escrow.id)
                 serializer.assign_uploaded_documents_to_escrow(documents)
             else:
                 raise ValidationError("Got invalid data for Escrow")
         except ValidationError as e:
-            logger.info("Invalid EscrowSerializer error. %r" % format_exc())
+            logger.info("Validation error. %r" % format_exc())
             raise e
         except Exception as e:
             logger.error("Unable to save Escrow=%r, due to %r" % (serializer.validated_data, format_exc()))
             raise ValidationError("Unable to save escrow")
 
         # Create initial operations:  Create Escrow Operation, Load Funds Operation
-        create_escrow_operation = EscrowOperation(
-            escrow=escrow, type=EscrowOperationType.create_escrow,
-            creator=self.request.user, approval_deadline=funding_deadline
+        # CreateEscrow
+        create_op = CreateEscrowOperation(
+            escrow=escrow,
+            type=EscrowOperationType.create_escrow,
+            creator=self.request.user,
+            approval_deadline=funding_deadline
         )
-        create_escrow_operation.save()
+        create_op.save()
 
-        load_funds_operation = EscrowOperation(
-            escrow=escrow, type=EscrowOperationType.load_funds,
-            creator=self.request.user, approval_deadline=funding_deadline,
-            args={'args': {"amount": initial_amount}}
+        # LoadFunds
+        load_funds_op = LoadFundsEscrowOperation(
+            escrow=escrow,
+            type=EscrowOperationType.load_funds,
+            creator=self.request.user,
+            approval_deadline=funding_deadline
         )
-        load_funds_operation.save()
+        load_funds_op.amount = int(float(initial_amount) * 100)  # internal amounts are always in CENTS (x100)
+        load_funds_op.save()
 
     @transaction.atomic
     def perform_update(self, serializer):
@@ -189,16 +186,12 @@ class EscrowViewSet(views.ModelViewSet):
         :param pk:
         :return:
         """
-
         escrow_id = pk
-
         try:
             escrow = Escrow.objects.get(id=escrow_id)
         except Exception:
             raise NotFound(f'Escrow not found {escrow_id}')
-
         escrow.accept()
-
         return Response()
 
     @transaction.atomic
@@ -216,16 +209,12 @@ class EscrowViewSet(views.ModelViewSet):
         :param pk:
         :return:
         """
-
         escrow_id = pk
-
         try:
             escrow = Escrow.objects.get(id=escrow_id)
         except Exception:
             raise NotFound(f'Escrow not found {escrow_id}')
-
         escrow.reject()
-
         return Response()
 
 
@@ -263,12 +252,15 @@ class EscrowOperationViewSet(views.ModelViewSet):
         logger.info("EscrowOperation creation, validated_data=%r" % serializer.validated_data)
         try:
             if serializer.is_valid(raise_exception=True):
-                operation = serializer.save(creator=self.request.user)
-                logger.info("Successfully created new escrow operation (id=%r)" % operation.id)
+                operation = serializer.save(creator=self.request.user)  # type: EscrowOperation
+                logger.info("Successfully created new escrow operation (%r)" % operation)
 
-                operation = EscrowOperation.get_specific_operation_obj(operation)
+                operation = EscrowOperation.cast(operation)
+
+                # auto accept operation if it does not require any action from counterpart!
                 if not operation.requires_mutual_approval:
                     operation.accept()
+
         except ValidationError as e:
             logger.info("Invalid EscrowOperationSerializer error. %r" % format_exc())
             raise e
@@ -291,20 +283,28 @@ class EscrowOperationViewSet(views.ModelViewSet):
         :param pk:
         :return:
         """
-        escrow_operation_id = pk
+        op_id = pk
         try:
-            escrow_operation = EscrowOperation.objects.get(id=escrow_operation_id)
+            operation = EscrowOperation.objects.get(id=op_id)  # type: EscrowOperation
         except Exception:
-            raise NotFound(f'EscrowOperation not found {escrow_operation_id}')
+            raise NotFound(f'EscrowOperation not found {op_id}')
 
-        # It's possible that with "accept" request we received some additional information, that is required for
-        # subsequent operation's processing ("load_funds" needs amount & funding_source_id etc.)
-        # We could pass request's data as an argument to "accept" method, but for
-        # consistency (when "load_funds" operation is initiated and executed in EscrowOperation.perform_create method)
-        # it's better to save it to "args" field
-        escrow_operation.add_args(request.data if request.data is not None else {})
+        logger.info("Accepting operation=%r, req_data=%r" % (operation, request.POST))
 
-        return EscrowOperation.get_operation_class(escrow_operation.type).accept(request.user)
+        if not request.data:
+            raise ValidationError("Empty operation data")
+
+        if operation.type is EscrowOperationType.load_funds:
+            op = EscrowOperation.cast(operation)  # type: LoadFundsEscrowOperation
+            op.amount = int(request.data["amount"])
+            op.funding_source_id = UUID(request.data["funding_source_id"])
+            op.save()
+        elif operation.type is EscrowOperationType.release_funds:
+            # TODO: process specific operation types here
+            pass
+
+        op.accept()
+        Response(status=status_codes.HTTP_204_NO_CONTENT)
 
     @transaction.atomic
     @action(methods=['POST'],
@@ -321,12 +321,12 @@ class EscrowOperationViewSet(views.ModelViewSet):
         :param pk:
         :return:
         """
-
         operation_id = pk
-
         try:
-            operation = EscrowOperation.objects.get(id=operation_id)
+            operation = EscrowOperation.objects.get(id=operation_id)  # type: EscrowOperation
+            op = EscrowOperation.cast(operation)  # type: EscrowOperation
         except Exception:
             raise NotFound(f'EscrowOperation not found {operation_id}')
 
-        return EscrowOperation.get_specific_operation_obj(operation).reject(request.user)
+        op.reject()
+        Response(status=status_codes.HTTP_204_NO_CONTENT)

@@ -83,3 +83,50 @@ class SchedulePaymentType(Enum):
     class Labels:
         receive = 'internal'
         pay = 'external'
+
+
+class EscrowStatus(Enum):
+    pending = 'pending'  # escrow is waiting to be accepted
+    pending_funding = 'pending_funding'  # escrow is waiting for initial funds
+    ongoing = 'ongoing'  # escrow was accepted and request/load of funds ops are ongoing
+    closed = 'closed'  # closed by mutual agreement of counterparts
+    terminated = 'terminated'  # 'closed' automatically due to inaction of parties involved
+    rejected = 'rejected'  # was rejected for some reason by either counterpart
+
+    class Labels:
+        pending = 'Pending'
+        ongoing = 'Ongoing'
+        closed = 'Closed'
+        terminated = 'Terminated'
+        rejected = 'Rejected'
+
+
+class EscrowOperationType(Enum):
+    """
+    Possible operations on Escrow
+    """
+    load_funds = 'load_funds'  # Load funds
+    release_funds = 'release_funds'  # Release funds
+    close_escrow = 'close_escrow'  # Request to close escrow
+    create_escrow = 'create_escrow'  # Initial request to create escrow
+
+    class Labels:
+        load_funds = 'Load funds'
+        release_funds = 'Release funds'
+        close_escrow = 'Close escrow'
+        create_escrow = 'Create escrow'
+
+
+class EscrowOperationStatus(Enum):
+    """
+    Possible statuses of specific escrow operations
+    """
+    pending = 'pending'
+    rejected = 'rejected'
+    approved = 'approved'
+
+    class Labels:
+        pending = 'Pending'
+        rejected = 'Rejected'
+        approved = 'Approved'
+
