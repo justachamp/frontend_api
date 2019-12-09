@@ -116,6 +116,7 @@ class EscrowViewSet(views.ModelViewSet):
 
         # Create initial operations:  Create Escrow Operation, Load Funds Operation
         # CreateEscrow
+        logger.info("Creating CreateEscrowOperation for escrow_id=%s" % escrow.id)
         creator = self.request.user
         create_op = CreateEscrowOperation(
             escrow=escrow,
@@ -126,6 +127,7 @@ class EscrowViewSet(views.ModelViewSet):
         create_op.save()
 
         # LoadFunds
+        logger.info("Creating LoadFundsEscrowOperation for escrow_id=%s" % escrow.id)
         load_funds_op = LoadFundsEscrowOperation(
             escrow=escrow,
             type=EscrowOperationType.load_funds,
@@ -277,7 +279,7 @@ class EscrowOperationViewSet(views.ModelViewSet):
             logger.error("Unable to save EscrowOperation=%r, due to %r" % (serializer.validated_data, format_exc()))
             raise ValidationError("Unable to save escrow operation")
 
-    # @transaction.atomic
+    @transaction.atomic
     @action(methods=['POST'],
             detail=True,
             permission_classes=(
