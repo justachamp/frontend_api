@@ -160,6 +160,12 @@ class Escrow(Model):
         :param user:
         :return:
         """
+        # Avoiding returning True for scenario with just-created Escrow record: we have two operations here, and one of
+        # them, "load_funds", could wait for action from funder, but after recipient will approve "create_escrow"
+        # operation
+        if self.status is EscrowStatus.pending and self.create_escrow_operation.creator.id == user.id:
+            return False
+
         return EscrowOperation.objects.filter(
             escrow__id=self.id,
             # sharing knowledge about "status" field calculated fields - not good
