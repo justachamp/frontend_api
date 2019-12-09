@@ -128,7 +128,7 @@ class EscrowViewSet(views.ModelViewSet):
             creator=self.request.user,
             approval_deadline=funding_deadline
         )
-        load_funds_op.amount = int(float(initial_amount) * 100)  # internal amounts are always in CENTS (x100)
+        load_funds_op.amount = initial_amount
         load_funds_op.save()
 
     @transaction.atomic
