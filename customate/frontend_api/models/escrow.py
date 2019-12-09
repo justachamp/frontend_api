@@ -149,7 +149,7 @@ class Escrow(Model):
             return False
 
         op = self.release_escrow_operation
-        if op is not None and op.status is not EscrowOperationStatus.pending:
+        if op is not None and op.status is EscrowOperationStatus.pending:
             return False
 
         return True
