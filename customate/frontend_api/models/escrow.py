@@ -137,10 +137,13 @@ class Escrow(Model):
         Can user issue 'CloseEscrow' operation on this Escrow?
         :return:
         """
-        # Check that there was no 'CloseEscrow' operations so far
+        if self.status is not EscrowStatus.ongoing:
+            return False
+
         op = self.close_escrow_operation
         if op is None:
             return True
+
         return op.status is not EscrowOperationStatus.pending
 
     @property
@@ -153,7 +156,7 @@ class Escrow(Model):
         if self.balance == 0:
             return False
 
-        if self.status is EscrowStatus.closed:
+        if self.status is not EscrowStatus.ongoing:
             return False
 
         op = self.release_escrow_operation
