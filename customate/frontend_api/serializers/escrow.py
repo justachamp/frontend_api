@@ -280,6 +280,6 @@ class EscrowOperationSerializer(HyperlinkedModelSerializer):
         if op.creator.id == current_user.id:
             return False
 
-        # if operation requires approval, verify that it was given
+        # if operation requires approval, verify that it wasn't given
         if op.requires_mutual_approval:
-            return op.approved is None
+            return op.status is EscrowOperationStatus.pending
