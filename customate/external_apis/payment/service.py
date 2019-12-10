@@ -327,6 +327,27 @@ class Payee:
             payment_account_id=UUID(res['data']['relationships']['account']['data']['id'])
         )
 
+    @staticmethod
+    def deactivate(payee_id: UUID):
+        """
+        Deactivate payee
+        https://customatepayment.docs.apiary.io/#reference/0/payee-management/deactivate-payee
+
+        :param payee_id:
+        :return:
+        """
+        r = requests.delete("{base_url}payees/{payee_id}".format(
+            base_url=BASE_URL,
+            payee_id=str(payee_id)
+        ), headers={
+            "Content-Type": "application/json"
+        })
+
+        if r.status_code == requests.codes.bad_request:
+            raise PaymentApiError(json_response=r.json())
+        else:
+            r.raise_for_status()
+
 
 class FundingSource:
     """
@@ -409,6 +430,27 @@ class FundingSource:
             currency=Currency(res["data"]["attributes"]["currency"]),
             payment_account_id=UUID(res['data']['relationships']['account']['data']['id'])
         )
+
+    @staticmethod
+    def deactivate(fs_id: UUID):
+        """
+        Deactivate funding source
+        https://customatepayment.docs.apiary.io/#reference/0/funding-source-management/deactivate-funding-source
+
+        :param fs_id:
+        :return:
+        """
+        r = requests.delete("{base_url}funding_sources/{fs_id}".format(
+            base_url=BASE_URL,
+            fs_id=str(fs_id)
+        ), headers={
+            "Content-Type": "application/json"
+        })
+
+        if r.status_code == requests.codes.bad_request:
+            raise PaymentApiError(json_response=r.json())
+        else:
+            r.raise_for_status()
 
 
 class Wallet:
