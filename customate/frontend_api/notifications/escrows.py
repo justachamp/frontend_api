@@ -11,8 +11,6 @@ from frontend_api.notifications.helpers import (
     send_bulk_smses,
     get_funds_senders,
     get_funds_recipients,
-    get_load_funds_details,
-    get_schedule_details,
     get_ses_email_payload
 )
 from core.models import User
