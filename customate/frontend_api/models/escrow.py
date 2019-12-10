@@ -213,14 +213,7 @@ class Escrow(Model):
         Get the first and only CreateEscrow operation for this escrow
         :return:
         """
-        # some safety assertions
-        objs = CreateEscrowOperation.objects.filter(escrow__id=self.id)
-        logger.debug("count=%s" % objs.count())
-        count = objs.count()
-        if count == 0:
-            return None
-        assert count == 1, "Unexpected number of CreateEscrowOperations"
-        return objs.first()
+        return CreateEscrowOperation.objects.filter(escrow__id=self.id).first()
 
     @property
     def close_escrow_operation(self) -> CloseEscrowOperation or None:
@@ -228,13 +221,7 @@ class Escrow(Model):
         Get the last and only CloseEscrow operation for this escrow
         :return:
         """
-        objs = CloseEscrowOperation.objects.filter(escrow__id=self.id)
-        logger.debug("count=%s" % objs.count())
-        count = objs.count()
-        if count == 0:
-            return None
-        assert count == 1, "Unexpected number of CloseEscrowOperations"
-        return objs.first()
+        return CloseEscrowOperation.objects.filter(escrow__id=self.id).first()
 
     @property
     def release_escrow_operation(self) -> ReleaseFundsEscrowOperation or None:
@@ -242,13 +229,7 @@ class Escrow(Model):
         Get the last and only ReleaseEscrow operation for this escrow
         :return:
         """
-        objs = ReleaseFundsEscrowOperation.objects.filter(escrow__id=self.id)
-        logger.debug("count=%s" % objs.count())
-        count = objs.count()
-        if count == 0:
-            return None
-        assert count == 1, "Unexpected number of ReleaseFundsEscrowOperation"
-        return objs.first()
+        return ReleaseFundsEscrowOperation.objects.filter(escrow__id=self.id).first()
 
     def accept(self):
         """
