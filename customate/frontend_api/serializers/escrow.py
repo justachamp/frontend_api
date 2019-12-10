@@ -282,4 +282,4 @@ class EscrowOperationSerializer(HyperlinkedModelSerializer):
 
         # if operation requires approval, verify that it was given
         if op.requires_mutual_approval:
-            return op.approved is not None
+            return op.approved is None
