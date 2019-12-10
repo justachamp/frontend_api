@@ -308,18 +308,14 @@ class EscrowOperationViewSet(views.ModelViewSet):
 
         logger.info("Accepting operation=%r, req_data=%r" % (operation, request.POST))
 
-        if not request.data:
-            raise ValidationError("Empty operation data")
-
         if operation.type is EscrowOperationType.load_funds:
             op = EscrowOperation.cast(operation)  # type: LoadFundsEscrowOperation
             # Looks like we only need to set "funding_source_id". "amount" field is already set by EscrowOperation's
             # creator and we don't want to allow to change it in any way.
             op.funding_source_id = UUID(request.data["funding_source_id"])
             op.save()
-        elif operation.type is EscrowOperationType.release_funds:
-            # TODO: process specific operation types here
-            pass
+        else:
+            op = EscrowOperation.cast(operation)  # type: Union[CloseEscrowOperation, ReleaseFundsEscrowOperation]
 
         op.accept()
         return Response(status=status_codes.HTTP_204_NO_CONTENT)
