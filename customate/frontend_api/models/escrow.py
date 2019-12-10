@@ -472,12 +472,53 @@ class CloseEscrowOperation(EscrowOperation):
     def accept(self):
         super().accept()
         self.escrow.move_to_status(status=EscrowStatus.closed)
-        # TODO: return remaining funds on Escrow wallet to Funder!
 
-        # Deactivate Wallet and related entities on the payment service side
+        self._refund_all_escrow_funds_to_funder()
+
         payment_service.Wallet.deactivate(self.escrow.wallet_id)
         payment_service.FundingSource.deactivate(self.escrow.transit_funding_source_id)
         payment_service.Payee.deactivate(self.escrow.transit_payee_id)
+
+    def _refund_all_escrow_funds_to_funder(self):
+        """
+        Note that we cannot relay on Escrow.balance field here, because it's possible that we still didn't process
+        latest "on_transaction_change" event and local "balance" field has incorrect value
+        :return:
+        """
+        wallet_details = payment_service.Wallet.get(self.escrow.wallet_id)
+        funding_source_id = self.escrow.transit_funding_source_id
+        payee_id = None  # funder's payee with type=wallet
+        payment_result = None
+        description = "{escrow_name} funds release after closing".format(escrow_name=self.escrow.name)
+
+        try:
+            pass
+            # payment_result = payment_service.Payment.create(
+            #     user_id=self.escrow.funder_user.id,
+            #     payment_account_id=self.escrow.funder_payment_account_id,
+            #     currency=Currency(self.escrow.currency),
+            #     amount=wallet_details.balance,
+            #     description=description,
+            #     payee_id=payee_id,
+            #     funding_source_id=funding_source_id
+            # )
+            #
+            # if payment_result.status is PaymentStatusType.FAILED:
+            #     raise ValidationError(payment_result.error_message)
+        except ValidationError as ex:
+            logger.warning("Release all Escrow funds payment for %s (op_id=%s) was created with FAILED status (%s)" % (
+                type(self), self.id, payment_result
+            ), extra={
+                'escrow_id': self.escrow.id
+            })
+            raise ex
+        except Exception:
+            logger.error("Unable to create payment for %s (op_id=%s) due to unknown error: %r. " % (
+                type(self), self.id, format_exc()
+            ), extra={
+                'escrow_id': self.escrow.id
+            })
+            raise ValidationError("Unable to accept operation(id=%s)" % self.id)
 
 
 class LoadFundsEscrowOperation(EscrowOperation):

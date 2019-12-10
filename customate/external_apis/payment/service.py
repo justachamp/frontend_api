@@ -460,6 +460,71 @@ class Wallet:
     """
 
     @staticmethod
+    def get(wallet_id: UUID) -> WalletDetails:
+        """
+        Get details about wallet
+        :param wallet_id:
+        :return:
+        """
+        r = requests.get("{base_url}wallets/{wallet_id}".format(
+            base_url=BASE_URL,
+            wallet_id=str(wallet_id)
+        ), headers={
+            "Content-Type": "application/json"
+        })
+
+        if r.status_code == requests.codes.bad_request:
+            raise PaymentApiError(json_response=r.json())
+        else:
+            r.raise_for_status()
+
+        # {
+        #   "data": {
+        #     "type": "wallets",
+        #     "id": "778bccad-5482-406a-b0f1-05608fd69a43",
+        #     "attributes": {
+        #       "active": 1,
+        #       "balance": 440,
+        #       "creationDate": 1575883779579,
+        #       "currency": "GBP",
+        #       "data": null,
+        #       "iban": "6f28a7a4-0fa0-4629-9a33-09ed48713fcd",
+        #       "ibanGeneralPart": "48713fcd",
+        #       "isVirtual": 1,
+        #       "usedDate": 1575883779578
+        #     },
+        #     "relationships": {
+        #       "account": {
+        #         "data": {
+        #           "type": "accounts",
+        #           "id": "45381b6c-c9c9-4592-9253-f6888aa64455"
+        #         }
+        #       },
+        #       "fundingSource": {
+        #         "data": null
+        #       },
+        #       "payee": {
+        #         "data": null
+        #       }
+        #     }
+        #   }
+        # }
+        res = r.json()
+        logger.debug("res=%r" % res)
+        return WalletDetails(
+            id=UUID(res["data"]["id"]),
+            currency=Currency(res["data"]["attributes"]["currency"]),
+            iban=res["data"]["attributes"]["iban"],
+            balance=int(res["data"]["attributes"]["balance"]),
+            is_virtual=bool(int(res["data"]["attributes"]["isVirtual"])),
+            payment_account_id=UUID(res['data']['relationships']['account']['data']['id']),
+            # Returning this fields during processing GET request requires additional changes in Payment API,
+            # which are not planned to be implemented
+            funding_source_id=None,
+            payee_id=None,
+        )
+
+    @staticmethod
     def create(currency: Currency, payment_account_id: UUID) -> WalletDetails:
         """
         Virtual wallet is a wallet that doesn't have a real VIBAN (from the list provided by bank) attached to it,
