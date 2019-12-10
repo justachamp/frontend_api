@@ -32,8 +32,9 @@ from frontend_api.permissions import (
     # HasParticularSchedulePermission
 )
 from frontend_api.serializers.escrow import EscrowOperationSerializer
-from frontend_api.helpers import (
-    notify_counterpart_about_new_escrow
+from frontend_api.notifications.escrows import (
+    notify_counterpart_about_new_escrow,
+    notify_escrow_creator_about_rejected_escrow
 )
 
 logger = logging.getLogger(__name__)
@@ -226,6 +227,14 @@ class EscrowViewSet(views.ModelViewSet):
         except Exception:
             raise NotFound(f'Escrow not found {escrow_id}')
         escrow.reject()
+        # Send appropriate notification to escrows creator.
+        try:
+            create_escrow_op = escrow.create_escrow_operation
+            notify_escrow_creator_about_rejected_escrow(create_escrow_op)
+        except AssertionError:
+            logger.error("Send notification about rejected escrow.\
+                         Could not get initial CreateEscrowOperation. Escrow id: %s" % escrow.id)
+            pass
         return Response(status=status_codes.HTTP_204_NO_CONTENT)
 
 

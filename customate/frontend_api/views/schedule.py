@@ -24,7 +24,7 @@ import external_apis.payment.service as payment_service
 from frontend_api.fields import ScheduleStatus, SchedulePurpose
 from frontend_api.tasks.payments import make_overdue_payment, make_payment, make_failed_payment
 from frontend_api.models import Schedule, Document
-from frontend_api.helpers import invite_payer
+from frontend_api.notifications.schedules import invite_payer
 
 
 from frontend_api.permissions import (
