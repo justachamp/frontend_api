@@ -2,7 +2,7 @@ import logging
 from traceback import format_exc
 from uuid import UUID
 from django.db.models import Q
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import action
 from rest_framework import status as status_codes
@@ -275,6 +275,12 @@ class EscrowOperationViewSet(views.ModelViewSet):
         except ValidationError as e:
             logger.info("Invalid EscrowOperationSerializer error. %r" % format_exc())
             raise e
+        except IntegrityError as e:
+            # We allow to create several pending "load_funds" operations, all other operation types in "pending" state
+            # should be present in one copy (this restriction is implemented on database level)
+            logger.error("Unable to save EscrowOperation=%r, due to IntegrityError: %r" % (serializer.validated_data, format_exc()))
+            raise ValidationError("Looks like counterpart has already performed some action with this Escrow record. "
+                                  "Please refresh page and try again.")
         except Exception as e:
             logger.error("Unable to save EscrowOperation=%r, due to %r" % (serializer.validated_data, format_exc()))
             raise ValidationError("Unable to save escrow operation")
