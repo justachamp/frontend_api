@@ -124,6 +124,14 @@ class Escrow(Model):
             else None
 
     @property
+    def can_dispute(self) -> bool:
+        """
+        Can user dispute some operations on this Escrow?
+        :return:
+        """
+        return self.status is EscrowStatus.ongoing
+
+    @property
     def can_close(self) -> bool:
         """
         Can user issue 'CloseEscrow' operation on this Escrow?

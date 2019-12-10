@@ -77,6 +77,7 @@ class EscrowSerializer(BaseEscrowSerializer):
     currency = EnumField(enum=Currency, required=True)
 
     # Allowed operations for current user
+    can_dispute = BooleanField(required=False, read_only=True)
     can_close = BooleanField(required=False, read_only=True)
     can_release_funds = BooleanField(required=False, read_only=True)
     can_accept = SerializerMethodField()
@@ -138,6 +139,7 @@ class EscrowSerializer(BaseEscrowSerializer):
             'funder_payment_account_id',
             'closing_date',
 
+            'can_dispute',
             'can_accept',
             'can_close',
             'can_load_funds',
