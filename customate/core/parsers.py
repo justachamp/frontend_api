@@ -11,8 +11,13 @@ class JSONAPIBulkParser(parsers.JSONParser):
     def parse(self, stream, media_type=None, parser_context=None):
         data = []
         encoding = parser_context.get('encoding', settings.DEFAULT_CHARSET)
-        raw_data = json.loads(stream.read().decode(encoding))
+        stream_data = stream.read().decode(encoding)
 
+        # Handling POST/PUT requests with empty body (which is allowed by standard)
+        if stream_data == '':
+            return data
+
+        raw_data = json.loads(stream_data)
         if isinstance(raw_data.get('data'), list):
             for single_data in raw_data['data']:
                 single_data = {'data': single_data}
