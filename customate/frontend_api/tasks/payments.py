@@ -25,7 +25,11 @@ from frontend_api.models.schedule import Schedule, PeriodicSchedule, DepositsSch
 from frontend_api.models.schedule import SchedulePayments, LastSchedulePayments
 from frontend_api.models.escrow import Escrow, EscrowStatus
 from frontend_api.fields import ScheduleStatus, SchedulePeriod
-from frontend_api import helpers
+from frontend_api.notifications.schedules import (
+    notify_about_loaded_funds,
+    notify_about_schedules_successful_payment,
+    notify_about_schedules_failed_payment
+)
 
 logger = logging.getLogger(__name__)
 
@@ -234,7 +238,7 @@ def on_transaction_change(transaction_info: Dict):
 
     # Send notifications about loaded funds
     if not schedule_id:
-        helpers.notify_about_loaded_funds(
+        notify_about_loaded_funds(
             user_id=user_id,
             transaction_info=transaction_info,
             transaction_status=transaction_status)
@@ -248,10 +252,10 @@ def on_transaction_change(transaction_info: Dict):
 
     # Send notifications about completed schedules.
     if transaction_status is TransactionStatusType.SUCCESS:
-        helpers.notify_about_schedules_successful_payment(schedule=schedule, transaction_info=transaction_info)
+        notify_about_schedules_successful_payment(schedule=schedule, transaction_info=transaction_info)
 
     if transaction_status is TransactionStatusType.FAILED:
-        helpers.notify_about_schedules_failed_payment(schedule=schedule, transaction_info=transaction_info)
+        notify_about_schedules_failed_payment(schedule=schedule, transaction_info=transaction_info)
 
 
 @shared_task

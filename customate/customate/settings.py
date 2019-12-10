@@ -323,7 +323,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
             ],
             'libraries': {
-                'prettify_number': 'frontend_api.helpers'
+                'prettify_number': 'frontend_api.notifications.helpers'
             }
         },
     },
