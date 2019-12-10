@@ -572,7 +572,6 @@ class LoadFundsEscrowOperation(EscrowOperation):
 
         escrow = self.escrow
         payee_id = escrow.transit_payee_id
-        payment_result = None
         description = "{escrow_name} funding".format(escrow_name=escrow.name)
 
         try:
@@ -586,19 +585,8 @@ class LoadFundsEscrowOperation(EscrowOperation):
                 funding_source_id=self.funding_source_id
             )
 
-            if payment_result.status is not PaymentStatusType.FAILED:
-                if escrow.status is EscrowStatus.pending_funding:
-                    escrow.move_to_status(status=EscrowStatus.ongoing)
-            else:
-                raise ValidationError(payment_result.error_message)
-        except ValidationError as ex:
-            logger.warning("Load funds payment for %s (op_id=%s) was created with FAILED status (%s)" % (
-                type(self), self.id, payment_result
-            ), extra={
-                'escrow_operation_id': self.id,
-                'escrow_id': escrow.id
-            })
-            raise ex
+            if payment_result.status is not PaymentStatusType.FAILED and escrow.status is EscrowStatus.pending_funding:
+                escrow.move_to_status(status=EscrowStatus.ongoing)
         except Exception:
             logger.error("Unable to create payment for %s (id=%s) due to unknown error: %r. " % (
                 type(self), self.id, format_exc()
@@ -649,11 +637,10 @@ class ReleaseFundsEscrowOperation(EscrowOperation):
         escrow = self.escrow
         funding_source_id = escrow.transit_funding_source_id
         payee_id = escrow.payee_id
-        payment_result = None
         description = "{escrow_name} funds release".format(escrow_name=escrow.name)
 
         try:
-            payment_result = payment_service.Payment.create(
+            payment_service.Payment.create(
                 user_id=escrow.funder_user.id,
                 payment_account_id=escrow.funder_payment_account_id,
                 currency=Currency(escrow.currency),
@@ -662,17 +649,6 @@ class ReleaseFundsEscrowOperation(EscrowOperation):
                 payee_id=payee_id,
                 funding_source_id=funding_source_id
             )
-
-            if payment_result.status is PaymentStatusType.FAILED:
-                raise ValidationError(payment_result.error_message)
-        except ValidationError as ex:
-            logger.warning("Release funds payment for %s (op_id=%s) was created with FAILED status (%s)" % (
-                type(self), self.id, payment_result
-            ), extra={
-                'escrow_operation_id': self.id,
-                'escrow_id': escrow.id
-            })
-            raise ex
         except Exception:
             logger.error("Unable to create payment for %s (op_id=%s) due to unknown error: %r. " % (
                 type(self), self.id, format_exc()
