@@ -526,6 +526,7 @@ class LoadFundsEscrowOperation(EscrowOperation):
         escrow = self.escrow
         payee_id = escrow.transit_payee_id
         payment_result = None
+        description = "{escrow_name} funding".format(escrow_name=escrow.name)
 
         try:
             payment_result = payment_service.Payment.create(
@@ -533,7 +534,7 @@ class LoadFundsEscrowOperation(EscrowOperation):
                 payment_account_id=escrow.funder_payment_account_id,
                 currency=Currency(escrow.currency),
                 amount=self.amount,
-                description=self.escrow.additional_information,
+                description=description,
                 payee_id=payee_id,
                 funding_source_id=self.funding_source_id
             )
@@ -602,6 +603,7 @@ class ReleaseFundsEscrowOperation(EscrowOperation):
         funding_source_id = escrow.transit_funding_source_id
         payee_id = escrow.payee_id
         payment_result = None
+        description = "{escrow_name} funds release".format(escrow_name=escrow.name)
 
         try:
             payment_result = payment_service.Payment.create(
@@ -609,7 +611,7 @@ class ReleaseFundsEscrowOperation(EscrowOperation):
                 payment_account_id=escrow.funder_payment_account_id,
                 currency=Currency(escrow.currency),
                 amount=self.amount,
-                description=escrow.additional_information,
+                description=description,
                 payee_id=payee_id,
                 funding_source_id=funding_source_id
             )
