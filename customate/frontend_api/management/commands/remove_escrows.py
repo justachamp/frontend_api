@@ -41,6 +41,8 @@ class Command(BaseCommand):
             self.stdout.write(f"Removing {len(escrow_ids)} escrow(s)")
 
             if escrow_ids:
+                cursor.execute("delete from frontend_api_document where escrow_id = ANY(%s);",
+                               params=[escrow_ids])
                 cursor.execute("delete from frontend_api_escrowoperation where escrow_id = ANY(%s);",
                                params=[escrow_ids])
                 cursor.execute("delete from frontend_api_escrow where id = ANY(%s);",
