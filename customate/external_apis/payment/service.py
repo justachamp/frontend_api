@@ -501,6 +501,27 @@ class Wallet:
             payee_id=UUID(res['data']['relationships']['payee']['data']['id']),
         )
 
+    @staticmethod
+    def deactivate(wallet_id: UUID):
+        """
+        Deactivate wallet.
+        https://customatepayment.docs.apiary.io/#reference/0/wallet-management/deactivate-wallet
+
+        :param wallet_id:
+        :return:
+        """
+        r = requests.delete("{base_url}wallets/{wallet_id}".format(
+            base_url=BASE_URL,
+            wallet_id=str(wallet_id)
+        ), headers={
+            "Content-Type": "application/json"
+        })
+
+        if r.status_code == requests.codes.bad_request:
+            raise PaymentApiError(json_response=r.json())
+        else:
+            r.raise_for_status()
+
 
 class PaymentAccount:
     """

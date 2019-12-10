@@ -462,6 +462,9 @@ class CloseEscrowOperation(EscrowOperation):
         self.escrow.move_to_status(status=EscrowStatus.closed)
         # TODO: return remaining funds on Escrow wallet to Funder!
 
+        # Deactivate Wallet on the payment service side
+        payment_service.Wallet.deactivate(self.escrow.wallet_id)
+
 
 class LoadFundsEscrowOperation(EscrowOperation):
     """
