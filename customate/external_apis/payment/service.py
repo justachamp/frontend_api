@@ -328,6 +328,99 @@ class Payee:
         )
 
     @staticmethod
+    def find(account_id: UUID, payee_type: PayeeType, currency: Currency) -> [PayeeDetails]:
+        """
+        Find Payees by specific attributes
+
+        :param account_id:
+        :param payee_type:
+        :param currency:
+        :return:
+        """
+
+        # Using RSQL as query language (https://github.com/jirutka/rsql-parser), only this filter's format is supported
+        # by payment service
+        r = requests.get("{base_url}payees?filter[payees]=account.id=={account_id};type=={payee_type};currency=={currency}".format(
+            base_url=BASE_URL,
+            payee_type=payee_type.value,
+            account_id=account_id,
+            currency=currency.value
+        ), headers={
+            "Content-Type": "application/json"
+        })
+
+        if r.status_code == requests.codes.bad_request:
+            raise PaymentApiError(json_response=r.json())
+        else:
+            r.raise_for_status()
+
+        # {
+        #   "data": [{
+        #     "id": "1119e2b2-0641-48bf-a9ce-55020b745b61",
+        #     "type": "payees",
+        #     "attributes": {
+        #       "title": "Test Payee",
+        #       "type": "BANK_ACCOUNT",
+        #       "active": 1,
+        #       "currency": "EUR",
+        #       "data": {
+        #         "recipient": {
+        #           "fullName": "Gilbert Mendoza",
+        #           "email": "fisher.octua@email.com",
+        #           "address": {
+        #             "postcode": "EC3N 2EX",
+        #             "city": "London",
+        #             "address_line_1": "Dawson House 5 Jewry Street",
+        #             "address_line_2": "",
+        #             "country": "GB"
+        #           }
+        #         },
+        #         "bank": {
+        #           "name": "SAXO PAYMENTS A/S",
+        #           "address": {
+        #             "postcode": "EC3N 2EX",
+        #             "city": "London",
+        #             "address_line_1": "Dawson House 5 Jewry Street",
+        #             "address_line_2": "",
+        #             "country": "GB"
+        #           }
+        #         },
+        #         "account": {
+        #           "bic": "SAPYGB2L",
+        #           "iban": "DE85202208000090025795"
+        #         }
+        #       }
+        #     },
+        #     "relationships": {
+        #       "account": {
+        #         "data": {
+        #           "type": "accounts",
+        #           "id": "9479e3b3-0641-48bf-a9ce-55020b745b61"
+        #         }
+        #       }
+        #     }
+        #   }]
+        # }
+        res = r.json()
+        logger.debug("res=%r" % res)
+
+        result = []
+        for payee_details in res["data"]:
+            result.append(
+                PayeeDetails(
+                    id=UUID(payee_details["id"]),
+                    title=payee_details["attributes"]["title"],
+                    type=PayeeType(payee_details["attributes"]["type"]),
+                    iban=payee_details['attributes']['data']['account']['iban'],
+                    recipient_name=payee_details['attributes']['data']['recipient']['fullName'],
+                    recipient_email=payee_details['attributes']['data']['recipient']['email'],
+                    payment_account_id=UUID(payee_details['relationships']['account']['data']['id'])
+                )
+            )
+
+        return result
+
+    @staticmethod
     def deactivate(payee_id: UUID):
         """
         Deactivate payee

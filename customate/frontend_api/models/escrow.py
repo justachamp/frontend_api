@@ -15,7 +15,7 @@ from django.utils.translation import gettext_lazy as _
 from django.contrib.postgres.fields import JSONField
 
 from core.models import Model, User
-from core.fields import Currency, UserRole, PaymentStatusType
+from core.fields import Currency, UserRole, PaymentStatusType, PayeeType
 from customate.settings import ESCROW_OPERATION_APPROVE_DEADLINE
 import external_apis.payment.service as payment_service
 
@@ -481,30 +481,39 @@ class CloseEscrowOperation(EscrowOperation):
 
     def _refund_all_escrow_funds_to_funder(self):
         """
-        Note that we cannot relay on Escrow.balance field here, because it's possible that we still didn't process
+        Note that we cannot rely on Escrow.balance field here, because it's possible that we still didn't process
         latest "on_transaction_change" event and local "balance" field has incorrect value
         :return:
         """
+        # Receiving latest wallet details ("balance" included)
         wallet_details = payment_service.Wallet.get(self.escrow.wallet_id)
         funding_source_id = self.escrow.transit_funding_source_id
-        payee_id = None  # funder's payee with type=wallet
         payment_result = None
         description = "{escrow_name} funds release after closing".format(escrow_name=self.escrow.name)
 
         try:
-            pass
-            # payment_result = payment_service.Payment.create(
-            #     user_id=self.escrow.funder_user.id,
-            #     payment_account_id=self.escrow.funder_payment_account_id,
-            #     currency=Currency(self.escrow.currency),
-            #     amount=wallet_details.balance,
-            #     description=description,
-            #     payee_id=payee_id,
-            #     funding_source_id=funding_source_id
-            # )
-            #
-            # if payment_result.status is PaymentStatusType.FAILED:
-            #     raise ValidationError(payment_result.error_message)
+            # Searching for appropriate funder's payee
+            funder_wallet_payees = payment_service.Payee.find(self.escrow.funder_payment_account_id, PayeeType.WALLET,
+                                                              self.escrow.currency)
+            if isinstance(funder_wallet_payees, list) and len(funder_wallet_payees) > 1:
+                raise ValidationError("Cannot process with releasing Escrows funds. Expected only one wallet's payee.")
+            else:
+                funder_wallet_payee_id = funder_wallet_payees[0].id
+
+            # Sending money from Escrow's wallet (transit_funding_source_id) to
+            # funder's "real" wallet (funder_wallet_payee_id)
+            payment_result = payment_service.Payment.create(
+                user_id=self.escrow.funder_user.id,
+                payment_account_id=self.escrow.funder_payment_account_id,
+                currency=Currency(self.escrow.currency),
+                amount=wallet_details.balance,
+                description=description,
+                payee_id=funder_wallet_payee_id,
+                funding_source_id=funding_source_id
+            )
+
+            if payment_result.status is PaymentStatusType.FAILED:
+                raise ValidationError(payment_result.error_message)
         except ValidationError as ex:
             logger.warning("Release all Escrow funds payment for %s (op_id=%s) was created with FAILED status (%s)" % (
                 type(self), self.id, payment_result
