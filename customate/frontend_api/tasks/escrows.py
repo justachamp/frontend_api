@@ -6,7 +6,9 @@ from celery import shared_task
 from django.core.paginator import Paginator
 from django.conf import settings
 
-from frontend_api.models import Escrow, EscrowStatus
+from frontend_api.models import Escrow
+from frontend_api.models.escrow import LoadFundsEscrowOperation
+from frontend_api.fields import EscrowStatus
 
 logger = logging.getLogger(__name__)
 
@@ -18,9 +20,17 @@ def process_unaccepted_escrows():
     :return:
     """
     now = arrow.utcnow()
-    expired_escrows = Escrow.objects.filter(funding_deadline__lte=now.datetime.date())
-    paginator = Paginator(expired_escrows, settings.CELERY_BEAT_PER_PAGE_OBJECTS)
+    expired_operations = LoadFundsEscrowOperation.objects.filter(
+        escrow__status=EscrowStatus.pending_funding,
+        approval_deadline__lte=now.datetime.date(),
+        is_expired=False,
+        approved__isnull=True
+    )
+    logger.info("Process unaccepted escrows. Expired operations count: %s" % expired_operations.count())
+    paginator = Paginator(expired_operations, settings.CELERY_BEAT_PER_PAGE_OBJECTS)
     for page in paginator.page_range:
         # WARN: potential generation of 1-N SQL UPDATE command here
-        for escrow in paginator.page(page).object_list:
-            escrow.move_to_status(EscrowStatus.terminated)
+        for operation in paginator.page(page).object_list:
+            operation.escrow.move_to_status(EscrowStatus.terminated)
+            operation.is_expired = True
+            operation.reject()
