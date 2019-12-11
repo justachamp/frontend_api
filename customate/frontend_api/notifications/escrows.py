@@ -5,14 +5,8 @@ import logging
 from django.conf import settings
 
 from frontend_api.tasks.notifiers import send_notification_email, send_notification_sms
-from frontend_api.notifications.helpers import (
-    prettify_number,
-    send_bulk_emails,
-    send_bulk_smses,
-    get_funds_senders,
-    get_funds_recipients,
-    get_ses_email_payload
-)
+from frontend_api.notifications.helpers import get_ses_email_payload
+from frontend_api.models.escrow import EscrowOperation
 from core.models import User
 
 logger = logging.getLogger(__name__)
@@ -35,17 +29,20 @@ def notify_counterpart_about_new_escrow(counterpart: User, create_op: object):
     send_notification_email.delay(to_address=counterpart.email, message=message)
 
 
-def notify_escrow_creator_about_rejected_escrow(create_escrow_op: object):
+def notify_escrow_creator_about_escrow_state(create_escrow_op: EscrowOperation, tpl_filename: str):
     """
-    Once escrow has rejected by counterpart, send appropriate notification to creator.
+    Once escrow has rejected / accepted by counterpart, send appropriate notification to creator.
+    :param tpl_filename:
     :param create_escrow_op: CreateEscrowOperation object. Need for notifications context.
     :return:
     """
     creator = create_escrow_op.creator
     context = {}
     message = get_ses_email_payload(
-        tpl_filename="notifications/escrow_rejected_by_counterpart.html",
+        tpl_filename=tpl_filename,
         tpl_context=context,
         subject=settings.AWS_SES_SUBJECT_NAME
     )
     send_notification_email.delay(to_address=creator.email, message=message)
+
+
