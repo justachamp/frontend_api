@@ -102,7 +102,7 @@ class Escrow(Model):
         Initial amount is just an 'amount' from first 'LoadFunds' operation
         :return:
         """
-        op = LoadFundsEscrowOperation.objects.filter(escrow__id=self.id).first()  # type: LoadFundsEscrowOperation
+        op = self.load_escrow_operation  # type: LoadFundsEscrowOperation
         logger.debug("op=%r" % op)
         return op.amount
 
@@ -112,7 +112,7 @@ class Escrow(Model):
         Latest funding date of first 'LoadFunds' operation for this escrow
         :return:
         """
-        op = LoadFundsEscrowOperation.objects.filter(escrow__id=self.id).first()  # type: LoadFundsEscrowOperation
+        op = self.load_escrow_operation  # type: LoadFundsEscrowOperation
         return op.approval_deadline or arrow.utcnow().datetime
 
     @property
