@@ -162,9 +162,10 @@ class EscrowSerializer(BaseEscrowSerializer):
         :param escrow:
         :return: whether or not current user can perform load funds to an Escrow
         """
+        op = escrow.load_escrow_operation
         current_user = self.context.get('request').user
         return (current_user.id == escrow.funder_user.id and escrow.status is EscrowStatus.pending_funding) \
-               or escrow.status is EscrowStatus.ongoing
+               or (escrow.status is EscrowStatus.ongoing and (op is None or op.status is not EscrowOperationStatus.pending))
 
     def counterpart(self, escrow: Escrow):
         """

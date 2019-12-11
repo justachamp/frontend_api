@@ -220,6 +220,14 @@ class Escrow(Model):
         })
 
     @property
+    def load_escrow_operation(self) -> LoadFundsEscrowOperation or None:
+        """
+        Get the first and only LoadEscrow operation for this escrow
+        :return:
+        """
+        return LoadFundsEscrowOperation.objects.filter(escrow__id=self.id).first()
+
+    @property
     def create_escrow_operation(self) -> CreateEscrowOperation or None:
         """
         Get the first and only CreateEscrow operation for this escrow
