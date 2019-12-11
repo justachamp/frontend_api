@@ -55,7 +55,7 @@ class EscrowViewSet(views.ModelViewSet):
                           )
 
     # Example: /api/v1/escrows/?page[number]=1&filter[currency.iexact]=EUR&filter[name.icontains]=test&sort=-status
-    ordering_fields = ('id', 'name', 'status')
+    ordering_fields = ('id', 'name', 'status', 'created_at')
     search_fields = ('name', 'payee_recipient_name', 'payee_recipient_email', 'payee_iban')
 
     filterset_fields = {
