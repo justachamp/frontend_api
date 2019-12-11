@@ -495,9 +495,15 @@ class CloseEscrowOperation(EscrowOperation):
         """
         # Receiving latest wallet details ("balance" included)
         wallet_details = payment_service.Wallet.get(self.escrow.wallet_id)
+        amount = wallet_details.balance
         funding_source_id = self.escrow.transit_funding_source_id
         payment_result = None
         description = "{escrow_name} funds release after closing".format(escrow_name=self.escrow.name)
+
+        if amount <= 0:
+            logger.info("There are no funds to release for Escrow (id=%s, op_id=%s)" % (self.escrow.id, self.id),
+                        extra={'escrow_operation_id': self.id, 'escrow_id': self.escrow.id})
+            return
 
         try:
             # Searching for appropriate funder's payee
@@ -514,7 +520,7 @@ class CloseEscrowOperation(EscrowOperation):
                 user_id=self.escrow.funder_user.id,
                 payment_account_id=self.escrow.funder_payment_account_id,
                 currency=Currency(self.escrow.currency),
-                amount=wallet_details.balance,
+                amount=amount,
                 description=description,
                 payee_id=funder_wallet_payee_id,
                 funding_source_id=funding_source_id
@@ -526,6 +532,7 @@ class CloseEscrowOperation(EscrowOperation):
             logger.warning("Release all Escrow funds payment for %s (op_id=%s) was created with FAILED status (%s)" % (
                 type(self), self.id, payment_result
             ), extra={
+                'escrow_operation_id': self.id,
                 'escrow_id': self.escrow.id
             })
             raise ex
@@ -533,6 +540,7 @@ class CloseEscrowOperation(EscrowOperation):
             logger.error("Unable to create payment for %s (op_id=%s) due to unknown error: %r. " % (
                 type(self), self.id, format_exc()
             ), extra={
+                'escrow_operation_id': self.id,
                 'escrow_id': self.escrow.id
             })
             raise ValidationError("Unable to accept operation(id=%s)" % self.id)
