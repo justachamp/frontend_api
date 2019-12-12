@@ -271,6 +271,7 @@ def on_payment_change(payment_info: Dict):
     schedule_id = payment_info.get("schedule_id")
     funding_source_id = payment_info.get("funding_source_id")
     payment_status = PaymentStatusType(payment_info.get('status'))
+    wallet_id = payment_info.get("wallet_id")
     amount = int(payment_info.get("amount"))
     request_id = payment_info.get("request_id", RequestIdGenerator.get())
 
@@ -286,7 +287,38 @@ def on_payment_change(payment_info: Dict):
     })
 
     if schedule_id is None:
-        logger.info("Skipping payment (id=%s), not related to any schedule" % payment_id, extra={
+        logger.info("Schedule ID is not set for payment, trying to process payment in context of an Escrow")
+
+        if payment_status not in [PaymentStatusType.PENDING, TransactionStatusType.PROCESSING]:
+            try:
+                escrow = Escrow.objects.get(wallet_id=wallet_id)
+                logger.info("Payment (id=%s) is related to an Escrow's (id=%s, status=%s) wallet (id=%s)" % (
+                    payment_id, escrow.id, escrow.status, wallet_id
+                ), extra={
+                    'request_id': request_id,
+                    'payment_id': payment_id,
+                    'escrow_id': escrow.id,
+                    'escrow_status': escrow.status,
+                    'wallet_id': wallet_id
+                })
+
+                if escrow.status is EscrowStatus.pending_funding:
+                    if payment_status in [PaymentStatusType.FAILED, PaymentStatusType.REFUND, PaymentStatusType.CANCELED]:
+                        # We need to provide a way to repeat LoadFunds attempt, but creating new
+                        # LoadFundsEscrowOperation object could break our logic/idea that Escrow with "pending_funding"
+                        # status has only one LoadFunds operation, so we resetting "approve" flag's state
+                        escrow.load_escrow_operation.reset_approved_state()
+                    else:
+                        logger.info("Payment executed successfully and Escrow (id=%s) could be moved to 'ongoing' state"
+                                    % escrow.id, extra={'request_id': request_id, 'escrow_id': escrow.id})
+                        escrow.move_to_status(status=EscrowStatus.ongoing)
+
+                return
+            except Escrow.DoesNotExist:
+                logger.info("Unsuccessfully tried to find Escrow with given wallet_id (%s)." % wallet_id)
+                pass
+
+        logger.info("Skipping payment (id=%s), not related to any schedule or an Escrow" % payment_id, extra={
             'request_id': request_id,
             'payment_id': payment_id
         })

@@ -422,6 +422,18 @@ class EscrowOperation(Model):
             'escrow_id': self.escrow.id
         })
 
+    def reset_approved_state(self):
+        """
+        Reset "approved" flag for this operation, allowing user to repeat "acceptance" attempt
+        :return:
+        """
+        self.approved = None
+        self.save(update_fields=["approved"])
+        logger.info("Escrow operation (id=%s) approved state was reset" % self.id, extra={
+            'escrow_operation_id': self.id,
+            'escrow_id': self.escrow.id
+        })
+
     def __str__(self):
         return "EscrowOperation(id=%s, type=%s, escrow=%s, args=%s)" % (
             self.id, self.type.value, self.escrow.id if self.escrow else None, self.args
@@ -610,7 +622,7 @@ class LoadFundsEscrowOperation(EscrowOperation):
         description = "{escrow_name} funding".format(escrow_name=escrow.name)
 
         try:
-            payment_result = payment_service.Payment.create(
+            payment_service.Payment.create(
                 user_id=escrow.funder_user.id,
                 payment_account_id=escrow.funder_payment_account_id,
                 currency=Currency(escrow.currency),
@@ -619,9 +631,6 @@ class LoadFundsEscrowOperation(EscrowOperation):
                 payee_id=payee_id,
                 funding_source_id=self.funding_source_id
             )
-
-            if payment_result.status is not PaymentStatusType.FAILED and escrow.status is EscrowStatus.pending_funding:
-                escrow.move_to_status(status=EscrowStatus.ongoing)
         except Exception:
             logger.error("Unable to create payment for %s (id=%s) due to unknown error: %r. " % (
                 type(self), self.id, format_exc()
