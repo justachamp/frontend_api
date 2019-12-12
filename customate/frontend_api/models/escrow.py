@@ -165,6 +165,25 @@ class Escrow(Model):
 
         return True
 
+    @property
+    def can_review_operations(self) -> bool:
+        """
+        Can user review existence operations for this Escrow?
+        :return:
+        """
+        return self.status in [EscrowStatus.ongoing, EscrowStatus.terminated, EscrowStatus.closed]
+
+    @property
+    def can_review_transactions(self) -> bool:
+        """
+        Can user review existence transactions for this Escrow?
+        :return:
+        """
+        # Allow to review transaction in the same cases we do for operations AND in case when we still waiting for
+        # initial funds to arrive (from CC & DD sources for example)
+        return self.can_review_operations or (self.status is EscrowStatus.pending_funding
+                                              and self.load_escrow_operation.status is EscrowOperationStatus.approved)
+
     def has_pending_operations_for(self, user: User) -> bool:
         """
         Do we have any unapproved operations in current escrow which require actions from counterpart?

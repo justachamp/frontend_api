@@ -80,6 +80,8 @@ class EscrowSerializer(BaseEscrowSerializer):
     can_dispute = BooleanField(required=False, read_only=True)
     can_close = BooleanField(required=False, read_only=True)
     can_release_funds = BooleanField(required=False, read_only=True)
+    can_review_operations = BooleanField(required=False, read_only=True)
+    can_review_transactions = BooleanField(required=False, read_only=True)
     can_accept = SerializerMethodField()
     can_load_funds = SerializerMethodField()
 
@@ -144,6 +146,8 @@ class EscrowSerializer(BaseEscrowSerializer):
             'can_close',
             'can_load_funds',
             'can_release_funds',
+            'can_review_operations',
+            'can_review_transactions',
             'has_pending_operations'
         )
 
