@@ -271,8 +271,14 @@ class Escrow(Model):
         :param balance:
         :return:
         """
+        old_balance = self.balance
         self.balance = balance
-        self.save()
+        self.save(update_fields=["balance"])
+        logger.info("Updated escrow (id=%s) balance=%d (was=%d)" % (self.id, balance, old_balance), extra={
+            'escrow_id': self.id,
+            'new_balance': balance,
+            'old_balance': old_balance
+        })
 
 
 # support JSON schema versioning for possible future changes
@@ -516,6 +522,7 @@ class CloseEscrowOperation(EscrowOperation):
 
             # Sending money from Escrow's wallet (transit_funding_source_id) to
             # funder's "real" wallet (funder_wallet_payee_id)
+            logger.info("Sending release funds payment for Escrow (id=%s)" % self.escrow.id)
             payment_result = payment_service.Payment.create(
                 user_id=self.escrow.funder_user.id,
                 payment_account_id=self.escrow.funder_payment_account_id,
@@ -526,6 +533,7 @@ class CloseEscrowOperation(EscrowOperation):
                 funding_source_id=funding_source_id
             )
 
+            logger.info("Release funds payment for Escrow (id=%s) status: %s" % (self.escrow.id, payment_result.status))
             if payment_result.status is PaymentStatusType.FAILED:
                 raise ValidationError(payment_result.error_message)
         except ValidationError as ex:
@@ -544,6 +552,8 @@ class CloseEscrowOperation(EscrowOperation):
                 'escrow_id': self.escrow.id
             })
             raise ValidationError("Unable to accept operation(id=%s)" % self.id)
+
+        logger.info("Finished with refunding all Escrow (id=%s) funds " % self.escrow.id)
 
 
 class LoadFundsEscrowOperation(EscrowOperation):
