@@ -181,8 +181,8 @@ class Escrow(Model):
         """
         # Allow to review transaction in the same cases we do for operations AND in case when we still waiting for
         # initial funds to arrive (from CC & DD sources for example)
-        return self.can_review_operations or (self.status is EscrowStatus.pending_funding
-                                              and self.load_escrow_operation.status is EscrowOperationStatus.approved)
+        return self.status in [EscrowStatus.pending_funding, EscrowStatus.ongoing, EscrowStatus.terminated,
+                               EscrowStatus.closed]
 
     def has_pending_operations_for(self, user: User) -> bool:
         """
