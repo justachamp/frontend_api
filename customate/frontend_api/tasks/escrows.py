@@ -9,6 +9,7 @@ from django.conf import settings
 from frontend_api.models import Escrow
 from frontend_api.models.escrow import LoadFundsEscrowOperation
 from frontend_api.fields import EscrowStatus
+from frontend_api.notifications.escrows import notify_about_fund_escrow_state
 
 logger = logging.getLogger(__name__)
 
@@ -34,3 +35,8 @@ def process_unaccepted_escrows():
             operation.escrow.move_to_status(EscrowStatus.terminated)
             operation.is_expired = True
             operation.reject()
+            # Send appropriate notification to seller
+            notify_about_fund_escrow_state(
+                escrow=operation.escrow,
+                tpl_filename="notifications/escrow_has_not_been_funded.html"
+            )

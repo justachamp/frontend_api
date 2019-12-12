@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 
 import logging
+from typing import Optional, Dict
 
 from django.conf import settings
 
 from frontend_api.tasks.notifiers import send_notification_email, send_notification_sms
 from frontend_api.notifications.helpers import get_ses_email_payload
-from frontend_api.models.escrow import EscrowOperation
+from frontend_api.models.escrow import EscrowOperation, Escrow
 from core.models import User
 
 logger = logging.getLogger(__name__)
@@ -45,4 +46,21 @@ def notify_escrow_creator_about_escrow_state(create_escrow_op: EscrowOperation, 
     )
     send_notification_email.delay(to_address=creator.email, message=message)
 
+
+def notify_seller_about_fund_escrow_state(escrow: Escrow, tpl_filename: str, transaction_info: Optional[Dict] = None):
+    """
+    Notify if escrow has been funded or not.
+    :param escrow:
+    :param tpl_filename:
+    :param transaction_info:
+    :return:
+    """
+    seller = escrow.recipient_user
+    context = {}
+    message = get_ses_email_payload(
+        tpl_filename=tpl_filename,
+        tpl_context=context,
+        subject=settings.AWS_SES_SUBJECT_NAME
+    )
+    send_notification_email.delay(to_address=seller.email, message=message)
 
