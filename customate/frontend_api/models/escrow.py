@@ -274,7 +274,7 @@ class Escrow(Model):
         old_balance = self.balance
         self.balance = balance
         self.save(update_fields=["balance"])
-        logger.info("Updated escrow (id=%s) balance=%d (was=%d)" % (self.id, balance, old_balance), extra={
+        logger.info("Updated escrow (id=%s) balance=%d (was=%s)" % (self.id, balance, old_balance), extra={
             'escrow_id': self.id,
             'new_balance': balance,
             'old_balance': old_balance
