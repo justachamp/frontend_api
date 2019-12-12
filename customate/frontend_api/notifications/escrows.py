@@ -47,7 +47,7 @@ def notify_escrow_creator_about_escrow_state(create_escrow_op: EscrowOperation, 
     send_notification_email.delay(to_address=creator.email, message=message)
 
 
-def notify_seller_about_fund_escrow_state(escrow: Escrow, tpl_filename: str, transaction_info: Optional[Dict] = None):
+def notify_about_fund_escrow_state(escrow: Escrow, tpl_filename: str, transaction_info: Optional[Dict] = None):
     """
     Notify if escrow has been funded or not.
     :param escrow:
