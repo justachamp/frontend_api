@@ -55,12 +55,12 @@ def notify_about_fund_escrow_state(escrow: Escrow, tpl_filename: str, transactio
     :param transaction_info:
     :return:
     """
-    seller = escrow.recipient_user
+    recipient = escrow.recipient_user
     context = {}
     message = get_ses_email_payload(
         tpl_filename=tpl_filename,
         tpl_context=context,
         subject=settings.AWS_SES_SUBJECT_NAME
     )
-    send_notification_email.delay(to_address=seller.email, message=message)
+    send_notification_email.delay(to_address=recipient.email, message=message)
 

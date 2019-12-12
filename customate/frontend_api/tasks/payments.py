@@ -30,6 +30,7 @@ from frontend_api.notifications.schedules import (
     notify_about_schedules_successful_payment,
     notify_about_schedules_failed_payment
 )
+from frontend_api.notifications.escrows import notify_about_fund_escrow_state
 
 logger = logging.getLogger(__name__)
 
@@ -231,6 +232,10 @@ def on_transaction_change(transaction_info: Dict):
         try:
             escrow = Escrow.objects.get(wallet_id=wallet_id)
             escrow.update_balance(int(balance))
+            notify_about_fund_escrow_state(
+                escrow=escrow,
+                tpl_filename="notifications/escrow_has_been_funded.html",
+                transaction_info=transaction_info)
             return
         except Escrow.DoesNotExist:
             logger.info("Got 'wallet_id': %s. Escrow with given the one does not exist. %r" % (wallet_id, format_exc()))
