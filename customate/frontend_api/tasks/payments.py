@@ -263,11 +263,66 @@ def on_transaction_change(transaction_info: Dict):
         notify_about_schedules_failed_payment(schedule=schedule, transaction_info=transaction_info)
 
 
-@shared_task
-@transaction.atomic
-def on_payment_change(payment_info: Dict):
+def process_escrow_payment_change(payment_info: Dict, request_id=None):
     """
-    Process notification about changes in Payment model received from Payment-api.
+    Special code for handling Escrow-related payment events
+    :param payment_info:
+    :return:
+    """
+    payment_id = payment_info.get("payment_id")
+    payment_status = PaymentStatusType(payment_info.get('status'))
+    wallet_id = payment_info.get("wallet_id")
+
+    if wallet_id is None:
+        logger.info("Skipping payment (id=%s), it is not related to any wallet(Escrow)" % payment_id, extra={
+            'request_id': request_id,
+            'payment_id': payment_id
+        })
+        return
+
+    p_statuses = [PaymentStatusType.PENDING, TransactionStatusType.PROCESSING]
+    if payment_status in p_statuses:
+        logger.info("Skipping Escrow processing (wallet_id=%s), since status in %r" % (wallet_id, p_statuses))
+        return
+
+    try:
+        escrow = Escrow.objects.get(wallet_id=wallet_id)
+        logger.info("payment_id=%s is related to Escrow(id=%s, status=%s) wallet_id=%s" % (
+            payment_id, escrow.id, escrow.status, wallet_id
+        ), extra={
+            'request_id': request_id,
+            'payment_id': payment_id,
+            'escrow_id': escrow.id,
+            'escrow_status': escrow.status,
+            'wallet_id': wallet_id
+        })
+
+        if escrow.status is not EscrowStatus.pending_funding:
+            logger.info("Skipping Escrow processing as status is not [%r], payment_id=%s" % (
+                EscrowStatus.pending_funding, payment_id
+            ))
+            return
+
+        if payment_status in [PaymentStatusType.FAILED, PaymentStatusType.REFUND, PaymentStatusType.CANCELED]:
+            # We need to provide a way to repeat LoadFunds attempt, but creating new
+            # LoadFundsEscrowOperation object could break our logic/idea that Escrow with "pending_funding"
+            # status has only one LoadFunds operation, so we resetting "approve" flag's state
+            escrow.load_escrow_operation.reset_approved_state()
+        else:
+            logger.info("Moving escrow (id=%s) to %r state" % (escrow.id, EscrowStatus.ongoing), extra={
+                'request_id': request_id,
+                'escrow_id': escrow.id
+            })
+            escrow.move_to_status(status=EscrowStatus.ongoing)
+
+        return
+    except Escrow.DoesNotExist:
+        logger.info("Unable to find Escrow with given wallet_id=%s" % wallet_id)
+
+
+def process_schedule_payment_change(payment_info: Dict, request_id=None):
+    """
+    Process payment events in the context of Schedules
     :param payment_info:
     :return:
     """
@@ -276,64 +331,19 @@ def on_payment_change(payment_info: Dict):
     schedule_id = payment_info.get("schedule_id")
     funding_source_id = payment_info.get("funding_source_id")
     payment_status = PaymentStatusType(payment_info.get('status'))
-    wallet_id = payment_info.get("wallet_id")
     amount = int(payment_info.get("amount"))
-    request_id = payment_info.get("request_id", RequestIdGenerator.get())
-
-    logging.init_shared_extra(request_id)
-    logger.info("Received 'payment changed' event, starting processing (payment_id=%s, payment_info=%r)" % (
-        payment_id, payment_info
-    ), extra={
-        'request_id': request_id,
-        'payment_id': payment_id,
-        'schedule_id': schedule_id,
-        'funding_source_id': funding_source_id,
-        'payment_status': payment_status
-    })
 
     if schedule_id is None:
-        logger.info("Schedule ID is not set for payment, trying to process payment in context of an Escrow")
-
-        if payment_status not in [PaymentStatusType.PENDING, TransactionStatusType.PROCESSING]:
-            try:
-                escrow = Escrow.objects.get(wallet_id=wallet_id)
-                logger.info("Payment (id=%s) is related to an Escrow's (id=%s, status=%s) wallet (id=%s)" % (
-                    payment_id, escrow.id, escrow.status, wallet_id
-                ), extra={
-                    'request_id': request_id,
-                    'payment_id': payment_id,
-                    'escrow_id': escrow.id,
-                    'escrow_status': escrow.status,
-                    'wallet_id': wallet_id
-                })
-
-                if escrow.status is EscrowStatus.pending_funding:
-                    if payment_status in [PaymentStatusType.FAILED, PaymentStatusType.REFUND, PaymentStatusType.CANCELED]:
-                        # We need to provide a way to repeat LoadFunds attempt, but creating new
-                        # LoadFundsEscrowOperation object could break our logic/idea that Escrow with "pending_funding"
-                        # status has only one LoadFunds operation, so we resetting "approve" flag's state
-                        escrow.load_escrow_operation.reset_approved_state()
-                    else:
-                        logger.info("Payment executed successfully and Escrow (id=%s) could be moved to 'ongoing' state"
-                                    % escrow.id, extra={'request_id': request_id, 'escrow_id': escrow.id})
-                        escrow.move_to_status(status=EscrowStatus.ongoing)
-
-                return
-            except Escrow.DoesNotExist:
-                logger.info("Unsuccessfully tried to find Escrow with given wallet_id (%s)." % wallet_id)
-                pass
-
-        logger.info("Skipping payment (id=%s), not related to any schedule or an Escrow" % payment_id, extra={
+        logger.info("Skipping payment (id=%s), it is not related to any schedule" % payment_id, extra={
             'request_id': request_id,
             'payment_id': payment_id
         })
         return
 
-    # some sanity checks
     try:
         schedule = Schedule.objects.get(id=schedule_id)  # type: Schedule
     except ObjectDoesNotExist:
-        logger.error("Given schedule (id=%s) no longer exists, exiting" % schedule_id, extra={
+        logger.error("Given schedule (id=%s) not found, exiting" % schedule_id, extra={
             'schedule_id': schedule_id
         })
         return
@@ -375,28 +385,61 @@ def on_payment_change(payment_info: Dict):
     schedule.update_status()
 
     # Retry payment using backup funding source if it is available
-    if schedule.can_retry_with_backup_funding_source():
-        logger.info("Retrying payment (id=%s, status=%s) using backup funding source(id=%s, was=%s)" % (
-            payment_id, payment_status, schedule.backup_funding_source_id, funding_source_id
-        ), extra={
-            'payment_id': payment_id,
-            'schedule_id': schedule_id,
-            'schedule.backup_funding_source_id': schedule.backup_funding_source_id
-        })
-
-        make_payment.delay(
-            user_id=str(schedule.origin_user_id),
-            payment_account_id=str(schedule.origin_payment_account_id),
-            schedule_id=str(schedule.id),
-            currency=str(schedule.currency.value),
-            payment_amount=amount,  # NOTE: use the same amount of original payment!
-            additional_information=str(schedule.additional_information),
-            payee_id=str(schedule.payee_id),
-            funding_source_id=str(schedule.backup_funding_source_id),  # NOTE: This time, use backup funding source!
-            parent_payment_id=payment_id,  # NOTE: specify originating payment, to be able to track payment chains
-            request_id=request_id
-        )
+    if not schedule.can_retry_with_backup_funding_source():
         return
+
+    logger.info("Retrying payment (id=%s, status=%s) using backup funding source(id=%s, was=%s)" % (
+        payment_id, payment_status, schedule.backup_funding_source_id, funding_source_id
+    ), extra={
+        'payment_id': payment_id,
+        'schedule_id': schedule_id,
+        'schedule.backup_funding_source_id': schedule.backup_funding_source_id
+    })
+
+    make_payment.delay(
+        user_id=str(schedule.origin_user_id),
+        payment_account_id=str(schedule.origin_payment_account_id),
+        schedule_id=str(schedule.id),
+        currency=str(schedule.currency.value),
+        payment_amount=amount,  # NOTE: use the same amount of original payment!
+        additional_information=str(schedule.additional_information),
+        payee_id=str(schedule.payee_id),
+        funding_source_id=str(schedule.backup_funding_source_id),  # NOTE: This time, use backup funding source!
+        parent_payment_id=payment_id,  # NOTE: specify originating payment, to be able to track payment chains
+        request_id=request_id
+    )
+
+
+@shared_task
+@transaction.atomic
+def on_payment_change(payment_info: Dict):
+    """
+    Process notification about changes in Payment model received from Payment-api.
+    :param payment_info:
+    :return:
+    """
+    payment_id = payment_info.get("payment_id")
+    schedule_id = payment_info.get("schedule_id")
+    funding_source_id = payment_info.get("funding_source_id")
+    payment_status = PaymentStatusType(payment_info.get('status'))
+    request_id = payment_info.get("request_id", RequestIdGenerator.get())
+
+    logging.init_shared_extra(request_id)
+    logger.info("Received 'payment changed' event, starting processing (payment_id=%s, payment_info=%r)" % (
+        payment_id, payment_info
+    ), extra={
+        'request_id': request_id,
+        'payment_id': payment_id,
+        'schedule_id': schedule_id,
+        'funding_source_id': funding_source_id,
+        'payment_status': payment_status
+    })
+
+    # try to process payment event in the context of Escrow
+    process_escrow_payment_change(payment_info=payment_info, request_id=request_id)
+
+    # try to process payment event in the context of Schedule
+    process_schedule_payment_change(payment_info=payment_info, request_id=request_id)
 
 
 # Must NOT be executed in transaction. This requirement comes from "make_payment" requirements.

@@ -44,7 +44,8 @@ class Escrow(Model):
 
     wallet_id = models.UUIDField(
         help_text=_("Identifier of the virtual wallet, that relates to this Escrow"),
-        default=None, blank=True, null=True
+        default=None, blank=True, null=True,
+        unique=True
     )
 
     payee_id = models.UUIDField(
@@ -229,6 +230,8 @@ class Escrow(Model):
 
     def move_to_status(self, status: EscrowStatus):
         old_status = self.status
+        if old_status == status:
+            return
         self.status = status
         self.save(update_fields=["status"])
         logger.info("Updated escrow (id=%s) status=%s (was=%s)" % (self.id, status, old_status), extra={
@@ -409,11 +412,8 @@ class EscrowOperation(Model):
         Accept this operation on behalf of current user
         :return:
         """
-        if not self.approved is None:
+        if self.approved is not None:
             raise ValidationError(f'Cannot accept operation when approved={self.approved} is set already')
-
-        if self.is_expired:
-            raise ValidationError(f'Cannot accept operation when is_expired={self.is_expired}')
 
         self.approved = True
         self.save(update_fields=["approved"])
@@ -427,17 +427,31 @@ class EscrowOperation(Model):
         Reject this operation on behalf of current user
         :return:
         """
-        if not self.approved is None:
+        if self.approved is not None:
             raise ValidationError(f'Cannot reject escrow operation when approved={self.approved} is set already')
-
-        if self.is_expired:
-            raise ValidationError(f'Cannot reject escrow operation when is_expired={self.is_expired}')
 
         self.approved = False
         self.save(update_fields=["approved"])
         logger.info("Escrow operation (id=%s) was rejected" % self.id, extra={
             'escrow_operation_id': self.id,
-            'escrow_id': self.escrow.id
+            'escrow_id': self.escrow.id,
+            'escrow_approved': self.approved
+        })
+
+    def expire(self):
+        """
+        Makes current operation expired
+        :return:
+        """
+        if self.is_expired:
+            return
+
+        self.is_expired = True
+        self.save(update_fields=["is_expired"])
+        logger.info("Escrow operation (id=%s) is_expired=%r" % (self.id, self.is_expired), extra={
+            'escrow_operation_id': self.id,
+            'escrow_id': self.escrow.id,
+            'escrow_is_expired': self.is_expired
         })
 
     def reset_approved_state(self):
