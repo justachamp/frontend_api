@@ -20,14 +20,15 @@ def notify_counterpart_about_new_escrow(counterpart: User, create_op: object):
     :param create_op:  CreateEscrowOperation object. Need for notification details.
     :return:
     """
-    context = {}
-    message = get_ses_email_payload(
-        tpl_filename="notifications/new_escrow_created.html",
-        tpl_context=context,
-        subject=settings.AWS_SES_SUBJECT_NAME
-    )
-    # Send email
-    send_notification_email.delay(to_address=counterpart.email, message=message)
+    if counterpart.notify_by_email:
+        context = {}
+        message = get_ses_email_payload(
+            tpl_filename="notifications/new_escrow_created.html",
+            tpl_context=context,
+            subject=settings.AWS_SES_SUBJECT_NAME
+        )
+        # Send email
+        send_notification_email.delay(to_address=counterpart.email, message=message)
 
 
 def notify_escrow_creator_about_escrow_state(create_escrow_op: EscrowOperation, tpl_filename: str):
@@ -38,13 +39,14 @@ def notify_escrow_creator_about_escrow_state(create_escrow_op: EscrowOperation, 
     :return:
     """
     creator = create_escrow_op.creator
-    context = {}
-    message = get_ses_email_payload(
-        tpl_filename=tpl_filename,
-        tpl_context=context,
-        subject=settings.AWS_SES_SUBJECT_NAME
-    )
-    send_notification_email.delay(to_address=creator.email, message=message)
+    if creator.notify_by_email:
+        context = {}
+        message = get_ses_email_payload(
+            tpl_filename=tpl_filename,
+            tpl_context=context,
+            subject=settings.AWS_SES_SUBJECT_NAME
+        )
+        send_notification_email.delay(to_address=creator.email, message=message)
 
 
 def notify_about_fund_escrow_state(escrow: Escrow, tpl_filename: str, transaction_info: Optional[Dict] = None):
@@ -56,11 +58,12 @@ def notify_about_fund_escrow_state(escrow: Escrow, tpl_filename: str, transactio
     :return:
     """
     recipient = escrow.recipient_user
-    context = {}
-    message = get_ses_email_payload(
-        tpl_filename=tpl_filename,
-        tpl_context=context,
-        subject=settings.AWS_SES_SUBJECT_NAME
-    )
-    send_notification_email.delay(to_address=recipient.email, message=message)
+    if recipient.notify_by_email:
+        context = {}
+        message = get_ses_email_payload(
+            tpl_filename=tpl_filename,
+            tpl_context=context,
+            subject=settings.AWS_SES_SUBJECT_NAME
+        )
+        send_notification_email.delay(to_address=recipient.email, message=message)
 
