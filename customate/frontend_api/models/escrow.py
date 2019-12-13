@@ -79,9 +79,8 @@ class Escrow(Model):
     )
 
     balance = models.IntegerField(
-        blank=True,
-        null=True,
-        help_text=_("Transit storage of balance from payment service.")
+        help_text=_("Transit storage of balance from payment service."),
+        default=0, blank=True, null=True
     )
 
     def __str__(self):
