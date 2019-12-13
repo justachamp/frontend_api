@@ -5,6 +5,7 @@ import arrow
 from celery import shared_task
 from django.core.paginator import Paginator
 from django.conf import settings
+from django.db.models import Q
 
 from frontend_api.models import Escrow
 from frontend_api.models.escrow import LoadFundsEscrowOperation
@@ -22,7 +23,8 @@ def process_unaccepted_escrows():
     """
     now = arrow.utcnow()
     expired_operations = LoadFundsEscrowOperation.objects.filter(
-        escrow__status=EscrowStatus.pending_funding,
+        Q(escrow__status=EscrowStatus.pending_funding) |
+        Q(escrow__status=EscrowStatus.pending),
         approval_deadline__lte=now.datetime.date(),
         is_expired=False,
         approved__isnull=True
