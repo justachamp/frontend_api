@@ -26,12 +26,17 @@ logger = logging.getLogger(__name__)
 # Need to get transaction type for passing transaction_type to templates
 # Key is a transaction name from payment service, value is transaction type for appearance in templates
 transaction_names = {
-    "CreditCardToWallet": "Card",
-    "DirectDebitToWallet": "Direct Debit",
-    "WalletToIban": "External",
-    "IncomingInternal": "Internal",
-    "OutgoingInternal": "Internal",
-    "IbanToWallet": "Bank Transfer"
+    "CreditCardToWallet": 'Card',
+    "IncomingContribution": 'Incoming Contribution',
+    "DirectDebitToWallet": 'Direct Debit',
+    "WalletToIban": 'External',
+    "IbanToWallet": 'Incoming Bank Transfer',
+    "IncomingInternal": 'Internal In',
+    "OutgoingInternal": 'Internal Out',
+    "Release": 'Release',
+    "Refund": 'Refund',
+    "WalletToVirtualWallet": 'Replenishment',
+    "VirtualWalletToWallet": 'Refund',
 }
 
 
