@@ -35,7 +35,8 @@ from frontend_api.serializers.escrow import EscrowOperationSerializer
 
 from frontend_api.notifications.escrows import (
     notify_counterpart_about_new_escrow,
-    notify_escrow_creator_about_escrow_state
+    notify_escrow_creator_about_escrow_state,
+    notify_about_requesting_action_with_funds
 )
 
 logger = logging.getLogger(__name__)
@@ -296,13 +297,25 @@ class EscrowOperationViewSet(views.ModelViewSet):
                 if not operation.requires_mutual_approval:
                     operation.accept()
 
+                # Notify funder about propose to fund or release funds
+                tpl_filenames = {
+                    EscrowOperationType.load_funds: "notifications/requesting_funding_escrow.html",
+                    EscrowOperationType.release_funds: "notifications/requesting_release_funds.html"
+                }
+                if self.request.user is operation.escrow.recipient_user and operation.type in tpl_filenames.keys():
+                    notify_about_requesting_action_with_funds(
+                        escrow=operation.escrow,
+                        tpl_filename=tpl_filenames[operation.type]
+                    )
+
         except ValidationError as e:
             logger.info("Invalid EscrowOperationSerializer error. %r" % format_exc())
             raise e
         except IntegrityError as e:
             # We allow to create several pending "load_funds" operations, all other operation types in "pending" state
             # should be present in one copy (this restriction is implemented on database level)
-            logger.error("Unable to save EscrowOperation=%r, due to IntegrityError: %r" % (serializer.validated_data, format_exc()))
+            logger.error("Unable to save EscrowOperation=%r, due to IntegrityError: %r" % (
+                serializer.validated_data, format_exc()))
             raise ValidationError("Looks like counterpart has already performed some action with this Escrow record. "
                                   "Please refresh page and try again.")
         except Exception as e:

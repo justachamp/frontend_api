@@ -67,3 +67,22 @@ def notify_about_fund_escrow_state(escrow: Escrow, tpl_filename: str, transactio
         )
         send_notification_email.delay(to_address=recipient.email, message=message)
 
+
+def notify_about_requesting_action_with_funds(escrow: Escrow, tpl_filename: str):
+    """
+    Notify funder to fund escrow.
+    :param tpl_filename:
+    :param escrow:
+    :return:
+    """
+    recipient = escrow.funder_user
+    if recipient.notify_by_email:
+        context = {}
+        message = get_ses_email_payload(
+            tpl_filename=tpl_filename,
+            tpl_context=context,
+            subject=settings.AWS_SES_SUBJECT_NAME
+        )
+        send_notification_email.delay(to_address=recipient.email, message=message)
+
+
