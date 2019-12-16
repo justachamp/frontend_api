@@ -391,7 +391,7 @@ class EscrowOperationViewSet(views.ModelViewSet):
                 op.creator != current_user]):
             notify_about_fund_escrow_state(
                 escrow=escrow,
-                tpl_filename="notification/escrow_has_not_been_funded.html"
+                tpl_filename="notifications/escrow_has_not_been_funded.html"
         )
 
         return Response(status=status_codes.HTTP_204_NO_CONTENT)
