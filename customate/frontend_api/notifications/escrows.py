@@ -21,7 +21,10 @@ def notify_counterpart_about_new_escrow(counterpart: User, create_op: object):
     :return:
     """
     if counterpart.notify_by_email:
-        context = {}
+        context = {
+            "counterpart": counterpart.email,
+            "creator": create_op.creator.email
+        }
         message = get_ses_email_payload(
             tpl_filename="notifications/new_escrow_created.html",
             tpl_context=context,
@@ -40,7 +43,10 @@ def notify_escrow_creator_about_escrow_state(create_escrow_op: EscrowOperation, 
     """
     creator = create_escrow_op.creator
     if creator.notify_by_email:
-        context = {}
+        context = {
+            "creator": creator.email,
+            "escrow_name": create_escrow_op.escrow.name
+        }
         message = get_ses_email_payload(
             tpl_filename=tpl_filename,
             tpl_context=context,
@@ -59,7 +65,10 @@ def notify_about_fund_escrow_state(escrow: Escrow, tpl_filename: str, transactio
     """
     recipient = escrow.recipient_user
     if recipient.notify_by_email:
-        context = {}
+        context = {
+            "recipient": recipient.email,
+            "escrow_name": escrow.name
+        }
         message = get_ses_email_payload(
             tpl_filename=tpl_filename,
             tpl_context=context,
@@ -75,14 +84,18 @@ def notify_about_requesting_action_with_funds(escrow: Escrow, tpl_filename: str)
     :param escrow:
     :return:
     """
-    recipient = escrow.funder_user
-    if recipient.notify_by_email:
-        context = {}
+    email_recipient = escrow.funder_user
+    if email_recipient.notify_by_email:
+        context = {
+            "escrow_funder": email_recipient.email,
+            "funds_recipient": escrow.recipient_user,
+            "escrow_name": escrow.name
+        }
         message = get_ses_email_payload(
             tpl_filename=tpl_filename,
             tpl_context=context,
             subject=settings.AWS_SES_SUBJECT_NAME
         )
-        send_notification_email.delay(to_address=recipient.email, message=message)
+        send_notification_email.delay(to_address=email_recipient.email, message=message)
 
 
