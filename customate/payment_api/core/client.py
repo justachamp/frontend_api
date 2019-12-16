@@ -133,7 +133,7 @@ class Session(DefaultSession):
 
     # The only difference from parent's method is that we return ResourceObjectWithCustomId object, that provides
     # possibility to provide custom id to resource
-    def create(self, _type: str, fields: dict=None, **more_fields) -> 'ResourceObject':
+    def create(self, _type: str, fields: dict = None, **more_fields) -> 'ResourceObject':
         """
         Create a new ResourceObject of model _type. This requires that schema is defined
         for model.
@@ -223,7 +223,7 @@ class Client(ResourceMappingMixin, JsonApiErrorParser):
     def _apply_resource_id(self, instance, attributes):
         if attributes.get('id') and instance.id is None:
             instance.id = attributes.get('id')
-            del(attributes['id'])
+            del (attributes['id'])
 
     def _apply_resource_attributes(self, instance, attributes):
         relationships = instance._relationships.keys()
@@ -243,12 +243,14 @@ class Client(ResourceMappingMixin, JsonApiErrorParser):
         try:
             self._apply_resource_attributes(instance, attributes)
             instance.commit(custom_url=self.get_post_url(instance))
-
             return instance
 
         except DocumentError as ex:
-            logger.info("PaymentClient.update caught a document error: %r " % format_exc(),
-                        extra={'instance_id': instance.id, 'attributes': attributes, 'service': SERVICE})
+            logger.error("PaymentClient.update caught a document error: %r " % format_exc(), extra={
+                'instance_id': instance.id,
+                'attributes': attributes,
+                'service': SERVICE
+            })
             data = self._parse_document_error(ex)
             if data:
                 raise ValidationError(data)
@@ -267,8 +269,11 @@ class Client(ResourceMappingMixin, JsonApiErrorParser):
             logger.debug(instance)
             return instance
         except DocumentError as ex:
-            logger.info("PaymentClient.create caught a document error: %r " % format_exc(),
-                        extra={'resource_name': resource_name, 'attributes': attributes, 'service': SERVICE})
+            logger.error("PaymentClient.create caught a document error: %r " % format_exc(), extra={
+                'resource_name': resource_name,
+                'attributes': attributes,
+                'service': SERVICE
+            })
             data = self._parse_document_error(ex)
             if data:
                 raise ValidationError(data)
@@ -285,14 +290,17 @@ class Client(ResourceMappingMixin, JsonApiErrorParser):
             instance = self.client.create(resource_name)
             instance.id = resource_id
 
-            # Looks like we have to add resource to the session this way, so that it could be successfully remove by
+            # Looks like we have to add resource to the session this way, so that it could be successfully removed by
             # delete operation
             self.client.add_resources(instance)
             instance.delete()
             instance.commit()
         except DocumentError as ex:
-            logger.info("PaymentClient.delete caught a document error: %r " % format_exc(),
-                        extra={'resource_name': resource_name, 'resource_id': resource_id, 'service': SERVICE})
+            logger.error("PaymentClient.delete caught a document error: %r " % format_exc(), extra={
+                'resource_name': resource_name,
+                'resource_id': resource_id,
+                'service': SERVICE
+            })
             data = self._parse_document_error(ex)
             if data:
                 raise ValidationError(data)

@@ -85,10 +85,10 @@ class Escrow(Model):
     )
 
     def __str__(self):
-        return "Escrow(id=%s, payee_id=%s, transit_wallet_id=%s, " \
-               "transit_payee_id=%s, transit_funding_source_id=%s, " \
-               "acceptance_deadline=%s, balance=%s)" % (
-                   self.id, self.payee_id, self.wallet_id,
+        return "Escrow(id=%s, name=%s, wallet_id=%s, payee_id=%s, " \
+               "transit_funding_source_id=%s, transit_payee_id=%s, " \
+               "funding_deadline=%s, balance=%s)" % (
+                   self.id, self.name, self.wallet_id, self.payee_id,
                    self.transit_payee_id, self.transit_funding_source_id,
                    self.funding_deadline, self.balance
                )

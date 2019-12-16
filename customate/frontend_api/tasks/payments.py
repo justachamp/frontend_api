@@ -212,6 +212,86 @@ def make_payment(user_id: str, payment_account_id: str, schedule_id: str, curren
         return result
 
 
+def process_schedule_transaction_change(transaction_info: Dict):
+    """
+    Handle Schedule related transaction changes
+    :param transaction_info:
+    :return:
+    """
+    transaction_id = transaction_info.get("transaction_id")
+    schedule_id = transaction_info.get("schedule_id")
+    transaction_status = TransactionStatusType(transaction_info.get("status"))
+
+    if not schedule_id:
+        return
+
+    try:
+        schedule = Schedule.objects.get(id=schedule_id)
+    except Schedule.DoesNotExist:
+        logger.error("Schedule with id %s was not found. %r" % (schedule_id, format_exc()))
+        return
+
+    logger.info("Processing transaction_id=%s for schedule_id=%s" % (transaction_id, schedule_id))
+    # Send notifications about completed schedules.
+    if transaction_status is TransactionStatusType.SUCCESS:
+        notify_about_schedules_successful_payment(schedule=schedule, transaction_info=transaction_info)
+    elif transaction_status is TransactionStatusType.FAILED:
+        notify_about_schedules_failed_payment(schedule=schedule, transaction_info=transaction_info)
+
+
+def process_escrow_transaction_change(transaction_info: Dict):
+    """
+    Handle Escrow-related transaction changes
+    :param transaction_info:
+    :return:
+    """
+    transaction_id = transaction_info.get("transaction_id")
+    transaction_status = TransactionStatusType(transaction_info.get("status"))
+    wallet_id = transaction_info.get("wallet_id")
+    payee_id = transaction_info.get("payee_id")  # recipient of money
+    funding_source_id = transaction_info.get("funding_source_id")  # origin of money
+    balance = transaction_info.get("closing_balance")
+
+    payee_id = UUID(payee_id) if payee_id else None
+    funding_source_id = UUID(funding_source_id) if funding_source_id else None
+
+    # Do not process is transaction is still processing
+    if transaction_status in [TransactionStatusType.PENDING, TransactionStatusType.PROCESSING]:
+        logger.info("Skipping escrow transaction(id=%s) handling, since status=%r" % (
+            transaction_id, transaction_status
+        ))
+        return
+
+    # Identify Escrow by its unique `wallet_id`
+    try:
+        escrow = Escrow.objects.get(wallet_id=wallet_id)
+        # persist actual balance in our local Django model
+        escrow.update_balance(int(balance))
+
+        # Since escrow is 2-stage process, i.e.  Funder -> Escrow Wallet -> Recipient,
+        # we need to figure out which stage we're currently on (F->E, or E->R), to do this we'll use
+        # `payee_id` and `funding_source_id`
+
+        # F->E Stage: money gets into Escrow wallet
+        if payee_id == escrow.transit_payee_id:
+            # TODO: send notification to Recipient, that Escrow was funded
+            pass
+
+        # E->R Stage: money leaves Escrow wallet
+        if funding_source_id == escrow.transit_funding_source_id:
+            # TODO: send notification to Funder, that money were released to Recipient
+            pass
+
+        # send notifications
+        # notify_about_fund_escrow_state(
+        #     escrow=escrow,
+        #     tpl_filename="notifications/escrow_has_been_funded.html",
+        #     transaction_info=transaction_info
+        # )
+    except Escrow.DoesNotExist:
+        logger.info("Unable to find Escrow with given wallet_id=%s" % wallet_id)
+
+
 @shared_task
 @transaction.atomic
 def on_transaction_change(transaction_info: Dict):
@@ -221,46 +301,41 @@ def on_transaction_change(transaction_info: Dict):
     :return:
     """
     logger.info("Start on_transaction_change. Transaction info: %s." % transaction_info)
+    transaction_id = transaction_info.get("transaction_id")
     user_id = transaction_info.get("user_id")
     schedule_id = transaction_info.get("schedule_id")
     transaction_status = TransactionStatusType(transaction_info.get("status"))
+    payee_id = transaction_info.get("payee_id")  # recipient of money
+    funding_source_id = transaction_info.get("funding_source_id")  # origin of money
     wallet_id = transaction_info.get("wallet_id")
-    balance = transaction_info.get("closing_balance")
+    request_id = RequestIdGenerator.get()
 
-    # Persist balance to Escrow object
-    if transaction_status not in [TransactionStatusType.PENDING, TransactionStatusType.PROCESSING]:
-        try:
-            escrow = Escrow.objects.get(wallet_id=wallet_id)
-            escrow.update_balance(int(balance))
-            notify_about_fund_escrow_state(
-                escrow=escrow,
-                tpl_filename="notifications/escrow_has_been_funded.html",
-                transaction_info=transaction_info)
-            return
-        except Escrow.DoesNotExist:
-            logger.info("Got 'wallet_id': %s. Escrow with given the one does not exist. %r" % (wallet_id, format_exc()))
-            pass
+    logging.init_shared_extra(request_id)
+    logger.info("Received 'transaction changed' event, starting processing (transaction_id=%s, transaction_info=%r)" % (
+        transaction_id, transaction_info
+    ), extra={
+        'request_id': request_id,
+        'user_id': user_id,
+        'transaction_id': transaction_id,
+        'schedule_id': schedule_id,
+        'wallet_id': wallet_id,
+        'funding_source_id': funding_source_id,
+        'payee_id': payee_id,
+        'transaction_status': transaction_status,
+    })
 
     # Send notifications about loaded funds
-    if not schedule_id:
-        notify_about_loaded_funds(
-            user_id=user_id,
-            transaction_info=transaction_info,
-            transaction_status=transaction_status)
-        return
+    # TODO: Do we need to sent notifications about funds loading regardless of Schedule/Escrow processing?
+    notify_about_loaded_funds(
+        user_id=user_id,
+        transaction_info=transaction_info,
+        transaction_status=transaction_status
+    )
 
-    try:
-        schedule = Schedule.objects.get(id=schedule_id)
-    except Schedule.DoesNotExist:
-        logger.error("Schedule with id %s was not found. %r" % (schedule_id, format_exc()))
-        return
-
-    # Send notifications about completed schedules.
-    if transaction_status is TransactionStatusType.SUCCESS:
-        notify_about_schedules_successful_payment(schedule=schedule, transaction_info=transaction_info)
-
-    if transaction_status is TransactionStatusType.FAILED:
-        notify_about_schedules_failed_payment(schedule=schedule, transaction_info=transaction_info)
+    # Persist balance to Escrow object
+    process_escrow_transaction_change(transaction_info=transaction_info)
+    # schedule specific logic
+    process_schedule_transaction_change(transaction_info=transaction_info)
 
 
 def process_escrow_payment_change(payment_info: Dict, request_id=None):
@@ -274,7 +349,7 @@ def process_escrow_payment_change(payment_info: Dict, request_id=None):
     wallet_id = payment_info.get("wallet_id")
 
     if wallet_id is None:
-        logger.info("Skipping payment (id=%s), it is not related to any wallet(Escrow)" % payment_id, extra={
+        logger.info("Skipping payment (id=%s), it is not related to any Escrow wallet" % payment_id, extra={
             'request_id': request_id,
             'payment_id': payment_id
         })
@@ -418,6 +493,7 @@ def on_payment_change(payment_info: Dict):
     :param payment_info:
     :return:
     """
+    user_id = payment_info.get("user_id")
     payment_id = payment_info.get("payment_id")
     schedule_id = payment_info.get("schedule_id")
     funding_source_id = payment_info.get("funding_source_id")
@@ -429,10 +505,11 @@ def on_payment_change(payment_info: Dict):
         payment_id, payment_info
     ), extra={
         'request_id': request_id,
+        'user_id': user_id,
         'payment_id': payment_id,
         'schedule_id': schedule_id,
         'funding_source_id': funding_source_id,
-        'payment_status': payment_status
+        'payment_status': payment_status,
     })
 
     # try to process payment event in the context of Escrow
