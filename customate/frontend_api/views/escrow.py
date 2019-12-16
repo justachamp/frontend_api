@@ -303,7 +303,7 @@ class EscrowOperationViewSet(views.ModelViewSet):
                     EscrowOperationType.load_funds: "notifications/requesting_funding_escrow.html",
                     EscrowOperationType.release_funds: "notifications/requesting_release_funds.html"
                 }
-                if self.request.user is operation.escrow.recipient_user and operation.type in tpl_filenames.keys():
+                if self.request.user == operation.escrow.recipient_user and operation.type in tpl_filenames.keys():
                     logger.info("Start notify funder about requesting to fund/release funds. \
                                 Funds recipient: %s. " % self.request.user)
                     notify_about_requesting_action_with_funds(
