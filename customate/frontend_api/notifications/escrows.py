@@ -88,7 +88,7 @@ def notify_about_requesting_action_with_funds(escrow: Escrow, tpl_filename: str)
     if email_recipient.notify_by_email:
         context = {
             "escrow_funder": email_recipient.email,
-            "funds_recipient": escrow.recipient_user,
+            "funds_recipient": escrow.recipient_user.email,
             "escrow_name": escrow.name
         }
         message = get_ses_email_payload(
