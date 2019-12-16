@@ -36,7 +36,8 @@ from frontend_api.serializers.escrow import EscrowOperationSerializer
 from frontend_api.notifications.escrows import (
     notify_counterpart_about_new_escrow,
     notify_escrow_creator_about_escrow_state,
-    notify_about_requesting_action_with_funds
+    notify_about_requesting_action_with_funds,
+    notify_about_fund_escrow_state
 )
 
 logger = logging.getLogger(__name__)
@@ -380,4 +381,15 @@ class EscrowOperationViewSet(views.ModelViewSet):
             raise NotFound(f'EscrowOperation not found {operation_id}')
 
         op.reject()
+        # Notify recipient user about rejected load_funds operation ( if he initiated load_funds operation )
+        escrow = op.escrow
+        current_user = self.request.user
+        if all([op.type == EscrowOperationType.load_funds,
+                op.creator == escrow.recipient_user,
+                op.creator != current_user]):
+            notify_about_fund_escrow_state(
+                escrow=escrow,
+                tpl_filename="notification/escrow_has_not_been_funded.html"
+        )
+
         return Response(status=status_codes.HTTP_204_NO_CONTENT)
