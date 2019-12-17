@@ -173,7 +173,7 @@ class EscrowSerializer(BaseEscrowSerializer):
         # 1) it's a funder and an Escrow in "pending_funding" state and existing LoadFunds operation is not approved yet
         if current_user.id == escrow.funder_user.id:
             return escrow.status is EscrowStatus.pending_funding \
-                   and latest_op.status is not EscrowOperationStatus.appronoved
+                   and latest_op.status is not EscrowOperationStatus.approved
 
         # 2) Escrow in "ongoing" state and there is no existing pending LoadFunds operations
         if escrow.status is EscrowStatus.ongoing:
