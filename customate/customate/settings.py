@@ -100,7 +100,7 @@ COGNITO_CREATE_UNKNOWN_USERS = True
 
 # see more at https://lincolnloop.com/blog/django-logging-right-way/
 LOGGING_CONFIG = None
-LOGLEVEL = environ.get('LOGLEVEL', 'debug' if DEBUG else 'info').upper()
+LOGLEVEL = environ.get('LOGLEVEL', 'DEBUG' if DEBUG else 'INFO').upper()
 LOGFILEPATH = environ.get('LOGFILEPATH', 'app.log')
 
 logging.config.dictConfig({
@@ -109,7 +109,7 @@ logging.config.dictConfig({
     'formatters': {
         'console': {
             # see more parameters at https://docs.python.org/3/library/logging.html#logging.LogRecord
-            'format': '[%(asctime)s %(levelname)s %(pathname)s:%(lineno)s] %(message)s',
+            'format': '[%(asctime)s %(levelname)s %(pathname)s:%(lineno)s|%(name)s] %(message)s',
             'datefmt': "%y%m%d %H:%M:%S",
         },
 
@@ -134,11 +134,13 @@ logging.config.dictConfig({
         'console': {
             'class': 'colorlog.StreamHandler' if supports_color() else 'logging.StreamHandler',
             'formatter': 'colorlog' if supports_color() else 'console',
+            #'filters': ['require_debug_true']
         },
 
         'rotating_file': {
             'class': 'core.logger.BetterRotatingFileHandler',
             'formatter': 'customate.json.formatter',
+            #'filters': ['require_debug_true'],
             'filename': LOGFILEPATH,
             'maxBytes': 1024 * 1024 * 10,  # 10 MB
         },

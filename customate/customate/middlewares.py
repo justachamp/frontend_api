@@ -1,8 +1,24 @@
 import logging
-
+from traceback import format_exc
+from customate.settings import DEBUG
 from rest_framework import status as status_codes
 
 logger = logging.getLogger(__name__)
+
+
+def grepify_exception(exc, delimiter=" | "):
+    """
+    Turns exception into one line string convenient for log grepping
+    :param exc: Python's exception
+    :type exc: Exception
+    :param delimiter: Separator between newlines
+    :type delimiter: str
+    :rtype: unicode
+    """
+
+    fe = format_exc()
+    fe = fe.replace("\n", delimiter)
+    return fe
 
 
 class RequestDetailsLoggingMiddleware:
@@ -45,3 +61,13 @@ class RequestDetailsLoggingMiddleware:
         Don't want to log massive, not really interesting response related information
         """
         return response.status_code >= status_codes.HTTP_204_NO_CONTENT
+
+    def process_exception(self, request, exception):
+        """
+
+        :param exception:
+        :return:
+        """
+        if not DEBUG:
+            logger.error(grepify_exception(exception))
+        return None
