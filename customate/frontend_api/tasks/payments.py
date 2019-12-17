@@ -30,7 +30,10 @@ from frontend_api.notifications.schedules import (
     notify_about_schedules_successful_payment,
     notify_about_schedules_failed_payment
 )
-from frontend_api.notifications.escrows import notify_about_fund_escrow_state
+from frontend_api.notifications.escrows import (
+    notify_about_fund_escrow_state,
+    notify_parties_about_funds_transfer
+)
 
 logger = logging.getLogger(__name__)
 
@@ -274,20 +277,25 @@ def process_escrow_transaction_change(transaction_info: Dict):
 
         # F->E Stage: money gets into Escrow wallet
         if payee_id == escrow.transit_payee_id:
-            # TODO: send notification to Recipient, that Escrow was funded
+            # Send notification to recipient
+            notify_about_fund_escrow_state(
+                escrow=escrow,
+                tpl_filename="notifications/escrow_has_been_funded.html",
+                transaction_info=transaction_info
+            )
             pass
 
         # E->R Stage: money leaves Escrow wallet
         if funding_source_id == escrow.transit_funding_source_id:
-            # TODO: send notification to Funder, that money were released to Recipient
+            # Send notification to recipient and funder
+            notify_parties_about_funds_transfer(
+                escrow=escrow,
+                tpl_filename="notifications/escrow_funds_was_transferred.html",
+                transaction_info=transaction_info
+            )
             pass
 
-        # send notifications
-        # notify_about_fund_escrow_state(
-        #     escrow=escrow,
-        #     tpl_filename="notifications/escrow_has_been_funded.html",
-        #     transaction_info=transaction_info
-        # )
+
     except Escrow.DoesNotExist:
         logger.info("Unable to find Escrow with given wallet_id=%s" % wallet_id)
 

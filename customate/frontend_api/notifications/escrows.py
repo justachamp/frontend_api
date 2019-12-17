@@ -99,3 +99,42 @@ def notify_about_requesting_action_with_funds(escrow: Escrow, tpl_filename: str)
         send_notification_email.delay(to_address=funder.email, message=message)
 
 
+def notify_parties_about_funds_transfer(escrow: Escrow, tpl_filename: str, transaction_info: Dict):
+    """
+    While money leaves Escrow wallet, notify both recipient and funder users.
+    :param tpl_filename:
+    :param escrow:
+    :param transaction_info:
+    :return:
+    """
+    amount = transaction_info.get('amount')
+    currency = transaction_info.get('currency')
+    recipient = escrow.recipient_user
+    funder = escrow.funder_user
+    context = {
+        'escrow': escrow,
+        'amount': amount,
+        'currency': currency
+    }
+    if recipient.notify_by_email:
+        context.update({'user': recipient, 'action': 'received'})
+        message = get_ses_email_payload(
+            tpl_filename=tpl_filename,
+            tpl_context=context,
+            subject=settings.AWS_SES_SUBJECT_NAME
+        )
+        send_notification_email.delay(to_address=recipient.email, message=message)
+
+    if funder.notify_by_email:
+        context.update({'user': funder, 'action': 'released'})
+        message = get_ses_email_payload(
+            tpl_filename=tpl_filename,
+            tpl_context=context,
+            subject=settings.AWS_SES_SUBJECT_NAME
+        )
+        send_notification_email.delay(to_address=funder.email, message=message)
+
+
+
+
+
