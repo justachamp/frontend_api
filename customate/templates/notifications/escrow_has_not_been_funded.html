@@ -4,8 +4,8 @@
 {% block body %}
         <div style="margin-top:42px;font-family:Roboto;font-size:24px;line-height:44px;padding-left:70px;">
         <div style="margin-top:10px;font-family:Roboto;font-size:14px;line-height:26px;color:#708090;">
-            Hi {{ recipient }},
-            Escrow {{ escrow_name }} has not been funded.
+            Hi {{ recipient.email }},
+            Escrow {{ escrow.name }} has not been funded.
         </div>
         <div style="margin-top:10px;font-family:Roboto;font-size:14px;line-height:26px;color:#708090;">
             Please login to your account at <a href="{{link}}">GoCustomate</a> to action the request.
