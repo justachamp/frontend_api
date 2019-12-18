@@ -138,3 +138,21 @@ def notify_parties_about_funds_transfer(escrow: Escrow, tpl_filename: str, trans
 
 
 
+def send_reminder_to_fund_escrow(escrow: Escrow, tpl_filename: str):
+    """
+    Reminder for funding escrow by counterpart.
+    :param escrow:
+    :param tpl_filename:
+    :return:
+    """
+    email_recipient = escrow.funder_user
+    if email_recipient.notify_by_email:
+        context ={
+            "escrow": escrow
+        }
+        message = get_ses_email_payload(
+            tpl_filename=tpl_filename,
+            tpl_context=context,
+            subject=settings.AWS_SES_SUBJECT_NAME
+        )
+        send_notification_email.delay(to_address=email_recipient.email, message=message)

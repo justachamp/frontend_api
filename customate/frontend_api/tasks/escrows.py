@@ -1,15 +1,19 @@
 from __future__ import absolute_import, unicode_literals
 import logging
+from datetime import timedelta
 
 import arrow
 from celery import shared_task
 from django.core.paginator import Paginator
 from django.conf import settings
-from django.db.models import Q
+from django.db.models import DateField, ExpressionWrapper, F, Q
 
-from frontend_api.models.escrow import LoadFundsEscrowOperation
+from frontend_api.models.escrow import Escrow, LoadFundsEscrowOperation
 from frontend_api.fields import EscrowStatus
-from frontend_api.notifications.escrows import notify_about_fund_escrow_state
+from frontend_api.notifications.escrows import (
+    notify_about_fund_escrow_state,
+    send_reminder_to_fund_escrow
+)
 
 logger = logging.getLogger(__name__)
 
@@ -39,4 +43,51 @@ def process_unaccepted_escrows():
             notify_about_fund_escrow_state(
                 escrow=operation.escrow,
                 tpl_filename="notifications/escrow_has_not_been_funded.html"
+            )
+
+
+def reminder_to_fund_escrow():
+    """
+    Since each Escrow have 'funding_deadline' we're going to send two types of notifications regarding 'Funds':
+        - friendly reminder ( if half time has passed )
+        - final notice ( if 1 day until deadline remains )
+    :return:
+    """
+    # Get and iterate 'half-time expired' load funds operations
+    sql_query = """
+        SELECT * FROM (
+           SELECT *,
+           ("created_at"+ ("approval_deadline" - "created_at")/2)::date AS "half_deadline",
+            ROW_NUMBER() OVER (PARTITION BY escrow_id ) AS "rn"
+            FROM frontend_api_escrowoperation WHERE type='load_funds' order by created_at ASC
+        ) sq WHERE "rn" = 1 AND "half_deadline" = now()::date
+    """
+
+    half_time_expired_escrow_operations = LoadFundsEscrowOperation.objects.raw(sql_query)
+    paginator = Paginator(half_time_expired_escrow_operations, settings.CELERY_BEAT_PER_PAGE_OBJECTS)
+    for page in paginator.page_range:
+        for operation in paginator.page(page).object_list:  # type: LoadFundsEscrowOperation
+            send_reminder_to_fund_escrow(
+                escrow=operation.escrow,
+                tpl_filename="notifications/friendly_reminder_to_fund_escrow.html"
+            )
+
+    # Get and iterate 'one day remains' load funds operations
+    sql_query = """
+        SELECT * FROM (
+           SELECT *,
+           ("frontend_api_escrowoperation"."approval_deadline" - 1)::date AS "half_deadline",
+            ROW_NUMBER() OVER (PARTITION BY escrow_id ) AS "rn"
+            FROM frontend_api_escrowoperation WHERE type='load_funds' order by created_at ASC
+        ) sq WHERE "rn" = 1 AND "half_deadline" = now()::date
+    """
+
+    one_day_remains_escrow_operations = LoadFundsEscrowOperation.objects.raw(sql_query)
+
+    paginator = Paginator(one_day_remains_escrow_operations, settings.CELERY_BEAT_PER_PAGE_OBJECTS)
+    for page in paginator.page_range:
+        for operation in paginator.page(page).object_list:  # type: LoadFundsEscrowOperation
+            send_reminder_to_fund_escrow(
+                escrow=operation.escrow,
+                tpl_filename="notifications/final_notice_to_fund_escrow.html"
             )

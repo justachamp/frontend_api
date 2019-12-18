@@ -490,6 +490,10 @@ CELERY_BEAT_SCHEDULE = {
     #     'task': 'frontend_api.tasks.schedules.remove_unassigned_documents',
     #     'schedule': crontab(hour='01', minute="00")  # 01:00 UTC every day
     # },
+    'once_per_day_send_reminders_to_fund_escrow': {
+        'task': 'frontend_api.tasks.escrows.reminder_to_fund_escrow',
+        'schedule': crontab(hour='00', minute="01")  # 00:01 UTC every day
+    },
 }
 
 PAYMENT_SYSTEM_CLOSING_TIME = environ['PAYMENT_SYSTEM_CLOSING_TIME']  # HH:mm format
