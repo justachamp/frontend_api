@@ -32,10 +32,10 @@ class RequestDetailsLoggingMiddleware:
         # the view (and later middleware) are called.
         logging.init_shared_extra()
 
-        logger.info("Request details: url=%s, method=%s", request.path, request.method,
+        logger.info("Request details: url=%s, method=%s", request.get_full_path(), request.method,
                     extra={'body': request.body.decode("utf-8"),
                            'query_params': request.GET.copy(),
-                           'path': request.path,
+                           'url': request.get_full_path(),
                            'method': request.method})
 
         response = self.get_response(request)
