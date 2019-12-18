@@ -64,6 +64,7 @@ def reminder_to_fund_escrow():
     """
 
     half_time_expired_escrow_operations = LoadFundsEscrowOperation.objects.raw(sql_query)
+    logger.info("Start sending friendly reminders. Escrows count: %d." % half_time_expired_escrow_operations.count())
     paginator = Paginator(half_time_expired_escrow_operations, settings.CELERY_BEAT_PER_PAGE_OBJECTS)
     for page in paginator.page_range:
         for operation in paginator.page(page).object_list:  # type: LoadFundsEscrowOperation
@@ -83,7 +84,7 @@ def reminder_to_fund_escrow():
     """
 
     one_day_remains_escrow_operations = LoadFundsEscrowOperation.objects.raw(sql_query)
-
+    logger.info("Start sending last notice reminders. Escrows count: %d." % one_day_remains_escrow_operations.count())
     paginator = Paginator(one_day_remains_escrow_operations, settings.CELERY_BEAT_PER_PAGE_OBJECTS)
     for page in paginator.page_range:
         for operation in paginator.page(page).object_list:  # type: LoadFundsEscrowOperation
