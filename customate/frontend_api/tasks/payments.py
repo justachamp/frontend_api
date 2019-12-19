@@ -290,7 +290,7 @@ def process_escrow_transaction_change(transaction_info: Dict):
             # Send notification to recipient and funder
             notify_parties_about_funds_transfer(
                 escrow=escrow,
-                tpl_filename="notifications/escrow_funds_was_transferred.html",
+                tpl_filename="notifications/escrow_funds_were_transferred.html",
                 transaction_info=transaction_info
             )
             pass
