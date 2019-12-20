@@ -15,7 +15,7 @@ from django.utils.translation import gettext_lazy as _
 from django.contrib.postgres.fields import JSONField
 
 from core.models import Model, User
-from core.fields import Currency, UserRole, PaymentStatusType, PayeeType
+from core.fields import Currency, UserRole, PaymentStatusType, PayeeType, TransactionStatusType
 from customate.settings import ESCROW_OPERATION_APPROVE_DEADLINE
 import external_apis.payment.service as payment_service
 
@@ -82,6 +82,11 @@ class Escrow(Model):
     balance = models.IntegerField(
         help_text=_("Transit storage of balance from payment service."),
         default=0, blank=True, null=True
+    )
+
+    has_pending_payment = models.BooleanField(
+        default=False,
+        help_text=_("Tracks payment operations state.")
     )
 
     def __str__(self):
@@ -286,20 +291,29 @@ class Escrow(Model):
         """
         self.create_escrow_operation.reject()
 
-    def update_balance(self, balance):
+    def update_payment_info(self, balance: int, status: TransactionStatusType = None):
         """
-        Track total balance of underlying money transactions here.
+        Update info about underlying money transactions in this model
         :param balance:
+        :param status:
         :return:
         """
+
         old_balance = self.balance
+        old_has_pending_payment = self.has_pending_payment
         self.balance = balance
-        self.save(update_fields=["balance"])
-        logger.info("Updated escrow (id=%s) balance=%d (was=%s)" % (self.id, balance, old_balance), extra={
+        self.has_pending_payment = False if status in [TransactionStatusType.SUCCESS] else True
+
+        logger.info("Updated escrow (id=%s) balance=%d (was=%s), has_pending_payment=%s (was=%s)" % (
+            self.id, balance, old_balance, self.has_pending_payment, old_has_pending_payment), extra={
             'escrow_id': self.id,
             'new_balance': balance,
-            'old_balance': old_balance
+            'old_balance': old_balance,
+            'new_has_pending_payment': self.has_pending_payment,
+            'old_has_pending_payment': old_has_pending_payment
         })
+
+        self.save(update_fields=["balance", "has_pending_payment"])
 
 
 # support JSON schema versioning for possible future changes

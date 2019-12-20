@@ -258,18 +258,28 @@ def process_escrow_transaction_change(transaction_info: Dict):
     payee_id = UUID(payee_id) if payee_id else None
     funding_source_id = UUID(funding_source_id) if funding_source_id else None
 
-    # Do not process is transaction is still processing
+    escrow = None
+    # Identify Escrow by its unique `wallet_id`
+    try:
+        escrow = Escrow.objects.get(wallet_id=wallet_id)
+    except Exception:
+        logger.error("Unable to fetch Escrow with given wallet_id=%s, exc=%r" % (wallet_id, format_exc()))
+        return
+
+    # persist actual balance/status in our local Django model
+    escrow.update_payment_info(
+        balance=int(balance),
+        status=transaction_status
+    )
+
+    # Do not process transactions that are still processing
     if transaction_status in [TransactionStatusType.PENDING, TransactionStatusType.PROCESSING]:
         logger.info("Skipping escrow transaction(id=%s) handling, since status=%r" % (
             transaction_id, transaction_status
         ))
         return
 
-    # Identify Escrow by its unique `wallet_id`
     try:
-        escrow = Escrow.objects.get(wallet_id=wallet_id)
-        # persist actual balance in our local Django model
-        escrow.update_balance(int(balance))
 
         # Since escrow is 2-stage process, i.e.  Funder -> Escrow Wallet -> Recipient,
         # we need to figure out which stage we're currently on (F->E, or E->R), to do this we'll use
@@ -283,7 +293,6 @@ def process_escrow_transaction_change(transaction_info: Dict):
                 tpl_filename="notifications/escrow_has_been_funded.html",
                 transaction_info=transaction_info
             )
-            pass
 
         # E->R Stage: money leaves Escrow wallet
         if funding_source_id == escrow.transit_funding_source_id:
@@ -293,11 +302,9 @@ def process_escrow_transaction_change(transaction_info: Dict):
                 tpl_filename="notifications/escrow_funds_were_transferred.html",
                 transaction_info=transaction_info
             )
-            pass
 
-
-    except Escrow.DoesNotExist:
-        logger.info("Unable to find Escrow with given wallet_id=%s" % wallet_id)
+    except Exception:
+        logger.error("Unable to process notifications for Escrow wallet_id=%s, exc=%r" % (wallet_id, format_exc()))
 
 
 @shared_task
@@ -310,9 +317,9 @@ def on_transaction_change(transaction_info: Dict):
     """
     logger.info("Start on_transaction_change. Transaction info: %s." % transaction_info)
     transaction_id = transaction_info.get("transaction_id")
+    transaction_status = TransactionStatusType(transaction_info.get("status"))
     user_id = transaction_info.get("user_id")
     schedule_id = transaction_info.get("schedule_id")
-    transaction_status = TransactionStatusType(transaction_info.get("status"))
     payee_id = transaction_info.get("payee_id")  # recipient of money
     funding_source_id = transaction_info.get("funding_source_id")  # origin of money
     wallet_id = transaction_info.get("wallet_id")
