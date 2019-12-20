@@ -40,10 +40,7 @@ def process_unaccepted_escrows():
             operation.expire()
             operation.reject()
             # Send appropriate notification to seller
-            notify_about_fund_escrow_state(
-                escrow=operation.escrow,
-                tpl_filename="notifications/escrow_has_not_been_funded.html"
-            )
+            notify_about_fund_escrow_state(escrow=operation.escrow)
 
 
 def reminder_to_fund_escrow():

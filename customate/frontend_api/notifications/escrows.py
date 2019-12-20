@@ -4,9 +4,10 @@ import logging
 from typing import Optional, Dict
 
 from django.conf import settings
+import arrow
 
 from frontend_api.tasks.notifiers import send_notification_email, send_notification_sms
-from frontend_api.notifications.helpers import get_ses_email_payload
+from frontend_api.notifications.helpers import get_ses_email_payload, transaction_names
 from frontend_api.models.escrow import EscrowOperation, Escrow
 from core.models import User
 
@@ -56,19 +57,31 @@ def notify_escrow_creator_about_escrow_state(counterpart: User, create_escrow_op
         send_notification_email.delay(to_address=creator.email, message=message)
 
 
-def notify_about_fund_escrow_state(escrow: Escrow, tpl_filename: str, transaction_info: Optional[Dict] = None):
+def notify_about_fund_escrow_state(escrow: Escrow, transaction_info: Optional[Dict] = None):
     """
     Notify if escrow has been funded or not.
     :param escrow:
-    :param tpl_filename:
     :param transaction_info:
     :return:
     """
     recipient = escrow.recipient_user
     if recipient.notify_by_email:
-        context = {
-            "escrow": escrow
-        }
+        if transaction_info is None:
+            context = {
+                "recipient": recipient,
+                "escrow": escrow
+            }
+            tpl_filename = "notifications/escrow_has_not_been_funded.html"
+        else:
+            context = {
+                'amount': transaction_info.get("amount"),
+                'processed_datetime': arrow.utcnow().datetime,
+                'escrow': escrow,
+                'transaction_type': transaction_names.get(transaction_info.get("name"), "Unknown"),
+                # identifier specifies either funds has increased or decreased
+                'sign': "+"
+            }
+            tpl_filename = "notifications/escrow_has_been_funded.html"
         message = get_ses_email_payload(
             tpl_filename=tpl_filename,
             tpl_context=context,
@@ -144,7 +157,7 @@ def send_reminder_to_fund_escrow(escrow: Escrow, tpl_filename: str):
     """
     email_recipient = escrow.funder_user
     if email_recipient.notify_by_email:
-        context ={
+        context = {
             "escrow": escrow
         }
         message = get_ses_email_payload(

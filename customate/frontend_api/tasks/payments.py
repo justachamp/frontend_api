@@ -224,8 +224,15 @@ def process_schedule_transaction_change(transaction_info: Dict):
     transaction_id = transaction_info.get("transaction_id")
     schedule_id = transaction_info.get("schedule_id")
     transaction_status = TransactionStatusType(transaction_info.get("status"))
+    user_id = transaction_info.get("user_id")
 
     if not schedule_id:
+        # Send notifications about loaded funds
+        notify_about_loaded_funds(
+            user_id=user_id,
+            transaction_info=transaction_info,
+            transaction_status=transaction_status
+        )
         return
 
     try:
@@ -288,11 +295,8 @@ def process_escrow_transaction_change(transaction_info: Dict):
         # F->E Stage: money gets into Escrow wallet
         if payee_id == escrow.transit_payee_id:
             # Send notification to recipient
-            notify_about_fund_escrow_state(
-                escrow=escrow,
-                tpl_filename="notifications/escrow_has_been_funded.html",
-                transaction_info=transaction_info
-            )
+            notify_about_fund_escrow_state(escrow=escrow, transaction_info=transaction_info)
+            pass
 
         # E->R Stage: money leaves Escrow wallet
         if funding_source_id == escrow.transit_funding_source_id:
@@ -338,14 +342,6 @@ def on_transaction_change(transaction_info: Dict):
         'payee_id': payee_id,
         'transaction_status': transaction_status,
     })
-
-    # Send notifications about loaded funds
-    # TODO: Do we need to sent notifications about funds loading regardless of Schedule/Escrow processing?
-    notify_about_loaded_funds(
-        user_id=user_id,
-        transaction_info=transaction_info,
-        transaction_status=transaction_status
-    )
 
     # Persist balance to Escrow object
     process_escrow_transaction_change(transaction_info=transaction_info)
