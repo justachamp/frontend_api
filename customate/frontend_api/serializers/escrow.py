@@ -169,15 +169,20 @@ class EscrowSerializer(BaseEscrowSerializer):
         latest_op = LoadFundsEscrowOperation.objects.filter(escrow__id=escrow.id).order_by("-created_at").first()
         current_user = self.context.get('request').user
 
+        case = False
+        case2 = False
+
         # We allow LoadFunds operation in two cases:
         # 1) it's a funder and an Escrow in "pending_funding" state and existing LoadFunds operation is not approved yet
         if current_user.id == escrow.funder_user.id:
-            return escrow.status is EscrowStatus.pending_funding \
+            case = escrow.status is EscrowStatus.pending_funding \
                    and latest_op.status is not EscrowOperationStatus.approved
 
         # 2) Escrow in "ongoing" state and there is no existing pending LoadFunds operations
         if escrow.status is EscrowStatus.ongoing:
-            return latest_op.status is not EscrowOperationStatus.pending
+            case2 = latest_op.status is not EscrowOperationStatus.pending
+
+        return case or case2
 
     def counterpart(self, escrow: Escrow):
         """
