@@ -22,8 +22,8 @@ def notify_counterpart_about_new_escrow(counterpart: User, create_op: object):
     """
     if counterpart.notify_by_email:
         context = {
-            "counterpart": counterpart,
-            "creator": create_op.creator
+            "escrow": create_op.escrow,
+            "create_op": create_op
         }
         message = get_ses_email_payload(
             tpl_filename="notifications/new_escrow_created.html",
@@ -34,9 +34,10 @@ def notify_counterpart_about_new_escrow(counterpart: User, create_op: object):
         send_notification_email.delay(to_address=counterpart.email, message=message)
 
 
-def notify_escrow_creator_about_escrow_state(create_escrow_op: EscrowOperation, tpl_filename: str):
+def notify_escrow_creator_about_escrow_state(counterpart: User, create_escrow_op: EscrowOperation, tpl_filename: str):
     """
     Once escrow has rejected / accepted by counterpart, send appropriate notification to creator.
+    :param counterpart:
     :param tpl_filename:
     :param create_escrow_op: CreateEscrowOperation object. Need for notifications context.
     :return:
@@ -44,8 +45,8 @@ def notify_escrow_creator_about_escrow_state(create_escrow_op: EscrowOperation, 
     creator = create_escrow_op.creator
     if creator.notify_by_email:
         context = {
-            "creator": creator,
-            "escrow": create_escrow_op.escrow
+            "escrow": create_escrow_op.escrow,
+            "counterpart": counterpart
         }
         message = get_ses_email_payload(
             tpl_filename=tpl_filename,
@@ -66,7 +67,6 @@ def notify_about_fund_escrow_state(escrow: Escrow, tpl_filename: str, transactio
     recipient = escrow.recipient_user
     if recipient.notify_by_email:
         context = {
-            "recipient": recipient,
             "escrow": escrow
         }
         message = get_ses_email_payload(
@@ -77,19 +77,19 @@ def notify_about_fund_escrow_state(escrow: Escrow, tpl_filename: str, transactio
         send_notification_email.delay(to_address=recipient.email, message=message)
 
 
-def notify_about_requesting_action_with_funds(escrow: Escrow, tpl_filename: str):
+def notify_about_requesting_action_with_funds(counterpart: User, operation: EscrowOperation, tpl_filename: str):
     """
     Notify funder to fund escrow.
+    :param operation:
+    :param counterpart:
     :param tpl_filename:
-    :param escrow:
     :return:
     """
-    funder = escrow.funder_user
+    funder = operation.escrow.funder_user
     if funder.notify_by_email:
         context = {
-            "funder": funder,
-            "recipient": escrow.recipient_user,
-            "escrow": escrow
+            "operation": operation,
+            "counterpart": counterpart
         }
         message = get_ses_email_payload(
             tpl_filename=tpl_filename,
@@ -133,9 +133,6 @@ def notify_parties_about_funds_transfer(escrow: Escrow, tpl_filename: str, trans
             subject=settings.AWS_SES_SUBJECT_NAME
         )
         send_notification_email.delay(to_address=funder.email, message=message)
-
-
-
 
 
 def send_reminder_to_fund_escrow(escrow: Escrow, tpl_filename: str):

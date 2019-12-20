@@ -210,7 +210,9 @@ class EscrowViewSet(views.ModelViewSet):
         # Send appropriate notification to escrows creator.
         try:
             create_escrow_op = escrow.create_escrow_operation
+            counterpart = self.request.user
             notify_escrow_creator_about_escrow_state(
+                counterpart=counterpart,
                 create_escrow_op=create_escrow_op,
                 tpl_filename="notifications/escrow_accepted_by_counterpart.html"
             )
@@ -244,7 +246,9 @@ class EscrowViewSet(views.ModelViewSet):
         # Send appropriate notification to escrows creator.
         try:
             create_escrow_op = escrow.create_escrow_operation
+            counterpart = self.request.user
             notify_escrow_creator_about_escrow_state(
+                counterpart=counterpart,
                 create_escrow_op=create_escrow_op,
                 tpl_filename="notifications/escrow_rejected_by_counterpart.html"
             )
@@ -307,7 +311,8 @@ class EscrowOperationViewSet(views.ModelViewSet):
                     logger.info("Start notify funder about requesting to fund/release funds. \
                                 Funds recipient: %s. " % self.request.user)
                     notify_about_requesting_action_with_funds(
-                        escrow=operation.escrow,
+                        counterpart=self.request.user,
+                        operation=operation,
                         tpl_filename=tpl_filenames[operation.type]
                     )
 

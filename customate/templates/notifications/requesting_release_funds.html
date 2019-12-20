@@ -2,13 +2,31 @@
 {% load prettify_number %}
 
 {% block body %}
-        <div style="margin-top:42px;font-family:Roboto;font-size:24px;line-height:44px;padding-left:70px;">
-        <div style="margin-top:10px;font-family:Roboto;font-size:14px;line-height:26px;color:#708090;">
-            Hi {{ funder.email }},
-            you've got a propose to release funds of Escrow {{ escrow.name }} from {{ recipient.email }}.
+    <div style="margin-top:42px;font-family:Roboto;font-size:34px;line-height:44px;text-align:center">
+        Hi, you received a request.
+    </div>
+
+    <hr style="width:77%;margin-top:34px;background-color:#e6e6e6;height:1px;border:0;">
+
+    <div style="margin-top:30px;font-size:15px;line-height:30px;padding-left:70px;">
+
+        <div style="display:inline-block;width:30%;font-family:Roboto;color:#697386;">Escrow wallet</div>
+        <div style="display:inline-block;width:65%;font-family:Roboto Bold;text-align:left;color:#000000;">{{ operation.escrow.name }}</div>
+
+        <div style="display:inline-block;width:30%;font-family:Roboto;color:#697386;">Counterpart</div>
+        <div style="display:inline-block;width:65%;font-family:Roboto Bold;text-align:left;color:#000000;">{{ counterpart.email }}</div>
+
+        <div style="display:inline-block;width:30%;font-family:Roboto;color:#697386;">To release</div>
+        <div style="display:inline-block;width:65%;font-family:Roboto Bold;text-align:left;color:#000000;">
+            {{ operation.escrow.currency.symbol }}
+            {{ operation.amount }}
         </div>
-        <div style="margin-top:10px;font-family:Roboto;font-size:14px;line-height:26px;color:#708090;">
-            Please login to your account at <a href="{{link}}">GoCustomate</a> to action the request.
-        </div>
+
+    </div>
+
+    <hr style="width:77%;margin-top:34px;background-color:#e6e6e6;height:1px;border:0;">
+
+    <div style="margin-top:32px;font-family:Roboto;font-size:15px;line-height:26px;color:#708090;text-align:center;">
+        Please login to your account at <a href="{{link}}">GoCustomate</a> to action the request.
     </div>
 {% endblock %}
