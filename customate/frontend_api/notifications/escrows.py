@@ -130,18 +130,19 @@ def notify_parties_about_funds_transfer(escrow: Escrow, tpl_filename: str, trans
     :return:
     """
     amount = transaction_info.get('amount')
-    currency = transaction_info.get('currency')
     recipient = escrow.recipient_user
     funder = escrow.funder_user
+    now = arrow.utcnow()
     logger.info("Start notify about funds tranffer. Recipient: %s, Funder: %s. Trnasaction info: %s." %
                 (recipient.email, funder.email, transaction_info))
     context = {
         'escrow': escrow,
         'amount': amount,
-        'currency': currency
+        'processed_datetime': now.datetime,
+        'transaction_type': transaction_names.get(transaction_info.get("name"), "Unknown"),
     }
     if recipient.notify_by_email:
-        context.update({'user': recipient, 'action': 'received'})
+        context.update({'sign': '+', 'closing_balance': 0})
         message = get_ses_email_payload(
             tpl_filename=tpl_filename,
             tpl_context=context,
@@ -150,7 +151,7 @@ def notify_parties_about_funds_transfer(escrow: Escrow, tpl_filename: str, trans
         send_notification_email.delay(to_address=recipient.email, message=message)
 
     if funder.notify_by_email:
-        context.update({'user': funder, 'action': 'released'})
+        context.update({'sign': '-', 'closing_balance': 0})
         message = get_ses_email_payload(
             tpl_filename=tpl_filename,
             tpl_context=context,
