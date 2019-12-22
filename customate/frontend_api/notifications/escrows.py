@@ -31,6 +31,8 @@ def notify_counterpart_about_new_escrow(counterpart: User, create_op: object):
             tpl_context=context,
             subject=settings.AWS_SES_SUBJECT_NAME
         )
+        logger.info("Start notify about just created escrow. Counterpart: %s, Escrow id: %s" %
+                    (counterpart.email, create_op.escrow.id))
         # Send email
         send_notification_email.delay(to_address=counterpart.email, message=message)
 
@@ -54,6 +56,7 @@ def notify_escrow_creator_about_escrow_state(counterpart: User, create_escrow_op
             tpl_context=context,
             subject=settings.AWS_SES_SUBJECT_NAME
         )
+        logger.info("Start notify about escrow state. Creator: %s, context: %s" % (creator.email, context))
         send_notification_email.delay(to_address=creator.email, message=message)
 
 
@@ -72,6 +75,8 @@ def notify_about_fund_escrow_state(escrow: Escrow, transaction_info: Optional[Di
                 "escrow": escrow
             }
             tpl_filename = "notifications/escrow_has_not_been_funded.html"
+            logger.info("Start notify about funds escrow state. Escrow has not been funded. Recipient: %s, context: %s" %
+                        (recipient.email, context))
         else:
             context = {
                 'amount': transaction_info.get("amount"),
@@ -87,6 +92,8 @@ def notify_about_fund_escrow_state(escrow: Escrow, transaction_info: Optional[Di
             tpl_context=context,
             subject=settings.AWS_SES_SUBJECT_NAME
         )
+        logger.info("Start notify about funds escrow state. Escrow has not been funded. Recipient: %s, context: %s" %
+                    (recipient.email, context))
         send_notification_email.delay(to_address=recipient.email, message=message)
 
 
@@ -100,6 +107,8 @@ def notify_about_requesting_action_with_funds(counterpart: User, operation: Escr
     """
     funder = operation.escrow.funder_user
     if funder.notify_by_email:
+        logger.info("Start notify about requesting action with funds. Action: %s. Funder: %s" %
+                    (operation.type, funder.email))
         context = {
             "operation": operation,
             "counterpart": counterpart
@@ -124,6 +133,8 @@ def notify_parties_about_funds_transfer(escrow: Escrow, tpl_filename: str, trans
     currency = transaction_info.get('currency')
     recipient = escrow.recipient_user
     funder = escrow.funder_user
+    logger.info("Start notify about funds tranffer. Recipient: %s, Funder: %s. Trnasaction info: %s." %
+                (recipient.email, funder.email, transaction_info))
     context = {
         'escrow': escrow,
         'amount': amount,
@@ -165,4 +176,5 @@ def send_reminder_to_fund_escrow(escrow: Escrow, tpl_filename: str):
             tpl_context=context,
             subject=settings.AWS_SES_SUBJECT_NAME
         )
+        logger.info("Send reminder to fund escrow. Escrow id: %s." % escrow.id)
         send_notification_email.delay(to_address=email_recipient.email, message=message)
