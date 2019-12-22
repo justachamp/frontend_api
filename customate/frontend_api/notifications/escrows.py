@@ -133,7 +133,7 @@ def notify_parties_about_funds_transfer(escrow: Escrow, tpl_filename: str, trans
     recipient = escrow.recipient_user
     funder = escrow.funder_user
     now = arrow.utcnow()
-    logger.info("Start notify about funds tranffer. Recipient: %s, Funder: %s. Trnasaction info: %s." %
+    logger.info("Start notify about funds transfer. Recipient: %s, Funder: %s. Transaction info: %s." %
                 (recipient.email, funder.email, transaction_info))
     context = {
         'escrow': escrow,
@@ -149,15 +149,6 @@ def notify_parties_about_funds_transfer(escrow: Escrow, tpl_filename: str, trans
             subject=settings.AWS_SES_SUBJECT_NAME
         )
         send_notification_email.delay(to_address=recipient.email, message=message)
-
-    if funder.notify_by_email:
-        context.update({'sign': '-', 'closing_balance': 0})
-        message = get_ses_email_payload(
-            tpl_filename=tpl_filename,
-            tpl_context=context,
-            subject=settings.AWS_SES_SUBJECT_NAME
-        )
-        send_notification_email.delay(to_address=funder.email, message=message)
 
 
 def send_reminder_to_fund_escrow(escrow: Escrow, tpl_filename: str):

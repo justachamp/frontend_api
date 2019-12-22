@@ -35,7 +35,7 @@ def get_load_funds_details(transaction_info: Dict) -> Dict:
         'processed_datetime': now.datetime,
         'closing_balance': transaction_info.get("closing_balance"),
         # identifier explicitly specifies that funds has increased
-        'sign': "+"
+        'sign': "-" if int(transaction_info["amount"]) < 0 else '+'
     }
     return context
 
