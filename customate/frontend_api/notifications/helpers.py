@@ -7,6 +7,7 @@ from django.template.loader import render_to_string
 from django import template
 from django.conf import settings
 from django.db.models import Q
+from babel.numbers import format_decimal
 
 from core.fields import Currency, TransactionStatusType, UserStatus
 from frontend_api.models import Schedule
@@ -42,7 +43,7 @@ def prettify_number(value) -> str:
     :return:
     """
     try:
-        return "%0.2f" % abs((int(value) / 100))
+        return format_decimal(abs((int(value) / 100)))
     except (ValueError, ZeroDivisionError):
         return None
 

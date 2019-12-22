@@ -19,7 +19,7 @@
         <div style="display:inline-block;width:30%;font-family:Roboto;color:#697386;">To fund</div>
         <div style="display:inline-block;width:65%;font-family:Roboto Bold;text-align:left;color:#000000;">
             {{ operation.escrow.currency.symbol }}
-            {{ operation.amount }}
+            {{ operation.amount|prettify_number }}
         </div>
 
     </div>
