@@ -75,7 +75,7 @@ def notify_about_fund_escrow_state(escrow: Escrow, transaction_info: Optional[Di
                 "escrow": escrow
             }
             tpl_filename = "notifications/escrow_has_not_been_funded.html"
-            logger.info("Start notify about funds escrow state. Escrow has not been funded. Recipient: %s, context: %s" %
+            logger.info("Start notify about funds escrow state. Escrow funded. Recipient: %s, context: %s" %
                         (recipient.email, context))
         else:
             context = {
