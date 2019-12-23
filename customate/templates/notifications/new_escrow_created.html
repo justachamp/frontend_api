@@ -17,6 +17,12 @@
         <div style="display:inline-block;width:30%;font-family:Roboto;color:#697386;">To accept</div>
         <div style="display:inline-block;width:65%;font-family:Roboto Bold;text-align:left;color:#000000;">{{ escrow.name }}</div>
 
+        <div style="display:inline-block;width:30%;font-family:Roboto;color:#697386;">Initial amount</div>
+        <div style="display:inline-block;width:65%;font-family:Roboto Bold;text-align:left;color:#000000;">
+            {{ escrow.currency.symbol }}
+            {{ load_funds_op.amount|prettify_number }}
+        </div>
+
     </div>
 
     <hr style="width:77%;margin-top:34px;background-color:#e6e6e6;height:1px;border:0;">

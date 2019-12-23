@@ -8,23 +8,26 @@ import arrow
 
 from frontend_api.tasks.notifiers import send_notification_email, send_notification_sms
 from frontend_api.notifications.helpers import get_ses_email_payload, transaction_names
-from frontend_api.models.escrow import EscrowOperation, Escrow
+from frontend_api.models.escrow import EscrowOperation, Escrow, LoadFundsEscrowOperation
 from core.models import User
 
 logger = logging.getLogger(__name__)
 
 
-def notify_counterpart_about_new_escrow(counterpart: User, create_op: object):
+def notify_counterpart_about_new_escrow(counterpart: User, create_op: object, load_funds_op: object):
     """
     Once new escrow has created, send appropriate notification to counterpart.
+    :param load_funds_op:
     :param counterpart:
     :param create_op:  CreateEscrowOperation object. Need for notification details.
     :return:
     """
     if counterpart.notify_by_email:
+        escrow = create_op.escrow
         context = {
-            "escrow": create_op.escrow,
-            "create_op": create_op
+            "escrow": escrow,
+            "create_op": create_op,
+            "load_funds_op": load_funds_op
         }
         message = get_ses_email_payload(
             tpl_filename="notifications/new_escrow_created.html",

@@ -144,7 +144,7 @@ class EscrowViewSet(views.ModelViewSet):
 
         # Send appropriate notification to counterpart
         counterpart = escrow.recipient_user if creator.id == escrow.funder_user.id else escrow.funder_user
-        notify_counterpart_about_new_escrow(counterpart=counterpart, create_op=create_op)
+        notify_counterpart_about_new_escrow(counterpart=counterpart, create_op=create_op, load_funds_op=load_funds_op)
 
     @transaction.atomic
     def perform_update(self, serializer):
