@@ -173,3 +173,30 @@ def send_reminder_to_fund_escrow(escrow: Escrow, tpl_filename: str):
         )
         logger.info("Send reminder to fund escrow. Escrow id: %s." % escrow.id)
         send_notification_email.delay(to_address=email_recipient.email, message=message)
+
+
+def notify_about_declined_operation_request(operation: EscrowOperation, counterpart: User, tpl_filename: str):
+    """
+    Requested operations may be declined.
+    Sending notification about that.
+    Currently sends about declined:
+        - Release funds operation
+    :param operation:
+    :param counterpart:
+    :param tpl_filename:
+    :return:
+    """
+    recipient = operation.escrow.recipient_user
+    if recipient.notify_by_email:
+        context = {
+            "operation": operation,
+            "counterpart": counterpart
+        }
+        message = get_ses_email_payload(
+            tpl_filename=tpl_filename,
+            tpl_context=context,
+            subject=settings.AWS_SES_SUBJECT_NAME
+        )
+        logger.info("Start notify about rejected operation request. Recipient: %s, context: %s" %
+                    (recipient.email, context))
+        send_notification_email.delay(to_address=recipient.email, message=message)

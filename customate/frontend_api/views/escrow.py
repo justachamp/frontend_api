@@ -37,7 +37,8 @@ from frontend_api.notifications.escrows import (
     notify_counterpart_about_new_escrow,
     notify_escrow_creator_about_escrow_state,
     notify_about_requesting_action_with_funds,
-    notify_about_fund_escrow_state
+    notify_about_fund_escrow_state,
+    notify_about_declined_operation_request
 )
 
 logger = logging.getLogger(__name__)
@@ -391,9 +392,17 @@ class EscrowOperationViewSet(views.ModelViewSet):
         # Notify recipient user about rejected load_funds operation ( if he initiated load_funds operation )
         escrow = op.escrow
         current_user = self.request.user
-        if all([op.type == EscrowOperationType.load_funds,
-                op.creator == escrow.recipient_user,
-                op.creator != current_user]):
-            notify_about_fund_escrow_state(escrow=escrow)
+        op_creator = op.creator
+        counterpart = escrow.recipient_user if op_creator.id == escrow.funder_user.id else escrow.funder_user
+
+        if op_creator == escrow.recipient_user and op_creator != current_user:
+            if op.type == EscrowOperationType.load_funds:
+                notify_about_fund_escrow_state(escrow=escrow)
+            if op.type == EscrowOperationType.release_funds:
+                notify_about_declined_operation_request(
+                    operation=op,
+                    counterpart=counterpart,
+                    tpl_filename="notifications/operation_requesting_was_declined.html"
+                )
 
         return Response(status=status_codes.HTTP_204_NO_CONTENT)
