@@ -166,6 +166,8 @@ class EscrowSerializer(BaseEscrowSerializer):
         :param escrow:
         :return: whether or not current user can perform load funds to an Escrow
         """
+        if escrow.has_pending_payment:
+            return False
         latest_op = LoadFundsEscrowOperation.objects.filter(escrow__id=escrow.id).order_by("-created_at").first()
         current_user = self.context.get('request').user
 

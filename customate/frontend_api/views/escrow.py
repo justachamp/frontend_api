@@ -29,7 +29,7 @@ from frontend_api.permissions import (
     IsNotBlocked,
     IsActive,
     IsAccountVerified,
-    # HasParticularSchedulePermission
+    # HasParticularSchedulePermission,
 )
 from frontend_api.serializers.escrow import EscrowOperationSerializer
 
@@ -292,6 +292,12 @@ class EscrowOperationViewSet(views.ModelViewSet):
         :return:
         """
         logger.info("EscrowOperation creation, validated_data=%r" % serializer.validated_data)
+
+        # Check if operations Escrow has pending payment operations.
+        escrow = get_object_or_404(Escrow, id=serializer.validated_data['escrow_id'])
+        if escrow.has_pending_payment:
+            raise ValidationError("Operation is not allowed while previous operation has not completed.")
+
         try:
             if serializer.is_valid(raise_exception=True):
                 operation = serializer.save(creator=self.request.user)  # type: EscrowOperation

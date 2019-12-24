@@ -311,6 +311,7 @@ class HasParticularSchedulePermission(permissions.BasePermission):
         Appropriate rights of subuser verified by preceded 'SubUserManageSchedulesPermission'
         permission class.
     """
+
     def has_object_permission(self, request, view, obj):
         if request.method == "PATCH":
             return self.has_patch_permission(request, obj)
@@ -318,3 +319,4 @@ class HasParticularSchedulePermission(permissions.BasePermission):
 
     def has_patch_permission(self, request, obj):
         return request.user.account.id in obj.origin_user.get_all_related_account_ids()
+

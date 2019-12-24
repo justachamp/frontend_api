@@ -142,6 +142,8 @@ class Escrow(Model):
         Can user issue 'CloseEscrow' operation on this Escrow?
         :return:
         """
+        if self.has_pending_payment:
+            return False
         if self.status is not EscrowStatus.ongoing:
             return False
 
@@ -157,6 +159,8 @@ class Escrow(Model):
         Can user issue 'ReleaseFunds' operation on this Escrow?
         :return:
         """
+        if self.has_pending_payment:
+            return False
         # Obviously, no money to release
         if self.balance == 0:
             return False
