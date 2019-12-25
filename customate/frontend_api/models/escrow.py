@@ -549,13 +549,13 @@ class CloseEscrowOperation(EscrowOperation):
         super().accept()
         self.escrow.move_to_status(status=EscrowStatus.closed)
 
-        self._refund_all_escrow_funds_to_funder()
+        self.refund_to_funder()
 
         payment_service.Wallet.deactivate(self.escrow.wallet_id)
         payment_service.FundingSource.deactivate(self.escrow.transit_funding_source_id)
         payment_service.Payee.deactivate(self.escrow.transit_payee_id)
 
-    def _refund_all_escrow_funds_to_funder(self):
+    def refund_to_funder(self):
         """
         Note that we cannot rely on Escrow.balance field here, because it's possible that we still didn't process
         latest "on_transaction_change" event and local "balance" field has incorrect value
@@ -575,8 +575,11 @@ class CloseEscrowOperation(EscrowOperation):
 
         try:
             # Searching for appropriate funder's payee
-            funder_wallet_payees = payment_service.Payee.find(self.escrow.funder_payment_account_id, PayeeType.WALLET,
-                                                              self.escrow.currency)
+            funder_wallet_payees = payment_service.Payee.find(
+                payment_account_id=self.escrow.funder_payment_account_id,
+                payee_type=PayeeType.WALLET,
+                currency=self.escrow.currency
+            )
             if isinstance(funder_wallet_payees, list) and len(funder_wallet_payees) > 1:
                 raise ValidationError("Cannot process with releasing Escrows funds. Expected only one wallet's payee.")
             else:
@@ -592,7 +595,8 @@ class CloseEscrowOperation(EscrowOperation):
                 amount=amount,
                 description=description,
                 payee_id=funder_wallet_payee_id,
-                funding_source_id=funding_source_id
+                funding_source_id=funding_source_id,
+                escrow_id=self.escrow.id
             )
 
             logger.info("Release funds payment for Escrow (id=%s) status: %s" % (self.escrow.id, payment_result.status))
@@ -743,7 +747,7 @@ class ReleaseFundsEscrowOperation(EscrowOperation):
                 amount=self.amount,
                 description=description,
                 payee_id=payee_id,
-                funding_source_id=funding_source_id
+                funding_source_id=funding_source_id,
             )
         except Exception:
             logger.error("Unable to create payment for %s (op_id=%s) due to unknown error: %r. " % (

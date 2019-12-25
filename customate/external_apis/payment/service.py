@@ -336,11 +336,11 @@ class Payee:
         )
 
     @staticmethod
-    def find(account_id: UUID, payee_type: PayeeType, currency: Currency) -> [PayeeDetails]:
+    def find(payment_account_id: UUID, payee_type: PayeeType, currency: Currency) -> [PayeeDetails]:
         """
         Find Payees by specific attributes
 
-        :param account_id:
+        :param payment_account_id:
         :param payee_type:
         :param currency:
         :return:
@@ -352,7 +352,7 @@ class Payee:
             "{base_url}payees?filter[payees]=account.id=={account_id};type=={payee_type};currency=={currency}".format(
                 base_url=BASE_URL,
                 payee_type=payee_type.value,
-                account_id=account_id,
+                account_id=payment_account_id,
                 currency=currency.value
             ), headers={
                 "Content-Type": "application/json"

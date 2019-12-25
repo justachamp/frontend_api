@@ -359,30 +359,69 @@ def process_escrow_payment_change(payment_info: Dict):
     payment_id = payment_info.get("payment_id")
     payment_status = PaymentStatusType(payment_info.get('status'))
     escrow_id = payment_info.get("escrow_id")
-
-    if escrow_id is None:
-        logger.info("Skipping payment (id=%s), it is not related to any Escrow " % payment_id, extra={
-            'payment_id': payment_id
-        })
-        return
+    payee_id = payment_info.get("payee_id")
+    funding_source_id = payment_info.get("funding_source_id")
 
     p_statuses = [PaymentStatusType.PENDING, TransactionStatusType.PROCESSING]
     if payment_status in p_statuses:
-        logger.info("Skipping Escrow processing (id=%s), since status in %r" % (escrow_id, p_statuses))
+        logger.info("Skipping Escrow processing (id=%s), since payment status is in %r" % (escrow_id, p_statuses))
         return
 
+    # NOTE: Try to find matching Escrow using different criterias,
+    # since we don't always get 'escrow_id' from payment-api
+    escrow = None
+    # CASE 1: try to find it by 'escrow_id'
     try:
         escrow = Escrow.objects.get(id=escrow_id)
-        logger.info("payment_id=%s is related to Escrow(id=%s, status=%s)" % (
+        logger.info("payment_id=%s is related to Escrow(id=%s, status=%s) by escrow_id" % (
             payment_id, escrow.id, escrow.status
         ), extra={
             'payment_id': payment_id,
             'escrow_id': escrow.id,
             'escrow_status': escrow.status,
         })
+    except ObjectDoesNotExist:
+        logger.info("Unable to find Escrow by  escrow_id=%s" % escrow_id)
 
+    # CASE 2: try to find it by 'payee_id'
+    # In this case 'payee_id' == 'escrow.transit_payee_id', and this means that money goes from Funder -> Escrow
+    if escrow is None:
+        try:
+            escrow = Escrow.objects.get(transit_payee_id=payee_id)
+            logger.info("payment_id=%s is related to Escrow(id=%s, status=%s) by payee_id" % (
+                payment_id, escrow.id, escrow.status
+            ), extra={
+                'payment_id': payment_id,
+                'escrow_id': escrow.id,
+                'escrow_status': escrow.status,
+            })
+        except ObjectDoesNotExist:
+            logger.info("Unable to find Escrow by payee_id=%s" % payee_id)
+
+    # CASE 3: try to find it by 'funding_source_id'
+    # In this case, 'funding_source_id' == 'escrow.transit_funding_source_id'
+    if escrow is None:
+        try:
+            escrow = Escrow.objects.get(transit_funding_source_id=funding_source_id)
+            logger.info("payment_id=%s is related to Escrow(id=%s, status=%s) by funding_source_id" % (
+                payment_id, escrow.id, escrow.status
+            ), extra={
+                'payment_id': payment_id,
+                'escrow_id': escrow.id,
+                'escrow_status': escrow.status,
+            })
+        except ObjectDoesNotExist:
+            logger.info("Unable to find Escrow by funding_source_id=%s" % funding_source_id)
+
+    if escrow is None:
+        logger.error("Unable to find matching Escrow, which corresponds to payment_info=%r" % payment_info)
+        return
+
+    logger.info("Processing Escrow=%r" % escrow)
+    # actually process Escrow
+    try:
         if escrow.status is not EscrowStatus.pending_funding:
-            logger.info("Skipping Escrow processing as status is not [%r], payment_id=%s" % (
+            logger.info("Skipping Escrow processing since status is not [%r], payment_id=%s" % (
                 EscrowStatus.pending_funding, payment_id
             ))
             return
@@ -398,9 +437,8 @@ def process_escrow_payment_change(payment_info: Dict):
             })
             escrow.move_to_status(status=EscrowStatus.ongoing)
 
-        return
-    except Escrow.DoesNotExist:
-        logger.info("Unable to find Escrow with given id=%s" % escrow_id)
+    except Exception:
+        logger.error("Unable to process Escrow %r" % format_exc())
 
 
 def process_schedule_payment_change(payment_info: Dict, request_id=None):
