@@ -40,18 +40,18 @@ def notify_counterpart_about_new_escrow(counterpart: User, create_op: object, lo
         send_notification_email.delay(to_address=counterpart.email, message=message)
 
 
-def notify_originator_about_escrow_state(counterpart: User, escrow_op: EscrowOperation, tpl_filename: str):
+def notify_escrow_creator_about_escrow_state(counterpart: User, create_escrow_op: EscrowOperation, tpl_filename: str):
     """
     Once escrow has rejected / accepted by counterpart, send appropriate notification to creator.
-    :param escrow_op:
     :param counterpart:
     :param tpl_filename:
+    :param create_escrow_op: CreateEscrowOperation object. Need for notifications context.
     :return:
     """
-    creator = escrow_op.creator
+    creator = create_escrow_op.creator
     if creator.notify_by_email:
         context = {
-            "escrow": escrow_op.escrow,
+            "escrow": create_escrow_op.escrow,
             "counterpart": counterpart
         }
         message = get_ses_email_payload(

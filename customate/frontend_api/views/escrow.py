@@ -35,7 +35,7 @@ from frontend_api.serializers.escrow import EscrowOperationSerializer
 
 from frontend_api.notifications.escrows import (
     notify_counterpart_about_new_escrow,
-    notify_originator_about_escrow_state,
+    notify_escrow_creator_about_escrow_state,
     notify_about_requesting_action_with_funds,
     notify_about_fund_escrow_state,
     notify_about_declined_operation_request
@@ -212,9 +212,9 @@ class EscrowViewSet(views.ModelViewSet):
         try:
             create_escrow_op = escrow.create_escrow_operation
             counterpart = self.request.user
-            notify_counterpart_about_escrow_state(
+            notify_escrow_creator_about_escrow_state(
                 counterpart=counterpart,
-                escrow_op=create_escrow_op,
+                create_escrow_op=create_escrow_op,
                 tpl_filename="notifications/escrow_accepted_by_counterpart.html"
             )
         except AssertionError:
@@ -248,10 +248,10 @@ class EscrowViewSet(views.ModelViewSet):
         try:
             create_escrow_op = escrow.create_escrow_operation
             counterpart = self.request.user
-            notify_originator_about_escrow_state(
+            notify_escrow_creator_about_escrow_state(
                 counterpart=counterpart,
-                escrow_op=create_escrow_op,
-                tpl_filename="notifications/request_rejected_by_counterpart.html"
+                create_escrow_op=create_escrow_op,
+                tpl_filename="notifications/escrow_rejected_by_counterpart.html"
             )
         except AssertionError:
             logger.error("Send notification about rejected escrow.\
@@ -309,11 +309,10 @@ class EscrowOperationViewSet(views.ModelViewSet):
                 if not operation.requires_mutual_approval:
                     operation.accept()
 
-                # Notify funder about propose to load_funds/release_funds/close_escrow
+                # Notify funder about propose to fund or release funds
                 tpl_filenames = {
                     EscrowOperationType.load_funds: "notifications/requesting_funding_escrow.html",
-                    EscrowOperationType.release_funds: "notifications/requesting_release_funds.html",
-                    EscrowOperationType.close_escrow: "notifications/requesting_close_escrow.html"
+                    EscrowOperationType.release_funds: "notifications/requesting_release_funds.html"
                 }
                 if self.request.user == operation.escrow.recipient_user and operation.type in tpl_filenames.keys():
                     logger.info("Start notify funder about requesting to fund/release funds. \
@@ -396,21 +395,20 @@ class EscrowOperationViewSet(views.ModelViewSet):
             raise NotFound(f'EscrowOperation not found {operation_id}')
 
         op.reject()
-        # Notify recipient user about rejected load_funds/close_escrow operation
+        # Notify recipient user about rejected load_funds operation ( if he initiated load_funds operation )
         escrow = op.escrow
         current_user = self.request.user
-        
-        if all([op.creator == escrow.recipient_user,
-                op.creator != current_user,
-                op.type == EscrowOperationType.load_funds]):
-            notify_about_fund_escrow_state(escrow=escrow)
+        op_creator = op.creator
+        counterpart = escrow.recipient_user if op_creator.id == escrow.funder_user.id else escrow.funder_user
 
-        if op.type == EscrowOperationType.close_escrow:
-            counterpart = escrow.recipient_user if op.creator.id == escrow.funder_user.id else escrow.funder_user
-            notify_originator_about_escrow_state(
-                counterpart=counterpart,
-                escrow_op=op,
-                tpl_filename="notifications/request_rejected_by_counterpart.html"
-            )
+        if op_creator == escrow.recipient_user and op_creator != current_user:
+            if op.type == EscrowOperationType.load_funds:
+                notify_about_fund_escrow_state(escrow=escrow)
+            if op.type == EscrowOperationType.release_funds:
+                notify_about_declined_operation_request(
+                    operation=op,
+                    counterpart=counterpart,
+                    tpl_filename="notifications/operation_requesting_was_declined.html"
+                )
 
         return Response(status=status_codes.HTTP_204_NO_CONTENT)
