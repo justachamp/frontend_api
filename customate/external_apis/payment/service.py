@@ -324,6 +324,7 @@ class Payee:
         # }
         res = r.json()
         logger.debug("res=%r" % res)
+        wallet_id = res['data']['attributes']['data'].get('walletId')
 
         return PayeeDetails(
             id=UUID(res["data"]["id"]),
@@ -333,7 +334,7 @@ class Payee:
             recipient_name=res['data']['attributes']['data']['recipient']['fullName'],
             recipient_email=res['data']['attributes']['data']['recipient']['email'],
             payment_account_id=UUID(res['data']['relationships']['account']['data']['id']),
-            wallet_id=UUID(res['data']['attributes']['data']['walletId'])
+            wallet_id=UUID(wallet_id) if wallet_id else None
         )
 
     @staticmethod
@@ -416,6 +417,7 @@ class Payee:
 
         result = []
         for payee_details in res["data"]:
+            wallet_id = payee_details['attributes']['data'].get('walletId')
             result.append(
                 PayeeDetails(
                     id=UUID(payee_details["id"]),
@@ -425,7 +427,7 @@ class Payee:
                     recipient_name=payee_details['attributes']['data']['recipient']['fullName'],
                     recipient_email=payee_details['attributes']['data']['recipient']['email'],
                     payment_account_id=UUID(payee_details['relationships']['account']['data']['id']),
-                    wallet_id=UUID(payee_details['attributes']['data']['walletId'])
+                    wallet_id=UUID(wallet_id) if wallet_id else None
                 )
             )
 
