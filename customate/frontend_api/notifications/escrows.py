@@ -40,18 +40,18 @@ def notify_counterpart_about_new_escrow(counterpart: User, create_op: object, lo
         send_notification_email.delay(to_address=counterpart.email, message=message)
 
 
-def notify_escrow_creator_about_escrow_state(counterpart: User, create_escrow_op: EscrowOperation, tpl_filename: str):
+def notify_originator_about_escrow_state(counterpart: User, escrow_op: EscrowOperation, tpl_filename: str):
     """
     Once escrow has rejected / accepted by counterpart, send appropriate notification to creator.
+    :param escrow_op:
     :param counterpart:
     :param tpl_filename:
-    :param create_escrow_op: CreateEscrowOperation object. Need for notifications context.
     :return:
     """
-    creator = create_escrow_op.creator
+    creator = escrow_op.creator
     if creator.notify_by_email:
         context = {
-            "escrow": create_escrow_op.escrow,
+            "escrow": escrow_op.escrow,
             "counterpart": counterpart
         }
         message = get_ses_email_payload(
@@ -200,3 +200,27 @@ def notify_about_declined_operation_request(operation: EscrowOperation, counterp
         logger.info("Start notify about rejected operation request. Recipient: %s, context: %s" %
                     (recipient.email, context))
         send_notification_email.delay(to_address=recipient.email, message=message)
+
+
+def notify_about_requesting_close_escrow(request_recipient: User, operation: EscrowOperation, tpl_filename: str):
+    """
+
+    :param request_recipient:
+    :param operation:
+    :param tpl_filename:
+    :return:
+    """
+    op_creator = operation.creator
+    if request_recipient.notify_by_email:
+        context = {
+            "operation": operation,
+            "counterpart": op_creator
+        }
+        message = get_ses_email_payload(
+            tpl_filename=tpl_filename,
+            tpl_context=context,
+            subject=settings.AWS_SES_SUBJECT_NAME
+        )
+        logger.info("Start notify about requesting to close escrow. Request recipient: %s, context: %s" %
+                    (request_recipient.email, context))
+        send_notification_email.delay(to_address=request_recipient.email, message=message)
