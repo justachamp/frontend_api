@@ -16,7 +16,7 @@
         <div>{{ processed_datetime|date:"Y/m/d H:i" }}</div>
         <div style="margin-top:-5px;">
             {{ transaction_type }},
-            {% if schedule_name %}{{ schedule_name }}, {% endif %}{{ error_message }}
+            {% if schedule_name %}{{ name }}, {% endif %}{{ error_message }}
         </div>
     </div>
     <hr style="width:77%;margin-top:24px;background-color:#D3D3D3;height:1px;border:0;">
