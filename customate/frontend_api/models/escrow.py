@@ -675,6 +675,7 @@ class LoadFundsEscrowOperation(EscrowOperation):
             payment_service.Payment.create(
                 user_id=escrow.funder_user.id,
                 payment_account_id=escrow.funder_payment_account_id,
+                escrow_id=self.escrow.id,
                 currency=Currency(escrow.currency),
                 amount=self.amount,
                 description=description,
@@ -737,6 +738,7 @@ class ReleaseFundsEscrowOperation(EscrowOperation):
             payment_service.Payment.create(
                 user_id=escrow.funder_user.id,
                 payment_account_id=escrow.funder_payment_account_id,
+                escrow_id=self.escrow.id,
                 currency=Currency(escrow.currency),
                 amount=self.amount,
                 description=description,

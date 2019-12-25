@@ -257,7 +257,7 @@ def process_escrow_transaction_change(transaction_info: Dict):
     """
     transaction_id = transaction_info.get("transaction_id")
     transaction_status = TransactionStatusType(transaction_info.get("status"))
-    wallet_id = transaction_info.get("wallet_id")
+    escrow_id = transaction_info.get("escrow_id")
     payee_id = transaction_info.get("payee_id")  # recipient of money
     funding_source_id = transaction_info.get("funding_source_id")  # origin of money
     balance = transaction_info.get("closing_balance")
@@ -266,11 +266,10 @@ def process_escrow_transaction_change(transaction_info: Dict):
     funding_source_id = UUID(funding_source_id) if funding_source_id else None
 
     escrow = None
-    # Identify Escrow by its unique `wallet_id`
     try:
-        escrow = Escrow.objects.get(wallet_id=wallet_id)
+        escrow = Escrow.objects.get(id=escrow_id)
     except Exception:
-        logger.error("Unable to fetch Escrow with given wallet_id=%s, exc=%r" % (wallet_id, format_exc()))
+        logger.error("Unable to fetch Escrow with given id=%s, exc=%r" % (escrow_id, format_exc()))
         return
 
     # persist actual balance/status in our local Django model
@@ -287,7 +286,6 @@ def process_escrow_transaction_change(transaction_info: Dict):
         return
 
     try:
-
         # Since escrow is 2-stage process, i.e.  Funder -> Escrow Wallet -> Recipient,
         # we need to figure out which stage we're currently on (F->E, or E->R), to do this we'll use
         # `payee_id` and `funding_source_id`
@@ -295,8 +293,10 @@ def process_escrow_transaction_change(transaction_info: Dict):
         # F->E Stage: money gets into Escrow wallet
         if payee_id == escrow.transit_payee_id:
             # Send notification to recipient
-            notify_about_fund_escrow_state(escrow=escrow, transaction_info=transaction_info)
-            pass
+            notify_about_fund_escrow_state(
+                escrow=escrow,
+                transaction_info=transaction_info
+            )
 
         # E->R Stage: money leaves Escrow wallet
         if funding_source_id == escrow.transit_funding_source_id:
@@ -306,9 +306,8 @@ def process_escrow_transaction_change(transaction_info: Dict):
                 tpl_filename="notifications/escrow_funds_were_transferred.html",
                 transaction_info=transaction_info
             )
-
     except Exception:
-        logger.error("Unable to process notifications for Escrow wallet_id=%s, exc=%r" % (wallet_id, format_exc()))
+        logger.error("Unable to process notifications for Escrow id=%s, exc=%r" % (escrow_id, format_exc()))
 
 
 @shared_task
@@ -327,6 +326,7 @@ def on_transaction_change(transaction_info: Dict):
     payee_id = transaction_info.get("payee_id")  # recipient of money
     funding_source_id = transaction_info.get("funding_source_id")  # origin of money
     wallet_id = transaction_info.get("wallet_id")
+    escrow_id = transaction_info.get("escrow_id")
     request_id = RequestIdGenerator.get()
 
     logging.init_shared_extra(request_id)
@@ -337,6 +337,7 @@ def on_transaction_change(transaction_info: Dict):
         'user_id': user_id,
         'transaction_id': transaction_id,
         'schedule_id': schedule_id,
+        'escrow_id': escrow_id,
         'wallet_id': wallet_id,
         'funding_source_id': funding_source_id,
         'payee_id': payee_id,
@@ -349,7 +350,7 @@ def on_transaction_change(transaction_info: Dict):
     process_schedule_transaction_change(transaction_info=transaction_info)
 
 
-def process_escrow_payment_change(payment_info: Dict, request_id=None):
+def process_escrow_payment_change(payment_info: Dict):
     """
     Special code for handling Escrow-related payment events
     :param payment_info:
@@ -357,30 +358,27 @@ def process_escrow_payment_change(payment_info: Dict, request_id=None):
     """
     payment_id = payment_info.get("payment_id")
     payment_status = PaymentStatusType(payment_info.get('status'))
-    wallet_id = payment_info.get("wallet_id")
+    escrow_id = payment_info.get("escrow_id")
 
-    if wallet_id is None:
-        logger.info("Skipping payment (id=%s), it is not related to any Escrow wallet" % payment_id, extra={
-            'request_id': request_id,
+    if escrow_id is None:
+        logger.info("Skipping payment (id=%s), it is not related to any Escrow " % payment_id, extra={
             'payment_id': payment_id
         })
         return
 
     p_statuses = [PaymentStatusType.PENDING, TransactionStatusType.PROCESSING]
     if payment_status in p_statuses:
-        logger.info("Skipping Escrow processing (wallet_id=%s), since status in %r" % (wallet_id, p_statuses))
+        logger.info("Skipping Escrow processing (id=%s), since status in %r" % (escrow_id, p_statuses))
         return
 
     try:
-        escrow = Escrow.objects.get(wallet_id=wallet_id)
-        logger.info("payment_id=%s is related to Escrow(id=%s, status=%s) wallet_id=%s" % (
-            payment_id, escrow.id, escrow.status, wallet_id
+        escrow = Escrow.objects.get(id=escrow_id)
+        logger.info("payment_id=%s is related to Escrow(id=%s, status=%s)" % (
+            payment_id, escrow.id, escrow.status
         ), extra={
-            'request_id': request_id,
             'payment_id': payment_id,
             'escrow_id': escrow.id,
             'escrow_status': escrow.status,
-            'wallet_id': wallet_id
         })
 
         if escrow.status is not EscrowStatus.pending_funding:
@@ -396,14 +394,13 @@ def process_escrow_payment_change(payment_info: Dict, request_id=None):
             escrow.load_escrow_operation.reset_approved_state()
         else:
             logger.info("Moving escrow (id=%s) to %r state" % (escrow.id, EscrowStatus.ongoing), extra={
-                'request_id': request_id,
                 'escrow_id': escrow.id
             })
             escrow.move_to_status(status=EscrowStatus.ongoing)
 
         return
     except Escrow.DoesNotExist:
-        logger.info("Unable to find Escrow with given wallet_id=%s" % wallet_id)
+        logger.info("Unable to find Escrow with given id=%s" % escrow_id)
 
 
 def process_schedule_payment_change(payment_info: Dict, request_id=None):
@@ -507,6 +504,7 @@ def on_payment_change(payment_info: Dict):
     user_id = payment_info.get("user_id")
     payment_id = payment_info.get("payment_id")
     schedule_id = payment_info.get("schedule_id")
+    escrow_id = payment_info.get("escrow_id")
     funding_source_id = payment_info.get("funding_source_id")
     payment_status = PaymentStatusType(payment_info.get('status'))
     request_id = payment_info.get("request_id", RequestIdGenerator.get())
@@ -519,12 +517,13 @@ def on_payment_change(payment_info: Dict):
         'user_id': user_id,
         'payment_id': payment_id,
         'schedule_id': schedule_id,
+        'escrow_id': escrow_id,
         'funding_source_id': funding_source_id,
         'payment_status': payment_status,
     })
 
     # try to process payment event in the context of Escrow
-    process_escrow_payment_change(payment_info=payment_info, request_id=request_id)
+    process_escrow_payment_change(payment_info=payment_info)
 
     # try to process payment event in the context of Schedule
     process_schedule_payment_change(payment_info=payment_info, request_id=request_id)
@@ -814,5 +813,5 @@ def on_payee_change(payee_info: Dict):
     :param payee_info:
     :return:
     """
-    pass
+    logger.info("Received on_payee_change event, info=%r" % payee_info)
     # TODO: update all payee info that is stored in Django models

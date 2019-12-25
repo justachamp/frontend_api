@@ -111,6 +111,7 @@ class Payment:
                payee_id: UUID, funding_source_id: UUID,
                schedule_id: UUID = None,
                payment_id: UUID = None,
+               escrow_id: UUID = None,
                parent_payment_id: UUID = None,
                execution_date: datetime = None) -> PaymentResult:
         """
@@ -122,6 +123,7 @@ class Payment:
         :param user_id:
         :param payment_account_id:
         :param schedule_id:
+        :param escrow_id:
         :param currency:
         :param amount:
         :param description:
@@ -132,6 +134,17 @@ class Payment:
         :return:
         """
 
+        data = {
+            "amount": amount,
+            "description": description,
+            "parentPaymentId": str(parent_payment_id) if parent_payment_id else None,
+            "executionDate": datetime.timestamp(execution_date) if execution_date else None
+        }
+        if escrow_id:
+            data.update({
+                "escrowId": str(escrow_id)
+            })
+
         payload = {
             "data": {
                 "type": "payments",
@@ -140,12 +153,7 @@ class Payment:
                     "userId": str(user_id),
                     "currency": currency.value,
                     "scheduleId": str(schedule_id) if schedule_id else None,
-                    "data": {
-                        "amount": amount,
-                        "description": description,
-                        "parentPaymentId": str(parent_payment_id) if parent_payment_id else None,
-                        "executionDate": datetime.timestamp(execution_date) if execution_date else None
-                    }
+                    "data": data
                 },
                 "relationships": {
                     "account": {
@@ -170,7 +178,7 @@ class Payment:
             }
         }
 
-        logger.info("payload=%r" % (payload, ))
+        logger.info("payload=%r" % (payload,))
 
         r = requests.post("{base_url}payments/".format(base_url=BASE_URL), json=payload)
         if r.status_code == requests.codes.bad_request:
@@ -340,14 +348,15 @@ class Payee:
 
         # Using RSQL as query language (https://github.com/jirutka/rsql-parser), only this filter's format is supported
         # by payment service
-        r = requests.get("{base_url}payees?filter[payees]=account.id=={account_id};type=={payee_type};currency=={currency}".format(
-            base_url=BASE_URL,
-            payee_type=payee_type.value,
-            account_id=account_id,
-            currency=currency.value
-        ), headers={
-            "Content-Type": "application/json"
-        })
+        r = requests.get(
+            "{base_url}payees?filter[payees]=account.id=={account_id};type=={payee_type};currency=={currency}".format(
+                base_url=BASE_URL,
+                payee_type=payee_type.value,
+                account_id=account_id,
+                currency=currency.value
+            ), headers={
+                "Content-Type": "application/json"
+            })
 
         if r.status_code == requests.codes.bad_request:
             raise PaymentApiError(json_response=r.json())
