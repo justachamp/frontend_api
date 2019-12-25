@@ -10,8 +10,6 @@ from frontend_api.tasks.notifiers import send_notification_email, send_notificat
 from frontend_api.notifications.helpers import get_ses_email_payload, transaction_names
 from frontend_api.models.escrow import EscrowOperation, Escrow, LoadFundsEscrowOperation
 from core.models import User
-from external_apis.payment import service as payment_service
-from frontend_api.notifications.helpers import get_load_funds_details
 
 logger = logging.getLogger(__name__)
 
@@ -68,8 +66,6 @@ def notify_originator_about_escrow_state(counterpart: User, escrow_op: EscrowOpe
 def notify_about_fund_escrow_state(escrow: Escrow, transaction_info: Optional[Dict] = None):
     """
     Notify if escrow has been funded or not.
-    If escrow has been funded, recipient will get such context:
-        sign '+', escrow balance, escrow name.
     :param escrow:
     :param transaction_info:
     :return:
@@ -82,9 +78,8 @@ def notify_about_fund_escrow_state(escrow: Escrow, transaction_info: Optional[Di
                 "escrow": escrow
             }
             tpl_filename = "notifications/escrow_has_not_been_funded.html"
-            logger.info(
-                "Start notify about funds escrow state. Escrow has not been funded. Recipient: %s, Transaction info: %s" %
-                (recipient.email, transaction_info))
+            logger.info("Start notify about funds escrow state. Escrow funded. Recipient: %s, context: %s" %
+                        (recipient.email, context))
         else:
             context = {
                 'amount': transaction_info.get("amount"),
@@ -92,7 +87,7 @@ def notify_about_fund_escrow_state(escrow: Escrow, transaction_info: Optional[Di
                 'escrow': escrow,
                 'transaction_type': transaction_names.get(transaction_info.get("name"), "Unknown"),
                 # identifier specifies either funds has increased or decreased
-                'sign': "&plus"
+                'sign': "+"
             }
             tpl_filename = "notifications/escrow_has_been_funded.html"
         message = get_ses_email_payload(
@@ -129,12 +124,10 @@ def notify_about_requesting_action_with_funds(counterpart: User, operation: Escr
         send_notification_email.delay(to_address=funder.email, message=message)
 
 
-def notify_parties_about_funds_transfer(escrow: Escrow, transaction_info: Dict):
+def notify_parties_about_funds_transfer(escrow: Escrow, tpl_filename: str, transaction_info: Dict):
     """
     While money leaves Escrow wallet, notify both recipient and funder users.
-    Recipients template context: sign '+', wallet balance, escrow name.
-    Funders template context: sign '-', escrow balance, escrow name.
-
+    :param tpl_filename:
     :param escrow:
     :param transaction_info:
     :return:
@@ -142,42 +135,22 @@ def notify_parties_about_funds_transfer(escrow: Escrow, transaction_info: Dict):
     amount = transaction_info.get('amount')
     recipient = escrow.recipient_user
     funder = escrow.funder_user
-    context = get_load_funds_details(transaction_info)
-
-    if funder.notify_by_email:
-        # Here we pass escrow balance and escrow name.
-        tpl_filename = "notifications/escrow_funds_were_transferred.html"
-        context.update({'sign': '&minus',
-                        # Because of we use the same template for schedule and escrow notifications,
-                        # schedule_name is a variable that contains name of money storage (schedule, escrow)
-                        'name': escrow.name,
-                        'escrow': escrow})
-        message = get_ses_email_payload(
-            tpl_filename=tpl_filename,
-            tpl_context=context,
-            subject=settings.AWS_SES_SUBJECT_NAME
-        )
-        logger.info("Start notify about funds transfer. Email recipient: %s. Transaction info: %s. Context: %s" &
-                    (funder.email, transaction_info, context))
-        send_notification_email.delay(to_address=funder.email, message=message)
-
+    now = arrow.utcnow()
+    logger.info("Start notify about funds transfer. Recipient: %s, Funder: %s. Transaction info: %s." %
+                (recipient.email, funder.email, transaction_info))
+    context = {
+        'escrow': escrow,
+        'amount': amount,
+        'processed_datetime': now.datetime,
+        'transaction_type': transaction_names.get(transaction_info.get("name"), "Unknown"),
+    }
     if recipient.notify_by_email:
-        # Requests to payment service. Need to get recipients balance
-        # Here we pass wallet balance and escrow name for recipient.
-        payee_id = transaction_info.get('payee_id')
-        payee_details = payment_service.Payee.get(payee_id=payee_id)
-        wallet_details = payment_service.Wallet.get(wallet_id=payee_details.wallet_id)
-
-        tpl_filename = "notifications/email_users_balance_updated.html"
-        context.update({'sign': '&plus', 'closing_balance': wallet_details.balance,
-                        'name': escrow.name, 'escrow': escrow})
+        context.update({'sign': '+', 'closing_balance': 0})
         message = get_ses_email_payload(
             tpl_filename=tpl_filename,
             tpl_context=context,
             subject=settings.AWS_SES_SUBJECT_NAME
         )
-        logger.info("Start notify about funds transfer. Email recipient: %s. Transaction info: %s. Context: %s" &
-                    (recipient.email, transaction_info, context))
         send_notification_email.delay(to_address=recipient.email, message=message)
 
 

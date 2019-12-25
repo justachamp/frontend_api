@@ -20,9 +20,24 @@ from frontend_api.notifications.helpers import (
     get_ses_email_payload
 )
 from core.models import User
-from frontend_api.notifications.helpers import transaction_names, get_load_funds_details
+from frontend_api.notifications.helpers import transaction_names
 
 logger = logging.getLogger(__name__)
+
+
+def get_load_funds_details(transaction_info: Dict) -> Dict:
+    now = arrow.utcnow()
+    context = {
+        "transaction_type": transaction_names.get(transaction_info.get("name"), "Unknown"),
+        "error_message": transaction_info.get("error_message") or "unknown",
+        'currency': Currency(transaction_info.get("currency")),
+        'amount': transaction_info.get("amount"),
+        'processed_datetime': now.datetime,
+        'closing_balance': transaction_info.get("closing_balance"),
+        # identifier explicitly specifies that funds has increased
+        'sign': "-" if int(transaction_info["amount"]) < 0 else '+'
+    }
+    return context
 
 
 def get_schedule_details(user: User, schedule: Schedule,
@@ -41,10 +56,10 @@ def get_schedule_details(user: User, schedule: Schedule,
         'currency': schedule.currency,
         'amount': transaction_info.get("amount"),
         'processed_datetime': now.datetime,
-        'name': schedule.name,
+        'schedule_name': schedule.name,
         'transaction_type': transaction_names.get(transaction_info.get("name"), "Unknown"),
         # identifier specifies either funds has increased or decreased
-        'sign': "&minus" if int(transaction_info["amount"]) < 0 else '&plus'
+        'sign': "-" if int(transaction_info["amount"]) < 0 else '+'
     }
     return context
 
@@ -107,7 +122,7 @@ def notify_about_loaded_funds(user_id: str, transaction_info: Dict, transaction_
     }[transaction_status]
 
     tpl_filename = {
-        TransactionStatusType.SUCCESS: 'notifications/email_users_balance_updated.html',
+        TransactionStatusType.SUCCESS: 'notifications/email_recipients_balance_updated.html',
         TransactionStatusType.FAILED: 'notifications/email_transaction_failed.html'
     }[transaction_status]
 
@@ -237,7 +252,7 @@ def notify_about_schedules_successful_payment(schedule: Schedule, transaction_in
         logger.info("Successful payment. Funds senders emails: %s" % ", ".join(emails))
         send_bulk_emails(emails=emails,
                          context=email_context_for_senders,
-                         tpl_filename='notifications/email_users_balance_updated.html')
+                         tpl_filename='notifications/email_senders_balance_updated.html')
         sms_context = {
             "transaction_type": schedule_details.get("transaction_type"),
             "amount": prettify_number(schedule_details['amount']),
@@ -264,7 +279,7 @@ def notify_about_schedules_successful_payment(schedule: Schedule, transaction_in
         # External user should not get transaction type
         schedule_details["transaction_type"] = None
         message = get_ses_email_payload(
-            tpl_filename='notifications/email_users_balance_updated.html',
+            tpl_filename='notifications/email_recipients_balance_updated.html',
             tpl_context=schedule_details,
             subject=settings.AWS_SES_SUBJECT_NAME
         )
@@ -292,7 +307,7 @@ def notify_about_schedules_successful_payment(schedule: Schedule, transaction_in
         logger.info("Successful payment. Funds recipient emails: %s" % ", ".join(emails))
         send_bulk_emails(emails=emails,
                          context=email_context_for_recipients,
-                         tpl_filename='notifications/email_users_balance_updated.html')
+                         tpl_filename='notifications/email_recipients_balance_updated.html')
 
         sms_context = {
             "transaction_type": schedule_details.get("transaction_type"),

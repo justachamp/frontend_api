@@ -14,7 +14,9 @@
     </div>
     <div style="margin-top:10px;font-family:Roboto;font-size:14px;line-height:26px;padding-left:70px;color:#708090;">
         <div>{{ processed_datetime|date:"Y/m/d H:i" }}</div>
-        <div style="margin-top:-5px;">{{ transaction_type }}, {{ name }}</div>
+        <div style="margin-top:-5px;">
+            {% if transaction_type %}{{ transaction_type }}, {% endif %}
+            {% if schedule_name %}{{ schedule_name }}{% endif %}</div>
     </div>
     <hr style="width:77%;margin-top:24px;background-color:#D3D3D3;height:1px;border:0;">
     {% if closing_balance %}
