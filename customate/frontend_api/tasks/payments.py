@@ -265,11 +265,11 @@ def process_escrow_transaction_change(transaction_info: Dict):
     payee_id = UUID(payee_id) if payee_id else None
     funding_source_id = UUID(funding_source_id) if funding_source_id else None
 
-    escrow = None
-    try:
-        escrow = Escrow.objects.get(id=escrow_id)
-    except Exception:
-        logger.error("Unable to fetch Escrow with given id=%s, exc=%r" % (escrow_id, format_exc()))
+    # figure out Escrow for processing
+    escrow = find_escrow_by_criteria(payment_info=transaction_info)
+
+    if escrow is None:
+        logger.error("Unable to find matching Escrow, which corresponds to transaction_info=%r" % transaction_info)
         return
 
     # persist actual balance/status in our local Django model
@@ -350,24 +350,18 @@ def on_transaction_change(transaction_info: Dict):
     process_schedule_transaction_change(transaction_info=transaction_info)
 
 
-def process_escrow_payment_change(payment_info: Dict):
+def find_escrow_by_criteria(payment_info: Dict) -> Escrow or None:
     """
-    Special code for handling Escrow-related payment events
+    Figure out which Escrow to use given input parameters
     :param payment_info:
     :return:
     """
     payment_id = payment_info.get("payment_id")
-    payment_status = PaymentStatusType(payment_info.get('status'))
     escrow_id = payment_info.get("escrow_id")
     payee_id = payment_info.get("payee_id")
     funding_source_id = payment_info.get("funding_source_id")
 
-    p_statuses = [PaymentStatusType.PENDING, TransactionStatusType.PROCESSING]
-    if payment_status in p_statuses:
-        logger.info("Skipping Escrow processing (id=%s), since payment status is in %r" % (escrow_id, p_statuses))
-        return
-
-    # NOTE: Try to find matching Escrow using different criterias,
+    # NOTE: Try to find matching Escrow using different criteria,
     # since we don't always get 'escrow_id' from payment-api
     escrow = None
     # CASE 1: try to find it by 'escrow_id'
@@ -412,6 +406,28 @@ def process_escrow_payment_change(payment_info: Dict):
             })
         except ObjectDoesNotExist:
             logger.info("Unable to find Escrow by funding_source_id=%s" % funding_source_id)
+
+    return escrow
+
+
+def process_escrow_payment_change(payment_info: Dict):
+    """
+    Special code for handling Escrow-related payment events
+    :param payment_info:
+    :return:
+    """
+    payment_id = payment_info.get("payment_id")
+    payment_status = PaymentStatusType(payment_info.get('status'))
+
+    p_statuses = [PaymentStatusType.PENDING, TransactionStatusType.PROCESSING]
+    if payment_status in p_statuses:
+        logger.info("Skipping Escrow processing(payment_info=%r), since payment status is in %r" % (
+            payment_info, p_statuses
+        ))
+        return
+
+    # figure out Escrow for processing
+    escrow = find_escrow_by_criteria(payment_info)
 
     if escrow is None:
         logger.error("Unable to find matching Escrow, which corresponds to payment_info=%r" % payment_info)
