@@ -424,7 +424,8 @@ class Payee:
                     iban=payee_details['attributes']['data']['account']['iban'],
                     recipient_name=payee_details['attributes']['data']['recipient']['fullName'],
                     recipient_email=payee_details['attributes']['data']['recipient']['email'],
-                    payment_account_id=UUID(payee_details['relationships']['account']['data']['id'])
+                    payment_account_id=UUID(payee_details['relationships']['account']['data']['id']),
+                    wallet_id=UUID(payee_details['attributes']['data']['walletId'])
                 )
             )
 
