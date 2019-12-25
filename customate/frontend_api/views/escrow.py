@@ -297,7 +297,9 @@ class EscrowOperationViewSet(views.ModelViewSet):
         # Check if operations Escrow has pending payment operations.
         escrow = get_object_or_404(Escrow, id=serializer.validated_data['escrow_id'])
         if escrow.last_operation.approved is None:
-            raise ValidationError("New request is not allowed, since previous request is not approved yet.")
+            raise ValidationError({
+                "additional_information": "New request is not allowed, since previous request is not approved yet."
+            })
 
         try:
             if serializer.is_valid(raise_exception=True):
@@ -336,11 +338,15 @@ class EscrowOperationViewSet(views.ModelViewSet):
             logger.error("Unable to save EscrowOperation=%r, due to IntegrityError: %r" % (
                 serializer.validated_data, format_exc()
             ))
-            raise ValidationError("Looks like counterpart has already performed some action with this Escrow record. "
-                                  "Please refresh page and try again.")
+            raise ValidationError({
+                "additional_information": "Looks like counterpart has already performed some action. "
+                                          "Please refresh page and try again."
+            })
         except Exception as e:
             logger.error("Unable to save EscrowOperation=%r, due to %r" % (serializer.validated_data, format_exc()))
-            raise ValidationError("Unable to save escrow operation")
+            raise ValidationError({
+                "additional_information": "Unable to save escrow operation"
+            })
 
     @transaction.atomic
     @action(methods=['POST'],
