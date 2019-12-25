@@ -296,50 +296,46 @@ class EscrowOperationViewSet(views.ModelViewSet):
 
         # Check if operations Escrow has pending payment operations.
         escrow = get_object_or_404(Escrow, id=serializer.validated_data['escrow_id'])
-        if escrow.has_pending_payment:
-            raise ValidationError("Operation is not allowed while previous operation has not completed.")
+        if escrow.last_operation.approved is None:
+            raise ValidationError("New request is not allowed, since previous request is not approved yet.")
 
         try:
             if serializer.is_valid(raise_exception=True):
-                operation = serializer.save(creator=self.request.user)  # type: EscrowOperation
-                logger.info("Successfully created new escrow operation (%r)" % operation)
+                op = serializer.save(creator=self.request.user)  # type: EscrowOperation
+                logger.info("Successfully created new escrow operation (%r)" % op)
 
-                operation = EscrowOperation.cast(operation)
+                op = EscrowOperation.cast(op)
 
                 # auto accept operation if it does not require any action from counterpart!
-                if not operation.requires_mutual_approval:
-                    operation.accept()
+                if not op.requires_mutual_approval:
+                    op.accept()
 
-                # Notify funder about propose to load_funds/release_funds/close_escrow
+                # Notify funder about proposal to load_funds/release_funds/close_escrow
                 tpl_filenames = {
                     EscrowOperationType.load_funds: "notifications/requesting_funding_escrow.html",
                     EscrowOperationType.release_funds: "notifications/requesting_release_funds.html",
                 }
-                if self.request.user == operation.escrow.recipient_user and operation.type in tpl_filenames.keys():
+                if self.request.user == op.escrow.recipient_user and op.type in tpl_filenames.keys():
                     logger.info("Start notify funder about requesting to fund/release funds. \
                                 Funds recipient: %s. " % self.request.user)
                     notify_about_requesting_action_with_funds(
                         counterpart=self.request.user,
-                        operation=operation,
-                        tpl_filename=tpl_filenames[operation.type]
+                        operation=op,
+                        tpl_filename=tpl_filenames[op.type]
                     )
-                if operation.requires_mutual_approval and operation.type == EscrowOperationType.close_escrow:
-                    escrow = operation.escrow
-                    request_recipient = escrow.recipient_user if operation.creator.id == escrow.funder_user.id else escrow.funder_user
+                if op.requires_mutual_approval and op.type == EscrowOperationType.close_escrow:
+                    escrow = op.escrow
+                    recipient = escrow.recipient_user if op.creator.id == escrow.funder_user.id else escrow.funder_user
                     notify_about_requesting_close_escrow(
-                        request_recipient=request_recipient,
-                        operation=operation,
+                        request_recipient=recipient,
+                        operation=op,
                         tpl_filename="notifications/requesting_close_escrow.html"
                     )
 
-        except ValidationError as e:
-            logger.info("Invalid EscrowOperationSerializer error. %r" % format_exc())
-            raise e
         except IntegrityError as e:
-            # We allow to create several pending "load_funds" operations, all other operation types in "pending" state
-            # should be present in one copy (this restriction is implemented on database level)
             logger.error("Unable to save EscrowOperation=%r, due to IntegrityError: %r" % (
-                serializer.validated_data, format_exc()))
+                serializer.validated_data, format_exc()
+            ))
             raise ValidationError("Looks like counterpart has already performed some action with this Escrow record. "
                                   "Please refresh page and try again.")
         except Exception as e:
@@ -407,7 +403,7 @@ class EscrowOperationViewSet(views.ModelViewSet):
         # Notify recipient user about rejected load_funds/close_escrow operation
         escrow = op.escrow
         current_user = self.request.user
-        
+
         if all([op.creator == escrow.recipient_user,
                 op.creator != current_user,
                 op.type == EscrowOperationType.load_funds]):

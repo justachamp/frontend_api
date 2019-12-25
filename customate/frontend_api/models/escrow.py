@@ -113,7 +113,7 @@ class Escrow(Model):
         Initial amount is just an 'amount' from first 'LoadFunds' operation
         :return:
         """
-        op = self.load_escrow_operation  # type: LoadFundsEscrowOperation
+        op = self.first_load_funds_operation  # type: LoadFundsEscrowOperation
         logger.debug("op=%r" % op)
         return op.amount
 
@@ -123,7 +123,7 @@ class Escrow(Model):
         Latest funding date of first 'LoadFunds' operation for this escrow
         :return:
         """
-        op = self.load_escrow_operation  # type: LoadFundsEscrowOperation
+        op = self.first_load_funds_operation  # type: LoadFundsEscrowOperation
         return op.approval_deadline or arrow.utcnow().datetime
 
     @property
@@ -174,7 +174,7 @@ class Escrow(Model):
         if self.status is not EscrowStatus.ongoing:
             return False
 
-        op = self.release_escrow_operation
+        op = self.last_release_funds_operation
         if op is not None and op.status is EscrowOperationStatus.pending:
             return False
 
@@ -256,36 +256,44 @@ class Escrow(Model):
         })
 
     @property
-    def load_escrow_operation(self) -> LoadFundsEscrowOperation or None:
+    def first_load_funds_operation(self) -> LoadFundsEscrowOperation or None:
         """
-        Get the first and only LoadEscrow operation for this escrow
+        Get the very first LoadFunds operation for this escrow
         :return:
         """
-        return LoadFundsEscrowOperation.objects.filter(escrow__id=self.id).first()
+        return LoadFundsEscrowOperation.objects.filter(escrow__id=self.id).order_by("created_at").first()
 
     @property
     def create_escrow_operation(self) -> CreateEscrowOperation or None:
         """
-        Get the first and only CreateEscrow operation for this escrow
+        Get the very first and _only_ CreateEscrow operation for this escrow
         :return:
         """
-        return CreateEscrowOperation.objects.filter(escrow__id=self.id).first()
+        return CreateEscrowOperation.objects.filter(escrow__id=self.id).order_by("created_at").first()
 
     @property
     def close_escrow_operation(self) -> CloseEscrowOperation or None:
         """
-        Get the last and only CloseEscrow operation for this escrow
+        Get the last and _only_ CloseEscrow operation for this escrow
         :return:
         """
-        return CloseEscrowOperation.objects.filter(escrow__id=self.id).first()
+        return CloseEscrowOperation.objects.filter(escrow__id=self.id).order_by("-created_at").first()
 
     @property
-    def release_escrow_operation(self) -> ReleaseFundsEscrowOperation or None:
+    def last_release_funds_operation(self) -> ReleaseFundsEscrowOperation or None:
         """
-        Get the last and only ReleaseEscrow operation for this escrow
+        Get the last ReleaseFunds operation for this escrow
         :return:
         """
-        return ReleaseFundsEscrowOperation.objects.filter(escrow__id=self.id).first()
+        return ReleaseFundsEscrowOperation.objects.filter(escrow__id=self.id).order_by("-created_at").first()
+
+    @property
+    def last_operation(self) -> EscrowOperation or None:
+        """
+        Get the most recent operation for this escrow
+        :return:
+        """
+        return EscrowOperation.objects.filter(escrow__id=self.id).order_by("-created_at").first()
 
     def accept(self):
         """
@@ -490,7 +498,7 @@ class EscrowOperation(Model):
         })
 
     def __str__(self):
-        return "EscrowOperation(id=%s, type=%s, escrow=%s, args=%s)" % (
+        return "EscrowOperation(id=%s, type=%s, escrow_id=%s, args=%s)" % (
             self.id, self.type.value, self.escrow.id if self.escrow else None, self.args
         )
 
@@ -508,7 +516,7 @@ class CreateEscrowOperation(EscrowOperation):
 
     class TypedManager(models.Manager):
         def get_queryset(self):
-            return super().get_queryset().filter(type=EscrowOperationType.create_escrow).order_by("created_at")
+            return super().get_queryset().filter(type=EscrowOperationType.create_escrow)
 
     objects = TypedManager()  # The default manager
 
@@ -546,7 +554,7 @@ class CloseEscrowOperation(EscrowOperation):
 
     class TypedManager(models.Manager):
         def get_queryset(self):
-            return super().get_queryset().filter(type=EscrowOperationType.close_escrow).order_by("-created_at")
+            return super().get_queryset().filter(type=EscrowOperationType.close_escrow)
 
     objects = TypedManager()  # The default manager
 
@@ -637,7 +645,7 @@ class LoadFundsEscrowOperation(EscrowOperation):
 
     class TypedManager(models.Manager):
         def get_queryset(self):
-            return super().get_queryset().filter(type=EscrowOperationType.load_funds).order_by("created_at")
+            return super().get_queryset().filter(type=EscrowOperationType.load_funds)
 
     objects = TypedManager()  # The default manager
 
