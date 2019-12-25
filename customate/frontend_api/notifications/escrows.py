@@ -95,8 +95,8 @@ def notify_about_fund_escrow_state(escrow: Escrow, transaction_info: Optional[Di
             tpl_context=context,
             subject=settings.AWS_SES_SUBJECT_NAME
         )
-        logger.info("Start notify about funds escrow state. Escrow has not been funded. Recipient: %s, context: %s" %
-                    (recipient.email, context))
+        logger.info("Start notify about funds escrow state. Escrow has not been funded. Recipient: %s, Transaction info: %s" %
+                    (recipient.email, transaction_info))
         send_notification_email.delay(to_address=recipient.email, message=message)
 
 
