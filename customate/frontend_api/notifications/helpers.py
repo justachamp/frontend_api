@@ -35,21 +35,6 @@ transaction_names = {
 }
 
 
-def get_load_funds_details(transaction_info: Dict) -> Dict:
-    now = arrow.utcnow()
-    context = {
-        "transaction_type": transaction_names.get(transaction_info.get("name"), "Unknown"),
-        "error_message": transaction_info.get("error_message") or "unknown",
-        'currency': Currency(transaction_info.get("currency")),
-        'amount': transaction_info.get("amount"),
-        'processed_datetime': now.datetime,
-        'closing_balance': transaction_info.get("closing_balance"),
-        # identifier explicitly specifies that funds has increased
-        'sign': "-" if int(transaction_info["amount"]) < 0 else '+'
-    }
-    return context
-
-
 @register.filter
 def prettify_number(value) -> str:
     """
