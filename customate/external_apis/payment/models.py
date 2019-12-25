@@ -20,6 +20,7 @@ class PayeeDetails:
     recipient_name: str
     recipient_email: str
     payment_account_id: UUID
+    wallet_id: UUID
 
 
 @dataclass(frozen=True)

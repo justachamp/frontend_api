@@ -332,7 +332,8 @@ class Payee:
             iban=res['data']['attributes']['data']['account']['iban'],
             recipient_name=res['data']['attributes']['data']['recipient']['fullName'],
             recipient_email=res['data']['attributes']['data']['recipient']['email'],
-            payment_account_id=UUID(res['data']['relationships']['account']['data']['id'])
+            payment_account_id=UUID(res['data']['relationships']['account']['data']['id']),
+            wallet_id=UUID(res['data']['attributes']['data']['walletId'])
         )
 
     @staticmethod
