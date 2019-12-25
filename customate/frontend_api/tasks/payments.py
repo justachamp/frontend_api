@@ -257,12 +257,12 @@ def process_escrow_transaction_change(transaction_info: Dict):
     """
     transaction_id = transaction_info.get("transaction_id")
     transaction_status = TransactionStatusType(transaction_info.get("status"))
+    wallet_id = transaction_info.get("wallet_id")
+    wallet_id = UUID(wallet_id) if wallet_id else None
     escrow_id = transaction_info.get("escrow_id")
     payee_id = transaction_info.get("payee_id")  # recipient of money
-    funding_source_id = transaction_info.get("funding_source_id")  # origin of money
-    balance = transaction_info.get("closing_balance")
-
     payee_id = UUID(payee_id) if payee_id else None
+    funding_source_id = transaction_info.get("funding_source_id")  # origin of money
     funding_source_id = UUID(funding_source_id) if funding_source_id else None
 
     # figure out Escrow for processing
@@ -272,6 +272,10 @@ def process_escrow_transaction_change(transaction_info: Dict):
         logger.error("Unable to find matching Escrow, which corresponds to transaction_info=%r" % transaction_info)
         return
 
+    # we're only interested in balance changes of Escrow's wallet
+    balance = transaction_info.get("closing_balance") \
+        if transaction_status is TransactionStatusType.SUCCESS and wallet_id == escrow.wallet_id else 0
+
     # persist actual balance/status in our local Django model
     escrow.update_payment_info(
         balance=int(balance),
@@ -279,7 +283,7 @@ def process_escrow_transaction_change(transaction_info: Dict):
     )
 
     # Do not process transactions that are still processing
-    if transaction_status in [TransactionStatusType.PENDING, TransactionStatusType.PROCESSING]:
+    if transaction_status in Escrow.PENDING_PAYMENT_STATUSES:
         logger.info("Skipping escrow transaction(id=%s) handling, since status=%r" % (
             transaction_id, transaction_status
         ))

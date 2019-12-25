@@ -89,6 +89,12 @@ class Escrow(Model):
         help_text=_("Tracks payment operations state.")
     )
 
+    # we consider Escrow as 'pending payments' when underlying transactions are in one of these states
+    PENDING_PAYMENT_STATUSES = [
+        TransactionStatusType.PROCESSING,
+        TransactionStatusType.PENDING
+    ]
+
     def __str__(self):
         return "Escrow(id=%s, name=%s, wallet_id=%s, payee_id=%s, " \
                "transit_funding_source_id=%s, transit_payee_id=%s, " \
@@ -302,11 +308,10 @@ class Escrow(Model):
         :param status:
         :return:
         """
-
         old_balance = self.balance
         old_has_pending_payment = self.has_pending_payment
         self.balance = balance
-        self.has_pending_payment = False if status in [TransactionStatusType.SUCCESS] else True
+        self.has_pending_payment = True if status in Escrow.PENDING_PAYMENT_STATUSES else False
 
         logger.info("Updated escrow (id=%s) balance=%d (was=%s), has_pending_payment=%s (was=%s)" % (
             self.id, balance, old_balance, self.has_pending_payment, old_has_pending_payment), extra={
