@@ -253,3 +253,31 @@ def notify_about_requesting_close_escrow(request_recipient: User, operation: Esc
         logger.info("Start notify about requesting to close escrow. Request recipient: %s, context: %s" %
                     (request_recipient.email, context))
         send_notification_email.delay(to_address=request_recipient.email, message=message)
+
+
+def notify_escrow_funder_about_transaction_status(escrow: Escrow, transaction_info: Dict,
+                                                  tpl_filename: str, additional_context: Dict = None):
+    """
+    Handles two types of transactions: from Wallet to Escrow, from Escrow to recipients Wallet.
+    Sending notifications about successful or failed transactions.
+    :param additional_context: need for specifying should balance be for Wallet or Escrow
+    :param escrow:
+    :param transaction_info:
+    :param tpl_filename:
+    :return:
+    """
+    funder = escrow.funder_user
+    context = get_load_funds_details(transaction_info)
+    context.update({"name": escrow.name})
+    if additional_context:
+        # Replace "Wallet" name to "Escrow" in template
+        # View escrow balance as balance (variable name in common template)
+        context.update(additional_context)
+        context["closing_balance"] = escrow.balance
+
+    message = get_ses_email_payload(
+        tpl_filename=tpl_filename,
+        tpl_context=context,
+        subject=settings.AWS_SES_SUBJECT_NAME
+        )
+    send_notification_email.delay(to_address=funder.email, message=message)
