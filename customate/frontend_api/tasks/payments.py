@@ -466,7 +466,7 @@ def process_escrow_payment_change(payment_info: Dict):
         return
 
     # figure out Escrow for processing
-    escrow = find_escrow_by_criteria(payment_info)
+    escrow = find_escrow_by_criteria(payment_info) # type: Escrow
 
     if escrow is None:
         logger.error("Unable to find matching Escrow, which corresponds to payment_info=%r" % payment_info)
@@ -485,7 +485,7 @@ def process_escrow_payment_change(payment_info: Dict):
             # We need to provide a way to repeat LoadFunds attempt, but creating new
             # LoadFundsEscrowOperation object could break our logic/idea that Escrow with "pending_funding"
             # status has only one LoadFunds operation, so we resetting "approve" flag's state
-            escrow.load_escrow_operation.reset_approved_state()
+            escrow.last_load_funds_operation.reset_approved_state()
         else:
             logger.info("Moving escrow (id=%s) to %r state" % (escrow.id, EscrowStatus.ongoing), extra={
                 'escrow_id': escrow.id

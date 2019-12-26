@@ -167,6 +167,7 @@ class Escrow(Model):
         """
         if self.has_pending_payment:
             return False
+
         # Obviously, no money to release
         if self.balance == 0:
             return False
@@ -262,6 +263,15 @@ class Escrow(Model):
         :return:
         """
         return LoadFundsEscrowOperation.objects.filter(escrow__id=self.id).order_by("created_at").first()
+
+    @property
+    def last_load_funds_operation(self) -> LoadFundsEscrowOperation or None:
+        """
+        Get the most recent LoadFunds operation for this escrow
+        :return:
+        """
+        return LoadFundsEscrowOperation.objects.filter(escrow__id=self.id).order_by("-created_at").first()
+
 
     @property
     def create_escrow_operation(self) -> CreateEscrowOperation or None:
