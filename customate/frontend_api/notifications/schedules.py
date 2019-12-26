@@ -62,7 +62,6 @@ def invite_payer(schedule: Schedule) -> None:
     schedule_details = {
         "payer": payer.email,
         "payee": schedule.recipient_user.email,
-        "link": "https://%s/" % settings.APP_WWW_HOST
     }
     payers = get_funds_senders(funds_sender=payer)
     emails = [user.email for user in payers if user.notify_by_email and user.email]
