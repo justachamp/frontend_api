@@ -246,7 +246,7 @@ def process_schedule_transaction_change(transaction_info: Dict):
     try:
         schedule = Schedule.objects.get(id=schedule_id)
     except Schedule.DoesNotExist:
-        logger.error("Schedule with id %s was not found. %r" % (schedule_id, format_exc()))
+        logger.info("Schedule with id %s was not found. %r" % (schedule_id, format_exc()))
         return
 
     logger.info("Processing transaction_id=%s for schedule_id=%s" % (transaction_id, schedule_id))
@@ -277,7 +277,7 @@ def process_escrow_transaction_change(transaction_info: Dict):
     escrow = find_escrow_by_criteria(payment_info=transaction_info)
 
     if escrow is None:
-        logger.error("Unable to find matching Escrow, which corresponds to transaction_info=%r" % transaction_info)
+        logger.info("Unable to find matching Escrow, which corresponds to transaction_info=%r" % transaction_info)
         return
 
     # we're only interested in balance changes of Escrow's wallet

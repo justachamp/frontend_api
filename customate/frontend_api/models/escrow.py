@@ -324,11 +324,13 @@ class Escrow(Model):
         Update info about underlying money transactions in this model
         :param balance:
         :param status:
-        :return:
         """
         old_balance = self.balance
         old_has_pending_payment = self.has_pending_payment
-        self.balance = balance
+        # for now, ignore incoming balance, and get it directly from Payment-API, as it is the only true source of data
+        wallet_info = payment_service.Wallet.get(wallet_id=self.wallet_id)
+        self.balance = wallet_info.balance
+
         self.has_pending_payment = True if status in Escrow.PENDING_PAYMENT_STATUSES else False
 
         logger.info("Updated escrow (id=%s) balance=%d (was=%s), has_pending_payment=%s (was=%s)" % (
