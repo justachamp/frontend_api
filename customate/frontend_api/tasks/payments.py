@@ -225,23 +225,6 @@ def process_schedule_transaction_change(transaction_info: Dict):
     transaction_id = transaction_info.get("transaction_id")
     schedule_id = transaction_info.get("schedule_id")
     transaction_status = TransactionStatusType(transaction_info.get("status"))
-    user_id = transaction_info.get("user_id")
-    transaction_type = transaction_info.get("name")
-
-    # Current function must process "out of Escrow scope" payments.
-    if not schedule_id and transaction_type not in [
-        # Escrow specific types
-        'WalletToVirtualWallet',
-        'OutgoingInternal',  # This type is Escrow specific only with 'if not schedule_id' condition.
-        'VirtualWalletToWallet'
-    ]:
-        # Send notifications about loaded funds
-        notify_about_loaded_funds(
-            user_id=user_id,
-            transaction_info=transaction_info,
-            transaction_status=transaction_status
-        )
-        return
 
     try:
         schedule = Schedule.objects.get(id=schedule_id)
@@ -344,6 +327,35 @@ def process_escrow_transaction_change(transaction_info: Dict):
         logger.error("Unable to process notifications for Escrow id=%s, exc=%r" % (escrow_id, format_exc()))
 
 
+def process_general_money_movement(transaction_info: Dict):
+    """
+    Any logic not related to processing specific Escrow and/or Schedule
+    :param transaction_info:
+    :return:
+    """
+    user_id = transaction_info.get("user_id")
+    transaction_name = transaction_info.get("name")
+    transaction_status = TransactionStatusType(transaction_info.get("status"))
+
+    ignored_names = [
+        # Escrow specific types
+        'WalletToVirtualWallet',
+        'OutgoingInternal',  # This type is Escrow specific only with 'if not schedule_id' condition.
+        'VirtualWalletToWallet'
+    ]
+    # Current function must process "out of Escrow scope" payments.
+    if transaction_name in ignored_names:
+        logger.info("Exiting, since name is in %r, transaction_info=%r" % (ignored_names, transaction_info))
+        return
+
+    # Send notifications about loaded funds
+    notify_about_loaded_funds(
+        user_id=user_id,
+        transaction_info=transaction_info,
+        transaction_status=transaction_status
+    )
+
+
 @shared_task
 @transaction.atomic
 def on_transaction_change(transaction_info: Dict):
@@ -377,6 +389,9 @@ def on_transaction_change(transaction_info: Dict):
         'payee_id': payee_id,
         'transaction_status': transaction_status,
     })
+
+    if schedule_id is None and escrow_id is None:
+        process_general_money_movement(transaction_info=transaction_info)
 
     # Persist balance to Escrow object
     process_escrow_transaction_change(transaction_info=transaction_info)
@@ -461,7 +476,7 @@ def process_escrow_payment_change(payment_info: Dict):
         return
 
     # figure out Escrow for processing
-    escrow = find_escrow_by_criteria(payment_info) # type: Escrow
+    escrow = find_escrow_by_criteria(payment_info)  # type: Escrow
 
     if escrow is None:
         logger.error("Unable to find matching Escrow, which corresponds to payment_info=%r" % payment_info)
