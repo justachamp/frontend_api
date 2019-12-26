@@ -403,11 +403,18 @@ class EscrowOperationViewSet(views.ModelViewSet):
         # Notify recipient user about rejected load_funds/close_escrow operation
         escrow = op.escrow
         current_user = self.request.user
+        op_creator = op.creator
+        counterpart = escrow.recipient_user if op_creator.id == escrow.funder_user.id else escrow.funder_user
 
-        if all([op.creator == escrow.recipient_user,
-                op.creator != current_user,
-                op.type == EscrowOperationType.load_funds]):
-            notify_about_fund_escrow_state(escrow=escrow)
+        if op_creator == escrow.recipient_user and op_creator != current_user:
+            if op.type == EscrowOperationType.load_funds:
+                notify_about_fund_escrow_state(escrow=escrow)
+            if op.type == EscrowOperationType.release_funds:
+                notify_about_declined_operation_request(
+                    operation=op,
+                    counterpart=counterpart,
+                    tpl_filename="notifications/operation_requesting_was_declined.html"
+                )
 
         if op.type == EscrowOperationType.close_escrow:
             counterpart = escrow.recipient_user if op.creator.id == escrow.funder_user.id else escrow.funder_user
