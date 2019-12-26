@@ -32,13 +32,9 @@ from frontend_api.notifications.schedules import (
 )
 from frontend_api.notifications.escrows import (
     notify_about_fund_escrow_state,
-    notify_parties_about_funds_transfer
+    notify_parties_about_funds_transfer,
+    notify_escrow_funder_about_transaction_status
 )
-from frontend_api.notifications.helpers import (
-    get_load_funds_details,
-    get_ses_email_payload
-)
-from frontend_api.tasks.notifiers import send_notification_email
 
 logger = logging.getLogger(__name__)
 
@@ -308,31 +304,28 @@ def process_escrow_transaction_change(transaction_info: Dict):
 
         # F->E Stage: money gets into Escrow wallet
         if payee_id == escrow.transit_payee_id:
+            logger.info("Notify parties about transaction status and balance amount after Escrow funding attempts.\
+                        Transaction info: %s" % transaction_info)
             if transaction_status in [TransactionStatusType.SUCCESS]:
                 # Send notification to recipient
                 notify_about_fund_escrow_state(
                     escrow=escrow,
                     transaction_info=transaction_info
                 )
-
                 # Send notification about updated wallet balance to funder
                 # Funder should get such context:
                 # sign '-', escrow name, wallet balance
-                logger.info("Notify funder about transaction status and balance amount after Escrow funding attempts.")
-                funder = escrow.funder_user
-                context = get_load_funds_details(transaction_info)
-                # Viewing of Escrow name in template as a reason for spend money
-                context.update({"name": escrow.name})
-                tpl_filename = {
-                    TransactionStatusType.SUCCESS: 'notifications/email_users_balance_updated.html',
-                    TransactionStatusType.FAILED: 'notifications/email_transaction_failed.html'
-                }[transaction_status]
-                message = get_ses_email_payload(
-                    tpl_filename=tpl_filename,
-                    tpl_context=context,
-                    subject=settings.AWS_SES_SUBJECT_NAME
-                    )
-                send_notification_email.delay(to_address=funder.email, message=message)
+                notify_escrow_funder_about_transaction_status(
+                    escrow=escrow,
+                    transaction_info=transaction_info,
+                    tpl_filename='notifications/email_users_balance_updated.html'
+                )
+            if transaction_status in [TransactionStatusType.FAILED]:
+                notify_escrow_funder_about_transaction_status(
+                    escrow=escrow,
+                    transaction_info=transaction_info,
+                    tpl_filename='notifications/email_transaction_failed.html',
+                )
                 pass
 
         # E->R Stage: money leaves Escrow wallet
@@ -343,6 +336,15 @@ def process_escrow_transaction_change(transaction_info: Dict):
                     escrow=escrow,
                     transaction_info=transaction_info
                 )
+            if transaction_status in [TransactionStatusType.FAILED]:
+                notify_escrow_funder_about_transaction_status(
+                    escrow=escrow,
+                    transaction_info=transaction_info,
+                    tpl_filename="notifications/email_transaction_failed.html",
+                    # footer replaces "(Wallet=>Escrow) available balance:" in template.
+                    additional_context={"footer": "Escrow available balance"}
+                )
+
     except Exception:
         logger.error("Unable to process notifications for Escrow id=%s, exc=%r" % (escrow_id, format_exc()))
 
