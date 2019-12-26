@@ -280,13 +280,8 @@ def process_escrow_transaction_change(transaction_info: Dict):
         logger.info("Unable to find matching Escrow, which corresponds to transaction_info=%r" % transaction_info)
         return
 
-    # we're only interested in balance changes of Escrow's wallet
-    balance = transaction_info.get("closing_balance") \
-        if transaction_status is TransactionStatusType.SUCCESS and wallet_id == escrow.wallet_id else 0
-
-    # persist actual balance/status in our local Django model
+    # persist actual payment_info in our local Django model
     escrow.update_payment_info(
-        balance=int(balance),
         status=transaction_status
     )
 
@@ -473,6 +468,12 @@ def process_escrow_payment_change(payment_info: Dict):
         return
 
     logger.info("Processing Escrow=%r" % escrow)
+
+    # persist actual payment_info in our local Django model
+    escrow.update_payment_info(
+        status=TransactionStatusType(payment_info.get('status'))
+    )
+
     # actually process Escrow
     try:
         if escrow.status is not EscrowStatus.pending_funding:

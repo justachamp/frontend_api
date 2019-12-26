@@ -319,10 +319,9 @@ class Escrow(Model):
         """
         self.create_escrow_operation.reject()
 
-    def update_payment_info(self, balance: int, status: TransactionStatusType = None):
+    def update_payment_info(self, status: TransactionStatusType = None):
         """
         Update info about underlying money transactions in this model
-        :param balance:
         :param status:
         """
         old_balance = self.balance
@@ -334,9 +333,9 @@ class Escrow(Model):
         self.has_pending_payment = True if status in Escrow.PENDING_PAYMENT_STATUSES else False
 
         logger.info("Updated escrow (id=%s) balance=%d (was=%s), has_pending_payment=%s (was=%s)" % (
-            self.id, balance, old_balance, self.has_pending_payment, old_has_pending_payment), extra={
+            self.id, self.balance, old_balance, self.has_pending_payment, old_has_pending_payment), extra={
             'escrow_id': self.id,
-            'new_balance': balance,
+            'new_balance': self.balance,
             'old_balance': old_balance,
             'new_has_pending_payment': self.has_pending_payment,
             'old_has_pending_payment': old_has_pending_payment
