@@ -268,8 +268,6 @@ def notify_escrow_funder_about_transaction_status(escrow: Escrow, transaction_in
     """
     funder = escrow.funder_user
     if funder.notify_by_email:
-        logger.info("Start notify funder about failed transaction. Funder: %s, Transaction_info: %s. Escrow: %s" %
-                    (funder.email, transaction_info, escrow.id))
         context = get_load_funds_details(transaction_info)
         context.update({"name": escrow.name})
         if additional_context:
@@ -283,4 +281,7 @@ def notify_escrow_funder_about_transaction_status(escrow: Escrow, transaction_in
             tpl_context=context,
             subject=settings.AWS_SES_SUBJECT_NAME
             )
+        logger.info("Start notify funder about transaction status. \
+                    Funder: %s, Transaction_info: %s. Escrow: %s. Context: %s" %
+                    (funder.email, transaction_info, escrow.id, context))
         send_notification_email.delay(to_address=funder.email, message=message)
