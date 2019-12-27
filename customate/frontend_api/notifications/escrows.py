@@ -25,22 +25,21 @@ def notify_counterpart_about_new_escrow(counterpart: User, create_op: object, lo
     :param create_op:  CreateEscrowOperation object. Need for notification details.
     :return:
     """
-    if counterpart.notify_by_email:
-        escrow = create_op.escrow
-        context = {
-            "escrow": escrow,
-            "create_op": create_op,
-            "load_funds_op": load_funds_op
-        }
-        message = get_ses_email_payload(
-            tpl_filename="notifications/new_escrow_created.html",
-            tpl_context=context,
-            subject=settings.AWS_SES_SUBJECT_NAME
-        )
-        logger.info("Start notify about just created escrow. Counterpart: %s, Escrow id: %s" %
-                    (counterpart.email, create_op.escrow.id))
-        # Send email
-        send_notification_email.delay(to_address=counterpart.email, message=message)
+    escrow = create_op.escrow
+    context = {
+        "escrow": escrow,
+        "create_op": create_op,
+        "load_funds_op": load_funds_op
+    }
+    message = get_ses_email_payload(
+        tpl_filename="notifications/new_escrow_created.html",
+        tpl_context=context,
+        subject=settings.AWS_SES_SUBJECT_NAME
+    )
+    logger.info("Start notify about just created escrow. Counterpart: %s, Escrow id: %s" %
+                (counterpart.email, create_op.escrow.id))
+    # Send email
+    send_notification_email.delay(to_address=counterpart.email, message=message)
 
 
 def notify_originator_about_escrow_state(counterpart: User, escrow_op: EscrowOperation, tpl_filename: str):
@@ -52,18 +51,17 @@ def notify_originator_about_escrow_state(counterpart: User, escrow_op: EscrowOpe
     :return:
     """
     creator = escrow_op.creator
-    if creator.notify_by_email:
-        context = {
-            "escrow": escrow_op.escrow,
-            "counterpart": counterpart
-        }
-        message = get_ses_email_payload(
-            tpl_filename=tpl_filename,
-            tpl_context=context,
-            subject=settings.AWS_SES_SUBJECT_NAME
-        )
-        logger.info("Start notify about escrow state. Creator: %s, context: %s" % (creator.email, context))
-        send_notification_email.delay(to_address=creator.email, message=message)
+    context = {
+        "escrow": escrow_op.escrow,
+        "counterpart": counterpart
+    }
+    message = get_ses_email_payload(
+        tpl_filename=tpl_filename,
+        tpl_context=context,
+        subject=settings.AWS_SES_SUBJECT_NAME
+    )
+    logger.info("Start notify about escrow state. Creator: %s, context: %s" % (creator.email, context))
+    send_notification_email.delay(to_address=creator.email, message=message)
 
 
 def notify_about_fund_escrow_state(escrow: Escrow, transaction_info: Optional[Dict] = None):
@@ -74,33 +72,32 @@ def notify_about_fund_escrow_state(escrow: Escrow, transaction_info: Optional[Di
     :return:
     """
     recipient = escrow.recipient_user
-    if recipient.notify_by_email:
-        if transaction_info is None:
-            context = {
-                "recipient": recipient,
-                "escrow": escrow
-            }
-            tpl_filename = "notifications/escrow_has_not_been_funded.html"
-            logger.info("Start notify about funds escrow state. Escrow funded. Recipient: %s, context: %s" %
-                        (recipient.email, context))
-        else:
-            context = {
-                'amount': transaction_info.get("amount"),
-                'processed_datetime': arrow.utcnow().datetime,
-                'escrow': escrow,
-                'transaction_type': transaction_names.get(transaction_info.get("name"), "Unknown"),
-                # identifier specifies either funds has increased or decreased
-                'sign': "+"
-            }
-            tpl_filename = "notifications/escrow_has_been_funded.html"
-        message = get_ses_email_payload(
-            tpl_filename=tpl_filename,
-            tpl_context=context,
-            subject=settings.AWS_SES_SUBJECT_NAME
-        )
-        logger.info("Start notify about funds escrow state. Escrow has not been funded. Recipient: %s, Transaction info: %s" %
-                    (recipient.email, transaction_info))
-        send_notification_email.delay(to_address=recipient.email, message=message)
+    if transaction_info is None:
+        context = {
+            "recipient": recipient,
+            "escrow": escrow
+        }
+        tpl_filename = "notifications/escrow_has_not_been_funded.html"
+        logger.info("Start notify about funds escrow state. Escrow funded. Recipient: %s, context: %s" %
+                    (recipient.email, context))
+    else:
+        context = {
+            'amount': transaction_info.get("amount"),
+            'processed_datetime': arrow.utcnow().datetime,
+            'escrow': escrow,
+            'transaction_type': transaction_names.get(transaction_info.get("name"), "Unknown"),
+            # identifier specifies either funds has increased or decreased
+            'sign': "+"
+        }
+        tpl_filename = "notifications/escrow_has_been_funded.html"
+    message = get_ses_email_payload(
+        tpl_filename=tpl_filename,
+        tpl_context=context,
+        subject=settings.AWS_SES_SUBJECT_NAME
+    )
+    logger.info("Start notify about funds escrow state. Escrow has not been funded. Recipient: %s, Transaction info: %s" %
+                (recipient.email, transaction_info))
+    send_notification_email.delay(to_address=recipient.email, message=message)
 
 
 def notify_about_requesting_action_with_funds(counterpart: User, operation: EscrowOperation, tpl_filename: str):
@@ -112,19 +109,18 @@ def notify_about_requesting_action_with_funds(counterpart: User, operation: Escr
     :return:
     """
     funder = operation.escrow.funder_user
-    if funder.notify_by_email:
-        logger.info("Start notify about requesting action with funds. Action: %s. Funder: %s" %
-                    (operation.type, funder.email))
-        context = {
-            "operation": operation,
-            "counterpart": counterpart
-        }
-        message = get_ses_email_payload(
-            tpl_filename=tpl_filename,
-            tpl_context=context,
-            subject=settings.AWS_SES_SUBJECT_NAME
-        )
-        send_notification_email.delay(to_address=funder.email, message=message)
+    logger.info("Start notify about requesting action with funds. Action: %s. Funder: %s" %
+                (operation.type, funder.email))
+    context = {
+        "operation": operation,
+        "counterpart": counterpart
+    }
+    message = get_ses_email_payload(
+        tpl_filename=tpl_filename,
+        tpl_context=context,
+        subject=settings.AWS_SES_SUBJECT_NAME
+    )
+    send_notification_email.delay(to_address=funder.email, message=message)
 
 
 def notify_parties_about_funds_transfer(escrow: Escrow, transaction_info: Dict):
@@ -138,49 +134,47 @@ def notify_parties_about_funds_transfer(escrow: Escrow, transaction_info: Dict):
     funder = escrow.funder_user
     context = get_load_funds_details(transaction_info)
 
-    if funder.notify_by_email:
-        # Here we pass escrow balance and escrow name.
-        tpl_filename = "notifications/escrow_funds_were_transferred.html"
-        context.update({'sign': '-',
-                        # Because of we use the same template for schedule and escrow notifications,
-                        # schedule_name is a variable that contains name of money storage (schedule, escrow)
-                        'name': escrow.name,
-                        'escrow': escrow})
-        message = get_ses_email_payload(
-            tpl_filename=tpl_filename,
-            tpl_context=context,
-            subject=settings.AWS_SES_SUBJECT_NAME
-        )
-        logger.info("Start notify about funds transfer. Email recipient: %s. Transaction info: %s." %
-                    (funder.email, transaction_info))
-        send_notification_email.delay(to_address=funder.email, message=message)
+    # Here we pass escrow balance and escrow name.
+    tpl_filename = "notifications/escrow_funds_were_transferred.html"
+    context.update({'sign': '-',
+                    # Because of we use the same template for schedule and escrow notifications,
+                    # schedule_name is a variable that contains name of money storage (schedule, escrow)
+                    'name': escrow.name,
+                    'escrow': escrow})
+    message = get_ses_email_payload(
+        tpl_filename=tpl_filename,
+        tpl_context=context,
+        subject=settings.AWS_SES_SUBJECT_NAME
+    )
+    logger.info("Start notify about funds transfer. Email recipient: %s. Transaction info: %s." %
+                (funder.email, transaction_info))
+    send_notification_email.delay(to_address=funder.email, message=message)
 
-    if recipient.notify_by_email:
-        # Requests to payment service. Need to get recipients balance
-        # Here we pass wallet balance and escrow name for recipient.
-        recipient_wallet_payees = payment_service.Payee.find(
-            payment_account_id=escrow.recipient_user.account.payment_account_id,
-            payee_type=PayeeType.WALLET,
-            currency=escrow.currency
-        )
-        if isinstance(recipient_wallet_payees, list) and len(recipient_wallet_payees) > 1:
-            logger.info('Start notify recipient about funds transfer. Got unexpected value from payment service: ' %
-                        recipient_wallet_payees)
-            return
-        payee_details = recipient_wallet_payees[0]
-        wallet_details = payment_service.Wallet.get(wallet_id=payee_details.wallet_id)
+    # Requests to payment service. Need to get recipients balance
+    # Here we pass wallet balance and escrow name for recipient.
+    recipient_wallet_payees = payment_service.Payee.find(
+        payment_account_id=escrow.recipient_user.account.payment_account_id,
+        payee_type=PayeeType.WALLET,
+        currency=escrow.currency
+    )
+    if isinstance(recipient_wallet_payees, list) and len(recipient_wallet_payees) > 1:
+        logger.info('Start notify recipient about funds transfer. Got unexpected value from payment service: ' %
+                    recipient_wallet_payees)
+        return
+    payee_details = recipient_wallet_payees[0]
+    wallet_details = payment_service.Wallet.get(wallet_id=payee_details.wallet_id)
 
-        tpl_filename = "notifications/email_users_balance_updated.html"
-        context.update({'sign': '+', 'closing_balance': wallet_details.balance,
-                        'name': escrow.name, 'escrow': escrow})
-        message = get_ses_email_payload(
-            tpl_filename=tpl_filename,
-            tpl_context=context,
-            subject=settings.AWS_SES_SUBJECT_NAME
-        )
-        logger.info("Start notify about funds transfer. Email recipient: %s. Transaction info: %s." %
-                    (recipient.email, transaction_info))
-        send_notification_email.delay(to_address=recipient.email, message=message)
+    tpl_filename = "notifications/email_users_balance_updated.html"
+    context.update({'sign': '+', 'closing_balance': wallet_details.balance,
+                    'name': escrow.name, 'escrow': escrow})
+    message = get_ses_email_payload(
+        tpl_filename=tpl_filename,
+        tpl_context=context,
+        subject=settings.AWS_SES_SUBJECT_NAME
+    )
+    logger.info("Start notify about funds transfer. Email recipient: %s. Transaction info: %s." %
+                (recipient.email, transaction_info))
+    send_notification_email.delay(to_address=recipient.email, message=message)
 
 
 def send_reminder_to_fund_escrow(escrow: Escrow, tpl_filename: str):
@@ -191,17 +185,16 @@ def send_reminder_to_fund_escrow(escrow: Escrow, tpl_filename: str):
     :return:
     """
     email_recipient = escrow.funder_user
-    if email_recipient.notify_by_email:
-        context = {
-            "escrow": escrow
-        }
-        message = get_ses_email_payload(
-            tpl_filename=tpl_filename,
-            tpl_context=context,
-            subject=settings.AWS_SES_SUBJECT_NAME
-        )
-        logger.info("Send reminder to fund escrow. Escrow id: %s." % escrow.id)
-        send_notification_email.delay(to_address=email_recipient.email, message=message)
+    context = {
+        "escrow": escrow
+    }
+    message = get_ses_email_payload(
+        tpl_filename=tpl_filename,
+        tpl_context=context,
+        subject=settings.AWS_SES_SUBJECT_NAME
+    )
+    logger.info("Send reminder to fund escrow. Escrow id: %s." % escrow.id)
+    send_notification_email.delay(to_address=email_recipient.email, message=message)
 
 
 def notify_about_declined_operation_request(operation: EscrowOperation, counterpart: User, tpl_filename: str):
@@ -216,19 +209,18 @@ def notify_about_declined_operation_request(operation: EscrowOperation, counterp
     :return:
     """
     recipient = operation.escrow.recipient_user
-    if recipient.notify_by_email:
-        context = {
-            "operation": operation,
-            "counterpart": counterpart
-        }
-        message = get_ses_email_payload(
-            tpl_filename=tpl_filename,
-            tpl_context=context,
-            subject=settings.AWS_SES_SUBJECT_NAME
-        )
-        logger.info("Start notify about rejected operation request. Recipient: %s, context: %s" %
-                    (recipient.email, context))
-        send_notification_email.delay(to_address=recipient.email, message=message)
+    context = {
+        "operation": operation,
+        "counterpart": counterpart
+    }
+    message = get_ses_email_payload(
+        tpl_filename=tpl_filename,
+        tpl_context=context,
+        subject=settings.AWS_SES_SUBJECT_NAME
+    )
+    logger.info("Start notify about rejected operation request. Recipient: %s, context: %s" %
+                (recipient.email, context))
+    send_notification_email.delay(to_address=recipient.email, message=message)
 
 
 def notify_about_requesting_close_escrow(request_recipient: User, operation: EscrowOperation, tpl_filename: str):
@@ -240,19 +232,18 @@ def notify_about_requesting_close_escrow(request_recipient: User, operation: Esc
     :return:
     """
     op_creator = operation.creator
-    if request_recipient.notify_by_email:
-        context = {
-            "operation": operation,
-            "counterpart": op_creator
-        }
-        message = get_ses_email_payload(
-            tpl_filename=tpl_filename,
-            tpl_context=context,
-            subject=settings.AWS_SES_SUBJECT_NAME
-        )
-        logger.info("Start notify about requesting to close escrow. Request recipient: %s, context: %s" %
-                    (request_recipient.email, context))
-        send_notification_email.delay(to_address=request_recipient.email, message=message)
+    context = {
+        "operation": operation,
+        "counterpart": op_creator
+    }
+    message = get_ses_email_payload(
+        tpl_filename=tpl_filename,
+        tpl_context=context,
+        subject=settings.AWS_SES_SUBJECT_NAME
+    )
+    logger.info("Start notify about requesting to close escrow. Request recipient: %s, context: %s" %
+                (request_recipient.email, context))
+    send_notification_email.delay(to_address=request_recipient.email, message=message)
 
 
 def notify_escrow_funder_about_transaction_status(escrow: Escrow, transaction_info: Dict,
@@ -267,21 +258,20 @@ def notify_escrow_funder_about_transaction_status(escrow: Escrow, transaction_in
     :return:
     """
     funder = escrow.funder_user
-    if funder.notify_by_email:
-        context = get_load_funds_details(transaction_info)
-        context.update({"name": escrow.name})
-        if additional_context:
-            # Replace "Wallet" name to "Escrow" in template
-            # View escrow balance as balance (variable name in common template)
-            context.update(additional_context)
-            context["closing_balance"] = escrow.balance
+    context = get_load_funds_details(transaction_info)
+    context.update({"name": escrow.name})
+    if additional_context:
+        # Replace "Wallet" name to "Escrow" in template
+        # View escrow balance as balance (variable name in common template)
+        context.update(additional_context)
+        context["closing_balance"] = escrow.balance
 
-        message = get_ses_email_payload(
-            tpl_filename=tpl_filename,
-            tpl_context=context,
-            subject=settings.AWS_SES_SUBJECT_NAME
-            )
-        logger.info("Start notify funder about transaction status. \
-                    Funder: %s, Transaction_info: %s. Escrow: %s. Context: %s" %
-                    (funder.email, transaction_info, escrow.id, context))
-        send_notification_email.delay(to_address=funder.email, message=message)
+    message = get_ses_email_payload(
+        tpl_filename=tpl_filename,
+        tpl_context=context,
+        subject=settings.AWS_SES_SUBJECT_NAME
+        )
+    logger.info("Start notify funder about transaction status. \
+                Funder: %s, Transaction_info: %s. Escrow: %s. Context: %s" %
+                (funder.email, transaction_info, escrow.id, context))
+    send_notification_email.delay(to_address=funder.email, message=message)
