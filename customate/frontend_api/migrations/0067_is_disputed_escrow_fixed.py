@@ -2,17 +2,23 @@
 
 from django.db import migrations, models
 
+
 class Migration(migrations.Migration):
     dependencies = [
-        ('frontend_api', '0065_escrowoperation_unique_index_for_load_funds'),
+        ('frontend_api', '0066_is_disputed_escrow'),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='document',
-            name='escrow',
+            model_name='escrow',
+            name='is_disputed',
             field=models.BooleanField(
                 default=False, null=False,
                 help_text='indicates whether this Escrow is being disputed',
             )),
+
+        migrations.RemoveField(
+            model_name='document',
+            name='escrow'
+        )
     ]
