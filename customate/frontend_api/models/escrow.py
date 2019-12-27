@@ -146,6 +146,9 @@ class Escrow(Model):
         Can user dispute some operations on this Escrow?
         :return:
         """
+        if self.is_disputed is True:
+            return False
+
         return self.status is EscrowStatus.ongoing
 
     @property
