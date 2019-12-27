@@ -89,6 +89,12 @@ class Escrow(Model):
         help_text=_("Tracks payment operations state.")
     )
 
+    is_disputed = models.BooleanField(
+        default=False,
+        help_text=_('indicates whether this Escrow is being disputed'),
+    )
+
+
     # we consider Escrow as 'pending payments' when underlying transactions are in one of these states
     PENDING_PAYMENT_STATUSES = [
         TransactionStatusType.PROCESSING,

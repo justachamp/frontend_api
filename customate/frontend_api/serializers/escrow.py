@@ -148,7 +148,9 @@ class EscrowSerializer(BaseEscrowSerializer):
             'can_release_funds',
             'can_review_operations',
             'can_review_transactions',
-            'has_pending_operations'
+            'has_pending_operations',
+
+            'is_disputed'
         )
 
     def get_can_accept(self, escrow: Escrow) -> bool:

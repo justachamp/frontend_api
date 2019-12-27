@@ -300,37 +300,39 @@ class EscrowOperationViewSet(views.ModelViewSet):
             raise ValidationError("New request is not allowed, since previous request is not approved yet.")
 
         try:
-            if serializer.is_valid(raise_exception=True):
-                op = serializer.save(creator=self.request.user)  # type: EscrowOperation
-                logger.info("Successfully created new escrow operation (%r)" % op)
+            if not serializer.is_valid(raise_exception=True):
+                pass
 
-                op = EscrowOperation.cast(op)
+            op = serializer.save(creator=self.request.user)  # type: EscrowOperation
+            logger.info("Successfully created new escrow operation (%r)" % op)
 
-                # auto accept operation if it does not require any action from counterpart!
-                if not op.requires_mutual_approval:
-                    op.accept()
+            op = EscrowOperation.cast(op)
 
-                # Notify funder about proposal to load_funds/release_funds/close_escrow
-                tpl_filenames = {
-                    EscrowOperationType.load_funds: "notifications/requesting_funding_escrow.html",
-                    EscrowOperationType.release_funds: "notifications/requesting_release_funds.html",
-                }
-                if self.request.user == op.escrow.recipient_user and op.type in tpl_filenames.keys():
-                    logger.info("Start notify funder about requesting to fund/release funds. \
-                                Funds recipient: %s. " % self.request.user)
-                    notify_about_requesting_action_with_funds(
-                        counterpart=self.request.user,
-                        operation=op,
-                        tpl_filename=tpl_filenames[op.type]
-                    )
-                if op.requires_mutual_approval and op.type == EscrowOperationType.close_escrow:
-                    escrow = op.escrow
-                    recipient = escrow.recipient_user if op.creator.id == escrow.funder_user.id else escrow.funder_user
-                    notify_about_requesting_close_escrow(
-                        request_recipient=recipient,
-                        operation=op,
-                        tpl_filename="notifications/requesting_close_escrow.html"
-                    )
+            # auto accept operation if it does not require any action from counterpart!
+            if not op.requires_mutual_approval:
+                op.accept()
+
+            # Notify funder about proposal to load_funds/release_funds/close_escrow
+            tpl_filenames = {
+                EscrowOperationType.load_funds: "notifications/requesting_funding_escrow.html",
+                EscrowOperationType.release_funds: "notifications/requesting_release_funds.html",
+            }
+            if self.request.user == op.escrow.recipient_user and op.type in tpl_filenames.keys():
+                logger.info("Start notify funder about requesting to fund/release funds. \
+                            Funds recipient: %s. " % self.request.user)
+                notify_about_requesting_action_with_funds(
+                    counterpart=self.request.user,
+                    operation=op,
+                    tpl_filename=tpl_filenames[op.type]
+                )
+            if op.requires_mutual_approval and op.type == EscrowOperationType.close_escrow:
+                escrow = op.escrow
+                recipient = escrow.recipient_user if op.creator.id == escrow.funder_user.id else escrow.funder_user
+                notify_about_requesting_close_escrow(
+                    request_recipient=recipient,
+                    operation=op,
+                    tpl_filename="notifications/requesting_close_escrow.html"
+                )
 
         except IntegrityError as e:
             logger.error("Unable to save EscrowOperation=%r, due to IntegrityError: %r" % (
