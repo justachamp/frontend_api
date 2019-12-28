@@ -36,6 +36,7 @@ def process_unaccepted_escrows():
     paginator = Paginator(expired_operations, settings.CELERY_BEAT_PER_PAGE_OBJECTS)
     for page in paginator.page_range:
         for operation in paginator.page(page).object_list:  # type: LoadFundsEscrowOperation
+            logger.info("Unaccepted operation id=%s and related escrow id=%s" % (operation.id, operation.escrow.id))
             operation.escrow.move_to_status(EscrowStatus.terminated)
             operation.expire()
             operation.reject()
