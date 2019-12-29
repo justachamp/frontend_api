@@ -284,7 +284,11 @@ class EscrowOperationViewSet(views.ModelViewSet):
             | Q(escrow__recipient_user__account__id__in=target_account_ids)
         ).order_by('created_at')
 
-    @transaction.atomic
+    # Must NOT be executed in transaction. Some operations perform payments creation and our current event model is
+    # asynchronous, this causes delayed reaction. To respond more quickly, the same Escrow's operations must update some
+    # model's fields before making a request to Payment API (in EscrowOperation.accept), but using DB transaction for
+    # this method will cause some kind of race condition (it's possible that we will receive event before transaction is
+    # committed)
     def perform_create(self, serializer):
         """
         Create new EscrowOperation / HTTP POST
@@ -344,7 +348,11 @@ class EscrowOperationViewSet(views.ModelViewSet):
             logger.error("Unable to save EscrowOperation=%r, due to %r" % (serializer.validated_data, format_exc()))
             raise ValidationError("Unable to save escrow operation")
 
-    @transaction.atomic
+    # Must NOT be executed in transaction. Some operations perform payments creation and our current event model is
+    # asynchronous, this causes delayed reaction. To respond more quickly, the same Escrow's operations must update some
+    # model's fields before making a request to Payment API (in EscrowOperation.accept), but using DB transaction for
+    # this method will cause some kind of race condition (it's possible that we will receive event before transaction is
+    # committed)
     @action(methods=['POST'],
             detail=True,
             permission_classes=(

@@ -348,8 +348,12 @@ class Escrow(Model):
         Update info about underlying money transactions in this model
         :param status:
         """
+        has_pending_payment = True if status in Escrow.PENDING_PAYMENT_STATUSES else False
+        self.update_has_pending_payment(has_pending_payment)
+
+    def update_has_pending_payment(self, has_pending_payment: bool):
         old_has_pending_payment = self.has_pending_payment
-        self.has_pending_payment = True if status in Escrow.PENDING_PAYMENT_STATUSES else False
+        self.has_pending_payment = has_pending_payment
         self.save(update_fields=["has_pending_payment"])
         logger.info("Updated escrow (id=%s) has_pending_payment=%s (was=%s)" % (
             self.id, self.has_pending_payment, old_has_pending_payment), extra={
@@ -624,6 +628,10 @@ class CloseEscrowOperation(EscrowOperation):
             else:
                 funder_wallet_payee_id = funder_wallet_payees[0].id
 
+            # Marking Escrow as the one that has pending payment before performing a request: it could be that
+            # "on_payment_change" event (where "has_pending_payment" field is updated) will come with big delay
+            self.escrow.update_has_pending_payment(True)
+
             # Sending money from Escrow's wallet (transit_funding_source_id) to
             # funder's "real" wallet (funder_wallet_payee_id)
             logger.info("Sending release funds payment for Escrow (id=%s)" % self.escrow.id)
@@ -656,6 +664,8 @@ class CloseEscrowOperation(EscrowOperation):
                 'escrow_operation_id': self.id,
                 'escrow_id': self.escrow.id
             })
+            # Assuming that we didn't create payment, so "has_pending_payment" flag must be reset manually
+            self.escrow.update_has_pending_payment(False)
             raise ValidationError("Unable to accept operation(id=%s)" % self.id)
 
         logger.info("Finished with refunding all Escrow (id=%s) funds " % self.escrow.id)
@@ -715,6 +725,10 @@ class LoadFundsEscrowOperation(EscrowOperation):
         description = "{escrow_name} funding".format(escrow_name=escrow.name)
 
         try:
+            # Marking Escrow as the one that has pending payment before performing a request: it could be that
+            # "on_payment_change" event (where "has_pending_payment" field is updated) will come with big delay
+            escrow.update_has_pending_payment(True)
+
             payment_service.Payment.create(
                 user_id=escrow.funder_user.id,
                 payment_account_id=escrow.funder_payment_account_id,
@@ -732,6 +746,8 @@ class LoadFundsEscrowOperation(EscrowOperation):
                 'escrow_operation_id': self.id,
                 'escrow_id': escrow.id
             })
+            # Assuming that we didn't create payment, so "has_pending_payment" flag must be reset manually
+            escrow.update_has_pending_payment(False)
             raise ValidationError("Unable to accept operation(id=%s)" % self.id)
 
 
@@ -778,6 +794,10 @@ class ReleaseFundsEscrowOperation(EscrowOperation):
         description = "{escrow_name} funds release".format(escrow_name=escrow.name)
 
         try:
+            # Marking Escrow as the one that has pending payment before performing a request: it could be that
+            # "on_payment_change" event (where "has_pending_payment" field is updated) will come with big delay
+            escrow.update_has_pending_payment(True)
+
             payment_service.Payment.create(
                 user_id=escrow.funder_user.id,
                 payment_account_id=escrow.funder_payment_account_id,
@@ -795,4 +815,6 @@ class ReleaseFundsEscrowOperation(EscrowOperation):
                 'escrow_operation_id': self.id,
                 'escrow_id': escrow.id
             })
+            # Assuming that we didn't create payment, so "has_pending_payment" flag must be reset manually
+            escrow.update_has_pending_payment(False)
             raise ValidationError("Unable to accept operation(id=%s)" % self.id)
