@@ -348,9 +348,11 @@ def process_general_money_movement(transaction_info: Dict):
     :param transaction_info:
     :return:
     """
+    transaction_id = transaction_info.get("transaction_id")
     user_id = transaction_info.get("user_id")
     transaction_name = transaction_info.get("name")
     transaction_status = TransactionStatusType(transaction_info.get("status"))
+    is_hidden = bool(int(transaction_info.get("is_hidden", 0)))
 
     ignored_names = [
         # Escrow specific types
@@ -361,6 +363,11 @@ def process_general_money_movement(transaction_info: Dict):
     # Current function must process "out of Escrow scope" payments.
     if transaction_name in ignored_names:
         logger.info("Exiting, since name is in %r, transaction_info=%r" % (ignored_names, transaction_info))
+        return
+
+    # Do not notify about hidden transactions
+    if is_hidden:
+        logger.info("Omit sending notification about transaction(id=%s), since it's hidden" % transaction_id)
         return
 
     # Send notifications about loaded funds
