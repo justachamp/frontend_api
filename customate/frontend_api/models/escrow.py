@@ -94,9 +94,13 @@ class Escrow(Model):
         help_text=_('indicates whether this Escrow is being disputed'),
     )
 
-
-    # we consider Escrow as 'pending payments' when underlying transactions are in one of these states
+    # We consider Escrow as 'pending payments' when underlying transactions are in one of these states
     PENDING_PAYMENT_STATUSES = [
+        PaymentStatusType.PROCESSING,
+        PaymentStatusType.PENDING
+    ]
+
+    PENDING_TRANSACTION_STATUSES = [
         TransactionStatusType.PROCESSING,
         TransactionStatusType.PENDING
     ]
@@ -328,29 +332,31 @@ class Escrow(Model):
         """
         self.create_escrow_operation.reject()
 
-    def update_payment_info(self, status: TransactionStatusType = None):
+    def update_balance(self, balance: int):
+        old_balance = self.balance
+        self.balance = balance
+        self.save(update_fields=["balance"])
+        logger.info("Updated escrow (id=%s) balance=%d (was=%s)" % (
+            self.id, self.balance, old_balance), extra={
+            'escrow_id': self.id,
+            'new_balance': self.balance,
+            'old_balance': old_balance,
+        })
+
+    def update_payment_info(self, status: PaymentStatusType = None):
         """
         Update info about underlying money transactions in this model
         :param status:
         """
-        old_balance = self.balance
         old_has_pending_payment = self.has_pending_payment
-        # for now, ignore incoming balance, and get it directly from Payment-API, as it is the only true source of data
-        wallet_info = payment_service.Wallet.get(wallet_id=self.wallet_id)
-        self.balance = wallet_info.balance
-
         self.has_pending_payment = True if status in Escrow.PENDING_PAYMENT_STATUSES else False
-
-        logger.info("Updated escrow (id=%s) balance=%d (was=%s), has_pending_payment=%s (was=%s)" % (
-            self.id, self.balance, old_balance, self.has_pending_payment, old_has_pending_payment), extra={
+        self.save(update_fields=["has_pending_payment"])
+        logger.info("Updated escrow (id=%s) has_pending_payment=%s (was=%s)" % (
+            self.id, self.has_pending_payment, old_has_pending_payment), extra={
             'escrow_id': self.id,
-            'new_balance': self.balance,
-            'old_balance': old_balance,
             'new_has_pending_payment': self.has_pending_payment,
             'old_has_pending_payment': old_has_pending_payment
         })
-
-        self.save(update_fields=["balance", "has_pending_payment"])
 
 
 # support JSON schema versioning for possible future changes

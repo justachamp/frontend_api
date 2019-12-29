@@ -225,6 +225,12 @@ def process_schedule_transaction_change(transaction_info: Dict):
     transaction_id = transaction_info.get("transaction_id")
     schedule_id = transaction_info.get("schedule_id")
     transaction_status = TransactionStatusType(transaction_info.get("status"))
+    is_hidden = transaction_info.get("is_hidden") == 'true'
+
+    # Do not notify about hidden transactions
+    if is_hidden:
+        logger.info("Omit sending notification about escrow transaction(id=%s), since it's hidden" % transaction_id)
+        return
 
     try:
         schedule = Schedule.objects.get(id=schedule_id)
@@ -255,24 +261,33 @@ def process_escrow_transaction_change(transaction_info: Dict):
     payee_id = UUID(payee_id) if payee_id else None
     funding_source_id = transaction_info.get("funding_source_id")  # origin of money
     funding_source_id = UUID(funding_source_id) if funding_source_id else None
+    closing_balance = transaction_info.get("closing_balance")
+    is_hidden = transaction_info.get("is_hidden") == 'true'
+
+    # Do not process transactions that are still processing
+    if transaction_status in Escrow.PENDING_TRANSACTION_STATUSES:
+        logger.info("Skipping escrow transaction(id=%s) handling, since status=%r" % (
+            transaction_id, transaction_status
+        ))
+        return
 
     # figure out Escrow for processing
-    escrow = find_escrow_by_criteria(payment_info=transaction_info)
+    escrow = find_escrow_by_criteria(payment_info=transaction_info)  # type: Escrow
 
     if escrow is None:
         logger.info("Unable to find matching Escrow, which corresponds to transaction_info=%r" % transaction_info)
         return
 
-    # persist actual payment_info in our local Django model
-    escrow.update_payment_info(
-        status=transaction_status
-    )
+    # There are some risks if we will cast to int during first variable declaration: incoming value could be "null" (for
+    # pending/processing transactions) and we will get ValueError
+    closing_balance = int(closing_balance)
+    # Pending/processing transaction doesn't have value in closing balance field, so we should update Escrow's balance
+    # only after verification for transaction's status.
+    escrow.update_balance(closing_balance)
 
-    # Do not process transactions that are still processing
-    if transaction_status in Escrow.PENDING_PAYMENT_STATUSES:
-        logger.info("Skipping escrow transaction(id=%s) handling, since status=%r" % (
-            transaction_id, transaction_status
-        ))
+    # Do not notify about hidden transactions
+    if is_hidden:
+        logger.info("Omit sending notification about escrow transaction(id=%s), since it's hidden" % transaction_id)
         return
 
     try:
@@ -409,14 +424,16 @@ def find_escrow_by_criteria(payment_info: Dict) -> Escrow or None:
     escrow_id = payment_info.get("escrow_id")
     payee_id = payment_info.get("payee_id")
     funding_source_id = payment_info.get("funding_source_id")
+    wallet_id = payment_info.get("wallet_id")
 
     # NOTE: Try to find matching Escrow using different criteria,
     # since we don't always get 'escrow_id' from payment-api
     escrow = None
-    # CASE 1: try to find it by 'escrow_id'
+
+    # CASE 0: try to find it by 'wallet_id' (looks like it should be present in all escrow-related payments)
     try:
-        escrow = Escrow.objects.get(id=escrow_id)
-        logger.info("payment_id=%s is related to Escrow(id=%s, status=%s) by escrow_id" % (
+        escrow = Escrow.objects.get(wallet_id=wallet_id)
+        logger.info("payment_id=%s is related to Escrow(id=%s, status=%s) by wallet_id" % (
             payment_id, escrow.id, escrow.status
         ), extra={
             'payment_id': payment_id,
@@ -424,37 +441,50 @@ def find_escrow_by_criteria(payment_info: Dict) -> Escrow or None:
             'escrow_status': escrow.status,
         })
     except ObjectDoesNotExist:
-        logger.info("Unable to find Escrow by  escrow_id=%s" % escrow_id)
+        logger.info("Unable to find Escrow by wallet_id=%s" % wallet_id)
 
-    # CASE 2: try to find it by 'payee_id'
-    # In this case 'payee_id' == 'escrow.transit_payee_id', and this means that money goes from Funder -> Escrow
-    if escrow is None:
-        try:
-            escrow = Escrow.objects.get(transit_payee_id=payee_id)
-            logger.info("payment_id=%s is related to Escrow(id=%s, status=%s) by payee_id" % (
-                payment_id, escrow.id, escrow.status
-            ), extra={
-                'payment_id': payment_id,
-                'escrow_id': escrow.id,
-                'escrow_status': escrow.status,
-            })
-        except ObjectDoesNotExist:
-            logger.info("Unable to find Escrow by payee_id=%s" % payee_id)
-
-    # CASE 3: try to find it by 'funding_source_id'
-    # In this case, 'funding_source_id' == 'escrow.transit_funding_source_id'
-    if escrow is None:
-        try:
-            escrow = Escrow.objects.get(transit_funding_source_id=funding_source_id)
-            logger.info("payment_id=%s is related to Escrow(id=%s, status=%s) by funding_source_id" % (
-                payment_id, escrow.id, escrow.status
-            ), extra={
-                'payment_id': payment_id,
-                'escrow_id': escrow.id,
-                'escrow_status': escrow.status,
-            })
-        except ObjectDoesNotExist:
-            logger.info("Unable to find Escrow by funding_source_id=%s" % funding_source_id)
+    # # CASE 1: try to find it by 'escrow_id'
+    # try:
+    #     escrow = Escrow.objects.get(id=escrow_id)
+    #     logger.info("payment_id=%s is related to Escrow(id=%s, status=%s) by escrow_id" % (
+    #         payment_id, escrow.id, escrow.status
+    #     ), extra={
+    #         'payment_id': payment_id,
+    #         'escrow_id': escrow.id,
+    #         'escrow_status': escrow.status,
+    #     })
+    # except ObjectDoesNotExist:
+    #     logger.info("Unable to find Escrow by  escrow_id=%s" % escrow_id)
+    #
+    # # CASE 2: try to find it by 'payee_id'
+    # # In this case 'payee_id' == 'escrow.transit_payee_id', and this means that money goes from Funder -> Escrow
+    # if escrow is None:
+    #     try:
+    #         escrow = Escrow.objects.get(transit_payee_id=payee_id)
+    #         logger.info("payment_id=%s is related to Escrow(id=%s, status=%s) by payee_id" % (
+    #             payment_id, escrow.id, escrow.status
+    #         ), extra={
+    #             'payment_id': payment_id,
+    #             'escrow_id': escrow.id,
+    #             'escrow_status': escrow.status,
+    #         })
+    #     except ObjectDoesNotExist:
+    #         logger.info("Unable to find Escrow by payee_id=%s" % payee_id)
+    #
+    # # CASE 3: try to find it by 'funding_source_id'
+    # # In this case, 'funding_source_id' == 'escrow.transit_funding_source_id'
+    # if escrow is None:
+    #     try:
+    #         escrow = Escrow.objects.get(transit_funding_source_id=funding_source_id)
+    #         logger.info("payment_id=%s is related to Escrow(id=%s, status=%s) by funding_source_id" % (
+    #             payment_id, escrow.id, escrow.status
+    #         ), extra={
+    #             'payment_id': payment_id,
+    #             'escrow_id': escrow.id,
+    #             'escrow_status': escrow.status,
+    #         })
+    #     except ObjectDoesNotExist:
+    #         logger.info("Unable to find Escrow by funding_source_id=%s" % funding_source_id)
 
     return escrow
 
@@ -484,9 +514,12 @@ def process_escrow_payment_change(payment_info: Dict):
 
     logger.info("Processing Escrow=%r" % escrow)
 
+    # Note that balance is stored in transactions (not payment) and Escrow's balance will be updated during processing
+    # 'on_transaction_changed' event
+
     # persist actual payment_info in our local Django model
     escrow.update_payment_info(
-        status=TransactionStatusType(payment_info.get('status'))
+        status=PaymentStatusType(payment_info.get('status'))
     )
 
     # actually process Escrow
