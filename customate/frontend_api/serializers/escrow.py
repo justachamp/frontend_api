@@ -69,7 +69,7 @@ class BaseEscrowSerializer(HyperlinkedModelSerializer):
 # Could be split into two serializer, one of which will be used for POST end-point and
 # will include fields that should not be returned for GET details request (like raw "args")
 class EscrowOperationSerializer(HyperlinkedModelSerializer):
-    id = UUIDField()
+    id = UUIDField(required=False)
     type = EnumField(enum=EscrowOperationType, required=True)
     status = EnumField(
         enum=EscrowOperationStatus,
