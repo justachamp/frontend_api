@@ -115,6 +115,7 @@ def notify_about_loaded_funds(user_id: str, transaction_info: Dict, transaction_
     load_funds_details = get_load_funds_details(transaction_info)
     emails = [user.email for user in funds_recipients if user.notify_by_email and user.email]
     logger.info("Load funds. Funds recipient emails: %s" % ", ".join(emails))
+    logger.info("Load funds. Details: %s" % load_funds_details)
     send_bulk_emails(emails=emails,
                      context=load_funds_details,
                      tpl_filename=tpl_filename)
@@ -130,6 +131,7 @@ def notify_about_loaded_funds(user_id: str, transaction_info: Dict, transaction_
     }
     phone_numbers = [user.phone_number for user in funds_recipients if user.notify_by_phone and user.phone_number]
     logger.info("Load funds. Funds recipient phone numbers: %s" % ", ".join(phone_numbers))
+    logger.info("Load funds. SMS context: %s" % load_funds_details)
     send_bulk_smses(phone_numbers=phone_numbers,
                     context=sms_context,
                     tpl_message=message_tpl)

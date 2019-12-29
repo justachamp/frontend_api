@@ -229,7 +229,7 @@ def process_schedule_transaction_change(transaction_info: Dict):
 
     # Do not notify about hidden transactions
     if is_hidden:
-        logger.info("Omit sending notification about escrow transaction(id=%s), since it's hidden" % transaction_id)
+        logger.info("Omit sending notification about transaction(id=%s), since it's hidden" % transaction_id)
         return
 
     try:
@@ -287,7 +287,7 @@ def process_escrow_transaction_change(transaction_info: Dict):
 
     # Do not notify about hidden transactions
     if is_hidden:
-        logger.info("Omit sending notification about escrow transaction(id=%s), since it's hidden" % transaction_id)
+        logger.info("Omit sending notification about transaction(id=%s), since it's hidden" % transaction_id)
         return
 
     try:

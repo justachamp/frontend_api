@@ -22,8 +22,10 @@ register = template.Library()
 # Key is a transaction name from payment service, value is transaction type for appearance in templates
 transaction_names = {
     "CreditCardToWallet": 'Card',
+    "CreditCardToVirtualWallet": 'Card',
     "IncomingContribution": 'Incoming Contribution',
     "DirectDebitToWallet": 'Direct Debit',
+    "DirectDebitToVirtualWallet": 'Direct Debit',
     "WalletToIban": 'External',
     "IbanToWallet": 'Incoming Bank Transfer',
     "IncomingInternal": 'Internal In',
