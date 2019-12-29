@@ -225,7 +225,7 @@ def process_schedule_transaction_change(transaction_info: Dict):
     transaction_id = transaction_info.get("transaction_id")
     schedule_id = transaction_info.get("schedule_id")
     transaction_status = TransactionStatusType(transaction_info.get("status"))
-    is_hidden = transaction_info.get("is_hidden") == 'true'
+    is_hidden = bool(int(transaction_info.get("is_hidden", 0)))
 
     # Do not notify about hidden transactions
     if is_hidden:
@@ -262,7 +262,7 @@ def process_escrow_transaction_change(transaction_info: Dict):
     funding_source_id = transaction_info.get("funding_source_id")  # origin of money
     funding_source_id = UUID(funding_source_id) if funding_source_id else None
     closing_balance = transaction_info.get("closing_balance")
-    is_hidden = transaction_info.get("is_hidden") == 'true'
+    is_hidden = bool(int(transaction_info.get("is_hidden", 0)))
 
     # Do not process transactions that are still processing
     if transaction_status in Escrow.PENDING_TRANSACTION_STATUSES:
