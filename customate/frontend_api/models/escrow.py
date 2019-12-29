@@ -800,6 +800,7 @@ class ReleaseFundsEscrowOperation(EscrowOperation):
 
             payment_service.Payment.create(
                 user_id=escrow.funder_user.id,
+                target_user_id=escrow.recipient_user.id,
                 payment_account_id=escrow.funder_payment_account_id,
                 escrow_id=self.escrow.id,
                 currency=Currency(escrow.currency),

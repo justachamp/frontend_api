@@ -113,6 +113,7 @@ class Payment:
                payment_id: UUID = None,
                escrow_id: UUID = None,
                parent_payment_id: UUID = None,
+               target_user_id: UUID = None,
                execution_date: datetime = None) -> PaymentResult:
         """
         Initiates payment.
@@ -130,6 +131,7 @@ class Payment:
         :param payee_id:
         :param funding_source_id:
         :param parent_payment_id:
+        :param target_user_id:
         :param execution_date:
         :return:
         """
@@ -138,7 +140,8 @@ class Payment:
             "amount": amount,
             "description": description,
             "parentPaymentId": str(parent_payment_id) if parent_payment_id else None,
-            "executionDate": datetime.timestamp(execution_date) if execution_date else None
+            "executionDate": datetime.timestamp(execution_date) if execution_date else None,
+            "targetUserId": str(target_user_id) if target_user_id else None
         }
         if escrow_id:
             data.update({
