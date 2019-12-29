@@ -66,6 +66,67 @@ class BaseEscrowSerializer(HyperlinkedModelSerializer):
         raise NotImplemented()
 
 
+# Could be split into two serializer, one of which will be used for POST end-point and
+# will include fields that should not be returned for GET details request (like raw "args")
+class EscrowOperationSerializer(HyperlinkedModelSerializer):
+    id = UUIDField()
+    type = EnumField(enum=EscrowOperationType, required=True)
+    status = EnumField(
+        enum=EscrowOperationStatus,
+        default=EscrowOperationStatus.pending,
+        required=False,
+        read_only=True
+    )
+    escrow_id = UUIDField(required=True)
+    additional_information = CharField(required=False, read_only=True)
+    amount = SerializerMethodField()
+    is_action_required = SerializerMethodField()
+    args = JSONField(required=False)
+
+    class Meta:
+        model = EscrowOperation
+        fields = (
+            'id',
+            'created_at',
+            'type',
+            'escrow_id',
+            'additional_information',
+            'amount',
+            'status',
+            'is_action_required',
+            'args'
+        )
+
+    def get_amount(self, op: EscrowOperation) -> int or None:
+        """
+        Get amount or None if not applicable to current operation
+        :param op:
+        :return:
+        """
+        if op.type in [EscrowOperationType.load_funds, EscrowOperationType.release_funds]:
+            sop = EscrowOperation.cast(op)  # type: Union[LoadFundsEscrowOperation, ReleaseFundsEscrowOperation]
+            return sop.amount
+        return None
+
+    def get_is_action_required(self, op: EscrowOperation) -> bool:
+        """
+        Whether this EscrowOperation requires some action from current user.
+        #We need to require actions only from operation's counterpart user
+
+        :param op: EscrowOperation
+        :return:
+        """
+        current_user = self.context.get('request').user
+
+        # no action required for creators
+        if op.creator.id == current_user.id:
+            return False
+
+        # if operation requires approval, verify that it wasn't given
+        if op.requires_mutual_approval:
+            return op.status is EscrowOperationStatus.pending
+
+
 class EscrowSerializer(BaseEscrowSerializer):
     name = CharField(required=True)
     status = EnumField(enum=EscrowStatus, default=EscrowStatus.pending, required=False)
@@ -103,6 +164,11 @@ class EscrowSerializer(BaseEscrowSerializer):
     additional_information = CharField(required=False, max_length=140)
     documents = SerializerField(resource=DocumentSerializer, many=True, required=False)
 
+    # We don't load/display escrow operations for Escrow with status "pending_funding", but UI must get information
+    # (initial Escrow's "amount" value in particular) about pending "load_funds" operation, which would be accepted
+    # after user click "Load funds" button and submit form
+    last_operation = SerializerField(resource=EscrowOperationSerializer, required=False)
+
     purpose = SerializerMethodField()
     counterpart_email = SerializerMethodField()
     counterpart_name = SerializerMethodField()
@@ -129,6 +195,7 @@ class EscrowSerializer(BaseEscrowSerializer):
 
             'additional_information',
             'documents',
+            'last_operation',
 
             'counterpart_email',
             'counterpart_name',
@@ -250,61 +317,3 @@ class EscrowSerializer(BaseEscrowSerializer):
         logger.info("Assigned documents to escrow: %s" % self.instance.id)
         Document.objects.filter(key__in=[item["key"] for item in documents]).update(escrow=self.instance)
 
-
-# Could be split into two serializer, one of which will be used for POST end-point and
-# will include fields that should not be returned for GET details request (like raw "args")
-class EscrowOperationSerializer(HyperlinkedModelSerializer):
-    type = EnumField(enum=EscrowOperationType, required=True)
-    status = EnumField(
-        enum=EscrowOperationStatus,
-        default=EscrowOperationStatus.pending,
-        required=False,
-        read_only=True
-    )
-    escrow_id = UUIDField(required=True)
-    additional_information = CharField(required=False, read_only=True)
-    amount = SerializerMethodField()
-    is_action_required = SerializerMethodField()
-    args = JSONField(required=False)
-
-    class Meta:
-        model = EscrowOperation
-        fields = (
-            'created_at',
-            'type',
-            'escrow_id',
-            'additional_information',
-            'amount',
-            'status',
-            'is_action_required',
-            'args'
-        )
-
-    def get_amount(self, op: EscrowOperation) -> int or None:
-        """
-        Get amount or None if not applicable to current operation
-        :param op:
-        :return:
-        """
-        if op.type in [EscrowOperationType.load_funds, EscrowOperationType.release_funds]:
-            sop = EscrowOperation.cast(op)  # type: Union[LoadFundsEscrowOperation, ReleaseFundsEscrowOperation]
-            return sop.amount
-        return None
-
-    def get_is_action_required(self, op: EscrowOperation) -> bool:
-        """
-        Whether this EscrowOperation requires some action from current user.
-        #We need to require actions only from operation's counterpart user
-
-        :param op: EscrowOperation
-        :return:
-        """
-        current_user = self.context.get('request').user
-
-        # no action required for creators
-        if op.creator.id == current_user.id:
-            return False
-
-        # if operation requires approval, verify that it wasn't given
-        if op.requires_mutual_approval:
-            return op.status is EscrowOperationStatus.pending
