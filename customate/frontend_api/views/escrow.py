@@ -300,7 +300,7 @@ class EscrowOperationViewSet(views.ModelViewSet):
 
         # Check if operations Escrow has pending payment operations.
         escrow = get_object_or_404(Escrow, id=serializer.validated_data['escrow_id'])
-        if escrow.last_operation.approved is None:
+        if escrow.has_pending_operation:
             raise ValidationError("New request is not allowed, since previous request is not approved yet.")
 
         try:

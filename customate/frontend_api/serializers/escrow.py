@@ -238,6 +238,9 @@ class EscrowSerializer(BaseEscrowSerializer):
         if escrow.has_pending_payment:
             return False
 
+        if escrow.has_pending_operation and escrow.status is not EscrowStatus.pending_funding:
+            return False
+
         latest_op = LoadFundsEscrowOperation.objects.filter(escrow__id=escrow.id).order_by("-created_at").first()
         current_user = self.context.get('request').user
 

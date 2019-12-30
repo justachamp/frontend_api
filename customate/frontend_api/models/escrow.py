@@ -163,6 +163,10 @@ class Escrow(Model):
         """
         if self.has_pending_payment:
             return False
+
+        if self.has_pending_operation:
+            return False
+
         if self.status is not EscrowStatus.ongoing:
             return False
 
@@ -179,6 +183,9 @@ class Escrow(Model):
         :return:
         """
         if self.has_pending_payment:
+            return False
+
+        if self.has_pending_operation:
             return False
 
         # Obviously, no money to release
@@ -316,6 +323,10 @@ class Escrow(Model):
         :return:
         """
         return EscrowOperation.objects.filter(escrow__id=self.id).order_by("-created_at").first()
+
+    @property
+    def has_pending_operation(self) -> bool:
+        return self.last_operation.status is EscrowOperationStatus.pending
 
     def accept(self):
         """
