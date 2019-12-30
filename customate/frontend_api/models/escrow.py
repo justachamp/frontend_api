@@ -285,7 +285,6 @@ class Escrow(Model):
         """
         return LoadFundsEscrowOperation.objects.filter(escrow__id=self.id).order_by("-created_at").first()
 
-
     @property
     def create_escrow_operation(self) -> CreateEscrowOperation or None:
         """

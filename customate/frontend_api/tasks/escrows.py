@@ -8,7 +8,7 @@ from django.core.paginator import Paginator
 from django.conf import settings
 from django.db.models import DateField, ExpressionWrapper, F, Q
 
-from frontend_api.models.escrow import Escrow, LoadFundsEscrowOperation
+from frontend_api.models.escrow import Escrow, LoadFundsEscrowOperation, CreateEscrowOperation
 from frontend_api.fields import EscrowStatus
 from frontend_api.notifications.escrows import (
     notify_about_fund_escrow_state,
@@ -37,9 +37,18 @@ def process_unaccepted_escrows():
     for page in paginator.page_range:
         for operation in paginator.page(page).object_list:  # type: LoadFundsEscrowOperation
             logger.info("Unaccepted operation id=%s and related escrow id=%s" % (operation.id, operation.escrow.id))
-            operation.escrow.move_to_status(EscrowStatus.terminated)
+            # We must mark "create_escrow" operation as expired if Escrow is in "pending" state
+            if operation.escrow.status is EscrowStatus.pending:
+                create_escrow_operation = operation.escrow.create_escrow_operation  # type: CreateEscrowOperation
+                create_escrow_operation.expire()
+
+            # Reject initial "load_funds" operation
             operation.expire()
             operation.reject()
+
+            # Terminate Escrow itself
+            operation.escrow.move_to_status(EscrowStatus.terminated)
+
             # Send appropriate notification to seller
             notify_about_fund_escrow_state(escrow=operation.escrow)
 
