@@ -317,13 +317,6 @@ def process_escrow_transaction_change(transaction_info: Dict):
                 #     transaction_info=transaction_info,
                 #     tpl_filename='notifications/email_users_balance_updated.html'
                 # )
-            if transaction_status in [TransactionStatusType.FAILED]:
-                notify_escrow_funder_about_transaction_status(
-                    escrow=escrow,
-                    transaction_info=transaction_info,
-                    tpl_filename='notifications/email_transaction_failed.html',
-                )
-                pass
 
         # E->R Stage: money leaves Escrow wallet ()
         if funding_source_id == escrow.transit_funding_source_id:
