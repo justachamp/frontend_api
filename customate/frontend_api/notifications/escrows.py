@@ -78,7 +78,7 @@ def notify_about_fund_escrow_state(escrow: Escrow, transaction_info: Optional[Di
             "escrow": escrow
         }
         tpl_filename = "notifications/escrow_has_not_been_funded.html"
-        logger.info("Start notify about funds escrow state. Escrow funded. Recipient: %s, context: %s" %
+        logger.info("Start notify about funds escrow state. Escrow has not been funded. Recipient: %s, context: %s" %
                     (recipient.email, context))
     else:
         context = {
@@ -95,7 +95,7 @@ def notify_about_fund_escrow_state(escrow: Escrow, transaction_info: Optional[Di
         tpl_context=context,
         subject=settings.AWS_SES_SUBJECT_NAME
     )
-    logger.info("Start notify about funds escrow state. Escrow has not been funded. Recipient: %s, Transaction info: %s" %
+    logger.info("Start notify about funds escrow state. Recipient: %s, Transaction info: %s" %
                 (recipient.email, transaction_info))
     send_notification_email.delay(to_address=recipient.email, message=message)
 
@@ -271,7 +271,7 @@ def notify_escrow_funder_about_transaction_status(escrow: Escrow, transaction_in
         tpl_context=context,
         subject=settings.AWS_SES_SUBJECT_NAME
         )
-    logger.info("Start notify funder about transaction status. \
-                Funder: %s, Transaction_info: %s. Escrow: %s. Context: %s" %
+    logger.info("Start notify funder about transaction status. "
+                "Funder: %s, Transaction_info: %s. Escrow: %s. Context: %s" %
                 (funder.email, transaction_info, escrow.id, context))
     send_notification_email.delay(to_address=funder.email, message=message)

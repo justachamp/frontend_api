@@ -305,14 +305,18 @@ def process_escrow_transaction_change(transaction_info: Dict):
                     escrow=escrow,
                     transaction_info=transaction_info
                 )
+
+                # Notification below is not required (check Denis's document)
+                # or funder will get notification from his own wallet (separate payment)
+
                 # Send notification about updated wallet balance to funder
                 # Funder should get such context:
                 # sign '-', escrow name, wallet balance
-                notify_escrow_funder_about_transaction_status(
-                    escrow=escrow,
-                    transaction_info=transaction_info,
-                    tpl_filename='notifications/email_users_balance_updated.html'
-                )
+                # notify_escrow_funder_about_transaction_status(
+                #     escrow=escrow,
+                #     transaction_info=transaction_info,
+                #     tpl_filename='notifications/email_users_balance_updated.html'
+                # )
             if transaction_status in [TransactionStatusType.FAILED]:
                 notify_escrow_funder_about_transaction_status(
                     escrow=escrow,
@@ -321,21 +325,40 @@ def process_escrow_transaction_change(transaction_info: Dict):
                 )
                 pass
 
-        # E->R Stage: money leaves Escrow wallet
+        # E->R Stage: money leaves Escrow wallet ()
         if funding_source_id == escrow.transit_funding_source_id:
-            if transaction_status in [TransactionStatusType.SUCCESS]:
+            # "Release" it's not common name for "OutgoingInternal" transaction, so we pre-set it like this
+            # Footer replaces "(Wallet=>Escrow) available balance:" in template.
+            additional_context = {'transaction_type': 'Release', "footer": "Escrow available balance"}
+
+            # Send notification for SUCCESS transaction only if this transaction is related to "Release" operation
+            # (payee in this case will belong to Recipient) it could be that it's a "Close" operation as well (payee
+            # will belong to Funder), but we don't need to inform funder with this notification in this case
+            # (he will be informed by "IncomingInternal" payment)
+            if transaction_status in [TransactionStatusType.SUCCESS] and payee_id == escrow.payee_id:
+                # Notification below (to both parties) is not required (check Denis's document)
+
                 # Send notification to recipient and funder
-                notify_parties_about_funds_transfer(
+                # notify_parties_about_funds_transfer(
+                #     escrow=escrow,
+                #     transaction_info=transaction_info
+                # )
+
+                # Recipient will receive separate event for his own incoming payment, so we shouldn't worry about him
+                # right here, just send notification to funder
+                notify_escrow_funder_about_transaction_status(
                     escrow=escrow,
-                    transaction_info=transaction_info
+                    transaction_info=transaction_info,
+                    tpl_filename='notifications/email_users_balance_updated.html',
+                    additional_context=additional_context
                 )
+
             if transaction_status in [TransactionStatusType.FAILED]:
                 notify_escrow_funder_about_transaction_status(
                     escrow=escrow,
                     transaction_info=transaction_info,
                     tpl_filename="notifications/email_transaction_failed.html",
-                    # footer replaces "(Wallet=>Escrow) available balance:" in template.
-                    additional_context={"footer": "Escrow available balance"}
+                    additional_context=additional_context
                 )
 
     except Exception:
@@ -354,16 +377,18 @@ def process_general_money_movement(transaction_info: Dict):
     transaction_status = TransactionStatusType(transaction_info.get("status"))
     is_hidden = bool(int(transaction_info.get("is_hidden", 0)))
 
-    ignored_names = [
-        # Escrow specific types
-        'WalletToVirtualWallet',
-        'OutgoingInternal',  # This type is Escrow specific only with 'if not schedule_id' condition.
-        'VirtualWalletToWallet'
-    ]
-    # Current function must process "out of Escrow scope" payments.
-    if transaction_name in ignored_names:
-        logger.info("Exiting, since name is in %r, transaction_info=%r" % (ignored_names, transaction_info))
-        return
+    # Looks like we don't need to ignore any transactions by name now
+
+    # ignored_names = [
+    #     # Escrow specific types
+    #     'WalletToVirtualWallet',
+    #     'OutgoingInternal',  # This type is Escrow specific only with 'if not schedule_id' condition.
+    #     'VirtualWalletToWallet'
+    # ]
+    # # Current function must process "out of Escrow scope" payments.
+    # if transaction_name in ignored_names:
+    #     logger.info("Exiting, since name is in %r, transaction_info=%r" % (ignored_names, transaction_info))
+    #     return
 
     # Do not notify about hidden transactions
     if is_hidden:
@@ -374,8 +399,20 @@ def process_general_money_movement(transaction_info: Dict):
     notify_about_loaded_funds(
         user_id=user_id,
         transaction_info=transaction_info,
-        transaction_status=transaction_status
+        transaction_status=transaction_status,
+        additional_context=get_general_money_movement_additional_context(transaction_info)
     )
+
+
+def get_general_money_movement_additional_context(transaction_info: Dict) -> Dict:
+    # It's common notification, but we would like to add Escrow's name to it (because notification template has it),
+    # if transaction contains link to any
+    result = {}
+    escrow = get_transaction_related_escrow(transaction_info)
+    if escrow is not None:
+        result.update({'name': escrow.name})
+
+    return result
 
 
 @shared_task
@@ -412,13 +449,59 @@ def on_transaction_change(transaction_info: Dict):
         'transaction_status': transaction_status,
     })
 
-    if schedule_id is None and escrow_id is None:
+    # if schedule_id is None and escrow_id is None:
+    #     process_general_money_movement(transaction_info=transaction_info)
+    #
+    # # Persist balance to Escrow object
+    # process_escrow_transaction_change(transaction_info=transaction_info)
+    # # schedule specific logic
+    # process_schedule_transaction_change(transaction_info=transaction_info)
+
+    if is_schedule_related_transaction(transaction_info):
+        process_schedule_transaction_change(transaction_info=transaction_info)
+    elif is_escrow_wallet_related_transaction(transaction_info):
+        process_escrow_transaction_change(transaction_info=transaction_info)
+    else:
         process_general_money_movement(transaction_info=transaction_info)
 
-    # Persist balance to Escrow object
-    process_escrow_transaction_change(transaction_info=transaction_info)
-    # schedule specific logic
-    process_schedule_transaction_change(transaction_info=transaction_info)
+
+def is_schedule_related_transaction(transaction_info: Dict):
+    transaction_id = transaction_info.get("transaction_id")
+    schedule_id = transaction_info.get("schedule_id")
+
+    result = schedule_id is not None and Schedule.objects.filter(id=schedule_id).exists()
+    logger.info("is_schedule_related_transaction returned %s for transaction_id=%s" % (result, transaction_id), extra={
+            'transaction_id': transaction_id,
+            'schedule_id': schedule_id
+        })
+    return result
+
+
+def is_escrow_wallet_related_transaction(transaction_info: Dict):
+    transaction_id = transaction_info.get("transaction_id")
+    wallet_id = transaction_info.get("wallet_id")
+
+    result = Escrow.objects.filter(wallet_id=wallet_id).exists()
+    logger.info("is_escrow_wallet_related_transaction returned %s for transaction_id=%s" % (
+        result, transaction_id
+    ), extra={
+        'transaction_id': transaction_id,
+        'wallet_id': wallet_id
+    })
+    return result
+
+
+def get_transaction_related_escrow(transaction_info: Dict):
+    transaction_id = transaction_info.get("transaction_id")
+    escrow_id = transaction_info.get("escrow_id")
+    result = None
+
+    try:
+        result = Escrow.objects.get(id=escrow_id)
+    except ObjectDoesNotExist:
+        logger.debug("Transaction (id=%s) does not contain reference to Escrow" % transaction_id)
+
+    return result
 
 
 def find_escrow_by_criteria(payment_info: Dict) -> Escrow or None:
@@ -516,7 +599,7 @@ def process_escrow_payment_change(payment_info: Dict):
     escrow = find_escrow_by_criteria(payment_info)  # type: Escrow
 
     if escrow is None:
-        logger.error("Unable to find matching Escrow, which corresponds to payment_info=%r" % payment_info)
+        logger.info("Unable to find matching Escrow, which corresponds to payment_info=%r" % payment_info)
         return
 
     logger.info("Processing Escrow=%r" % escrow)
