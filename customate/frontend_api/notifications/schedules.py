@@ -71,7 +71,9 @@ def invite_payer(schedule: Schedule) -> None:
                      tpl_filename="notifications/email_invite_payer.html")
 
 
-def notify_about_loaded_funds(user_id: str, transaction_info: Dict, transaction_status: TransactionStatusType) -> None:
+# TODO: shouldn't we extract this method to separate file, something like "notifications/common.py"?
+def notify_about_loaded_funds(user_id: str, transaction_info: Dict, transaction_status: TransactionStatusType,
+                              additional_context: Dict = None) -> None:
     """
     Sends notification to user about updated balance after 'load funds' operation has completed.
     :param: user_id
@@ -112,7 +114,11 @@ def notify_about_loaded_funds(user_id: str, transaction_info: Dict, transaction_
     }[transaction_status]
 
     funds_recipients = get_funds_recipients(funds_recipient=funds_recipient)
+    logger.info("Load funds. Funds recipients: %s" % funds_recipients)
     load_funds_details = get_load_funds_details(transaction_info)
+    if additional_context:
+        load_funds_details.update(additional_context)
+
     emails = [user.email for user in funds_recipients if user.notify_by_email and user.email]
     logger.info("Load funds. Funds recipient emails: %s" % ", ".join(emails))
     logger.info("Load funds. Details: %s" % load_funds_details)
