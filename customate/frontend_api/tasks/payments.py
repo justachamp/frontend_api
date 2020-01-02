@@ -16,7 +16,7 @@ from django.db.models import Q
 
 from core.logger import RequestIdGenerator
 from core.models import User
-from core.fields import Currency, PaymentStatusType, TransactionStatusType, FundingSourceType
+from core.fields import Currency, PaymentStatusType, TransactionStatusType, FundingSourceType, PayeeType
 
 import external_apis.payment.service as payment_service
 
@@ -252,6 +252,7 @@ def process_escrow_transaction_change(transaction_info: Dict):
     :param transaction_info:
     :return:
     """
+    user_id = transaction_info.get("user_id")
     transaction_id = transaction_info.get("transaction_id")
     transaction_status = TransactionStatusType(transaction_info.get("status"))
     wallet_id = transaction_info.get("wallet_id")
@@ -280,12 +281,14 @@ def process_escrow_transaction_change(transaction_info: Dict):
         logger.info("Unable to find matching Escrow, which corresponds to transaction_info=%r" % transaction_info)
         return
 
-    # There are some risks if we will cast to int during first variable declaration: incoming value could be "null" (for
-    # pending/processing transactions) and we will get ValueError
-    closing_balance = int(closing_balance)
-    # Pending/processing transaction doesn't have value in closing balance field, so we should update Escrow's balance
-    # only after verification for transaction's status.
-    escrow.update_balance(closing_balance)
+    is_escrow_wallet_related = is_escrow_wallet_related_transaction(transaction_info)
+    if is_escrow_wallet_related:
+        # There are some risks if we will cast to int during first variable declaration: incoming value could be "null"
+        # (for pending/processing transactions) and we will get ValueError
+        closing_balance = int(closing_balance)
+        # Pending/processing transaction doesn't have value in closing balance field, so we should update Escrow's
+        # balance only after verification for transaction's status.
+        escrow.update_balance(closing_balance)
 
     # Do not notify about hidden transactions
     if is_hidden:
@@ -293,34 +296,54 @@ def process_escrow_transaction_change(transaction_info: Dict):
         return
 
     try:
-        # Since escrow is 2-stage process, i.e.  Funder -> Escrow Wallet -> Recipient,
-        # we need to figure out which stage we're currently on (F->E, or E->R), to do this we'll use
+        # Escrow is 3-stage process (Funder -> Escrow Wallet & Escrow Wallet -> Recipient & Escrow Wallet -> Funder)
+        # and we need to figure out which stage we're currently on (F->E, E->R or E->F), to do this we'll use
         # `payee_id` and `funding_source_id`
 
-        # F->E Stage: money gets into Escrow wallet
-        if payee_id == escrow.transit_payee_id:
+        # F->E Stage: load money into Escrow wallet
+        if is_escrow_wallet_related and payee_id == escrow.transit_payee_id:
             logger.info("Notify parties about transaction status and balance amount after Escrow funding attempts.\
                         Transaction info: %s" % transaction_info)
+
+            additional_context = {"footer": "Escrow available balance"}
+
             if transaction_status in [TransactionStatusType.SUCCESS]:
+                logger.info("Notifying about SUCCESS load funds transaction (id=%s)" % transaction_id)
                 # Send notification to recipient
                 notify_about_fund_escrow_state(
                     escrow=escrow,
                     transaction_info=transaction_info
                 )
 
-            # There is a special case/scenario when we are trying to Load funds to an Escrow from WALLET, this kind of
-            # payment (WalletToVirtualWallet) has two created payments in case in failure, and we will receive two
-            # notifications, to avoid duplicates with notifications we need to ignore one of them. To do so, we added
-            # verification by funding source's type (so notification will be created by "process_general_money_movement")
-            if transaction_status in [TransactionStatusType.FAILED] and funding_source_type is not FundingSourceType.WALLET:
-                notify_escrow_funder_about_transaction_status(
-                    escrow=escrow,
-                    transaction_info=transaction_info,
-                    tpl_filename='notifications/email_transaction_failed.html',
-                )
+                # We don't want to send notification for IncomingInternal from WALLET here, because it doesn't contain
+                # original wallet's balance, and we need it (not Escrow's balance) in notification
+                if funding_source_type is not FundingSourceType.WALLET:
+                    notify_escrow_funder_about_transaction_status(
+                        escrow=escrow,
+                        transaction_info=transaction_info,
+                        tpl_filename='notifications/email_users_balance_updated.html',
+                        additional_context=additional_context
+                    )
 
-        # E->R Stage: money leaves Escrow wallet ()
-        if funding_source_id == escrow.transit_funding_source_id:
+            if transaction_status in [TransactionStatusType.FAILED]:
+                logger.info("Notifying about FAILED load funds transaction (id=%s)" % transaction_id)
+
+                # We don't want to send notification for IncomingInternal from WALLET here, because it doesn't contain
+                # original wallet's balance, and we need it (not Escrow's balance) in notification
+                if funding_source_type is not FundingSourceType.WALLET:
+                    notify_escrow_funder_about_transaction_status(
+                        escrow=escrow,
+                        transaction_info=transaction_info,
+                        tpl_filename='notifications/email_transaction_failed.html',
+                        additional_context=additional_context
+                    )
+
+        # E->R Stage: release money from Escrow wallet to Recipient
+        elif is_escrow_wallet_related and funding_source_id == escrow.transit_funding_source_id \
+                and payee_id == escrow.payee_id:
+            logger.info("Notify parties about transaction status and balance amount after Escrow release attempts.\
+                        Transaction info: %s" % transaction_info)
+
             # "Release" it's not common name for "OutgoingInternal" transaction, so we pre-set it like this
             # Footer replaces "(Wallet=>Escrow) available balance:" in template.
             additional_context = {'transaction_type': 'Release', "footer": "Escrow available balance"}
@@ -329,7 +352,8 @@ def process_escrow_transaction_change(transaction_info: Dict):
             # (payee in this case will belong to Recipient) it could be that it's a "Close" operation as well (payee
             # will belong to Funder), but we don't need to inform funder with this notification in this case
             # (he will be informed by "IncomingInternal" payment)
-            if transaction_status in [TransactionStatusType.SUCCESS] and payee_id == escrow.payee_id:
+            if transaction_status in [TransactionStatusType.SUCCESS]:
+                logger.info("Notifying about SUCCESS release funds transaction (id=%s)" % transaction_id)
                 # Recipient will receive separate event for his own incoming payment, so we shouldn't worry about him
                 # right here, just send notification to funder
                 notify_escrow_funder_about_transaction_status(
@@ -340,12 +364,55 @@ def process_escrow_transaction_change(transaction_info: Dict):
                 )
 
             if transaction_status in [TransactionStatusType.FAILED]:
+                logger.info("Notifying about FAILED release funds transaction (id=%s)" % transaction_id)
                 notify_escrow_funder_about_transaction_status(
                     escrow=escrow,
                     transaction_info=transaction_info,
                     tpl_filename="notifications/email_transaction_failed.html",
                     additional_context=additional_context
                 )
+
+        # E->F Stage: refund funds from Escrow wallet to Funder (after Escrow was closed):
+        # - VirtualWalletToWallet (consists of two payments VirtualWalletToWallet and IncomingInternal)
+        elif funding_source_id == escrow.transit_funding_source_id and not payee_id == escrow.payee_id:
+            logger.info("Notify parties about transaction status and balance amount after Escrow refunding attempts.\
+                        Transaction info: %s" % transaction_info)
+
+            if transaction_status in [TransactionStatusType.SUCCESS] and is_escrow_wallet_related:
+                # We are noe required to send notification for VirtualWalletToWallet (escrow's balance will be 0)
+                logger.info("Omit sending notification about transaction(id=%s), since it's not required "
+                            "(VirtualWalletToWallet)" % transaction_id)
+            else:
+                additional_context = {'name': escrow.name}
+                if escrow.funder_user.id == UUID(user_id):  # Return money to funder after closing an Escrow
+                    additional_context.update({'transaction_type': 'Refund'})
+
+                notify_about_loaded_funds(
+                    user_id=user_id,
+                    transaction_info=transaction_info,
+                    transaction_status=transaction_status,
+                    additional_context=additional_context
+                )
+
+        # - IncomingInternal (release funds, payment to Recipient's wallet)
+        # - IncomingInternal (close escrow, payment to Funder's wallet)
+        # - WalletToVirtualWallet (load funds from wallet, payment to Funder's wallet)
+        # all these payments are not linked with Escrow's wallet, but we may want to create notifications for them here
+        # instead of doing this in "process_general_money_movement".
+        elif not is_escrow_wallet_related:
+            logger.info("Notify parties about transaction that is not directly linked to Escrow wallet.\
+                        Transaction info: %s" % transaction_info)
+
+            additional_context = {'name': escrow.name}
+            # if escrow.funder_user.id == UUID(user_id):  # Return money to funder after closing an Escrow
+            #     additional_context.update({'transaction_type': 'Refund'})
+
+            notify_about_loaded_funds(
+                user_id=user_id,
+                transaction_info=transaction_info,
+                transaction_status=transaction_status,
+                additional_context=additional_context
+            )
 
     except Exception:
         logger.error("Unable to process notifications for Escrow id=%s, exc=%r" % (escrow_id, format_exc()))
@@ -359,7 +426,6 @@ def process_general_money_movement(transaction_info: Dict):
     """
     transaction_id = transaction_info.get("transaction_id")
     user_id = transaction_info.get("user_id")
-    transaction_name = transaction_info.get("name")
     transaction_status = TransactionStatusType(transaction_info.get("status"))
     is_hidden = bool(int(transaction_info.get("is_hidden", 0)))
 
@@ -372,8 +438,7 @@ def process_general_money_movement(transaction_info: Dict):
     notify_about_loaded_funds(
         user_id=user_id,
         transaction_info=transaction_info,
-        transaction_status=transaction_status,
-        additional_context=get_general_money_movement_additional_context(transaction_info)
+        transaction_status=transaction_status
     )
 
 
@@ -424,7 +489,7 @@ def on_transaction_change(transaction_info: Dict):
 
     if is_schedule_related_transaction(transaction_info):
         process_schedule_transaction_change(transaction_info=transaction_info)
-    elif is_escrow_wallet_related_transaction(transaction_info):
+    elif is_escrow_related_transaction(transaction_info):
         process_escrow_transaction_change(transaction_info=transaction_info)
     else:
         process_general_money_movement(transaction_info=transaction_info)
@@ -438,6 +503,18 @@ def is_schedule_related_transaction(transaction_info: Dict):
     logger.info("is_schedule_related_transaction returned %s for transaction_id=%s" % (result, transaction_id), extra={
             'transaction_id': transaction_id,
             'schedule_id': schedule_id
+        })
+    return result
+
+
+def is_escrow_related_transaction(transaction_info: Dict):
+    transaction_id = transaction_info.get("transaction_id")
+    escrow_id = transaction_info.get("escrow_id")
+
+    result = escrow_id is not None and Escrow.objects.filter(id=escrow_id).exists()
+    logger.info("is_escrow_related_transaction returned %s for transaction_id=%s" % (result, transaction_id), extra={
+            'transaction_id': transaction_id,
+            'escrow_id': escrow_id
         })
     return result
 
@@ -498,19 +575,19 @@ def find_escrow_by_criteria(payment_info: Dict) -> Escrow or None:
     except ObjectDoesNotExist:
         logger.info("Unable to find Escrow by wallet_id=%s" % wallet_id)
 
-    # # CASE 1: try to find it by 'escrow_id'
-    # try:
-    #     escrow = Escrow.objects.get(id=escrow_id)
-    #     logger.info("payment_id=%s is related to Escrow(id=%s, status=%s) by escrow_id" % (
-    #         payment_id, escrow.id, escrow.status
-    #     ), extra={
-    #         'payment_id': payment_id,
-    #         'escrow_id': escrow.id,
-    #         'escrow_status': escrow.status,
-    #     })
-    # except ObjectDoesNotExist:
-    #     logger.info("Unable to find Escrow by  escrow_id=%s" % escrow_id)
-    #
+    # CASE 1: try to find it by 'escrow_id'
+    try:
+        escrow = Escrow.objects.get(id=escrow_id)
+        logger.info("payment_id=%s is related to Escrow(id=%s, status=%s) by escrow_id" % (
+            payment_id, escrow.id, escrow.status
+        ), extra={
+            'payment_id': payment_id,
+            'escrow_id': escrow.id,
+            'escrow_status': escrow.status,
+        })
+    except ObjectDoesNotExist:
+        logger.info("Unable to find Escrow by  escrow_id=%s" % escrow_id)
+
     # # CASE 2: try to find it by 'payee_id'
     # # In this case 'payee_id' == 'escrow.transit_payee_id', and this means that money goes from Funder -> Escrow
     # if escrow is None:
