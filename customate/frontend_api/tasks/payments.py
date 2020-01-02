@@ -16,7 +16,7 @@ from django.db.models import Q
 
 from core.logger import RequestIdGenerator
 from core.models import User
-from core.fields import Currency, PaymentStatusType, TransactionStatusType
+from core.fields import Currency, PaymentStatusType, TransactionStatusType, FundingSourceType
 
 import external_apis.payment.service as payment_service
 
@@ -261,6 +261,8 @@ def process_escrow_transaction_change(transaction_info: Dict):
     payee_id = UUID(payee_id) if payee_id else None
     funding_source_id = transaction_info.get("funding_source_id")  # origin of money
     funding_source_id = UUID(funding_source_id) if funding_source_id else None
+    funding_source_type = transaction_info.get("funding_source_type")
+    funding_source_type = FundingSourceType(funding_source_type) if funding_source_type else None
     closing_balance = transaction_info.get("closing_balance")
     is_hidden = bool(int(transaction_info.get("is_hidden", 0)))
 
@@ -306,17 +308,16 @@ def process_escrow_transaction_change(transaction_info: Dict):
                     transaction_info=transaction_info
                 )
 
-                # Notification below is not required (check Denis's document)
-                # or funder will get notification from his own wallet (separate payment)
-
-                # Send notification about updated wallet balance to funder
-                # Funder should get such context:
-                # sign '-', escrow name, wallet balance
-                # notify_escrow_funder_about_transaction_status(
-                #     escrow=escrow,
-                #     transaction_info=transaction_info,
-                #     tpl_filename='notifications/email_users_balance_updated.html'
-                # )
+            # There is a special case/scenario when we are trying to Load funds to an Escrow from WALLET, this kind of
+            # payment (WalletToVirtualWallet) has two created payments in case in failure, and we will receive two
+            # notifications, to avoid duplicates with notifications we need to ignore one of them. To do so, we added
+            # verification by funding source's type (so notification will be created by "process_general_money_movement")
+            if transaction_status in [TransactionStatusType.FAILED] and funding_source_type is not FundingSourceType.WALLET:
+                notify_escrow_funder_about_transaction_status(
+                    escrow=escrow,
+                    transaction_info=transaction_info,
+                    tpl_filename='notifications/email_transaction_failed.html',
+                )
 
         # E->R Stage: money leaves Escrow wallet ()
         if funding_source_id == escrow.transit_funding_source_id:
@@ -329,14 +330,6 @@ def process_escrow_transaction_change(transaction_info: Dict):
             # will belong to Funder), but we don't need to inform funder with this notification in this case
             # (he will be informed by "IncomingInternal" payment)
             if transaction_status in [TransactionStatusType.SUCCESS] and payee_id == escrow.payee_id:
-                # Notification below (to both parties) is not required (check Denis's document)
-
-                # Send notification to recipient and funder
-                # notify_parties_about_funds_transfer(
-                #     escrow=escrow,
-                #     transaction_info=transaction_info
-                # )
-
                 # Recipient will receive separate event for his own incoming payment, so we shouldn't worry about him
                 # right here, just send notification to funder
                 notify_escrow_funder_about_transaction_status(
@@ -369,19 +362,6 @@ def process_general_money_movement(transaction_info: Dict):
     transaction_name = transaction_info.get("name")
     transaction_status = TransactionStatusType(transaction_info.get("status"))
     is_hidden = bool(int(transaction_info.get("is_hidden", 0)))
-
-    # Looks like we don't need to ignore any transactions by name now
-
-    # ignored_names = [
-    #     # Escrow specific types
-    #     'WalletToVirtualWallet',
-    #     'OutgoingInternal',  # This type is Escrow specific only with 'if not schedule_id' condition.
-    #     'VirtualWalletToWallet'
-    # ]
-    # # Current function must process "out of Escrow scope" payments.
-    # if transaction_name in ignored_names:
-    #     logger.info("Exiting, since name is in %r, transaction_info=%r" % (ignored_names, transaction_info))
-    #     return
 
     # Do not notify about hidden transactions
     if is_hidden:
@@ -441,14 +421,6 @@ def on_transaction_change(transaction_info: Dict):
         'payee_id': payee_id,
         'transaction_status': transaction_status,
     })
-
-    # if schedule_id is None and escrow_id is None:
-    #     process_general_money_movement(transaction_info=transaction_info)
-    #
-    # # Persist balance to Escrow object
-    # process_escrow_transaction_change(transaction_info=transaction_info)
-    # # schedule specific logic
-    # process_schedule_transaction_change(transaction_info=transaction_info)
 
     if is_schedule_related_transaction(transaction_info):
         process_schedule_transaction_change(transaction_info=transaction_info)
