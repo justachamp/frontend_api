@@ -647,6 +647,7 @@ class CloseEscrowOperation(EscrowOperation):
             logger.info("Sending release funds payment for Escrow (id=%s)" % self.escrow.id)
             payment_result = payment_service.Payment.create(
                 user_id=self.escrow.funder_user.id,
+                target_user_id=self.escrow.funder_user.id,
                 payment_account_id=self.escrow.funder_payment_account_id,
                 currency=Currency(self.escrow.currency),
                 amount=amount,
