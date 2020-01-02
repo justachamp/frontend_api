@@ -494,6 +494,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'frontend_api.tasks.escrows.reminder_to_fund_escrow',
         'schedule': crontab(hour='00', minute="01")  # 00:01 UTC every day
     },
+    'once_per_day_update_statuses_of_unaccepted_operations': {
+        'task': 'frontend_api.tasks.escrows.process_unaccepted_operations',
+        'schedule': crontab(hour='00', minute="01")  # 00:01 UTC every day
+    },
 }
 
 PAYMENT_SYSTEM_CLOSING_TIME = environ['PAYMENT_SYSTEM_CLOSING_TIME']  # HH:mm format

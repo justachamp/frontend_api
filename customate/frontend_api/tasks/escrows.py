@@ -8,11 +8,12 @@ from django.core.paginator import Paginator
 from django.conf import settings
 from django.db.models import DateField, ExpressionWrapper, F, Q
 
-from frontend_api.models.escrow import Escrow, LoadFundsEscrowOperation, CreateEscrowOperation
+from frontend_api.models.escrow import Escrow, LoadFundsEscrowOperation, CreateEscrowOperation, EscrowOperation
 from frontend_api.fields import EscrowStatus
 from frontend_api.notifications.escrows import (
     notify_about_fund_escrow_state,
-    send_reminder_to_fund_escrow
+    send_reminder_to_fund_escrow,
+    notify_originator_about_escrow_state
 )
 
 logger = logging.getLogger(__name__)
@@ -98,4 +99,32 @@ def reminder_to_fund_escrow():
             send_reminder_to_fund_escrow(
                 escrow=operation.escrow,
                 tpl_filename="notifications/final_notice_to_fund_escrow.html"
+            )
+
+
+def process_unaccepted_operations():
+    """
+    Make sure we change operation status to rejected if inaction of parties involved.
+    Processes only escrows with 'ongoing' statuses.
+    :return:
+    """
+    today = arrow.utcnow().datetime.date()
+    expired_operations = EscrowOperation.objects.filter(
+        escrow__status=EscrowStatus.ongoing,
+        approval_deadline__lte=today,
+        approved__isnull=True
+    )
+    logger.info("Process unaccepted operations. Operations count: %s" % expired_operations.count())
+    paginator = Paginator(expired_operations, settings.CELERY_BEAT_PER_PAGE_OBJECTS)
+    for page in paginator.page_range:
+        for operation in paginator.page(page).object_list:  # type: EscrowOperation
+            operation.expire()
+            operation.reject()
+            # Send notification to operation creator
+            escrow = operation.escrow
+            counterpart = escrow.funder_user if operation.creator == escrow.recipient_user else escrow.recipient_user
+            notify_originator_about_escrow_state(
+                escrow_op=operation,
+                counterpart=counterpart,
+                tpl_filename="notifications/request_rejected_by_counterpart.html"
             )
