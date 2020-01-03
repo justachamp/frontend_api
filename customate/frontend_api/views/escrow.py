@@ -391,6 +391,15 @@ class EscrowOperationViewSet(views.ModelViewSet):
             op = EscrowOperation.cast(operation)  # type: Union[CloseEscrowOperation, ReleaseFundsEscrowOperation]
 
         op.accept()
+
+        if op.type == EscrowOperationType.close_escrow:
+            escrow = op.escrow
+            counterpart = escrow.recipient_user if op.creator.id == escrow.funder_user.id else escrow.funder_user
+            notify_originator_about_escrow_state(
+                counterpart=counterpart,
+                escrow_op=op,
+                tpl_filename="notifications/close_escrow_accepted.html"
+            )
         return Response(status=status_codes.HTTP_204_NO_CONTENT)
 
     @transaction.atomic
