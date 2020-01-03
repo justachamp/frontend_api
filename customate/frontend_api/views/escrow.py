@@ -303,6 +303,12 @@ class EscrowOperationViewSet(views.ModelViewSet):
         if escrow.has_pending_operation:
             raise ValidationError("New request is not allowed, since previous request is not approved yet.")
 
+        # Probably it would be better to call "escrow.can_***" methods here, based on the operation's type,
+        # but let's use this simpler solution for now
+        if escrow.has_pending_payment:
+            raise ValidationError("New request is not allowed, since there is a pending payment. "
+                                  "Please refresh page and try again.")
+
         try:
             if not serializer.is_valid(raise_exception=True):
                 pass
