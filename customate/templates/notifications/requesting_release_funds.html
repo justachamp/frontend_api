@@ -2,31 +2,59 @@
 {% load prettify_number %}
 
 {% block body %}
-    <div style="margin-top:42px;font-family:Roboto;font-size:34px;line-height:44px;text-align:center">
-        Hi, you received a request.
-    </div>
-
-    <hr style="width:77%;margin-top:34px;background-color:#e6e6e6;height:1px;border:0;">
-
-    <div style="margin-top:30px;font-size:15px;line-height:30px;padding-left:70px;">
-
-        <div style="display:inline-block;width:30%;font-family:Roboto;color:#697386;">Escrow name</div>
-        <div style="display:inline-block;width:65%;font-family:Roboto Bold;text-align:left;color:#000000;">{{ operation.escrow.name }}</div>
-
-        <div style="display:inline-block;width:30%;font-family:Roboto;color:#697386;">Counterpart</div>
-        <div style="display:inline-block;width:65%;font-family:Roboto Bold;text-align:left;color:#000000;">{{ counterpart.email }}</div>
-
-        <div style="display:inline-block;width:30%;font-family:Roboto;color:#697386;">To release</div>
-        <div style="display:inline-block;width:65%;font-family:Roboto Bold;text-align:left;color:#000000;">
-            {{ operation.escrow.currency.symbol }}
-            {{ operation.amount|prettify_number }}
+<tr>
+    <td></td>
+    <td>
+        <div style="height:442px;overflow:hidden;">
+            <img width="44" height="442" src="https://customate-prod-django.s3.amazonaws.com/templates/images/left-tail.png" alt="">
+        </div>
+    </td>
+    <td style="background:#ffffff;">
+        <div style="height:442px;overflow: hidden;">
+            <div style="text-align:center;margin-top:40px;">
+                <img src="https://customate-prod-django.s3.amazonaws.com/templates/images/logo.png" alt="">
+            </div>
+        <div style="margin-top:42px;font-family:Roboto;font-size:34px;line-height:44px;text-align:center">
+            Hi, you received a request.
         </div>
 
-    </div>
+        <hr style="width:77%;margin-top:34px;background-color:#e6e6e6;height:1px;border:0;">
 
-    <hr style="width:77%;margin-top:34px;background-color:#e6e6e6;height:1px;border:0;">
-
-    <div style="margin-top:32px;font-family:Roboto;font-size:15px;line-height:26px;color:#708090;text-align:center;">
-        Please login to your account at <a href="{{link}}">GoCustomate</a> to action the request.
-    </div>
+            <table style="padding-top:20px;">
+                <tr style="height:30px;font-size:15px;">
+                    <td width="70" height="20"></td>
+                    <td width="200" height="20" style="font-family:Roboto;color:#697386;">Escrow name</td>
+                    <td width="400" height="20" style="font-family:Roboto Bold;text-align:left;color:#000000;">{{ operation.escrow.name }}</td>
+                </tr>
+                <tr style="height:30px;font-size:15px;">
+                    <td width="70" height="20"></td>
+                    <td width="200" height="20" style="font-family:Roboto;color:#697386;">Counterpart</td>
+                    <td width="400" height="20" style="font-family:Roboto Bold;text-align:left;color:#000000;">{{ counterpart.email }}</td>
+                </tr>
+                <tr style="height:30px;font-size:15px;">
+                    <td width="70" height="20"></td>
+                    <td width="200" height="20" style="font-family:Roboto;color:#697386;">Initial amount</td>
+                    <td width="400" height="20" style="font-family:Roboto Bold;text-align:left;color:#000000;">
+                        {{ operation.escrow.currency.symbol }}
+                        {{ operation.amount|prettify_number }}</td>
+                </tr>
+            </table>
+             <hr style="width:77%;margin-top:20px;background-color:#e6e6e6;height:1px;border:0;">
+            <table>
+                <tr style="height:20px;font-size:15px;">
+                    <td width="50" height="20"></td>
+                    <td width="500" height="20" style="font-family:Roboto;font-size:15px;line-height:26px;color:#708090;text-align:center;">
+                        Please login to your account at <a href="{{link}}">GoCustomate</a> to action the request.
+                    </td>
+                </tr>
+            </table>
+            </div>
+        </td>
+    <td>
+        <div style="height:442px;overflow:hidden;">
+            <img width="44" height="442" src="https://customate-prod-django.s3.amazonaws.com/templates/images/right-tail.png" alt="">
+        </div>
+    </td>
+    <td></td>
+</tr>
 {% endblock %}

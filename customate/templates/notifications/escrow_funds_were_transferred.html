@@ -2,29 +2,58 @@
 {% load prettify_number %}
 
 {% block body %}
-    <div style="margin-top:42px;font-family:Roboto;font-size:24px;line-height:44px;padding-left:70px;">
-        <div style="display:inline-block;width:60%;">Successful transaction</div>
-        <div style="display:inline-block;width:33%;text-align:center;">
-            {% if sign %}
-                <span>{{ sign }}</span>
-            {% endif %}
-            {{ escrow.currency.symbol }}
-            {{ amount|prettify_number }}
+
+<tr>
+    <td></td>
+    <td>
+        <div style="height:442px;overflow:hidden;">
+            <img width="44" height="442" src="https://customate-prod-django.s3.amazonaws.com/templates/images/left-tail.png" alt="">
         </div>
-    </div>
-    <div style="margin-top:10px;font-family:Roboto;font-size:14px;line-height:26px;padding-left:70px;color:#708090;">
-        <div>{{ processed_datetime|date:"Y/m/d H:i" }}</div>
-        <div style="margin-top:-5px;">
-            {{ transaction_type }},
-            {{ escrow.name }}
+    </td>
+    <td style="background:#ffffff;">
+        <div style="height:442px;overflow: hidden;">
+            <div style="text-align:center;margin-top:40px;">
+                <img src="https://customate-prod-django.s3.amazonaws.com/templates/images/logo.png" alt="">
+            </div>
+                <table style="margin-top:42px;">
+                    <tr style="height:20px;font-family:Roboto Bold;font-size:20px;text-align:left;">
+                        <td width="65" height="20"></td>
+                        <td width="300" height="20" style="font-family:Roboto;color:#697386;">Successful transaction</td>
+                        <td width="200" height="20" style="font-family:Roboto Bold;color:#000000;">
+                            {{ sign }} {{ escrow.currency.symbol }} {{ amount|prettify_number }}
+                        </td>
+                    </tr>
+                    <tr style="margin-top:10px;font-family:Roboto;font-size:14px;">
+                        <td width="65" height="20"></td>
+                        <td width="400" height="20" style="font-family:Roboto;color:#697386;">
+                            {{ processed_datetime|date:"Y/m/d H:i" }}
+                        </td>
+                    </tr>
+                    <tr style="margin-top:10px;font-family:Roboto;font-size:12px;">
+                        <td width="65" height="5"></td>
+                        <td width="400" height="20" style="font-family:Roboto Bold;text-align:left;color:#000000;">
+                            {{ transaction_type }}, {{ escrow.name }}
+                        </td>
+                    </tr>
+                </table>
+                <hr style="width:77%;margin-top:20px;background-color:#e6e6e6;height:1px;border:0;">
+                <table style="margin-top:42px;">
+                    <tr style="height:20px;font-family:Roboto Bold;font-size:14px;text-align:left;">
+                        <td width="70" height="20"></td>
+                        <td width="400" height="20" style="font-family:Roboto;color:#697386;">Escrow available balance:</td>
+                        <td width="200" height="20" style="font-family:Roboto Bold;text-align:left;color:#000000;">
+                            {{ escrow.currency.symbol }}
+                            {{ escrow.balance|prettify_number }}
+                        </td>
+                    </tr>
+                </table>
         </div>
-    </div>
-    <hr style="width:77%;margin-top:24px;background-color:#D3D3D3;height:1px;border:0;">
-    <div style="margin-top:32px;font-family:Roboto;font-size:14px;line-height:26px;padding-left:70px;">
-        <div style="display:inline-block;width:75%;color:#708090;">Escrow available balance:</div>
-        <div style="display:inline-block;width:20%;font-weight:bold;">
-            {{ escrow.currency.symbol }}
-            {{ escrow.balance|prettify_number }}
+    </td>
+    <td>
+        <div style="height:442px;overflow:hidden;">
+            <img width="44" height="442" src="https://customate-prod-django.s3.amazonaws.com/templates/images/right-tail.png" alt="">
         </div>
-    </div>
+    </td>
+    <td></td>
+</tr>
 {% endblock %}

@@ -1,60 +1,103 @@
 {% load prettify_number %}
 <!DOCTYPE HTML>
-<html xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml"
-      xmlns:o="urn:schemas-microsoft-com:office:office">
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+
 <head>
-    <!--[if gte mso 9]><xml><o:OfficeDocumentSettings><o:AllowPNG/><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml>
-    <![endif]-->
+    <!--[if gte mso 9]><xml><o:OfficeDocumentSettings><o:AllowPNG/><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml><![endif]-->
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <meta name="viewport" content="width=device-width">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title></title>
     <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet" type="text/css">
 </head>
-<body style="margin:0;padding:0;-webkit-text-size-adjust:100%;background: #FBFBFB;color:#000000;">
-<table style="border-collapse:collapse;table-layout:fixed;border-spacing:0;mso-table-lspace:0pt;mso-table-rspace:0pt;vertical-align:top;min-width:690px;Margin:0 auto;width:100%;background: #FBFBFB url('https://{{ AWS_STORAGE_BUCKET_NAME }}.s3.eu-west-2.amazonaws.com/templates/images/bg.png') center repeat-y;"
-       cellpadding="0" cellspacing="0">
-    <tbody>
-    <tr style="vertical-align:top;">
-        <td style="word-break:break-word;border-collapse:collapse !important;vertical-align:top;font-family:Roboto;">
-            <div style="width:690px; margin: 0 auto;">
-                <img src="https://{{ AWS_S3_STORAGE_BUCKET_NAME }}.s3.eu-west-2.amazonaws.com/templates/images/top.png" alt="">
-            </div>
-            <div style="width:600px;margin:0 auto;">
-                <div style="margin-top:40px;text-align:center;">
-                    <img src="https://{{ AWS_S3_STORAGE_BUCKET_NAME }}.s3.eu-west-2.amazonaws.com/templates/images/logo.png" alt="">
-                </div>
-                {% block body %}
-                {% endblock %}
-                <div style="border-top:1px #e0e0e0 solid;margin-top:62px;padding-top:16px;">
-                    <div style="display:table-cell;width:300px;padding-left:36px;padding-bottom:16px;">
-                        <a style="text-decoration:none;display:inline-block;margin-right:12px;" target="_blank"
-                           href="https://www.facebook.com/GoCustomateLTD/">
-                            <img src="https://{{ AWS_S3_STORAGE_BUCKET_NAME }}.s3.eu-west-2.amazonaws.com/templates/images/facebook.png"
-                                 width="14" height="16" alt="">
-                        </a>
-                        <a style="text-decoration:none;display:inline-block;margin-right:12px;" target="_blank"
-                           href="https://twitter.com/goCustomate">
-                            <img src="https://{{ AWS_S3_STORAGE_BUCKET_NAME }}.s3.eu-west-2.amazonaws.com/templates/images/twitter.png"
-                                 width="18" height="16" alt="">
-                        </a>
-                        <a style="text-decoration:none;display:inline-block;" target="_blank"
-                           href="https://www.youtube.com/channel/UCKSZNN1Dqa8KXMD7_vnuJpw">
-                            <img src="https://{{ AWS_S3_STORAGE_BUCKET_NAME }}.s3.eu-west-2.amazonaws.com/templates/images/youtube.png"
-                                 width="18" height="16" alt="">
-                        </a>
-                    </div>
-                    <div style="display:table-cell;width:300px;text-align:right;padding-right:32px;font-size:12px;line-height:24px;color: #949BA6;">
-                        Email: <a href="mailto:support@gocustomate.com" style="color:#3F78EC;text-decoration: none;">support@gocustomate.com</a>
-                    </div>
-                </div>
-            </div>
-            <div style="width:690px; margin: 0 auto;background: #FBFBFB;">
-                <img src="https://{{ AWS_S3_STORAGE_BUCKET_NAME }}.s3.eu-west-2.amazonaws.com/templates/images/bottom.png" alt="">
-            </div>
-        </td>
-    </tr>
-    </tbody>
+<body style="margin:0;padding:0;-webkit-text-size-adjust:100%;background:#FBFBFB;color:#000000!important;font-size:12px;">
+     <table style="border-collapse:collapse;table-layout:fixed;border-spacing:0;mso-table-lspace:0pt;mso-table-rspace:0pt;vertical-align:top;min-width:688px;margin:0 auto;width:100%;" cellpadding="0" cellspacing="0" border="0">
+
+         <tr>
+             <td></td>
+             <td width="44">
+                 <div style="height:90px">
+                     <img width="44" height="90" src="https://customate-prod-django.s3.amazonaws.com/templates/images/left-top.png" alt="">
+                 </div>
+             </td>
+             <td width="600">
+                 <div style="height:90px">
+                     <img width="600" height="90" src="https://customate-prod-django.s3.amazonaws.com/templates/images/top-tail.png" alt="">
+                 </div>
+             </td>
+             <td width="44">
+                 <div style="height:90px">
+                     <img width="44" height="90" src="https://customate-prod-django.s3.amazonaws.com/templates/images/right-top.png" alt="">
+                 </div>
+             </td>
+             <td></td>
+         </tr>
+         {% block body %}
+         {% endblock %}
+         <tr>
+             <td></td>
+             <td>
+                 <div style="height:57px;overflow:hidden;">
+                     <img width="44" height="57" src="https://customate-prod-django.s3.amazonaws.com/templates/images/footer-left-tail.png" alt="">
+                 </div>
+             </td>
+             <td>
+                 <div>
+                     <table style="border-collapse:collapse;table-layout:fixed;border-spacing:0;mso-table-lspace:0pt;mso-table-rspace:0pt;vertical-align:top;min-width:600px;margin:0 auto;width:100%;background:#FBFBFB;border-top:1px solid #e0e0e0;"
+                         cellpadding="0" cellspacing="0" border="0">
+                         <tr>
+                             <td style="padding-left:36px;">
+                                 <div style="margin-top:20px;height:36px;">
+                                     <a style="text-decoration:none;display:inline-block;" target="_blank" href="https://www.facebook.com/GoCustomateLTD/">
+                                         <img src="https://customate-prod-django.s3.amazonaws.com/templates/images/facebook.png" width="14" height="16" alt="">
+                                     </a>
+                                     <span><img src="https://customate-prod-django.s3.amazonaws.com/templates/images/blank.png" width="11" height="12" alt=""></span>
+                                     <a style="text-decoration:none;display:inline-block;" target="_blank" href="https://twitter.com/goCustomate">
+                                         <img src="https://customate-prod-django.s3.amazonaws.com/templates/images/twitter.png" width="18" height="16" alt="">
+                                     </a>
+                                     <span><img src="https://customate-prod-django.s3.amazonaws.com/templates/images/blank.png" width="10" height="12" alt=""></span>
+                                     <a style="text-decoration:none;display:inline-block;" target="_blank" href="https://www.youtube.com/channel/UCKSZNN1Dqa8KXMD7_vnuJpw">
+                                         <img src="https://customate-prod-django.s3.amazonaws.com/templates/images/youtube.png" width="18" height="16" alt="">
+                                     </a>
+                                 </div>
+                             </td>
+                             <td style="padding-right:36px;">
+                                 <div style="font-family:'Roboto',sans-serif;text-align:right;margin-top:22px;height:34px;color:#949BA6;">
+                                     <span>
+                                         Email: <a href="mailto:support@gocustomate.com" style="color:#3F78EC;text-decoration:none;">support@gocustomate.com</a>
+                                     </span>
+                                 </div>
+                             </td>
+                         </tr>
+                     </table>
+                 </div>
+             </td>
+             <td>
+                 <div style="height:57px;overflow:hidden;">
+                     <img width="44" height="57" src="https://customate-prod-django.s3.amazonaws.com/templates/images/footer-right-tail.png" alt="">
+                 </div>
+             </td>
+             <td></td>
+         </tr>
+         <tr>
+             <td></td>
+             <td width="44">
+                 <div style="height:84px">
+                     <img width="44" height="84" src="https://customate-prod-django.s3.amazonaws.com/templates/images/left-bottom.png" alt="">
+                 </div>
+             </td>
+             <td width="600">
+                 <div style="height:84px">
+                     <img width="600" height="84" src="https://customate-prod-django.s3.amazonaws.com/templates/images/bottom-tail.png" alt="">
+                 </div>
+             </td>
+             <td width="44">
+                 <div style="height:84px">
+                     <img width="44" height="84" src="https://customate-prod-django.s3.amazonaws.com/templates/images/right-bottom.png" alt="">
+                 </div>
+             </td>
+             <td></td>
+         </tr>
 </table>
 </body>
 </html>
