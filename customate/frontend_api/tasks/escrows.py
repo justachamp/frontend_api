@@ -158,7 +158,7 @@ def process_unaccepted_operations():
 
             # Send notification to operation creator
             additional_context = {
-                'title': 'the request was expired',
+                'title': 'your request is expired',
                 'amount': amount,
                 'operation_title': operation.type.label.lower()
             }
