@@ -131,6 +131,7 @@ def notify_about_requested_operation(email_recipient: User, counterpart: User,
         tpl_context=context,
         subject=settings.AWS_SES_SUBJECT_NAME
     )
+    logger.info("Start notify about requested operation. Email recipient: %s. Context: %s" % (email_recipient, context))
     send_notification_email.delay(to_address=email_recipient.email, message=message)
 
 
@@ -154,5 +155,8 @@ def notify_about_escrow_status(email_recipient: User, counterpart: User,
         tpl_filename=tpl_filename,
         tpl_context=context,
         subject=settings.AWS_SES_SUBJECT_NAME
+    )
+    logger.info(
+        "Start notify about requested operation status. Email recipient: %s. Context: %s" % (email_recipient, context)
     )
     send_notification_email.delay(to_address=email_recipient.email, message=message)
