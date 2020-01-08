@@ -23,17 +23,17 @@
                 <tr style="height:30px;font-size:15px;">
                     <td width="70" height="20"></td>
                     <td width="200" height="20" style="font-family:Roboto;color:#697386;">Escrow name</td>
-                    <td width="400" height="20" style="font-family:Roboto Bold;text-align:left;color:#000000;">{{ escrow.name }}</td>
+                    <td width="400" height="20" style="font-family:Roboto;font-weight:bold;text-align:left;color:#000000;">{{ escrow.name }}</td>
                 </tr>
                 <tr style="height:30px;font-size:15px;">
                     <td width="70" height="20"></td>
                     <td width="200" height="20" style="font-family:Roboto;color:#697386;">Counterpart</td>
-                    <td width="400" height="20" style="font-family:Roboto Bold;text-align:left;color:#000000;">{{ escrow.recipient_user.email }}</td>
+                    <td width="400" height="20" style="font-family:Roboto;font-weight:bold;text-align:left;color:#000000;">{{ escrow.recipient_user.email }}</td>
                 </tr>
                 <tr style="height:30px;font-size:15px;">
                     <td width="70" height="20"></td>
                     <td width="200" height="20" style="font-family:Roboto;color:#697386;">To fund</td>
-                    <td width="400" height="20" style="font-family:Roboto Bold;text-align:left;color:#000000;">
+                    <td width="400" height="20" style="font-family:Roboto;font-weight:bold;text-align:left;color:#000000;">
                         {{ escrow.currency.symbol }}
                         {{ escrow.initial_amount|prettify_number }}</td>
                 </tr>
