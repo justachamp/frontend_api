@@ -53,8 +53,17 @@ def process_unaccepted_escrows():
             creator = operation.creator
             counterpart = escrow.recipient_user if creator.id == escrow.funder_user else escrow.funder_user
 
+            # Notify escrow counterpart about not accepted escrow
+            additional_context = {'title': "the escrow wasn't funded"}
+            notify_about_escrow_status(
+                email_recipient=counterpart,
+                counterpart=creator,
+                escrow=escrow,
+                additional_context=additional_context
+            )
+
             # Notify escrow creator about not accepted escrow
-            additional_context = {'title': 'the escrow is terminated'}
+            additional_context = {'title': "the escrow wasn't funded"}
             notify_about_escrow_status(
                 email_recipient=creator,
                 counterpart=counterpart,
