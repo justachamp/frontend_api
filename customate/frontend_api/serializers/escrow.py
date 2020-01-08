@@ -122,6 +122,9 @@ class EscrowOperationSerializer(HyperlinkedModelSerializer):
         if op.creator.id == current_user.id:
             return False
 
+        if current_user.is_blocked:
+            return False
+
         # if operation requires approval, verify that it wasn't given
         if op.requires_mutual_approval:
             return op.status is EscrowOperationStatus.pending
@@ -139,10 +142,10 @@ class EscrowSerializer(BaseEscrowSerializer):
 
     # Allowed operations for current user
     can_dispute = BooleanField(required=False, read_only=True)
-    can_close = BooleanField(required=False, read_only=True)
-    can_release_funds = BooleanField(required=False, read_only=True)
     can_review_operations = BooleanField(required=False, read_only=True)
     can_review_transactions = BooleanField(required=False, read_only=True)
+    can_close = SerializerMethodField()
+    can_release_funds = SerializerMethodField()
     can_accept = SerializerMethodField()
     can_load_funds = SerializerMethodField()
 
@@ -241,8 +244,11 @@ class EscrowSerializer(BaseEscrowSerializer):
         if escrow.has_pending_operation and escrow.status is not EscrowStatus.pending_funding:
             return False
 
-        latest_op = LoadFundsEscrowOperation.objects.filter(escrow__id=escrow.id).order_by("-created_at").first()
         current_user = self.context.get('request').user
+        if current_user.is_blocked:
+            return False
+
+        latest_op = LoadFundsEscrowOperation.objects.filter(escrow__id=escrow.id).order_by("-created_at").first()
 
         case = False
         case2 = False
@@ -258,6 +264,58 @@ class EscrowSerializer(BaseEscrowSerializer):
             case2 = latest_op.status is not EscrowOperationStatus.pending
 
         return case or case2
+
+    def get_can_release_funds(self, escrow: Escrow) -> bool:
+        """
+        Can user issue 'ReleaseFunds' operation on this Escrow?
+        :return:
+        """
+        if escrow.has_pending_payment:
+            return False
+
+        if escrow.has_pending_operation:
+            return False
+
+        current_user = self.context.get('request').user
+        if current_user.is_blocked:
+            return False
+
+        # Obviously, no money to release
+        if escrow.balance == 0:
+            return False
+
+        if escrow.status is not EscrowStatus.ongoing:
+            return False
+
+        op = escrow.last_release_funds_operation
+        if op is not None and op.status is EscrowOperationStatus.pending:
+            return False
+
+        return True
+
+    def get_can_close(self, escrow: Escrow) -> bool:
+        """
+        Can user issue 'CloseEscrow' operation on this Escrow?
+        :return:
+        """
+        if escrow.has_pending_payment:
+            return False
+
+        if escrow.has_pending_operation:
+            return False
+
+        current_user = self.context.get('request').user
+        if current_user.is_blocked:
+            return False
+
+        if escrow.status is not EscrowStatus.ongoing:
+            return False
+
+        op = escrow.close_escrow_operation
+        if op is None:
+            return True
+
+        return op.status is not EscrowOperationStatus.pending
 
     def counterpart(self, escrow: Escrow):
         """

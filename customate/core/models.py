@@ -155,6 +155,14 @@ class User(AbstractUser, Model):
     def age_verified(self) -> bool:
         return self.birth_date and self.age >= USER_MIN_AGE
 
+    @property
+    def is_blocked(self):
+        return self.status == UserStatus.blocked
+
+    @property
+    def is_banned(self):
+        return self.status == UserStatus.banned
+
     def get_username(self):
         return self.email
 

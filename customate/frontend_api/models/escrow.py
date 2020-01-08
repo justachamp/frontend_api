@@ -156,52 +156,6 @@ class Escrow(Model):
         return self.status is EscrowStatus.ongoing
 
     @property
-    def can_close(self) -> bool:
-        """
-        Can user issue 'CloseEscrow' operation on this Escrow?
-        :return:
-        """
-        if self.has_pending_payment:
-            return False
-
-        if self.has_pending_operation:
-            return False
-
-        if self.status is not EscrowStatus.ongoing:
-            return False
-
-        op = self.close_escrow_operation
-        if op is None:
-            return True
-
-        return op.status is not EscrowOperationStatus.pending
-
-    @property
-    def can_release_funds(self) -> bool:
-        """
-        Can user issue 'ReleaseFunds' operation on this Escrow?
-        :return:
-        """
-        if self.has_pending_payment:
-            return False
-
-        if self.has_pending_operation:
-            return False
-
-        # Obviously, no money to release
-        if self.balance == 0:
-            return False
-
-        if self.status is not EscrowStatus.ongoing:
-            return False
-
-        op = self.last_release_funds_operation
-        if op is not None and op.status is EscrowOperationStatus.pending:
-            return False
-
-        return True
-
-    @property
     def can_review_operations(self) -> bool:
         """
         Can user review existence operations for this Escrow?
