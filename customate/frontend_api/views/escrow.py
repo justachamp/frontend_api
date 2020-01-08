@@ -147,22 +147,24 @@ class EscrowViewSet(views.ModelViewSet):
             # Requesting counterpart to accept Escrow
             additional_context = {
                 'operation_title': 'approve escrow',
-                'title': 'you received a request'}
+                'title': 'you received a request',
+                'amount': initial_amount}
             notify_about_requested_operation(
                 email_recipient=counterpart,
                 counterpart=creator,
-                operation=load_funds_op,
+                operation=create_op,
                 additional_context=additional_context
             )
 
             # Notify creator about requested action from counterpart.
             additional_context = {
                 'operation_title': 'approve escrow',
-                'title': 'you requested an action'}
+                'title': 'you requested an action',
+                'amount': initial_amount}
             notify_about_requested_operation(
                 email_recipient=creator,
                 counterpart=counterpart,
-                operation=load_funds_op,
+                operation=create_op,
                 additional_context=additional_context
             )
         except Exception:
