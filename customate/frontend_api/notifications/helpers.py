@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 register = template.Library()
 
-# Need to get transaction type for passing transaction_type to templates
+# Need to get transaction name for passing transaction_name to templates
 # Key is a transaction name from payment service, value is transaction type for appearance in templates
 transaction_names = {
     "CreditCardToWallet": 'Card',
@@ -40,7 +40,7 @@ transaction_names = {
 def get_load_funds_details(transaction_info: Dict) -> Dict:
     now = arrow.utcnow()
     context = {
-        "transaction_type": transaction_names.get(transaction_info.get("name"), "Unknown"),
+        "transaction_name": transaction_names.get(transaction_info.get("name"), "Unknown"),
         "error_message": transaction_info.get("error_message") or "unknown",
         'currency': Currency(transaction_info.get("currency")),
         'amount': transaction_info.get("amount"),

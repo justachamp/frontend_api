@@ -1,6 +1,5 @@
 from __future__ import absolute_import, unicode_literals
 import logging
-from datetime import timedelta
 
 import arrow
 from celery import shared_task
@@ -9,11 +8,11 @@ from django.conf import settings
 from django.db.models import DateField, ExpressionWrapper, F, Q
 
 from frontend_api.models.escrow import Escrow, LoadFundsEscrowOperation, CreateEscrowOperation, EscrowOperation
-from frontend_api.fields import EscrowStatus
+from frontend_api.fields import EscrowStatus, EscrowOperationType
 from frontend_api.notifications.escrows import (
-    notify_about_fund_escrow_state,
-    send_reminder_to_fund_escrow,
-    notify_originator_about_escrow_state
+    notify_about_requested_operation_status,
+    notify_about_requested_operation,
+    notify_about_escrow_status
 )
 
 logger = logging.getLogger(__name__)
@@ -50,8 +49,27 @@ def process_unaccepted_escrows():
             # Terminate Escrow itself
             operation.escrow.move_to_status(EscrowStatus.terminated)
 
-            # Send appropriate notification to seller
-            notify_about_fund_escrow_state(escrow=operation.escrow)
+            escrow = operation.escrow
+            creator = operation.creator
+            counterpart = escrow.recipient_user if creator.id == escrow.funder_user else escrow.funder_user
+
+            # Notify escrow creator about not accepted escrow
+            additional_context = {'title': 'the escrow is terminated'}
+            notify_about_escrow_status(
+                email_recipient=creator,
+                counterpart=counterpart,
+                escrow=escrow,
+                additional_context=additional_context
+            )
+
+            # Notify counterpart about not accepted escrow by himself.
+            additional_context = {'title': 'the escrow is terminated'}
+            notify_about_escrow_status(
+                email_recipient=counterpart,
+                counterpart=creator,
+                escrow=escrow,
+                additional_context=additional_context
+            )
 
 
 def reminder_to_fund_escrow():
@@ -72,13 +90,19 @@ def reminder_to_fund_escrow():
     """
 
     half_time_expired_escrow_operations = LoadFundsEscrowOperation.objects.raw(sql_query)
-    logger.info("Start sending friendly reminders. Escrows count: %d." % half_time_expired_escrow_operations.count())
+    logger.info("Start sending friendly reminders.")
     paginator = Paginator(half_time_expired_escrow_operations, settings.CELERY_BEAT_PER_PAGE_OBJECTS)
     for page in paginator.page_range:
         for operation in paginator.page(page).object_list:  # type: LoadFundsEscrowOperation
-            send_reminder_to_fund_escrow(
-                escrow=operation.escrow,
-                tpl_filename="notifications/friendly_reminder_to_fund_escrow.html"
+            email_recipient = operation.escrow.funder_user
+            counterpart = operation.escrow.recipient_user
+            notify_about_requested_operation(
+                email_recipient=email_recipient,
+                counterpart=counterpart,
+                operation=operation,
+                additional_context={'operation_title': operation.type.label.lower(),
+                                    'amount': operation.amount,
+                                    'title': 'half time remain'}
             )
 
     # Get and iterate 'one day remains' load funds operations
@@ -92,13 +116,19 @@ def reminder_to_fund_escrow():
     """
 
     one_day_remains_escrow_operations = LoadFundsEscrowOperation.objects.raw(sql_query)
-    logger.info("Start sending last notice reminders. Escrows count: %d." % one_day_remains_escrow_operations.count())
+    logger.info("Start sending last notice reminders.")
     paginator = Paginator(one_day_remains_escrow_operations, settings.CELERY_BEAT_PER_PAGE_OBJECTS)
     for page in paginator.page_range:
         for operation in paginator.page(page).object_list:  # type: LoadFundsEscrowOperation
-            send_reminder_to_fund_escrow(
-                escrow=operation.escrow,
-                tpl_filename="notifications/final_notice_to_fund_escrow.html"
+            email_recipient = operation.escrow.funder_user
+            counterpart = operation.escrow.recipient_user
+            notify_about_requested_operation(
+                email_recipient=email_recipient,
+                counterpart=counterpart,
+                operation=operation,
+                additional_context={'operation_title': operation.type.label.lower(),
+                                    'amount': operation.amount,
+                                    'title': 'one day remain'}
             )
 
 
@@ -120,11 +150,34 @@ def process_unaccepted_operations():
         for operation in paginator.page(page).object_list:  # type: EscrowOperation
             operation.expire()
             operation.reject()
-            # Send notification to operation creator
+
             escrow = operation.escrow
             counterpart = escrow.funder_user if operation.creator == escrow.recipient_user else escrow.recipient_user
-            notify_originator_about_escrow_state(
-                escrow_op=operation,
+            creator = operation.creator
+            amount = escrow.balance if operation.type == EscrowOperationType.close_escrow else operation.amount
+
+            # Send notification to operation creator
+            additional_context = {
+                'title': 'the request was expired',
+                'amount': amount,
+                'operation_title': operation.type.label.lower()
+            }
+            notify_about_requested_operation_status(
+                email_recipient=creator,
                 counterpart=counterpart,
-                tpl_filename="notifications/request_rejected_by_counterpart.html"
+                operation=operation,
+                additional_context=additional_context
+            )
+
+            # Send notification to counterpart
+            additional_context = {
+                'title': 'the request was expired',
+                'amount': amount,
+                'operation_title': operation.type.label.lower()
+            }
+            notify_about_requested_operation_status(
+                email_recipient=counterpart,
+                counterpart=creator,
+                operation=operation,
+                additional_context=additional_context
             )

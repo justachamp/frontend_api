@@ -32,7 +32,6 @@ from frontend_api.notifications.schedules import (
 )
 from frontend_api.notifications.escrows import (
     notify_about_fund_escrow_state,
-    notify_parties_about_funds_transfer,
     notify_escrow_funder_about_transaction_status
 )
 
@@ -321,7 +320,7 @@ def process_escrow_transaction_change(transaction_info: Dict):
                     notify_escrow_funder_about_transaction_status(
                         escrow=escrow,
                         transaction_info=transaction_info,
-                        tpl_filename='notifications/email_users_balance_updated.html',
+                        tpl_filename='notifications/users_balance_updated.html',
                         additional_context=additional_context
                     )
 
@@ -334,7 +333,7 @@ def process_escrow_transaction_change(transaction_info: Dict):
                     notify_escrow_funder_about_transaction_status(
                         escrow=escrow,
                         transaction_info=transaction_info,
-                        tpl_filename='notifications/email_transaction_failed.html',
+                        tpl_filename='notifications/transaction_failed.html',
                         additional_context=additional_context
                     )
 
@@ -346,7 +345,7 @@ def process_escrow_transaction_change(transaction_info: Dict):
 
             # "Release" it's not common name for "OutgoingInternal" transaction, so we pre-set it like this
             # Footer replaces "(Wallet=>Escrow) available balance:" in template.
-            additional_context = {'transaction_type': 'Release', "footer": "Escrow available balance"}
+            additional_context = {'transaction_name': 'Release', "footer": "Escrow available balance"}
 
             # Send notification for SUCCESS transaction only if this transaction is related to "Release" operation
             # (payee in this case will belong to Recipient) it could be that it's a "Close" operation as well (payee
@@ -359,7 +358,7 @@ def process_escrow_transaction_change(transaction_info: Dict):
                 notify_escrow_funder_about_transaction_status(
                     escrow=escrow,
                     transaction_info=transaction_info,
-                    tpl_filename='notifications/email_users_balance_updated.html',
+                    tpl_filename='notifications/users_balance_updated.html',
                     additional_context=additional_context
                 )
 
@@ -368,7 +367,7 @@ def process_escrow_transaction_change(transaction_info: Dict):
                 notify_escrow_funder_about_transaction_status(
                     escrow=escrow,
                     transaction_info=transaction_info,
-                    tpl_filename="notifications/email_transaction_failed.html",
+                    tpl_filename="notifications/transaction_failed.html",
                     additional_context=additional_context
                 )
 
@@ -385,7 +384,7 @@ def process_escrow_transaction_change(transaction_info: Dict):
             else:
                 additional_context = {'name': escrow.name}
                 if escrow.funder_user.id == UUID(user_id):  # Return money to funder after closing an Escrow
-                    additional_context.update({'transaction_type': 'Refund'})
+                    additional_context.update({'transaction_name': 'Refund'})
 
                 notify_about_loaded_funds(
                     user_id=user_id,
@@ -405,7 +404,7 @@ def process_escrow_transaction_change(transaction_info: Dict):
 
             additional_context = {'name': escrow.name}
             # if escrow.funder_user.id == UUID(user_id):  # Return money to funder after closing an Escrow
-            #     additional_context.update({'transaction_type': 'Refund'})
+            #     additional_context.update({'transaction_name': 'Refund'})
 
             notify_about_loaded_funds(
                 user_id=user_id,

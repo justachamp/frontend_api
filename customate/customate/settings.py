@@ -134,13 +134,13 @@ logging.config.dictConfig({
         'console': {
             'class': 'colorlog.StreamHandler' if supports_color() else 'logging.StreamHandler',
             'formatter': 'colorlog' if supports_color() else 'console',
-            #'filters': ['require_debug_true']
+            # 'filters': ['require_debug_true']
         },
 
         'rotating_file': {
             'class': 'core.logger.BetterRotatingFileHandler',
             'formatter': 'customate.json.formatter',
-            #'filters': ['require_debug_true'],
+            # 'filters': ['require_debug_true'],
             'filename': LOGFILEPATH,
             'maxBytes': 1024 * 1024 * 10,  # 10 MB
         },
@@ -315,7 +315,10 @@ ROOT_URLCONF = 'customate.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [path.join(BASE_DIR, "templates")],
+        'DIRS': [
+            path.join(BASE_DIR, "templates"),
+            path.join(BASE_DIR, "templates", "notifications", "escrow")
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
