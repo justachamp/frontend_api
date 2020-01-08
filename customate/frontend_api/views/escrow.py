@@ -155,18 +155,6 @@ class EscrowViewSet(views.ModelViewSet):
                 operation=create_op,
                 additional_context=additional_context
             )
-
-            # Notify creator about requested action from counterpart.
-            additional_context = {
-                'operation_title': 'approve escrow',
-                'title': 'you requested an action',
-                'amount': initial_amount}
-            notify_about_requested_operation(
-                email_recipient=creator,
-                counterpart=counterpart,
-                operation=create_op,
-                additional_context=additional_context
-            )
         except Exception:
             logger.error("Unable to send notification about new escrow. %r" % format_exc())
 
@@ -237,17 +225,6 @@ class EscrowViewSet(views.ModelViewSet):
         creator = create_escrow_op.creator
         counterpart = self.request.user
         try:
-            # Notify creator about accepted Escrow by counterpart.
-            additional_context = {
-                'operation_title': 'approve escrow',
-                'amount': escrow.initial_amount,
-                'title': 'your request was accepted'}
-            notify_about_requested_operation_status(
-                email_recipient=creator,
-                counterpart=counterpart,
-                operation=create_escrow_op,
-                additional_context=additional_context
-            )
             # Notify counterpart about accepted Escrow by himself.
             additional_context = {
                 'operation_title': 'approve escrow',
@@ -300,18 +277,6 @@ class EscrowViewSet(views.ModelViewSet):
             notify_about_requested_operation_status(
                 email_recipient=creator,
                 counterpart=counterpart,
-                operation=create_escrow_op,
-                additional_context=additional_context
-            )
-
-            # Notify counterpart about rejected escrow.
-            additional_context = {
-                'operation_title': 'approve escrow',
-                'amount': escrow.initial_amount,
-                'title': 'you declined an escrow'}
-            notify_about_requested_operation_status(
-                email_recipient=counterpart,
-                counterpart=creator,
                 operation=create_escrow_op,
                 additional_context=additional_context
             )
@@ -409,18 +374,6 @@ class EscrowOperationViewSet(views.ModelViewSet):
                 operation=op,
                 additional_context=additional_context
             )
-
-            # Notify operation creator about requested proposal to load_funds/release_funds/close_escrow
-            additional_context = {
-                'operation_title': op.type.label.lower(),
-                'title': 'you requested an action',
-                'amount': amount}
-            notify_about_requested_operation(
-                email_recipient=creator,
-                counterpart=counterpart,
-                operation=op,
-                additional_context=additional_context
-            )
         except Exception:
             logger.error("Unable to send notification about new operation. %r" % format_exc())
 
@@ -468,18 +421,6 @@ class EscrowOperationViewSet(views.ModelViewSet):
         amount = escrow.balance if op.type == EscrowOperationType.close_escrow else op.amount
         creator = op.creator
         try:
-            # Sending notification  to operation creator about accepted request.
-            additional_context = {
-                'operation_title': op.type.label.lower(),
-                'amount': amount,
-                'title': 'your request was accepted'}
-            notify_about_requested_operation_status(
-                email_recipient=creator,
-                counterpart=counterpart,
-                operation=op,
-                additional_context=additional_context
-            )
-
             # Sending notification about accepted operation to counterpart
             additional_context = {
                 'operation_title': op.type.label.lower(),
@@ -494,26 +435,26 @@ class EscrowOperationViewSet(views.ModelViewSet):
         except Exception:
             logger.error("Unable to send notification about accepted operation. %r" % format_exc())
 
-        try:
-            # Sending notification to escrow creator about closed escrow
-            if operation.type == EscrowOperationType.close_escrow:
-                additional_context = {'title': 'Escrow was closed'}
-                notify_about_escrow_status(
-                    email_recipient=creator,
-                    counterpart=counterpart,
-                    escrow=escrow,
-                    additional_context=additional_context
-                )
-                # Sending notification to counterpart about closed escrow
-                additional_context = {'title': 'Escrow was closed'}
-                notify_about_escrow_status(
-                    email_recipient=counterpart,
-                    counterpart=creator,
-                    escrow=escrow,
-                    additional_context=additional_context
-                )
-        except Exception:
-            logger.error("Unable to send notification about closed escrow. %r" % format_exc())
+        # try:
+        #     # Sending notification to escrow creator about closed escrow
+        #     if operation.type == EscrowOperationType.close_escrow:
+        #         additional_context = {'title': 'Escrow was closed'}
+        #         notify_about_escrow_status(
+        #             email_recipient=creator,
+        #             counterpart=counterpart,
+        #             escrow=escrow,
+        #             additional_context=additional_context
+        #         )
+        #         # Sending notification to counterpart about closed escrow
+        #         additional_context = {'title': 'Escrow was closed'}
+        #         notify_about_escrow_status(
+        #             email_recipient=counterpart,
+        #             counterpart=creator,
+        #             escrow=escrow,
+        #             additional_context=additional_context
+        #         )
+        # except Exception:
+        #     logger.error("Unable to send notification about closed escrow. %r" % format_exc())
 
         return Response(status=status_codes.HTTP_204_NO_CONTENT)
 
@@ -555,18 +496,6 @@ class EscrowOperationViewSet(views.ModelViewSet):
             notify_about_requested_operation_status(
                 email_recipient=creator,
                 counterpart=counterpart,
-                operation=op,
-                additional_context=additional_context
-            )
-
-            # Notify counterpart about declined request.
-            additional_context = {
-                'operation_title': op.type.label.lower(),
-                'amount': amount,
-                'title': 'you declined a request'}
-            notify_about_requested_operation_status(
-                email_recipient=counterpart,
-                counterpart=creator,
                 operation=op,
                 additional_context=additional_context
             )

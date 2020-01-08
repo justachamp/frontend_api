@@ -62,15 +62,6 @@ def process_unaccepted_escrows():
                 additional_context=additional_context
             )
 
-            # Notify counterpart about not accepted escrow by himself.
-            additional_context = {'title': 'the escrow is terminated'}
-            notify_about_escrow_status(
-                email_recipient=counterpart,
-                counterpart=creator,
-                escrow=escrow,
-                additional_context=additional_context
-            )
-
 
 def reminder_to_fund_escrow():
     """
@@ -165,19 +156,6 @@ def process_unaccepted_operations():
             notify_about_requested_operation_status(
                 email_recipient=creator,
                 counterpart=counterpart,
-                operation=operation,
-                additional_context=additional_context
-            )
-
-            # Send notification to counterpart
-            additional_context = {
-                'title': 'the request was expired',
-                'amount': amount,
-                'operation_title': operation.type.label.lower()
-            }
-            notify_about_requested_operation_status(
-                email_recipient=counterpart,
-                counterpart=creator,
                 operation=operation,
                 additional_context=additional_context
             )
