@@ -47,6 +47,13 @@ class Company(Model):
     registration_number = models.CharField(max_length=8, blank=True)
     vat_number = models.CharField(max_length=12, blank=True)
     business_website_url = OptionalSchemeURLField(blank=True)
+    business_info_verified = models.BooleanField(
+        _('business verified'),
+        default=False,
+        help_text=_(
+            'Indicates whether the business information has been verified'
+        ),
+    )
     address = models.OneToOneField(
         Address,
         on_delete=models.CASCADE,
