@@ -480,23 +480,19 @@ CELERY_BEAT_SCHEDULE = {
     },
     'once_per_day_update_statuses_of_unaccepted_schedules': {
         'task': 'frontend_api.tasks.schedules.process_unaccepted_schedules',
-        'schedule': crontab(hour='00', minute="01")  # 00:01 UTC every day
+        'schedule': crontab(hour='00', minute="10")  # 00:10 UTC every day
     },
     'once_per_day_update_statuses_of_unaccepted_escrows': {
         'task': 'frontend_api.tasks.escrows.process_unaccepted_escrows',
-        'schedule': crontab(hour='00', minute="01")  # 00:01 UTC every day
+        'schedule': crontab(hour='00', minute="20")  # 00:20 UTC every day
     },
-    # 'once_per_day_remove_unassigned_documents': {
-    #     'task': 'frontend_api.tasks.schedules.remove_unassigned_documents',
-    #     'schedule': crontab(hour='01', minute="00")  # 01:00 UTC every day
-    # },
     'once_per_day_send_reminders_to_fund_escrow': {
         'task': 'frontend_api.tasks.escrows.reminder_to_fund_escrow',
-        'schedule': crontab(hour='00', minute="01")  # 00:01 UTC every day
+        'schedule': crontab(hour='00', minute="30")  # 00:30 UTC every day
     },
     'once_per_day_update_statuses_of_unaccepted_operations': {
         'task': 'frontend_api.tasks.escrows.process_unaccepted_operations',
-        'schedule': crontab(hour='00', minute="01")  # 00:01 UTC every day
+        'schedule': crontab(hour='00', minute="40")  # 00:40 UTC every day
     },
 }
 
