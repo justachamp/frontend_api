@@ -470,19 +470,18 @@ class EscrowOperationViewSet(views.ModelViewSet):
         counterpart = escrow.recipient_user if creator.id == escrow.funder_user.id else escrow.funder_user
 
         # Notify operation creator about declined request.
-        if op.type == EscrowOperationType.close_escrow:
-            try:
-                additional_context = {
-                    'operation_title': op.type.label.lower(),
-                    'amount': amount,
-                    'title': 'your request was declined'}
-                notify_about_requested_operation_status(
-                    email_recipient=creator,
-                    counterpart=counterpart,
-                    operation=op,
-                    additional_context=additional_context
-                )
-            except Exception:
-                logger.error("Unable to send notification about declined operation. %r" % format_exc())
+        try:
+            additional_context = {
+                'operation_title': op.type.label.lower(),
+                'amount': amount,
+                'title': 'your request was declined'}
+            notify_about_requested_operation_status(
+                email_recipient=creator,
+                counterpart=counterpart,
+                operation=op,
+                additional_context=additional_context
+            )
+        except Exception:
+            logger.error("Unable to send notification about declined operation. %r" % format_exc())
 
         return Response(status=status_codes.HTTP_204_NO_CONTENT)
