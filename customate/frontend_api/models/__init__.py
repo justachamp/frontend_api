@@ -79,6 +79,11 @@ class Company(Model):
         ),
     )
 
+    @property
+    def is_verified(self):
+        # Using property for more consistent naming (User model uses "is_verified" field)
+        return self.business_info_verified
+
     def __str__(self):
         return "%s the company" % self.registration_business_name
 
