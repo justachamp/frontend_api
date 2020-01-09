@@ -874,6 +874,38 @@ class PaymentAccount:
         return UUID(res["data"]["id"])
 
     @staticmethod
+    def update(user_account_id: UUID, email: str, full_name: str):
+        """
+        Update payment account.
+        https://customatepayment.docs.apiary.io/#reference/0/account-management/update-account
+
+        :param user_account_id:
+        :param email:
+        :param full_name:
+        :return:
+        """
+        payload = {
+            "data": {
+                "type": "accounts",
+                "id": user_account_id,
+                "attributes": {
+                    "email": email,
+                    "fullName": full_name,
+                }
+            }
+        }
+
+        r = requests.patch("{base_url}accounts/{id}".format(
+            base_url=BASE_URL,
+            s_type=user_account_id
+        ), json=payload)
+
+        if r.status_code == requests.codes.bad_request:
+            raise PaymentApiError(json_response=r.json())
+        else:
+            r.raise_for_status()
+
+    @staticmethod
     def deactivate(payment_account_id: UUID):
         """
         Deactivate account.

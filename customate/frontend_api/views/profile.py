@@ -18,6 +18,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 from frontend_api.services.account import ProfileService
+import external_apis.payment.service as payment_service
 
 
 class DomainService:
@@ -72,6 +73,24 @@ class ProfileView(DomainService, APIView):
 
             serializer.is_valid(True)
             serializer.save(ignore_gbg_exception=ignore_gbg_exception, skip_gbg=skip_gbg)
+
+            profile_user = serializer.instance.user
+            # Payment account is related to owner user only, so we need to make sure we update payment account with
+            # the right user's data
+            if profile_user.is_owner:
+                logger.debug("Refreshing payment account (id=%s) with updated user's data: %s" % (
+                    profile_user.account.payment_account_id,
+                    profile_user
+                ), extra={
+                    'payment_account_id': profile_user.account.payment_account_id,
+                    'user_id': profile_user.id,
+                })
+
+                payment_service.PaymentAccount.update(
+                    user_account_id=profile_user.account.payment_account_id,
+                    email=profile_user.email,
+                    full_name=profile_user.get_full_name()
+                )
         except Exception as ex:
             # Special case for issue with Cognito's limits,
             # we need to convert original exception to APIException instance
@@ -79,6 +98,7 @@ class ProfileView(DomainService, APIView):
                 logger.debug("Cognito exception occurred (updating profile): %s" % format_exc())
                 raise GeneralCognitoException(ex)
             else:
+                logger.error("Cannot update Profile due an error: %s" % format_exc())
                 raise ex
 
         return response.Response(serializer.data)
