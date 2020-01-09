@@ -43,7 +43,7 @@ def get_schedule_details(user: User, schedule: Schedule,
         'amount': transaction_info.get("amount"),
         'processed_datetime': now.datetime,
         'name': schedule.name,
-        'transaction_type': transaction_names.get(transaction_info.get("name"), "Unknown"),
+        'transaction_name': transaction_names.get(transaction_info.get("name"), "Unknown"),
         # identifier specifies either funds has increased or decreased
         'sign': "-" if int(transaction_info["amount"]) < 0 else '+'
     }
@@ -68,7 +68,7 @@ def invite_payer(schedule: Schedule) -> None:
     logger.info("Invite payee. Send email notifications to: %s" % ", ".join(emails))
     send_bulk_emails(emails=emails,
                      context=schedule_details,
-                     tpl_filename="notifications/email_invite_payer.html")
+                     tpl_filename="notifications/schedule/invite_payer.html")
 
 
 # TODO: shouldn't we extract this method to separate file, something like "notifications/common.py"?
@@ -95,22 +95,22 @@ def notify_about_loaded_funds(user_id: str, transaction_info: Dict, transaction_
             ",".join(
                 ["Successful transaction: {sign}{amount}{cur_symbol}",
                  "\n{dt}",
-                 "\n{transaction_type}",
+                 "\n{transaction_name}",
                  "\n{cur_symbol} wallet available balance: {closing_balance} {cur_symbol}."]
             ),
         TransactionStatusType.FAILED:
             ",".join(
                 ["Failed transaction: {sign}{amount}{cur_symbol}",
                  "\n{dt}",
-                 "\n{transaction_type}",
+                 "\n{transaction_name}",
                  "\nReason: {error_msg}",
                  "\n{cur_symbol} wallet available balance: {closing_balance} {cur_symbol}."]
             )
     }[transaction_status]
 
     tpl_filename = {
-        TransactionStatusType.SUCCESS: 'notifications/email_users_balance_updated.html',
-        TransactionStatusType.FAILED: 'notifications/email_transaction_failed.html'
+        TransactionStatusType.SUCCESS: 'notifications/users_balance_updated.html',
+        TransactionStatusType.FAILED: 'notifications/transaction_failed.html'
     }[transaction_status]
 
     funds_recipients = get_funds_recipients(funds_recipient=funds_recipient)
@@ -127,7 +127,7 @@ def notify_about_loaded_funds(user_id: str, transaction_info: Dict, transaction_
                      tpl_filename=tpl_filename)
 
     sms_context = {
-        "transaction_type": load_funds_details.get("transaction_type"),
+        "transaction_name": load_funds_details.get("transaction_name"),
         "error_msg": load_funds_details.get("error_message") or "unknown",
         "amount": prettify_number(load_funds_details['amount']),
         "cur_symbol": load_funds_details["currency"].symbol,
@@ -163,7 +163,7 @@ def notify_about_schedules_failed_payment(schedule: Schedule, transaction_info: 
     message_tpl = ",".join([
         "Failed transaction: {sign}{amount}{cur_symbol}",
         "\n{dt}",
-        "\n{transaction_type}, {schedule_name}",
+        "\n{transaction_name}, {schedule_name}",
         "\nReason: {error_msg}",
         "\n{cur_symbol} wallet available balance: {closing_balance} {cur_symbol}."
     ])
@@ -184,11 +184,11 @@ def notify_about_schedules_failed_payment(schedule: Schedule, transaction_info: 
         logger.info("Failed payment. Funds senders emails: %s ." % ", ".join(emails))
         send_bulk_emails(emails=emails,
                          context=email_context,
-                         tpl_filename='notifications/email_transaction_failed.html')
+                         tpl_filename='notifications/transaction_failed.html')
 
         # Extract funds senders and send sms notifications about failed transaction
         sms_context = {
-            "transaction_type": schedule_details.get("transaction_type"),
+            "transaction_name": schedule_details.get("transaction_name"),
             "amount": prettify_number(schedule_details['amount']),
             "cur_symbol": schedule_details["currency"].symbol,
             "dt": arrow.get(schedule_details['processed_datetime']).format("YYYY/MM/DD hh:mm:ss"),
@@ -227,7 +227,7 @@ def notify_about_schedules_successful_payment(schedule: Schedule, transaction_in
     outgoing_payment_message_tpl = ",".join([
         "Successful transaction: {sign}{amount}{cur_symbol}",
         "\n{dt}",
-        "\n{transaction_type}, {schedule_name}",
+        "\n{transaction_name}, {schedule_name}",
         "\n{cur_symbol} wallet available balance: {closing_balance} {cur_symbol}."
     ])
 
@@ -245,9 +245,9 @@ def notify_about_schedules_successful_payment(schedule: Schedule, transaction_in
         logger.info("Successful payment. Funds senders emails: %s" % ", ".join(emails))
         send_bulk_emails(emails=emails,
                          context=email_context_for_senders,
-                         tpl_filename='notifications/email_users_balance_updated.html')
+                         tpl_filename='notifications/users_balance_updated.html')
         sms_context = {
-            "transaction_type": schedule_details.get("transaction_type"),
+            "transaction_name": schedule_details.get("transaction_name"),
             "amount": prettify_number(schedule_details['amount']),
             "cur_symbol": schedule_details["currency"].symbol,
             "dt": arrow.get(schedule_details['processed_datetime']).format("YYYY/MM/DD hh:mm:ss"),
@@ -270,9 +270,9 @@ def notify_about_schedules_successful_payment(schedule: Schedule, transaction_in
             transaction_status=TransactionStatusType.SUCCESS,
             transaction_info=transaction_info)
         # External user should not get transaction type
-        schedule_details["transaction_type"] = None
+        schedule_details["transaction_name"] = None
         message = get_ses_email_payload(
-            tpl_filename='notifications/email_users_balance_updated.html',
+            tpl_filename='notifications/users_balance_updated.html',
             tpl_context=schedule_details,
             subject=settings.AWS_SES_SUBJECT_NAME
         )
@@ -283,7 +283,7 @@ def notify_about_schedules_successful_payment(schedule: Schedule, transaction_in
     incoming_payment_message_tpl = ",".join([
         "Successful transaction: {sign}{amount}{cur_symbol}",
         "\n{dt}",
-        "\n{transaction_type}, {schedule_name}",
+        "\n{transaction_name}, {schedule_name}",
         "\n{cur_symbol} wallet available balance: {closing_balance} {cur_symbol}"
     ])
 
@@ -300,10 +300,10 @@ def notify_about_schedules_successful_payment(schedule: Schedule, transaction_in
         logger.info("Successful payment. Funds recipient emails: %s" % ", ".join(emails))
         send_bulk_emails(emails=emails,
                          context=email_context_for_recipients,
-                         tpl_filename='notifications/email_users_balance_updated.html')
+                         tpl_filename='notifications/users_balance_updated.html')
 
         sms_context = {
-            "transaction_type": schedule_details.get("transaction_type"),
+            "transaction_name": schedule_details.get("transaction_name"),
             "amount": prettify_number(schedule_details['amount']),
             "cur_symbol": schedule_details["currency"].symbol,
             "dt": arrow.get(schedule_details['processed_datetime']).format("YYYY/MM/DD hh:mm:ss"),

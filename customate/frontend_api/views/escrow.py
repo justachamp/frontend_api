@@ -34,12 +34,9 @@ from frontend_api.permissions import (
 from frontend_api.serializers.escrow import EscrowOperationSerializer
 
 from frontend_api.notifications.escrows import (
-    notify_counterpart_about_new_escrow,
-    notify_originator_about_escrow_state,
-    notify_about_requesting_action_with_funds,
-    notify_about_fund_escrow_state,
-    notify_about_declined_operation_request,
-    notify_about_requesting_close_escrow
+    notify_about_requested_operation_status,
+    notify_about_requested_operation,
+    notify_about_escrow_status
 )
 
 logger = logging.getLogger(__name__)
@@ -144,9 +141,22 @@ class EscrowViewSet(views.ModelViewSet):
         load_funds_op.amount = initial_amount
         load_funds_op.save()
 
-        # Send appropriate notification to counterpart
+        # Sending notifications about just created Escrow
         counterpart = escrow.recipient_user if creator.id == escrow.funder_user.id else escrow.funder_user
-        notify_counterpart_about_new_escrow(counterpart=counterpart, create_op=create_op, load_funds_op=load_funds_op)
+        try:
+            # Requesting counterpart to accept Escrow
+            additional_context = {
+                'operation_title': 'approve escrow',
+                'title': 'you received a request',
+                'amount': initial_amount}
+            notify_about_requested_operation(
+                email_recipient=counterpart,
+                counterpart=creator,
+                operation=create_op,
+                additional_context=additional_context
+            )
+        except Exception:
+            logger.error("Unable to send notification about new escrow. %r" % format_exc())
 
     @transaction.atomic
     def perform_update(self, serializer):
@@ -209,17 +219,25 @@ class EscrowViewSet(views.ModelViewSet):
         except Exception:
             raise NotFound(f'Escrow not found {escrow_id}')
         escrow.accept()
-        # Send appropriate notification to escrows creator.
+
+        # Sending notifications
+        create_escrow_op = escrow.create_escrow_operation
+        creator = create_escrow_op.creator
+        counterpart = self.request.user
         try:
-            create_escrow_op = escrow.create_escrow_operation
-            counterpart = self.request.user
-            notify_originator_about_escrow_state(
+            # Notify escrow creator about accepted Escrow.
+            additional_context = {
+                'operation_title': 'approve escrow',
+                'amount': escrow.initial_amount,
+                'title': 'your request was accepted'}
+            notify_about_requested_operation_status(
+                email_recipient=creator,
                 counterpart=counterpart,
-                escrow_op=create_escrow_op,
-                tpl_filename="notifications/escrow_accepted_by_counterpart.html"
+                operation=create_escrow_op,
+                additional_context=additional_context
             )
         except AssertionError:
-            logger.error("Send notification about accepted escrow.\
+            logger.error("Unable to send notification about accepted escrow.\
                         Could not get initial CreateEscrowOperation. Escrow id: %s" % escrow.id)
             pass
         return Response(status=status_codes.HTTP_204_NO_CONTENT)
@@ -245,17 +263,25 @@ class EscrowViewSet(views.ModelViewSet):
         except Exception:
             raise NotFound(f'Escrow not found {escrow_id}')
         escrow.reject()
-        # Send appropriate notification to escrows creator.
+
+        # Sending notifications
+        create_escrow_op = escrow.create_escrow_operation
+        creator = create_escrow_op.creator
+        counterpart = self.request.user
         try:
-            create_escrow_op = escrow.create_escrow_operation
-            counterpart = self.request.user
-            notify_originator_about_escrow_state(
+            # Notify creator about rejected escrow.
+            additional_context = {
+                'operation_title': 'approve escrow',
+                'amount': escrow.initial_amount,
+                'title': 'your request was declined'}
+            notify_about_requested_operation_status(
+                email_recipient=creator,
                 counterpart=counterpart,
-                escrow_op=create_escrow_op,
-                tpl_filename="notifications/request_rejected_by_counterpart.html"
+                operation=create_escrow_op,
+                additional_context=additional_context
             )
         except AssertionError:
-            logger.error("Send notification about rejected escrow.\
+            logger.error("Unable to send notification about rejected escrow.\
                          Could not get initial CreateEscrowOperation. Escrow id: %s" % escrow.id)
             pass
         return Response(status=status_codes.HTTP_204_NO_CONTENT)
@@ -322,28 +348,6 @@ class EscrowOperationViewSet(views.ModelViewSet):
             if not op.requires_mutual_approval:
                 op.accept()
 
-            # Notify funder about proposal to load_funds/release_funds/close_escrow
-            tpl_filenames = {
-                EscrowOperationType.load_funds: "notifications/requesting_funding_escrow.html",
-                EscrowOperationType.release_funds: "notifications/requesting_release_funds.html",
-            }
-            if self.request.user == op.escrow.recipient_user and op.type in tpl_filenames.keys():
-                logger.info("Start notify funder about requesting to fund/release funds. \
-                            Funds recipient: %s. " % self.request.user)
-                notify_about_requesting_action_with_funds(
-                    counterpart=self.request.user,
-                    operation=op,
-                    tpl_filename=tpl_filenames[op.type]
-                )
-            if op.requires_mutual_approval and op.type == EscrowOperationType.close_escrow:
-                escrow = op.escrow
-                recipient = escrow.recipient_user if op.creator.id == escrow.funder_user.id else escrow.funder_user
-                notify_about_requesting_close_escrow(
-                    request_recipient=recipient,
-                    operation=op,
-                    tpl_filename="notifications/requesting_close_escrow.html"
-                )
-
         except IntegrityError as e:
             logger.error("Unable to save EscrowOperation=%r, due to IntegrityError: %r" % (
                 serializer.validated_data, format_exc()
@@ -353,6 +357,25 @@ class EscrowOperationViewSet(views.ModelViewSet):
         except Exception as e:
             logger.error("Unable to save EscrowOperation=%r, due to %r" % (serializer.validated_data, format_exc()))
             raise ValidationError("Unable to save escrow operation")
+
+        # Sending notifications
+        counterpart = escrow.recipient_user if op.creator.id == escrow.funder_user.id else escrow.funder_user
+        amount = op.escrow.balance if op.type == EscrowOperationType.close_escrow else op.amount
+        creator = op.creator
+        try:
+            # Notify counterpart about proposal to load_funds/release_funds/close_escrow
+            additional_context = {
+                'operation_title': op.type.label.lower(),
+                'title': 'you received a request',
+                'amount': amount}
+            notify_about_requested_operation(
+                email_recipient=counterpart,
+                counterpart=creator,
+                operation=op,
+                additional_context=additional_context
+            )
+        except Exception:
+            logger.error("Unable to send notification about new operation. %r" % format_exc())
 
     # Must NOT be executed in transaction. Some operations perform payments creation and our current event model is
     # asynchronous, this causes delayed reaction. To respond more quickly, the same Escrow's operations must update some
@@ -392,14 +415,28 @@ class EscrowOperationViewSet(views.ModelViewSet):
 
         op.accept()
 
+        # Sending notifications
+        escrow = op.escrow
+        counterpart = escrow.recipient_user if op.creator.id == escrow.funder_user.id else escrow.funder_user
+        amount = escrow.balance if op.type == EscrowOperationType.close_escrow else op.amount
+        creator = op.creator
+
+        # Sending notification about accepted operation to operation creator
         if op.type == EscrowOperationType.close_escrow:
-            escrow = op.escrow
-            counterpart = escrow.recipient_user if op.creator.id == escrow.funder_user.id else escrow.funder_user
-            notify_originator_about_escrow_state(
-                counterpart=counterpart,
-                escrow_op=op,
-                tpl_filename="notifications/close_escrow_accepted.html"
-            )
+            try:
+                additional_context = {
+                    'operation_title': op.type.label.lower(),
+                    'amount': amount,
+                    'title': 'your request was accepted'}
+                notify_about_requested_operation_status(
+                    email_recipient=creator,
+                    counterpart=counterpart,
+                    operation=op,
+                    additional_context=additional_context
+                )
+            except Exception:
+                logger.error("Unable to send notification about accepted operation. %r" % format_exc())
+
         return Response(status=status_codes.HTTP_204_NO_CONTENT)
 
     @transaction.atomic
@@ -425,28 +462,26 @@ class EscrowOperationViewSet(views.ModelViewSet):
             raise NotFound(f'EscrowOperation not found {operation_id}')
 
         op.reject()
-        # Notify recipient user about rejected load_funds/close_escrow operation
+
+        # Sending notifications
         escrow = op.escrow
-        current_user = self.request.user
-        op_creator = op.creator
-        counterpart = escrow.recipient_user if op_creator.id == escrow.funder_user.id else escrow.funder_user
+        creator = op.creator
+        amount = escrow.balance if op.type == EscrowOperationType.close_escrow else op.amount
+        counterpart = escrow.recipient_user if creator.id == escrow.funder_user.id else escrow.funder_user
 
-        if op_creator == escrow.recipient_user and op_creator != current_user:
-            if op.type == EscrowOperationType.load_funds:
-                notify_about_fund_escrow_state(escrow=escrow)
-            if op.type == EscrowOperationType.release_funds:
-                notify_about_declined_operation_request(
-                    operation=op,
-                    counterpart=counterpart,
-                    tpl_filename="notifications/operation_requesting_was_declined.html"
-                )
-
-        if op.type == EscrowOperationType.close_escrow:
-            counterpart = escrow.recipient_user if op.creator.id == escrow.funder_user.id else escrow.funder_user
-            notify_originator_about_escrow_state(
+        # Notify operation creator about declined request.
+        try:
+            additional_context = {
+                'operation_title': op.type.label.lower(),
+                'amount': amount,
+                'title': 'your request was declined'}
+            notify_about_requested_operation_status(
+                email_recipient=creator,
                 counterpart=counterpart,
-                escrow_op=op,
-                tpl_filename="notifications/request_rejected_by_counterpart.html"
+                operation=op,
+                additional_context=additional_context
             )
+        except Exception:
+            logger.error("Unable to send notification about declined operation. %r" % format_exc())
 
         return Response(status=status_codes.HTTP_204_NO_CONTENT)

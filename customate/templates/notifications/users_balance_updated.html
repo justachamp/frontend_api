@@ -17,7 +17,7 @@
                 <table style="margin-top:42px;">
                     <tr style="height:20px;font-family:Roboto;font-weight:bold;font-size:20px;text-align:left;">
                         <td width="65" height="20"></td>
-                        <td width="300" height="20" style="font-family:Roboto;color:#697386;">Failed transaction</td>
+                        <td width="300" height="20" style="font-family:Roboto;color:#697386;">Successful transaction</td>
                         <td width="200" height="20" style="font-family:Roboto;font-weight:bold;color:#000000;">
                             {{ sign }} {{ currency.symbol }} {{ amount|prettify_number }}
                         </td>
@@ -31,7 +31,7 @@
                     <tr style="margin-top:10px;font-family:Roboto;font-size:12px;">
                         <td width="65" height="5"></td>
                         <td width="400" height="20" style="font-family:Roboto;font-weight:bold;text-align:left;color:#000000;">
-                            {% if transaction_type %}{{ transaction_type }}{% endif %}
+                            {% if transaction_name %}{{ transaction_name }}{% endif %}
                             {% if name %}, {{ name }}{% endif %}
                         </td>
                     </tr>

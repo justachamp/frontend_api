@@ -1,0 +1,31 @@
+{% extends 'base_escrow.html' %}
+{% load prettify_number %}
+
+{% block content %}
+
+    <div style="margin-top:42px;font-family:Roboto;font-size:34px;line-height:44px;text-align:center">
+        {{ title|capfirst }}.
+    </div>
+
+    <hr style="width:77%;margin-top:34px;background-color:#e6e6e6;height:1px;border:0;">
+        <table style="padding-top:20px;">
+            <tr style="height:30px;font-size:15px;">
+                <td width="70" height="20"></td>
+                <td width="200" height="20" style="font-family:Roboto;color:#697386;">Escrow name</td>
+                <td width="400" height="20" style="font-family:Roboto;font-weight:bold;text-align:left;color:#000000;">{{ escrow.name }}</td>
+            </tr>
+            <tr style="height:30px;font-size:15px;">
+                <td width="70" height="20"></td>
+                <td width="200" height="20" style="font-family:Roboto;color:#697386;">Counterpart</td>
+                <td width="400" height="20" style="font-family:Roboto;font-weight:bold;text-align:left;color:#000000;">{{ counterpart.email }}</td>
+            </tr>
+            <tr style="height:30px;font-size:15px;">
+                <td width="70" height="20"></td>
+                <td width="200" height="20" style="font-family:Roboto;color:#697386;">Escrow status</td>
+                <td width="400" height="20" style="font-family:Roboto;font-weight:bold;text-align:left;color:#000000;">
+                    {{ escrow.status }}
+                </td>
+            </tr>
+        </table>
+
+{% endblock %}
