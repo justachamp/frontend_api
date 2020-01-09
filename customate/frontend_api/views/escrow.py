@@ -362,20 +362,24 @@ class EscrowOperationViewSet(views.ModelViewSet):
         counterpart = escrow.recipient_user if op.creator.id == escrow.funder_user.id else escrow.funder_user
         amount = op.escrow.balance if op.type == EscrowOperationType.close_escrow else op.amount
         creator = op.creator
-        try:
-            # Notify counterpart about proposal to load_funds/release_funds/close_escrow
-            additional_context = {
-                'operation_title': op.type.label.lower(),
-                'title': 'you received a request',
-                'amount': amount}
-            notify_about_requested_operation(
-                email_recipient=counterpart,
-                counterpart=creator,
-                operation=op,
-                additional_context=additional_context
-            )
-        except Exception:
-            logger.error("Unable to send notification about new operation. %r" % format_exc())
+
+        if (self.request.user == op.escrow.recipient_user
+            and op.type in [EscrowOperationType.load_funds, EscrowOperationType.release_funds]) \
+                or op.type in [EscrowOperationType.close_escrow]:
+            try:
+                # Notify counterpart about proposal to load_funds/release_funds
+                additional_context = {
+                    'operation_title': op.type.label.lower(),
+                    'title': 'you received a request',
+                    'amount': amount}
+                notify_about_requested_operation(
+                    email_recipient=counterpart,
+                    counterpart=creator,
+                    operation=op,
+                    additional_context=additional_context
+                )
+            except Exception:
+                logger.error("Unable to send notification about new operation. %r" % format_exc())
 
     # Must NOT be executed in transaction. Some operations perform payments creation and our current event model is
     # asynchronous, this causes delayed reaction. To respond more quickly, the same Escrow's operations must update some
