@@ -887,7 +887,7 @@ class PaymentAccount:
         payload = {
             "data": {
                 "type": "accounts",
-                "id": user_account_id,
+                "id": str(user_account_id),
                 "attributes": {
                     "email": email,
                     "fullName": full_name,
@@ -897,7 +897,7 @@ class PaymentAccount:
 
         r = requests.patch("{base_url}accounts/{id}".format(
             base_url=BASE_URL,
-            s_type=user_account_id
+            id=str(user_account_id)
         ), json=payload)
 
         if r.status_code == requests.codes.bad_request:
