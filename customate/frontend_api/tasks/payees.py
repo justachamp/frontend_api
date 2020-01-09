@@ -47,6 +47,11 @@ def update_schedules_payee_fields(payee_info: Dict):
     logger.info("Updating schedules payee fields after receiving 'payee change' event (payee_id=%s)" % payee_id,
                 extra={'payee_id': payee_id})
 
+    if recipient_name is None or recipient_email is None or payee_title is None:
+        logger.info("Some incoming payee (id=%s) data is empty, skipping update for schedules" % payee_id,
+                    extra={'payee_id': payee_id})
+        return
+
     affected_rows_count = Schedule.objects.filter(payee_id=payee_id)\
         .update(
             payee_title=payee_title,
@@ -64,6 +69,11 @@ def update_escrows_payee_fields(payee_info: Dict):
 
     logger.info("Updating escrows payee fields after receiving 'payee change' event (payee_id=%s)" % payee_id,
                 extra={'payee_id': payee_id})
+
+    if recipient_name is None or recipient_email is None:
+        logger.info("Some incoming payee (id=%s) data is empty, skipping update for escrows" % payee_id,
+                    extra={'payee_id': payee_id})
+        return
 
     affected_rows_count = Escrow.objects.filter(payee_id=payee_id)\
         .update(
