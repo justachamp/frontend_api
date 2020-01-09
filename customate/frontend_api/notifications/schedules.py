@@ -8,7 +8,7 @@ import arrow
 from django.conf import settings
 
 from core.fields import Currency, TransactionStatusType
-from frontend_api.models import Schedule
+from frontend_api.models import Schedule, Escrow
 from frontend_api.models import UserAccount
 from frontend_api.tasks.notifiers import send_notification_email, send_notification_sms
 from frontend_api.notifications.helpers import (
@@ -73,12 +73,13 @@ def invite_payer(schedule: Schedule) -> None:
 
 # TODO: shouldn't we extract this method to separate file, something like "notifications/common.py"?
 def notify_about_loaded_funds(user_id: str, transaction_info: Dict, transaction_status: TransactionStatusType,
-                              additional_context: Dict = None) -> None:
+                              additional_context: Dict = None, escrow: Escrow = None) -> None:
     """
     Sends notification to user about updated balance after 'load funds' operation has completed.
     :param: user_id
     :param: transaction_info
     :param: transaction_status
+    :param: escrow
     :return:
     """
     if transaction_status not in [TransactionStatusType.SUCCESS, TransactionStatusType.FAILED]:
@@ -119,28 +120,34 @@ def notify_about_loaded_funds(user_id: str, transaction_info: Dict, transaction_
     if additional_context:
         load_funds_details.update(additional_context)
 
-    emails = [user.email for user in funds_recipients if user.notify_by_email and user.email]
+    # Current function handles Escrow events as well.
+    # And we have a condition that funder (except subusers ) should always receive email (except sms) notifications.
+    if escrow:
+        emails = [funds_recipient.email]
+    else:
+        emails = [user.email for user in funds_recipients if user.notify_by_email and user.email]
     logger.info("Load funds. Funds recipient emails: %s" % ", ".join(emails))
     logger.info("Load funds. Details: %s" % load_funds_details)
     send_bulk_emails(emails=emails,
                      context=load_funds_details,
                      tpl_filename=tpl_filename)
 
-    sms_context = {
-        "transaction_name": load_funds_details.get("transaction_name"),
-        "error_msg": load_funds_details.get("error_message") or "unknown",
-        "amount": prettify_number(load_funds_details['amount']),
-        "cur_symbol": load_funds_details["currency"].symbol,
-        "dt": arrow.get(load_funds_details['processed_datetime']).format("YYYY/MM/DD hh:mm:ss"),
-        "closing_balance": prettify_number(load_funds_details["closing_balance"]),
-        'sign': load_funds_details.get('sign')
-    }
-    phone_numbers = [user.phone_number for user in funds_recipients if user.notify_by_phone and user.phone_number]
-    logger.info("Load funds. Funds recipient phone numbers: %s" % ", ".join(phone_numbers))
-    logger.info("Load funds. SMS context: %s" % load_funds_details)
-    send_bulk_smses(phone_numbers=phone_numbers,
-                    context=sms_context,
-                    tpl_message=message_tpl)
+    if not escrow:
+        sms_context = {
+            "transaction_name": load_funds_details.get("transaction_name"),
+            "error_msg": load_funds_details.get("error_message") or "unknown",
+            "amount": prettify_number(load_funds_details['amount']),
+            "cur_symbol": load_funds_details["currency"].symbol,
+            "dt": arrow.get(load_funds_details['processed_datetime']).format("YYYY/MM/DD hh:mm:ss"),
+            "closing_balance": prettify_number(load_funds_details["closing_balance"]),
+            'sign': load_funds_details.get('sign')
+        }
+        phone_numbers = [user.phone_number for user in funds_recipients if user.notify_by_phone and user.phone_number]
+        logger.info("Load funds. Funds recipient phone numbers: %s" % ", ".join(phone_numbers))
+        logger.info("Load funds. SMS context: %s" % load_funds_details)
+        send_bulk_smses(phone_numbers=phone_numbers,
+                        context=sms_context,
+                        tpl_message=message_tpl)
 
 
 def notify_about_schedules_failed_payment(schedule: Schedule, transaction_info: Dict) -> None:

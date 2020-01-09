@@ -410,7 +410,8 @@ def process_escrow_transaction_change(transaction_info: Dict):
                 user_id=user_id,
                 transaction_info=transaction_info,
                 transaction_status=transaction_status,
-                additional_context=additional_context
+                additional_context=additional_context,
+                escrow=escrow
             )
 
     except Exception:
