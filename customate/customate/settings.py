@@ -460,6 +460,7 @@ CELERY_IMPORTS = (
     "frontend_api.tasks.payments",
     "frontend_api.tasks.schedules",
     "frontend_api.tasks.escrows",
+    "frontend_api.tasks.payees",
 )
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
