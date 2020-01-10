@@ -72,6 +72,7 @@ def process_unaccepted_escrows():
             )
 
 
+@shared_task
 def reminder_to_fund_escrow():
     """
     Since each Escrow have 'funding_deadline' we're going to send two types of notifications regarding 'Funds':
@@ -132,6 +133,7 @@ def reminder_to_fund_escrow():
             )
 
 
+@shared_task
 def process_unaccepted_operations():
     """
     Make sure we change operation status to rejected if inaction of parties involved.
@@ -147,7 +149,8 @@ def process_unaccepted_operations():
     logger.info("Process unaccepted operations. Operations count: %s" % expired_operations.count())
     paginator = Paginator(expired_operations, settings.CELERY_BEAT_PER_PAGE_OBJECTS)
     for page in paginator.page_range:
-        for operation in paginator.page(page).object_list:  # type: EscrowOperation
+        for escrow_op in paginator.page(page).object_list:  # type: EscrowOperation
+            operation = EscrowOperation.cast(escrow_op)
             operation.expire()
             operation.reject()
 
