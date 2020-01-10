@@ -1,34 +1,54 @@
-{% extends 'base_escrow.html' %}
+{% extends 'base.html' %}
 {% load prettify_number %}
 
-{% block content %}
+{% block body %}
+<tr>
+    <td></td>
+    <td width="44">
+        <div style="height:480px;overflow:hidden;">
+            <img width="44" height="480" src="https://customate-prod-django.s3.amazonaws.com/templates/images/left-tail.png" alt="">
+        </div>
+    </td>
+    <td height="480" style="background:#ffffff;vertical-align:top;padding-left:70px;padding-right:70px;">
+            <div style="text-align:center;margin-top:40px;">
+                <img src="https://customate-prod-django.s3.amazonaws.com/templates/images/logo.png" alt="">
+            </div>
 
-    <div style="margin-top:42px;font-family:Roboto;font-size:34px;line-height:44px;text-align:center">
-        {{ title|capfirst }}.
-    </div>
+            <div style="margin-bottom:32px;margin-top:32px;padding-bottom:32px;font-family:Roboto;font-size:32px;line-height:44px;mso-line-height-rule:exactly;line-height:140%;text-align:center;border-bottom:1px #e6e6e6 solid;color:#000000!important;">
+                {{ title|capfirst }}
+            </div>
 
-    <hr style="width:77%;margin-top:34px;background-color:#e6e6e6;height:1px;border:0;">
-
-        <table style="padding-top:20px;">
-            <tr style="height:30px;font-size:15px;">
-                <td width="70" height="20"></td>
-                <td width="200" height="20" style="font-family:Roboto;color:#697386;">Escrow name</td>
-                <td width="400" height="20" style="font-family:Roboto;font-weight:bold;text-align:left;color:#000000;">
-                    {{ operation_obj.escrow.name }}
-                </td>
-            </tr>
-            <tr style="height:30px;font-size:15px;">
-                <td width="70" height="20"></td>
-                <td width="200" height="20" style="font-family:Roboto;color:#697386;">Counterpart</td>
-                <td width="400" height="20" style="font-family:Roboto;font-weight:bold;text-align:left;color:#000000;">{{ counterpart.email }}</td>
-            </tr>
-            <tr style="height:30px;font-size:15px;">
-                <td width="70" height="20"></td>
-                <td width="200" height="20" style="font-family:Roboto;color:#697386;">To {{ operation_title }}</td>
-                <td width="400" height="20" style="font-family:Roboto;font-weight:bold;text-align:left;color:#000000;">
-                    {{ operation_obj.escrow.currency.symbol }}
-                    {{ amount|prettify_number }}</td>
-            </tr>
-        </table>
+            <table style="border-collapse:collapse;table-layout:fixed;border-spacing:0;mso-table-lspace:0pt;mso-table-rspace:0pt;vertical-align:top;font-family:Roboto;color:#697386;font-size:14px;mso-line-height-rule:exactly;line-height:200%;" cellpadding="0" cellspacing="0" border="0">
+                <tr style="padding:0;margin:0;" height="30">
+                    <td width="167" style="font-family:Roboto;color:#697386;">Escrow name</td>
+                    <td width="287" style="font-family:Roboto;text-align:left;color:#000000;">
+                        {{ operation_obj.escrow.name }}
+                    </td>
+                </tr>
+                <tr style="padding:0;margin:0;" height="30">
+                    <td width="167" style="font-family:Roboto;color:#697386;">Counterpart</td>
+                    <td width="267" style="font-family:Roboto;text-align:left;white-space:nowrap;">
+                        <a href="mailto:{{ counterpart.email }}" style="color:#000000;text-decoration:none;">{{ counterpart.email }}</a>
+                    </td>
+                </tr>
+                <tr style="padding:0;margin:0;" height="30">
+                    <td width="167" style="font-family:Roboto;color:#697386;">To {{ operation_title }}</td>
+                    <td width="287" style="font-family:Roboto;font-weight:bold;text-align:left;color:#000000;">
+                        {{ operation_obj.escrow.currency.symbol }}
+                        {{ amount|prettify_number }}</td>
+                </tr>
+            </table>
+            <!--[if mso]>
+            <div style="text-align:center;border-top:1px #e6e6e6 solid;padding-top:32px;margin-top:24px;font-size:14px;line-height:20px;color: #697386!important;">Please login to your account at <a href="{{link}}">GoCustomate</a> to action the request.</div>
+            <![endif]-->
+            <div style="text-align:center;border-top:1px #e6e6e6 solid;padding-top:32px;margin-top:32px;font-size:14px;line-height:20px;color: #697386!important;mso-hide:all;">Please login to your account at <a href="{{link}}">GoCustomate</a> to action the request.</div>
+    </td>
+    <td width="44">
+        <div style="height:480px;overflow:hidden;">
+            <img width="44" height="480" src="https://customate-prod-django.s3.amazonaws.com/templates/images/right-tail.png" alt="">
+        </div>
+    </td>
+    <td></td>
+</tr>
 
 {% endblock %}
