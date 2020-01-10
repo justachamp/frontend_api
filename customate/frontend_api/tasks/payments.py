@@ -237,7 +237,8 @@ def process_schedule_transaction_change(transaction_info: Dict):
         logger.info("Schedule with id %s was not found. %r" % (schedule_id, format_exc()))
         return
 
-    logger.info("Processing transaction_id=%s for schedule_id=%s" % (transaction_id, schedule_id))
+    logger.info("Processing transaction_id=%s for schedule_id=%s. Transaction status=%s"
+                % (transaction_id, schedule_id, transaction_status.label))
     # Send notifications about completed schedules.
     if transaction_status is TransactionStatusType.SUCCESS:
         notify_about_schedules_successful_payment(schedule=schedule, transaction_info=transaction_info)
@@ -501,9 +502,9 @@ def is_schedule_related_transaction(transaction_info: Dict):
 
     result = schedule_id is not None and Schedule.objects.filter(id=schedule_id).exists()
     logger.info("is_schedule_related_transaction returned %s for transaction_id=%s" % (result, transaction_id), extra={
-            'transaction_id': transaction_id,
-            'schedule_id': schedule_id
-        })
+        'transaction_id': transaction_id,
+        'schedule_id': schedule_id
+    })
     return result
 
 
@@ -513,9 +514,9 @@ def is_escrow_related_transaction(transaction_info: Dict):
 
     result = escrow_id is not None and Escrow.objects.filter(id=escrow_id).exists()
     logger.info("is_escrow_related_transaction returned %s for transaction_id=%s" % (result, transaction_id), extra={
-            'transaction_id': transaction_id,
-            'escrow_id': escrow_id
-        })
+        'transaction_id': transaction_id,
+        'escrow_id': escrow_id
+    })
     return result
 
 
