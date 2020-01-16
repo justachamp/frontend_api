@@ -77,7 +77,7 @@ class ProfileView(DomainService, APIView):
             profile_user = serializer.instance.user
             # Payment account is related to owner user only, so we need to make sure we update payment account with
             # the right user's data
-            if profile_user.is_owner:
+            if profile_user.is_owner and profile_user.account.payment_account_id is not None:
                 logger.debug("Refreshing payment account (id=%s) with updated user's data: %s" % (
                     profile_user.account.payment_account_id,
                     profile_user
