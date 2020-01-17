@@ -492,7 +492,7 @@ CELERY_BEAT_SCHEDULE = {
     },
     'once_per_day_send_reminders_to_fund_escrow': {
         'task': 'frontend_api.tasks.escrows.reminder_to_fund_escrow',
-        'schedule': crontab(hour='00', minute="30")  # 00:30 UTC every day
+        'schedule': crontab(hour='09', minute="00")  # 09:00 UTC every day
     },
     'once_per_day_update_statuses_of_unaccepted_operations': {
         'task': 'frontend_api.tasks.escrows.process_unaccepted_operations',
