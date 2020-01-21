@@ -25,7 +25,7 @@
                 </tr>
                 <tr style="padding:0;margin:0;" height="30">
                     <td width="167">Counterpart</td>
-                    <td width="287"><a href="mailto:{{ counterpart.email }}" style="color:#000000;text-decoration:none;">{{ counterpart.email }}</a></td>
+                    <td width="287"><a href="mailto:{{ counterpart.email }}" style="color:#000000;text-decoration:none;">{% if counterpart.email|length > 40 %}{{ counterpart.email|truncatechars:40 }}{% else %}{{ counterpart.email }}{% endif %}</a></td>
                 </tr>
                 <tr style="padding:0;margin:0;" height="30">
                     <td width="167">Escrow status</td>

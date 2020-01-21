@@ -28,7 +28,7 @@
                 <tr style="padding:0;margin:0;" height="30">
                     <td width="167" style="font-family:Roboto;color:#697386;">Counterpart</td>
                     <td width="267" style="font-family:Roboto;text-align:left;white-space:nowrap;">
-                        <a href="mailto:{{ counterpart.email }}" style="color:#000000;text-decoration:none;">{{ counterpart.email }}</a>
+                        <a href="mailto:{{ counterpart.email }}" style="color:#000000;text-decoration:none;">{% if counterpart.email|length > 40 %}{{ counterpart.email|truncatechars:40 }}{% else %}{{ counterpart.email }}{% endif %}</a>
                     </td>
                 </tr>
                 <tr style="padding:0;margin:0;" height="30">
