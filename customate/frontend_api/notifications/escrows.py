@@ -35,6 +35,7 @@ def notify_about_fund_escrow_state(escrow: Escrow, transaction_info: Optional[Di
                     (recipient.email, context))
     else:
         context = {
+            'closing_balance': transaction_info.get('closing_balance'),
             'amount': transaction_info.get("amount"),
             'processed_datetime': arrow.utcnow().datetime,
             'escrow': escrow,

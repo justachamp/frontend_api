@@ -31,10 +31,10 @@
                     <td></td>
                 </tr>
                 <tr height="62" style="vertical-align:bottom;mso-hide:all;">
-                    <td style="border-top:1px #e6e6e6 solid;">{% if footer %}{{ footer }}:{% else %}Wallet available balance:{% endif %}</td>
+                    <td style="border-top:1px #e6e6e6 solid;">Escrow available balance:</td>
                     <td style="text-align:right;border-top:1px #e6e6e6 solid;">
                         {{ escrow.currency.symbol }}
-                        {{ amount|prettify_number }}
+                        {{ closing_balance|prettify_number }}
                     </td>
                 </tr>
                 <!--[if mso]>
@@ -43,10 +43,10 @@
                     <td></td>
                 </tr>
                 <tr height="76" style="vertical-align:bottom;">
-                    <td style="border-top:1px #e6e6e6 solid;">{% if footer %}{{ footer }}:{% else %}Wallet available balance:{% endif %}</td>
+                    <td style="border-top:1px #e6e6e6 solid;">Escrow available balance:</td>
                     <td style="text-align:right;border-top:1px #e6e6e6 solid;">
                         {{ escrow.currency.symbol }}
-                        {{ amount|prettify_number }}
+                        {{ closing_balance|prettify_number }}
                     </td>
                 </tr>
                 <![endif]-->
