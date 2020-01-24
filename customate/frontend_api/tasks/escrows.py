@@ -62,15 +62,6 @@ def process_unaccepted_escrows():
                 additional_context=additional_context
             )
 
-            # Notify escrow creator about not accepted escrow
-            additional_context = {'title': "the escrow wasn't funded"}
-            notify_about_escrow_status(
-                email_recipient=creator,
-                counterpart=counterpart,
-                escrow=escrow,
-                additional_context=additional_context
-            )
-
 
 @shared_task
 def reminder_to_fund_escrow():
