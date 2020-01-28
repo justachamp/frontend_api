@@ -12,7 +12,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('user_email', type=str, help='Email of user that exists in target account'),
 
-        parser.add_argument('--skip-confirmation',
+        parser.add_argument('--skip_confirmation',
                             type=bool, default=False,
                             help='Prevent interactive confirmation')
 
@@ -37,7 +37,7 @@ class Command(BaseCommand):
             owner_account.sub_user_accounts.all().values_list('id', flat=True)
         )
 
-        skip_confirmation = options.get('skip-confirmation')
+        skip_confirmation = options.get('skip_confirmation')
         if not skip_confirmation:
             confirm = input("Type 'yes' if you would like to permanently remove specified accounts: %s (it's time to "
                             "check IDs and environment): "
