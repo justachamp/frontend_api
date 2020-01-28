@@ -23,8 +23,10 @@ class Command(BaseCommand):
 
         user_emails = list(map(lambda s: s.strip(), options.get('user_emails').split(',')))
 
+        self.stdout.write(f"Total users: {len(user_emails)}")
+
         for user_email in user_emails:
-            self.stderr.write(f"Processing email: {user_email}")
+            self.stdout.write(f"Processing email: {user_email}")
 
             try:
                 user = User.objects.get(email=user_email)
@@ -37,9 +39,12 @@ class Command(BaseCommand):
                 continue
 
             owner_account = user.account.owner_account if user.is_subuser else user.account
-            related_account_ids = [owner_account.id] + list(
-                owner_account.sub_user_accounts.all().values_list('id', flat=True)
-            )
+            if hasattr(owner_account, 'sub_user_accounts'):
+                related_account_ids = [owner_account.id] + list(
+                    owner_account.sub_user_accounts.all().values_list('id', flat=True)
+                )
+            else:
+                related_account_ids = [owner_account.id]
 
             skip_confirmation = options.get('skip_confirmation')
             if not skip_confirmation:
@@ -70,6 +75,12 @@ class Command(BaseCommand):
                 cursor.execute("DELETE FROM frontend_api_subuserpermission WHERE account_id = ANY(%s)",
                                params=[related_account_ids])
                 cursor.execute("DELETE FROM frontend_api_subuseraccount WHERE owner_account_id = ANY(%s)",
+                               params=[related_account_ids])
+
+                # Remove admin user related records
+                cursor.execute("DELETE FROM frontend_api_adminuserpermission WHERE account_id = ANY(%s)",
+                               params=[related_account_ids])
+                cursor.execute("DELETE FROM frontend_api_adminuseraccount WHERE account_ptr_id = ANY(%s)",
                                params=[related_account_ids])
 
                 # Remove relationship between account & company & payment account
