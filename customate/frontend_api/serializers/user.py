@@ -67,10 +67,10 @@ class BaseUserSerializer(HyperlinkedModelSerializer):
             so subuser should have the same status
         """
         data = super().to_representation(instance)
-        non_acive_statuses = [UserStatus.blocked, UserStatus.banned]
+        non_active_statuses = [UserStatus.blocked, UserStatus.banned]
         if instance.role == UserRole.sub_user:
             owner = instance.account.owner_account.user
-            if owner.status in non_acive_statuses:
+            if owner.status in non_active_statuses:
                 owners_status = UserStatusSerializer(owner).data
                 data["status"] = owners_status["status"]
         return data
