@@ -382,12 +382,12 @@ class UserTitle(Enum):
 class Gender(Enum):
     female = 'female'
     male = 'male'
-    unknown = 'unknown'
+    other = 'other'
 
     class Labels:
         female = 'Female'
         male = 'Male'
-        unknown = 'Unknown'
+        other = 'Other'
 
     def __repr__(self):
         return self.value
