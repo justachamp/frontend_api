@@ -98,6 +98,18 @@ COGNITO_ATTR_MAPPING = {
 
 COGNITO_CREATE_UNKNOWN_USERS = True
 
+# Security settings
+SECURE_HSTS_SECONDS = False \
+    if not isinstance(environ.get('SECURE_HSTS_SECONDS'), int) \
+    else int(environ.get('SECURE_HSTS_SECONDS'))
+SECURE_CONNECTIONS_ONLY = environ.get('SECURE_CONNECTIONS_ONLY', 'True') == 'True'
+SECURE_SSL_REDIRECT = SECURE_CONNECTIONS_ONLY
+SESSION_COOKIE_SECURE = SECURE_CONNECTIONS_ONLY
+CSRF_COOKIE_SECURE = SECURE_CONNECTIONS_ONLY
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_BROWSER_XSS_FILTER = True
+X_FRAME_OPTIONS = 'DENY'
+
 # see more at https://lincolnloop.com/blog/django-logging-right-way/
 LOGGING_CONFIG = None
 LOGLEVEL = environ.get('LOGLEVEL', 'DEBUG' if DEBUG else 'INFO').upper()
