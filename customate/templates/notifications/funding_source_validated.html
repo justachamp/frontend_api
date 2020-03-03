@@ -20,13 +20,17 @@
             <table style="border-collapse:collapse;table-layout:fixed;border-spacing:0;mso-table-lspace:0pt;mso-table-rspace:0pt;vertical-align:top;font-family:Roboto;color:#697386;font-size:14px;mso-line-height-rule:exactly;line-height:200%;" cellpadding="0" cellspacing="0" border="0">
                 <tr style="padding:0;margin:0;" height="30">
                     <td width="167">Source name:</td>
-                    <td width="287" style="color:#000000;text-align:right;">{{ fs_title }}</td>
+                    <td width="287" style="color:#000000;">{{ fs_title|capfirst }}</td>
                 </tr>
                 <tr style="padding:0;margin:0;" height="30">
                     <td width="167">Source validation status:</td>
-                    <td width="287" style="color:#000000;text-align:right;">valid</td>
+                    <td width="287" style="color:#000000;">Valid</td>
                 </tr>
             </table>
+            <!--[if mso]>
+            <div style="text-align:center;border-top:1px #e6e6e6 solid;padding-top:32px;margin-top:24px;font-size:14px;line-height:20px;color: #697386!important;">Please login to your account at <a href="{{link}}">GoCustomate</a> to action the request.</div>
+            <![endif]-->
+            <div style="text-align:center;border-top:1px #e6e6e6 solid;padding-top:32px;margin-top:32px;font-size:14px;line-height:20px;color: #697386!important;mso-hide:all;">Please login to your account at <a href="{{link}}">GoCustomate</a> to action the request.</div>
     </td>
     <td width="44">
     <div style="height:450px;overflow:hidden;">

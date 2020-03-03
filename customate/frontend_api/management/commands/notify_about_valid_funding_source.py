@@ -50,8 +50,8 @@ class Command(BaseCommand):
             sms_message = "".join(
                 [
                     "The DirectDebit was validated.",
-                    "\nSource name: %s" % fs_title,
-                    "\nSource validation status: valid"
+                    "\nSource name: %s" % fs_title.capitalize(),
+                    "\nSource validation status: Valid"
                  ]
             )
             # Network errors get handled inside involved function
