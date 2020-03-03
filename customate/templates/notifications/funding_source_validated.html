@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block body %}
+<tr>
+    <td></td>
+    <td width="44">
+        <div style="height:450px;overflow:hidden;">
+            <img width="44" height="450" src="https://customate-prod-django.s3.amazonaws.com/templates/images/left-tail.png" alt="">
+        </div>
+    </td>
+    <td height="450" style="background:#ffffff;vertical-align:top;padding-left:70px;padding-right:70px;">
+            <div style="text-align:center;margin-top:40px;">
+                <img src="https://customate-prod-django.s3.amazonaws.com/templates/images/logo.png" alt="">
+            </div>
+
+            <div style="margin-bottom:32px;margin-top:32px;padding-bottom:32px;font-family:Roboto;font-size:32px;line-height:44px;mso-line-height-rule:exactly;line-height:140%;text-align:center;border-bottom:1px #e6e6e6 solid;color:#000000!important;">
+                The DirectDebit was validated.
+            </div>
+
+            <table style="border-collapse:collapse;table-layout:fixed;border-spacing:0;mso-table-lspace:0pt;mso-table-rspace:0pt;vertical-align:top;font-family:Roboto;color:#697386;font-size:14px;mso-line-height-rule:exactly;line-height:200%;" cellpadding="0" cellspacing="0" border="0">
+                <tr style="padding:0;margin:0;" height="30">
+                    <td width="167">Source name:</td>
+                    <td width="287" style="color:#000000;text-align:right;">{{ fs_title }}</td>
+                </tr>
+                <tr style="padding:0;margin:0;" height="30">
+                    <td width="167">Source validation status:</td>
+                    <td width="287" style="color:#000000;text-align:right;">valid</td>
+                </tr>
+            </table>
+    </td>
+    <td width="44">
+    <div style="height:450px;overflow:hidden;">
+        <img width="44" height="450" src="https://customate-prod-django.s3.amazonaws.com/templates/images/right-tail.png" alt="">
+    </div>
+    </td>
+    <td></td>
+</tr>
+
+
+{% endblock %}
